@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ARES-X (3D)</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%230b0f1a' stroke='%235fd3ff' stroke-width='2'/%3E%3Ccircle cx='8' cy='8' r='2' fill='%235fd3ff'/%3E%3C/svg%3E">
+  <style>
+    /* ARX-20: tokens de diseño. Cambiar aquí cambia toda la interfaz. */
+    :root {
+      color-scheme: dark;
+      --cristal: rgba(11, 15, 26, 0.74);
+      --cristal-solido: rgba(11, 15, 26, 0.94);
+      --borde: rgba(140, 190, 255, 0.16);
+      --separador: rgba(255, 255, 255, 0.06);
+      --texto: #e7edf7;
+      --texto-suave: #b4bfd3;
+      --acento: #5fd3ff;
+      --acento-calido: #ffb454;
+      --peligro: #ff5d6c;
+      --exito: #6ee7a8;
+      --radio: 14px;
+      --sombra: none;
+      --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: var(--sans);   /* una sola familia; las cifras van tabulares */
+    }
+    * { box-sizing: border-box; }
+    /* controles de formulario con la misma familia que el resto */
+    button, input, select { font-family: inherit; }
+    #menu .fila-compacta button, #menu button.secundario, #controles #nueva, .resumen button, .manual-cabecera { min-height: 34px; }
+    .manual-cabecera { display: flex; align-items: center; }
+    html, body {
+      margin: 0; height: 100%; overflow: hidden;
+      background: #0b0f1a; color: var(--texto);
+      font-family: var(--sans); -webkit-font-smoothing: antialiased;
+    }
+    #escena { position: fixed; inset: 0; }
+    #escena canvas { display: block; }
+
+    .caja {
+      background: rgba(10, 14, 24, 0.5); border: 0; border-radius: var(--radio);
+      box-shadow: var(--sombra); padding: 14px 16px; font-size: 13px;
+    }
+    .ayuda { font-size: 12px; color: var(--texto-suave); margin-top: 10px; line-height: 1.45; }
+    .titulo-seccion {
+      font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
+      color: var(--acento); margin: 14px 0 6px; display: flex; align-items: center; gap: 8px; line-height: 1.3;
+    }
+    .titulo-seccion::after { content: ""; flex: 1; height: 1px; background: var(--separador); }
+    .titulo-seccion:first-child { margin-top: 0; }
+
+    /* ---------- columna izquierda: HUD y decisión ---------- */
+    #columna {
+      position: fixed; top: 12px; left: 12px; width: 252px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    #hud h1 {
+      font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+      margin: 0 0 10px; display: flex; align-items: center; gap: 8px; color: var(--texto);
+    }
+    #hud h1::before {
+      content: ""; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--exito); box-shadow: none;
+    }
+    .fila {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+      padding: 3px 0; border-bottom: 1px solid var(--separador); color: var(--texto-suave);
+    }
+    .fila:last-child { border-bottom: 0; }
+    .valor { font-family: var(--sans); font-size: 13px; font-weight: 600; color: #f1f5fb; font-variant-numeric: tabular-nums; text-align: right; }
+    .barra-mini { height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; margin: 2px 0 4px; }
+    .barra-mini > div { height: 100%; width: 0%; background: #5fd3ff; transition: width 0.4s ease; }
+
+    #decision { max-height: calc(100vh - 380px); min-height: 120px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(95, 211, 255, 0.45) transparent; }
+    /* Barra de desplazamiento visible en el panel de decisión (el contenido del AG no debe quedar oculto) */
+    #decision::-webkit-scrollbar { width: 6px; }
+    #decision::-webkit-scrollbar-thumb { background: rgba(95, 211, 255, 0.45); border-radius: 3px; }
+    #decision::-webkit-scrollbar-track { background: transparent; }
+    #decision.plegado #decision-cuerpo { display: none; }
+    #decision-cuerpo > div { margin: 2px 0; }
+    .barra { height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; margin: 4px 0 8px; }
+    .barra > div { height: 100%; width: 0%; background: #3b82f6; transition: width 0.3s ease; }
+    #barra-libre { background: #2a7fd6 !important; }
+    #barra-obstaculo { background: #d9822b !important; }
+    #barra-barranco { background: #c23a4a !important; }
+    .lista { margin: 4px 0 8px 16px; padding: 0; font-size: 12px; color: #c8d2e4; line-height: 1.5; }
+    .lista li::marker { color: var(--acento); }
+
+    /* ---------- avisos ---------- */
+    #intervencion-aviso {
+      position: fixed; top: 300px; left: 50%; transform: translateX(-50%);
+      background: #7a1e1e; color: #fff;
+      padding: 8px 18px; border-radius: 999px; font-weight: 700; font-size: 13px; letter-spacing: 0.04em;
+      display: none; box-shadow: none; animation: pulso 1.6s ease-in-out infinite;
+    }
+    @keyframes pulso { 50% { box-shadow: 0 0 6px rgba(255, 60, 80, 0.15); } }
+    #mensaje {
+      position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+      background: var(--cristal-solido); border: 1px solid var(--borde); border-radius: 999px;
+      padding: 8px 16px; font-size: 13px; min-height: 18px; box-shadow: var(--sombra);
+      max-width: calc(100vw - 560px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ---------- controles (derecha) ---------- */
+    #controles {
+      position: fixed; top: 12px; right: 12px; width: 252px;
+      max-height: calc(100vh - 24px); overflow-y: auto; scrollbar-width: thin; padding: 12px 14px;
+    }
+    #controles label { display: block; margin-top: 8px; color: var(--texto-suave); font-size: 12px; }
+    #controles label.veto { display: flex; align-items: center; gap: 8px; color: var(--texto); }
+    #controles label.veto input { width: auto; margin: 0; accent-color: var(--acento); }
+    #controles .par { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #controles input:not([type="checkbox"]), #controles select, #controles button, #menu input, #menu select, #menu button {
+      width: 100%; margin-top: 5px; padding: 8px 10px; border-radius: 9px; font: inherit; font-size: 13px;
+      border: 1px solid rgba(160, 200, 255, 0.18); background: rgba(255, 255, 255, 0.05); color: var(--texto);
+    }
+    #controles select option, #menu select option { background: #141b2d; color: var(--texto); }
+    #controles input:focus-visible, #controles select:focus-visible, #controles button:focus-visible,
+    #menu input:focus-visible, #menu select:focus-visible, #menu button:focus-visible,
+    #historial-cuerpo select:focus-visible, #historial-cuerpo input:focus-visible,
+    .chip:focus-visible, .tab:focus-visible, .boton:focus-visible, #pad button:focus-visible {
+      outline: 2px solid var(--acento); outline-offset: 2px;
+    }
+    .boton, #controles button, #menu button {
+      background: #2563eb; border: 0; color: #fff; font-weight: 600;
+      cursor: pointer; transition: filter 0.15s, transform 0.08s;
+    }
+    .boton:hover, #controles button:hover, #menu button:hover { filter: brightness(1.12); }
+    .boton:active, #controles button:active, #menu button:active { transform: translateY(1px); }
+    #controles button.secundario { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(160, 200, 255, 0.18); box-shadow: none; }
+    #controles button.secundario:hover { background: rgba(255, 255, 255, 0.14); }
+    #controles > button#nueva { margin-top: 10px; }
+    #controles h2 { margin: 16px 0 4px; }
+    #pad button { height: 34px; padding: 0; font-size: 15px; margin-top: 0; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(160, 200, 255, 0.16); box-shadow: none; }
+    #pad button:hover { background: rgba(95, 211, 255, 0.16); filter: none; }
+    #pad .vacio { visibility: hidden; }
+    #int-tecnica + *, #controles .intervencion-titulo { margin-top: 0; }
+
+    /* ---------- historial (abajo a la izquierda) ---------- */
+    #historial { padding: 0; }
+    #historial-toggle, #graficos-toggle, #decision-toggle {
+      width: 100%; display: flex; justify-content: space-between; align-items: center;
+      background: transparent; color: var(--texto); border: 0; padding: 12px 16px;
+      font: inherit; font-weight: 700; font-size: 13px; letter-spacing: 0.04em; cursor: pointer; text-align: left;
+    }
+    #historial-toggle:hover, #graficos-toggle:hover, #decision-toggle:hover { background: rgba(255, 255, 255, 0.04); }
+    #historial.plegado #historial-cuerpo, #graficos.plegado #graficos-cuerpo { display: none; }
+    #historial-cuerpo { padding: 0 16px 14px; max-height: 38vh; overflow: auto; }
+    #historial-cuerpo > div:first-child { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    #historial-cuerpo label { color: var(--texto-suave); font-size: 12px; }
+    #historial-cuerpo select, #historial-cuerpo input {
+      background: rgba(255, 255, 255, 0.05); color: var(--texto); border: 1px solid rgba(160, 200, 255, 0.18);
+      border-radius: 7px; padding: 4px 6px; font: inherit; font-size: 12px;
+    }
+    #hist-tabla { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+    #hist-tabla th, #hist-tabla td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--separador); white-space: nowrap; }
+    #hist-tabla th { color: var(--acento); font-weight: 600; position: sticky; top: 0; background: var(--cristal-solido); }
+    #hist-tabla td { color: #c8d2e4; font-family: var(--mono); }
+    #hist-csv { color: var(--acento); font-size: 12px; text-decoration: none; border: 1px solid var(--borde); border-radius: 7px; padding: 3px 8px; }
+    #hist-csv:hover { background: rgba(95, 211, 255, 0.1); }
+    #hist-total { font-family: var(--mono); }
+
+    /* ---------- gráficos de los modelos (abajo, a la derecha del historial) ---------- */
+    #graficos { padding: 0; }   /* ya dentro de la franja inferior (#dock) */
+    #graficos-cuerpo { padding: 0 16px 14px; }
+    .tabs { display: flex; gap: 4px; padding: 3px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+    .tab {
+      flex: 1; background: transparent; border: 0; border-radius: 8px; padding: 6px 4px;
+      color: var(--texto-suave); font: inherit; font-size: 12px; cursor: pointer;
+    }
+    .tab:hover { color: var(--texto); }
+    .tab.activa { background: rgba(95, 211, 255, 0.16); color: var(--texto); font-weight: 600; }
+    .leyenda { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; width: auto; margin: 0;
+      background: transparent; border: 1px solid var(--borde); border-radius: 999px;
+      color: var(--texto); font: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer;
+    }
+    .chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+    .chip[aria-pressed="false"] { color: var(--texto-suave); opacity: 0.5; }
+    .chip[aria-pressed="false"] i { box-shadow: none; }
+    .lienzo-caja { position: relative; }
+    #grafico { width: 100%; height: 200px; display: block; cursor: crosshair; border-radius: 10px; background: rgba(255, 255, 255, 0.02); }
+    /* Franja fija sobre la gráfica: nunca tapa el trazo */
+    .tip {
+      display: block; min-height: 26px; margin-bottom: 6px; padding: 5px 9px;
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--borde); border-radius: 8px;
+      font-family: var(--mono); font-size: 12px; line-height: 1.45; color: var(--texto-suave);
+    }
+    /* Indicador de contenido recortado: desvanece el borde inferior de paneles con scroll */
+    .desborda { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent); }
+    /* Cabeceras de panel con el mismo estilo que las secciones */
+    #historial-toggle, #graficos-toggle, #decision-toggle {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--acento);
+    }
+
+    /* ---------- menú de inicio ---------- */
+    #menu {
+      position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 35%, rgba(40, 80, 140, 0.35), rgba(5, 8, 16, 0.96) 70%);
+    }
+    #menu.oculto { display: none; }
+    #menu .caja { width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; scrollbar-width: thin; padding: 24px 26px 20px; font-size: 14px; }
+    #menu .paso { padding: 2px 0 10px; margin-bottom: 8px; border-bottom: 1px solid var(--separador); }
+    #menu .paso-final { border-bottom: 0; }
+    #menu .titulo-seccion { margin: 6px 0 4px; }
+    #menu .titulo-seccion::after { display: none; }
+    #menu .fila-compacta { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: end; }
+    #menu .fila-compacta label { margin-top: 0; min-width: 0; }
+    #menu .fila-compacta button { width: auto; margin: 0; padding: 7px 8px; font-size: 12px; white-space: nowrap; }
+    #menu .boton.inicio { margin-top: 6px; padding: 12px; font-size: 14px; }
+    #menu .veto { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--texto); }
+    #menu .veto input { width: auto; margin: 0; accent-color: var(--acento); }
+    .aviso-planeta button { width: auto; margin: 6px 0 0; padding: 5px 10px; font-size: 12px; }
+    #menu-iniciar:disabled, #iniciar:disabled { opacity: 0.45; cursor: not-allowed; }
+    .aviso-planeta { margin-top: 8px; padding: 8px 10px; border-radius: 10px; font-size: 12px; background: rgba(255, 93, 108, 0.12); border: 1px solid rgba(255, 93, 108, 0.45); color: #ffd2d6; }
+    #menu .num { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(95, 211, 255, 0.16); color: var(--acento); font-size: 12px; letter-spacing: 0; margin-right: 4px; }
+    #menu .kicker { font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--acento); font-weight: 700; }
+    #menu h1 {
+      font-size: 28px; letter-spacing: 0.12em; text-transform: uppercase; margin: 6px 0 8px;
+      color: #e7edf7;
+    }
+    #menu p { color: var(--texto-suave); margin: 0 0 14px; line-height: 1.5; }
+    #menu label { display: block; margin-top: 10px; color: var(--texto-suave); font-size: 12px; }
+    #menu button { margin-top: 18px; padding: 11px; font-size: 14px; letter-spacing: 0.02em; }
+
+    @media (max-width: 1100px) {
+      #historial { width: calc(100vw - 24px); }
+      #mensaje { max-width: calc(100vw - 300px); }
+    }
+    /* Móvil (≤ 760 px): columnas apiladas sin solaparse; el mensaje va arriba a lo ancho */
+    @media (max-width: 760px) {
+      #mensaje { top: 12px; left: 12px; right: 12px; transform: none; max-width: none; white-space: normal; border-radius: 12px; font-size: 13px; }
+      #columna { top: 60px; left: 12px; width: calc(100vw - 24px); max-width: 320px; }
+      #decision { max-height: 26vh; min-height: 0; }
+      #decision.plegado { min-height: 0; }
+      #controles { top: auto; bottom: 112px; left: 12px; right: 12px; width: auto; max-height: 34vh !important; }
+      .dock { left: 12px; right: 12px; }
+      .dock-tab { letter-spacing: 0.02em; padding: 8px 4px; font-size: 12px; }
+      #dock #manual { grid-column: 1 / span 2; grid-row: 4; padding: 4px 0 0; }
+      #intervencion-aviso { top: 110px; }
+    }
+    /* ---------- laboratorios de los modelos ---------- */
+    .oculto { display: none !important; }
+    #laboratorio {
+      position: fixed; inset: 0; z-index: 60; padding: 16px;
+      background: rgba(6, 9, 16, 0.9);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lab-caja {
+      width: min(1180px, 100%); max-height: 100%; overflow-y: auto; scrollbar-width: thin;
+      background: var(--cristal-solido); border: 1px solid var(--borde); border-radius: var(--radio);
+      box-shadow: var(--sombra); padding: 16px 18px 20px;
+    }
+    .lab-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .lab-cabecera .titulo-seccion { margin: 0 0 2px; }
+    .lab-cabecera .titulo-seccion::after { display: none; }
+    .lab-titulo { margin: 0; font-size: 18px; letter-spacing: 0.02em; }
+    #laboratorio .lab-cabecera button { width: auto; padding: 7px 12px; margin: 0; }
+    .lab-tabs { margin: 10px 0 14px; }
+    .lab-barra { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin-bottom: 10px; }
+    .lab-barra label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--texto-suave); min-width: 150px; }
+    .lab-barra input[type="range"] { width: 100%; accent-color: var(--acento); margin: 0; }
+    .lab-barra output { font-family: var(--mono); color: var(--texto); font-size: 12px; }
+    .lab-barra select, .lab-barra input:not([type="range"]) {
+      width: auto; padding: 5px 8px; border-radius: 8px; font: inherit; font-size: 13px;
+      border: 1px solid rgba(160, 200, 255, 0.18); background: rgba(255, 255, 255, 0.05); color: var(--texto);
+    }
+    .lab-barra .boton, .lab-barra button { width: auto; margin: 0; padding: 8px 14px; font: inherit; font-size: 13px; border-radius: 9px; }
+    .lab-barra .boton { background: #2563eb; border: 0; color: #fff; font-weight: 600; cursor: pointer; }
+    .lab-barra button.secundario { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(160, 200, 255, 0.18); color: var(--texto); cursor: pointer; }
+    .lab-barra .boton:disabled { opacity: 0.5; cursor: wait; }
+    .lab-seccion { margin-top: 4px; }
+    .progreso { height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; margin: -2px 0 12px; }
+    .progreso > div { height: 100%; width: 35%; background: var(--acento); border-radius: 4px; animation: progreso 1.2s ease-in-out infinite; }
+    @keyframes progreso { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+    .lab-grid-2, .lab-grid-3 { display: grid; gap: 12px; margin-bottom: 12px; }
+    .lab-grid-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+    .lab-grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .lab-bloque { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--separador); border-radius: 12px; padding: 10px 12px; min-width: 0; margin-bottom: 12px; }
+    .lab-grid-2 .lab-bloque, .lab-grid-3 .lab-bloque { margin-bottom: 0; }
+    .lienzo-caja { position: relative; }
+    .lienzo { width: 100%; height: 190px; display: block; cursor: crosshair; border-radius: 8px; background: rgba(255, 255, 255, 0.02); }
+    .lab-bloque .tip { margin: 6px 0 0; min-height: 24px; }
+    .lab-scroll { max-height: 260px; overflow-y: auto; scrollbar-width: thin; }
+    .lab-tabla { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .lab-tabla th, .lab-tabla td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--separador); }
+    .lab-tabla th { color: var(--acento); font-weight: 600; position: sticky; top: 0; background: var(--cristal-solido); }
+    .lab-tabla td { color: #c8d2e4; font-family: var(--mono); }
+    .lab-tabla .lab-cromo { font-size: 12px; }
+    .lab-tabla .lab-total td { font-weight: 700; color: var(--texto); border-top: 1px solid var(--borde); }
+    .lab-op { border-radius: 999px; padding: 1px 8px; font-size: 12px; font-family: var(--sans); }
+    .lab-op-inicial { background: rgba(255, 255, 255, 0.08); color: var(--texto-suave); }
+    .lab-op-elite { background: rgba(110, 231, 168, 0.18); color: var(--exito); }
+    .lab-op-copia { background: rgba(95, 211, 255, 0.14); color: var(--acento); }
+    .lab-op-cruce { background: rgba(255, 180, 84, 0.18); color: var(--acento-calido); }
+    .lab-op-cruce-mutacion, .lab-op-copia-mutacion { background: rgba(195, 155, 255, 0.2); color: #c39bff; }
+    .lab-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .lab-chips .chip { cursor: pointer; }
+    .lab-chips .chip.activa { background: rgba(95, 211, 255, 0.16); border-color: var(--acento); color: var(--texto); }
+    .lab-regla { padding: 7px 0; border-bottom: 1px solid var(--separador); font-size: 12px; color: var(--texto-suave); }
+    .lab-regla.activa { color: var(--texto); }
+    .lab-regla .barra { margin: 4px 0; }
+    .lab-regla .barra > div { background: #5fd3ff; }
+    .lab-prob { margin-bottom: 8px; font-size: 13px; color: var(--texto-suave); }
+    .lab-prob.ganadora { color: var(--texto); font-weight: 600; }
+    .lab-capa { margin: 6px 0; }
+    .lab-celdas { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
+    .lab-celda { width: 13px; height: 13px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); }
+    .lab-logits { display: flex; gap: 16px; font-family: var(--mono); font-size: 12px; margin-top: 8px; color: var(--texto); }
+    .lab-metricas { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .lab-metrica { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--separador); border-radius: 10px; padding: 8px 12px; min-width: 140px; }
+    .lab-metrica.destacada { border-color: var(--exito); }
+    .lab-metrica-valor { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--texto); }
+    .lab-confusion td, .lab-confusion th { text-align: center; }
+    .lab-confusion th:first-child { text-align: left; }
+    @media (max-width: 760px) { #laboratorio { padding: 8px; } .lab-caja { padding: 12px; } }
+
+    /* ---------- configuración por pasos (ARX-23) ---------- */
+    #controles { max-height: calc(100vh - 320px); scrollbar-width: thin; scrollbar-color: rgba(95, 211, 255, 0.45) transparent; }
+    #controles::-webkit-scrollbar { width: 6px; }
+    #controles::-webkit-scrollbar-thumb { background: rgba(95, 211, 255, 0.45); border-radius: 3px; }
+    #controles .paso { padding: 2px 0 10px; margin-bottom: 8px; border-bottom: 1px solid var(--separador); }
+    #controles .paso:last-child { border-bottom: 0; }
+    #controles .titulo-seccion { margin: 6px 0 4px; }
+    #controles .titulo-seccion::after { display: none; }
+    .num { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+      background: rgba(95, 211, 255, 0.16); color: var(--acento); font-size: 12px; letter-spacing: 0; }
+    #controles button.boton.inicio { margin-top: 8px; padding: 12px; font-size: 14px; letter-spacing: 0.02em; }
+    #controles select:disabled { opacity: 0.5; }
+    #controles .paso-final { border-bottom: 0; position: sticky; bottom: -12px; background: var(--cristal-solido); padding: 10px 0 2px; margin: 0; z-index: 2; }
+    #controles .fila-compacta { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: end; }
+    #controles .fila-compacta label { margin-top: 0; min-width: 0; }
+    #controles .fila-compacta button { width: auto; margin: 0; padding: 7px 8px; font-size: 12px; white-space: nowrap; }
+    #controles .fila-compacta select, #controles .fila-compacta input { min-width: 0; }
+    .resumen { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px;
+      border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--separador); font-size: 12px; color: var(--texto-suave); }
+    .resumen span { font-family: var(--mono); color: var(--texto); }
+    .resumen button { width: auto; margin: 0; padding: 5px 10px; font-size: 12px; }
+    #simulacion { border-bottom: 0; }
+    #controles #abrir-laboratorio { margin-top: 10px; }
+
+    /* ---------- controles manuales flotantes (abajo a la derecha) ---------- */
+    #manual {
+      position: fixed; right: 12px; bottom: 12px; z-index: 30; width: 190px; padding: 8px 10px;
+      opacity: 0.82; transition: opacity 0.2s;
+    }
+    #manual:hover, #manual:focus-within { opacity: 1; }
+    #manual.plegado #manual-cuerpo { display: none; }
+    .manual-cabecera { width: 100%; display: flex; justify-content: space-between; background: transparent; border: 0;
+      color: var(--texto-suave); font: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; padding: 2px 0 6px; cursor: pointer; }
+    #pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 0; }
+    #pad button { height: 34px; padding: 0; font-size: 15px; margin-top: 0; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(160, 200, 255, 0.16); box-shadow: none; }
+    #pad button:hover { background: rgba(95, 211, 255, 0.16); filter: none; }
+    #pad button.disparo { color: var(--peligro); }
+    #pad .vacio { visibility: hidden; }
+    #manual .vista { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px; }
+    #manual .vista button { height: 34px; padding: 0; font-size: 13px; margin: 0; }
+    #manual .ayuda { font-size: 12px; margin-top: 6px; }
+    @media (max-width: 760px) {
+      #manual { bottom: 58px; }
+      #manual:not(.abierto) #manual-cuerpo { display: none; }
+    }
+
+    /* ---------- menú de pausa (ARX-61) ---------- */
+    /* ---------- medidor de calor interno del rover (ARX-51) ---------- */
+    #h-calor-barra { background: #5fd3ff; transition: width 0.4s ease, background 0.4s ease; }
+    #fila-calor.oculto, #barra-calor-caja.oculto { display: none; }
+
+    /* ---------- objetivos de misión (ARX-67) ---------- */
+    .objetivos { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--separador); }
+    .objetivos .mision { font-size: 12px; color: var(--texto-suave); margin-bottom: 6px; }
+    .objetivos .cond { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 2px 0; }
+    .objetivos .cond.cumplido { color: var(--exito); }
+    .objetivos .cond.opcional { color: var(--texto-suave); opacity: 0.7; }
+    .lista li.opcional { color: var(--texto-suave); opacity: 0.7; }
+    .objetivos .barra-obj { height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; margin: 2px 0 6px; }
+    .objetivos .barra-obj > div { height: 100%; background: var(--acento); }
+
+    /* ---------- pantalla de meta combinada (ARX-74) ---------- */
+    .meta-caja { min-width: min(92vw, 420px); }
+    .meta-grupo { margin: 10px 0; }
+    .meta-opciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .meta-opcion { flex: 1 1 auto; min-height: 34px; padding: 6px 10px; border-radius: 9px; cursor: pointer; font: inherit; font-size: 13px;
+      background: rgba(255, 255, 255, 0.06); color: var(--texto); border: 1px solid rgba(160, 200, 255, 0.18); }
+    .meta-opcion[aria-pressed="true"] { background: rgba(95, 211, 255, 0.18); border-color: var(--acento); color: var(--acento); font-weight: 600; }
+    .meta-acciones { display: flex; gap: 8px; margin-top: 12px; }
+    .meta-acciones button { flex: 1; min-height: 40px; border-radius: 10px; border: 0; font: inherit; font-weight: 600; cursor: pointer; }
+    .boton-confirmar { background: var(--exito); color: #061018; }
+    .boton-salir { background: var(--peligro); color: #fff; }
+
+    /* ---------- aviso de error del motor (E4) ---------- */
+    #error-motor, #motor-lento, #sin-resultado { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+      background: rgba(6, 9, 16, 0.9); }
+    #error-motor.oculto, #motor-lento.oculto { display: none; }
+
+    /* ---------- pantalla de carga (ARX-60) ---------- */
+    #carga { position: fixed; inset: 0; z-index: 58; display: flex; align-items: center; justify-content: center;
+      background: rgba(6, 9, 16, 0.9); }
+    #carga.oculto { display: none; }
+    .carga-caja { width: min(320px, calc(100vw - 40px)); text-align: center; }
+    .carga-caja .kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); }
+    #carga-numero { font-size: 72px; font-weight: 700; color: #f1f5fb; margin: 8px 0 14px; font-variant-numeric: tabular-nums; }
+    .carga-barra { height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; overflow: hidden; }
+    #carga-relleno { height: 100%; width: 0%; background: var(--acento); }
+
+    #meta { position: fixed; inset: 0; z-index: 56; display: flex; align-items: center; justify-content: center;
+      background: rgba(6, 9, 16, 0.9); }
+    #meta.oculto { display: none; }
+    #meta .pausa-caja label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--texto-suave); }
+    #meta .pausa-caja select { padding: 6px; border-radius: 8px; font: inherit; }
+    #menu-misiones-fila.oculto { display: none; }
+    #menu-misiones-fila { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+    #pausa { position: fixed; inset: 0; z-index: 55; display: flex; align-items: center; justify-content: center;
+      background: rgba(6, 9, 16, 0.78); }
+    #pausa.oculto, #pausa-opciones-panel.oculto { display: none; }
+    .pausa-caja { width: min(340px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 10px; padding: 22px 24px;
+      background: rgba(10, 14, 24, 0.9); border-radius: var(--radio); }
+    .pausa-caja .kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); margin-bottom: 4px; }
+    .pausa-caja button { width: 100%; margin: 0; padding: 10px; font: inherit; font-size: 14px; }
+    #pausa-opciones-panel { display: flex; flex-direction: column; gap: 8px; padding: 6px 0; }
+    #pausa-opciones-panel label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--texto-suave); }
+    #pausa-opciones-panel label.veto { flex-direction: row; align-items: center; gap: 8px; color: var(--texto); }
+    #pausa-opciones-panel label.veto input { width: auto; margin: 0; accent-color: var(--acento); }
+    #pausa-opciones-panel select { padding: 6px; border-radius: 8px; font: inherit; }
+
+    /* ---------- menú de pausa (ARX-61) ---------- */
+    .registro { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); width: min(420px, 46vw); margin: 0; padding: 0;
+      list-style: none; z-index: 26; pointer-events: none; }
+    .registro li { font-size: 12px; background: rgba(10, 14, 24, 0.6); border-radius: 8px; padding: 3px 9px; margin-bottom: 4px;
+      color: #d4dcea; transition: opacity 0.3s, transform 0.3s; }
+    .registro li.nueva { animation: entraRegistro 0.3s ease-out; }
+    .registro li.saliendo { opacity: 0; transform: translateY(-6px); }
+    @keyframes entraRegistro { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+    /* ---------- modo cine (tecla H): la escena sin paneles ---------- */
+    body.cine #registro, body.cine #columna, body.cine #controles, body.cine #graficos, body.cine #historial, body.cine #manual, body.cine #mensaje, body.cine #intervencion-aviso { display: none !important; }
+
+    /* ---------- franja inferior con pestañas y sección plegable de controles (vuelta 14) ---------- */
+    .dock { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 25; display: grid;
+      grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: end; }
+    .dock > .dock-tabs { grid-column: 1; grid-row: 1; }
+    .dock > .dock-panel { grid-column: 1; }
+    /* Botón de reproducción en verde (ARX-56) */
+    #reproducir.verde { background: #1f9d55; color: #fff; box-shadow: none; font-weight: 700; }
+    /* Controles manuales dentro de la misma barra: sin caja propia */
+    #dock #manual { grid-column: 2; grid-row: 1 / span 3; position: static; width: auto; padding: 0 0 0 4px; background: none;
+      border: 0; box-shadow: none; opacity: 1; align-self: end; }
+    #dock #manual:hover, #dock #manual:focus-within { opacity: 1; }
+    #dock #manual #pad { width: 118px; gap: 3px; }
+    #dock #manual #pad button { height: 34px; }
+    #dock #manual .vista { grid-template-columns: repeat(5, 1fr); width: 150px; }
+    #dock #manual .ayuda { display: none; }
+    #dock #manual .manual-cabecera { justify-content: flex-end; gap: 6px; padding: 0 0 4px; }
+    .dock-tabs { display: flex; background: var(--cristal); border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; box-shadow: var(--sombra); }
+    .dock-tab { flex: 1; width: auto; margin: 0; background: transparent; border: 0; border-radius: 0; color: var(--texto-suave);
+      font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 8px; cursor: pointer; box-shadow: none; }
+    .dock-tab + .dock-tab { border-left: 1px solid var(--separador); }
+    .dock-tab:hover { color: var(--texto); background: rgba(255, 255, 255, 0.04); }
+    .dock-tab[aria-expanded="true"] { color: var(--acento); background: rgba(95, 211, 255, 0.1); }
+    .dock-panel { margin-top: 6px; background: var(--cristal-solido); border: 1px solid var(--borde); border-radius: 12px;
+      box-shadow: var(--sombra); padding: 10px 14px; max-height: 40vh; overflow: auto; scrollbar-width: thin; }
+    .dock-panel.plegado { display: none; }
+    .cabecera-plegable { width: 100%; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; background: none; border: 0;
+      color: var(--acento); font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 0; cursor: pointer; box-shadow: none; }
+    .cabecera-plegable:hover { background: none; filter: none; }
+    #controles.plegado #controles-cuerpo { display: none; }
+    #controles #controles-toggle { background: none; box-shadow: none; color: var(--acento); margin: 0 0 8px; padding: 2px 0; width: 100%; border: 0; filter: none; }
+
+    /* ---------- columna única izquierda: HUD y decisión separados por filetes (vuelta 13) ---------- */
+    #columna { background: rgba(10, 14, 24, 0.5); border: 0; border-radius: var(--radio); box-shadow: var(--sombra);
+      padding: 12px 14px; gap: 0; width: 264px; max-height: calc(100vh - 24px); overflow: hidden; }
+    #columna > .caja { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+    #columna #hud { padding-bottom: 10px; }
+    #columna #decision { border-top: 1px solid var(--separador); padding-top: 4px; max-height: none; overflow: visible; min-height: 0; }
+    #columna #decision.plegado { padding-top: 0; }
+    #columna #decision-toggle { padding: 6px 0; background: none; }
+    #columna #decision-toggle:hover { background: none; color: var(--acento); }
+    #columna #hud h1 { margin-bottom: 4px; }
+    #columna .estado-badge { margin-bottom: 8px; }
+
+    /* ---------- indicador de estado del rover (ARX-36, interfaz) ---------- */
+    .estado-badge { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 4px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em; border: 1px solid var(--color-estado, #5fd3ff);
+      color: var(--color-estado, #5fd3ff); background: color-mix(in srgb, var(--color-estado, #5fd3ff) 14%, transparent); }
+    .estado-badge .icono { font-size: 13px; line-height: 1; }
+    .estado-badge.pulso { animation: pulsoEstado 1.2s ease-in-out infinite; }
+    @keyframes pulsoEstado { 50% { opacity: 0.55; } }
+
+    /* ---------- jerarquía de la decisión y contraste del HUD (vuelta 10) ---------- */
+    #decision details.det { border-bottom: 1px solid var(--separador); }
+    #decision details.det > summary { list-style: none; cursor: pointer; padding: 5px 0; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento); display: flex; justify-content: space-between; gap: 8px; }
+    #decision details.det > summary::-webkit-details-marker { display: none; }
+    #decision details.det > summary::after { content: "▸"; color: var(--texto-suave); }
+    #decision details.det[open] > summary::after { content: "▾"; }
+    #decision details.det > summary span { text-transform: none; letter-spacing: 0; color: #f1f5fb; font-weight: 600; font-size: 12px; margin-left: auto; text-align: right; }
+    #decision details.det > div, #decision details.det > ul { padding: 2px 0 8px; font-size: 12px; }
+    #hud .fila span:first-child { color: #c3cce0; font-size: 12px; }
+    #hud .fila { border-bottom-color: rgba(255, 255, 255, 0.08); }
+
+    /* ---------- HUD compacto y decisión abierta (sprint 1) ---------- */
+    .hud-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+    .hud-grid .fila { padding: 2px 0; }
+    .hud-grid .fila.ancha, .hud-grid .barra-mini.ancha { grid-column: 1 / -1; }
+    .hud-grid .fila span:first-child { font-size: 12px; }
+    #hud { padding: 10px 12px; }
+    #hud h1 { margin-bottom: 6px; }
+    #decision { max-height: calc(100vh - 300px); }
+    #decision #decision-cuerpo > div { margin: 0; }
+    #decision .titulo-seccion { margin: 8px 0 3px; }
+    #decision .barra { margin: 2px 0 4px; }
+    #decision .lista { margin: 2px 0 4px 14px; }
+    #decision .ayuda { margin-top: 4px; }
+    @media (max-height: 800px) {
+      #decision { max-height: calc(100vh - 290px); }
+      #decision .lista li { line-height: 1.35; }
+    }
+  </style>
+<script type="importmap">
+{ "imports": { "three": "/static/vendor/three.module.js" } }
+</script>
+</head>
+<body>
+  <div id="escena"></div>
+
+  <div id="columna">
+    <div id="hud" class="caja">
+      <h1>ARES-X · Marte</h1>
+      <div id="estado-badge" class="estado-badge" role="status" aria-live="polite"><span class="icono" aria-hidden="true">◎</span><span class="texto">EXPLORACIÓN</span></div>
+      <div class="hud-grid">
+        <div class="fila"><span>Semilla</span><span class="valor" id="h-semilla">-</span></div>
+        <div class="fila"><span>Estado</span><span class="valor" id="h-estado">-</span></div>
+        <div class="fila ancha"><span>Batería</span><span class="valor" id="h-bateria">-</span></div>
+        <div class="barra-mini ancha"><div id="h-bateria-barra"></div></div>
+        <div class="fila"><span>Puntaje</span><span class="valor" id="h-puntaje">-</span></div>
+        <div class="fila"><span>Munición</span><span class="valor" id="h-municion">-</span></div>
+        <div class="fila"><span>Modo</span><span class="valor" id="h-modo">-</span></div>
+        <div class="fila"><span>Paso</span><span class="valor" id="h-paso">-</span></div>
+        <div class="fila"><span>Cooldown</span><span class="valor" id="h-cooldown">-</span></div>
+        <div class="fila"><span>Drones</span><span class="valor" id="h-drones">-</span></div>
+        <div class="fila ancha" id="fila-calor"><span>Calor interno</span><span class="valor" id="h-calor">-</span></div>
+        <div class="barra-mini ancha" id="barra-calor-caja"><div id="h-calor-barra"></div></div>
+      </div>
+      <div id="objetivos" class="objetivos oculto"></div>
+    </div>
+
+    <div id="decision" class="caja">
+      <button id="decision-toggle">Decisión de la IA <span aria-hidden="true">▾</span></button>
+      <div id="decision-cuerpo">
+        <details class="det" id="det-rna">
+          <summary>RNA · <span id="res-rna">-</span></summary>
+          <div>libre <span id="rna-libre">-</span></div><div class="barra"><div id="barra-libre"></div></div>
+          <div>obstáculo <span id="rna-obstaculo">-</span></div><div class="barra"><div id="barra-obstaculo"></div></div>
+          <div>barranco <span id="rna-barranco">-</span></div><div class="barra"><div id="barra-barranco"></div></div>
+        </details>
+        <details class="det" id="det-dif">
+          <summary>Difuso · <span id="res-dif">-</span></summary>
+          <div>velocidad <span id="dif-velocidad">-</span></div>
+          <ul class="lista" id="dif-reglas"><li>sin reglas activadas</li></ul>
+        </details>
+        <details class="det" id="det-ag">
+          <summary>AG · <span id="res-ag">-</span></summary>
+          <div id="ag-ruta">-</div>
+          <div class="ayuda">La línea amarilla de la escena es la ruta que sigue la IA.</div>
+        </details>
+        <details class="det" id="det-sup">
+          <summary>Supervisor · <span id="res-sup">-</span></summary>
+          <div>acción <span id="sup-accion">-</span></div>
+          <ul class="lista" id="sup-motivos"><li>-</li></ul>
+        </details>
+        <details class="det" id="det-rec">
+          <summary>Recomendaciones · manual</summary>
+          <button id="rec-consultar" class="secundario" type="button">Consultar a los modelos</button>
+          <ul class="lista" id="rec-lista"><li>Pulsa el botón para ver qué haría cada modelo en esta celda.</li></ul>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div id="intervencion-aviso">INTERVENCIÓN ACTIVA</div>
+
+  <div id="controles" class="caja oculto">
+    <button id="controles-toggle" class="cabecera-plegable" type="button" aria-expanded="true">Partida y simulación <span aria-hidden="true">▾</span></button>
+    <div id="controles-cuerpo">
+    <div id="resumen-config" class="resumen">
+      <span id="resumen-texto"></span>
+      <button id="reconfigurar" class="secundario" type="button">Reconfigurar</button>
+    </div>
+
+    <section class="paso">
+      <div class="titulo-seccion">1 · Mapa</div>
+      <div class="fila-compacta">
+        <label>Semilla <input id="semilla" type="number" value="" min="0" placeholder="aleatoria"></label>
+        <label>Nivel
+          <select id="nivel">
+            <option value="1">Muy fácil</option><option value="2">Fácil</option><option value="3">Medio</option>
+            <option value="4">Difícil</option><option value="5">Hardcore</option>
+          </select>
+        </label>
+        <button id="nueva" class="boton" type="button">Nueva</button>
+      </div>
+      <label>Tamaño del mapa
+        <select id="tamano">
+          <option value="pequeno">Pequeño (20×30)</option>
+            <option value="mediano">Mediano (30×45)</option>
+            <option value="grande" selected>Grande (40×60)</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="paso">
+      <div class="titulo-seccion">2 · Modo de control</div>
+      <label>Modo
+        <select id="modo">
+          <option value="manual">Manual (con recomendaciones)</option>
+          <option value="rna">Solo RNA</option>
+          <option value="difuso">Solo difuso</option>
+          <option value="ag">Solo AG</option>
+          <option value="automatico">Híbrido</option>
+        </select>
+      </label>
+      <div id="modo-desc" class="ayuda"></div>
+      <label class="veto" title="Con el veto, el supervisor no deja avanzar hacia barrancos u obstáculos detectados">
+        <input type="checkbox" id="veto" checked> Veto de seguridad (rna, difuso, ag)
+      </label>
+    </section>
+
+    <section id="escenarios-caja" class="paso oculto">
+      <div class="titulo-seccion">Automático continuo</div>
+      <div id="esc-texto" class="ayuda"></div>
+      <div id="esc-metricas" class="lab-metricas"></div>
+    </section>
+
+    <section id="simulacion" class="paso">
+      <div class="titulo-seccion">3 · Simulación</div>
+      <div class="par">
+        <button id="paso" type="button">Paso</button>
+        <label>Velocidad
+          <select id="velocidad">
+            <option value="900">lenta</option>
+            <option value="450" selected>normal</option>
+            <option value="150">rápida</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="paso">
+      <div class="titulo-seccion">4 · Intervención (prueba causal)</div>
+      <label>Técnica
+        <select id="int-tecnica">
+          <option value="ninguna">ninguna</option>
+          <option value="rna-barranco">RNA forzada a barranco</option>
+          <option value="rna-libre">RNA forzada a libre</option>
+          <option value="difuso">Solo difuso</option>
+        </select>
+      </label>
+      <label id="int-valor-fila" style="display:none">Velocidad (0 a 1)
+        <input id="int-valor" type="number" min="0" max="1" step="0.1" value="0">
+      </label>
+      <div class="par">
+        <button id="int-aplicar" type="button">Aplicar</button>
+        <button id="int-apagar" class="secundario" type="button">Apagar</button>
+      </div>
+      <button id="abrir-laboratorio" class="secundario" type="button">Laboratorios de los modelos</button>
+    </section>
+
+    <section class="paso paso-final">
+      <button id="reproducir" class="boton verde" type="button">Iniciar</button>
+    </section>
+    </div>
+  </div>
+
+  <div id="dock" class="dock">
+    <div class="dock-tabs" role="tablist">
+      <button id="historial-toggle" class="dock-tab" type="button" role="tab" aria-expanded="false">Historial de decisiones</button>
+      <button id="graficos-toggle" class="dock-tab" type="button" role="tab" aria-expanded="false">Gráficos de los modelos</button>
+    </div>
+    <div id="historial" class="dock-panel plegado">
+      <div id="historial-cuerpo">
+      <div>
+        <label>Modo <select id="hist-modo"><option value="">todos</option><option>manual</option><option>rna</option><option>difuso</option><option>ag</option><option>automatico</option></select></label>
+        <label>Técnica <select id="hist-tecnica"><option value="">todas</option><option>humano</option><option>rna</option><option>difuso</option><option>ag</option><option>supervisor</option><option>combate</option><option>escenario</option></select></label>
+        <label>Motivo contiene <input id="hist-motivo" type="text" size="12"></label>
+        <a id="hist-csv" href="/historial.csv">Exportar CSV</a>
+        <span id="hist-total" class="ayuda"></span>
+      </div>
+      <table id="hist-tabla">
+        <thead><tr><th>paso</th><th>modo</th><th>acción</th><th>técnica</th><th>motivo</th><th>valores clave</th></tr></thead>
+        <tbody id="hist-cuerpo"></tbody>
+      </table>
+    </div>
+    </div>
+    <div id="graficos" class="dock-panel plegado">
+      <div id="graficos-cuerpo">
+      <div class="tabs" role="tablist">
+        <button class="tab activa" data-serie="rna" role="tab">RNA</button>
+        <button class="tab" data-serie="difuso" role="tab">Difuso</button>
+        <button class="tab" data-serie="ag" role="tab">AG</button>
+      </div>
+      <div class="leyenda" id="graficos-leyenda"></div>
+      <div class="lienzo-caja">
+        <canvas id="grafico" aria-label="Gráfica del modelo seleccionado"></canvas>
+        <div id="grafico-tip" class="tip">Pasa el ratón sobre la gráfica para ver cada paso.</div>
+      </div>
+      <div class="ayuda">Pulsa una leyenda para ocultar o mostrar esa serie.</div>
+    </div>
+    </div>
+  <!-- Controles manuales: esquina inferior derecha, compactos y semitransparentes -->
+  <div id="manual" class="caja oculto">
+    <button id="manual-toggle" class="manual-cabecera" type="button" aria-expanded="true">Controles <span aria-hidden="true">▾</span></button>
+    <div id="manual-cuerpo">
+      <div id="pad">
+        <button data-r="NO" aria-label="noroeste">↖</button><button data-r="N" aria-label="norte">↑</button><button data-r="NE" aria-label="noreste">↗</button>
+        <button data-r="O" aria-label="oeste">←</button><button id="disparar" class="disparo" type="button" title="Disparar (Espacio)" aria-label="disparar">●</button><button data-r="E" aria-label="este">→</button>
+        <button data-r="SO" aria-label="suroeste">↙</button><button data-r="S" aria-label="sur">↓</button><button data-r="SE" aria-label="sureste">↘</button>
+      </div>
+      <div class="vista">
+        <button id="zoom-mas" class="secundario" type="button" title="Acercar">＋</button>
+        <button id="zoom-menos" class="secundario" type="button" title="Alejar">－</button>
+        <button id="encuadrar" class="secundario" type="button" title="Centrar en el rover">Rover</button>
+        <button id="ver-mapa" class="secundario" type="button" title="Ver el mapa completo">Mapa</button>
+        <button id="mapa-completo" class="secundario" type="button" title="Mapa completo: todo el terreno y la ruta planificada">Todo</button>
+      </div>
+      <div class="ayuda">Espacio: disparar. Flechas o WASD; 7/9/1/3 diagonales. H: modo cine.</div>
+    </div>
+  </div>
+
+  </div>
+
+  <div id="laboratorio" class="oculto" role="dialog" aria-modal="true" aria-label="Laboratorios de los modelos">
+    <div class="lab-caja">
+      <header class="lab-cabecera">
+        <div>
+          <div class="titulo-seccion">Laboratorios</div>
+          <h2 class="lab-titulo">Genético · Difuso · RNA · Políticas</h2>
+        </div>
+        <button id="cerrar-laboratorio" class="secundario" type="button">Cerrar (Esc)</button>
+      </header>
+      <div class="tabs lab-tabs" role="tablist">
+        <button class="tab lab-tab activa" data-lab="ag" role="tab" type="button">Genético</button>
+        <button class="tab lab-tab" data-lab="difuso" role="tab" type="button">Difuso</button>
+        <button class="tab lab-tab" data-lab="rna" role="tab" type="button">RNA</button>
+        <button class="tab lab-tab" data-lab="politicas" role="tab" type="button">Políticas</button>
+      </div>
+
+      <!-- Genético (CA-04) -->
+      <section id="lab-ag" class="lab-seccion">
+        <div class="lab-barra">
+          <label>Parada sin mejora
+            <select id="ag-parada">
+              <option value="">sin parada (30 generaciones)</option>
+              <option value="5">5 generaciones</option>
+              <option value="10">10 generaciones</option>
+            </select>
+          </label>
+          <button id="ag-ejecutar" class="boton" type="button">Ejecutar AG</button>
+          <span id="ag-estado" class="ayuda"></span>
+        </div>
+        <div id="ag-progreso" class="progreso oculto" aria-hidden="true"><div></div></div>
+        <div class="lab-grid-2">
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Mejor, media y peor fitness</div>
+            <div class="lienzo-caja"><canvas id="ag-curva" class="lienzo"></canvas></div>
+            <div id="ag-curva-tip" class="tip"></div>
+          </div>
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Población de la generación</div>
+            <label>Generación <select id="ag-generacion"></select></label>
+            <div id="ag-resumen" class="ayuda"></div>
+            <div id="ag-poblacion" class="lab-scroll"></div>
+          </div>
+        </div>
+        <div class="lab-bloque">
+          <div class="titulo-seccion">Desglose del fitness (3 mejores rutas)</div>
+          <div id="ag-candidatos" class="lab-chips"></div>
+          <div id="ag-desglose"></div>
+        </div>
+      </section>
+
+      <!-- Difuso (CA-05) -->
+      <section id="lab-difuso" class="lab-seccion oculto">
+        <div class="lab-barra">
+          <label>Distancia (m) <input id="dif-distancia" type="range" min="0" max="20" step="0.1" value="1"> <output id="dif-distancia-v"></output></label>
+          <label>Batería (%) <input id="dif-bateria" type="range" min="0" max="100" step="1" value="90"> <output id="dif-bateria-v"></output></label>
+          <label>Inclinación (°) <input id="dif-inclinacion" type="range" min="0" max="45" step="1" value="2"> <output id="dif-inclinacion-v"></output></label>
+          <label>Temperatura (°C) <input id="dif-temperatura" type="range" min="-80" max="80" step="1" value="15"> <output id="dif-temperatura-v"></output></label>
+          <button id="dif-barrido" class="boton" type="button">Barrido 10 → 1 m</button>
+          <span id="dif-estado" class="ayuda"></span>
+        </div>
+        <div class="lab-grid-3">
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Pertenencia · distancia</div>
+            <div class="lienzo-caja"><canvas id="dif-u-distancia" class="lienzo"></canvas></div>
+            <div id="dif-u-distancia-tip" class="tip"></div>
+            <div id="dif-u-distancia-entrada" class="ayuda"></div>
+          </div>
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Pertenencia · batería</div>
+            <div class="lienzo-caja"><canvas id="dif-u-bateria" class="lienzo"></canvas></div>
+            <div id="dif-u-bateria-tip" class="tip"></div>
+            <div id="dif-u-bateria-entrada" class="ayuda"></div>
+          </div>
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Pertenencia · temperatura</div>
+            <div class="lienzo-caja"><canvas id="dif-u-temperatura" class="lienzo"></canvas></div>
+            <div id="dif-u-temperatura-tip" class="tip"></div>
+            <div id="dif-u-temperatura-entrada" class="ayuda"></div>
+          </div>
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Pertenencia · inclinación</div>
+            <div class="lienzo-caja"><canvas id="dif-u-inclinacion" class="lienzo"></canvas></div>
+            <div id="dif-u-inclinacion-tip" class="tip"></div>
+            <div id="dif-u-inclinacion-entrada" class="ayuda"></div>
+          </div>
+        </div>
+        <div class="lab-grid-2">
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Salida · velocidad</div>
+            <div class="lienzo-caja"><canvas id="dif-salida" class="lienzo"></canvas></div>
+            <div id="dif-salida-tip" class="tip"></div>
+            <div id="dif-velocidad" class="ayuda"></div>
+          </div>
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Reglas</div>
+            <div id="dif-reglas" class="lab-scroll"></div>
+          </div>
+        </div>
+        <div class="lab-bloque">
+          <div class="titulo-seccion">Barrido de distancia · de 10 a 1 m (CA-05)</div>
+          <div class="lienzo-caja"><canvas id="dif-barrido-curva" class="lienzo"></canvas></div>
+          <div id="dif-barrido-tip" class="tip"></div>
+          <div id="dif-barrido-tabla" class="lab-scroll"></div>
+        </div>
+      </section>
+
+      <!-- RNA (CA-06) -->
+      <section id="lab-rna" class="lab-seccion oculto">
+        <div class="lab-barra">
+          <label>Proximidad frontal (m) <input id="rna-proximidad" type="range" min="0" max="20" step="0.1" value="2"> <output id="rna-proximidad-v"></output></label>
+          <label>Borde de barranco
+            <select id="rna-borde"><option value="0">no</option><option value="1">sí</option></select>
+          </label>
+          <label>Gradiente de altura (m) <input id="rna-gradiente" type="range" min="-10" max="10" step="0.1" value="0"> <output id="rna-gradiente-v"></output></label>
+          <label>Vibración <input id="rna-vibracion" type="range" min="-5" max="5" step="0.1" value="0"> <output id="rna-vibracion-v"></output></label>
+          <button id="rna-restablecer" class="secundario" type="button">Celda frente al rover</button>
+        </div>
+        <div class="lab-grid-2">
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Entrada → normalización</div>
+            <div id="rna-entrada"></div>
+          </div>
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Probabilidades → acción</div>
+            <div id="rna-probs"></div>
+            <div id="rna-accion" class="ayuda"></div>
+          </div>
+        </div>
+        <div class="lab-bloque">
+          <div class="titulo-seccion">Activaciones</div>
+          <div id="rna-activaciones"></div>
+        </div>
+        <div class="lab-bloque">
+          <div class="titulo-seccion">Evaluación del modelo · matriz de confusión y recall (CA-06)</div>
+          <div id="rna-evaluacion"></div>
+        </div>
+      </section>
+
+      <!-- Comparación de políticas (GET /comparacion, contrato §7) -->
+      <section id="lab-politicas" class="lab-seccion oculto">
+        <div class="lab-barra">
+          <label>Métrica
+            <select id="pol-metrica">
+              <option value="pasos">pasos hasta el final</option>
+              <option value="bateria_final">batería final (%)</option>
+              <option value="sitios_visitados">sitios visitados</option>
+              <option value="colisiones">colisiones</option>
+            </select>
+          </label>
+          <button id="pol-cargar" class="boton" type="button">Cargar comparación</button>
+          <span id="pol-estado" class="ayuda"></span>
+        </div>
+        <div class="lab-grid-2">
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Media con barra de desviación, por variante</div>
+            <div class="lienzo-caja"><canvas id="pol-barras" class="lienzo"></canvas></div>
+            <div id="pol-barras-tip" class="tip"></div>
+            <div class="ayuda">Barra: media. Línea blanca: ±1 desviación estándar (20 semillas por variante).</div>
+          </div>
+          <div class="lab-bloque">
+            <div class="titulo-seccion">Éxito y dispersión</div>
+            <div id="pol-tabla" class="lab-scroll"></div>
+          </div>
+        </div>
+        <div id="pol-nota" class="ayuda"></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="error-motor" class="oculto" role="alertdialog" aria-modal="true" aria-label="Error del motor">
+    <div class="pausa-caja">
+      <div class="kicker">El motor no respondió</div>
+      <p id="error-motor-texto" class="ayuda"></p>
+      <button id="error-reintentar" class="boton" type="button">Reintentar</button>
+      <button id="error-reiniciar" class="secundario" type="button">Reiniciar partida</button>
+      <button id="error-menu" class="secundario" type="button">Volver al menú</button>
+    </div>
+  </div>
+
+  <div id="motor-lento" class="oculto" role="alertdialog" aria-modal="true" aria-label="El motor no responde a tiempo">
+    <div class="pausa-caja">
+      <div class="kicker">El motor no responde a tiempo</div>
+      <p class="ayuda">El último paso tardó más de 2 s o el número de paso no avanza. La reproducción está detenida.</p>
+      <button id="motor-reintentar" class="boton" type="button">Reintentar</button>
+      <button id="motor-detener" class="secundario" type="button">Detener</button>
+      <button id="motor-menu" class="secundario" type="button">Volver al menú</button>
+    </div>
+  </div>
+
+  <div id="sin-resultado" class="oculto" role="alertdialog" aria-modal="true" aria-label="La misión terminó sin resultado">
+    <div class="pausa-caja">
+      <div class="kicker">La misión terminó sin resultado</div>
+      <p class="ayuda">El motor cerró la misión con la acción «fin», sin éxito ni fracaso. Puedes reintentar con la misma semilla o volver al menú.</p>
+      <button id="sin-resultado-reintentar" class="boton" type="button">Reintentar</button>
+      <button id="sin-resultado-menu" class="secundario" type="button">Volver al menú</button>
+    </div>
+  </div>
+
+  <div id="carga" class="oculto" role="status" aria-live="polite">
+    <div class="carga-caja">
+      <div id="carga-texto" class="kicker">Comenzamos en</div>
+      <div id="carga-numero">3</div>
+      <div class="carga-barra"><div id="carga-relleno"></div></div>
+    </div>
+  </div>
+
+  <div id="meta" class="oculto" role="dialog" aria-modal="true" aria-label="Fin de la misión">
+    <div class="pausa-caja meta-caja">
+      <div class="kicker" id="meta-titulo">Meta</div>
+      <div id="meta-cadena" class="ayuda oculto"></div>
+      <ul id="meta-objetivos" class="lista"></ul>
+      <div class="meta-grupo" role="group" aria-labelledby="meta-mapa-titulo">
+        <div class="kicker" id="meta-mapa-titulo">Mapa</div>
+        <div class="meta-opciones">
+          <button id="meta-repetir" class="meta-opcion" type="button" aria-pressed="true">↻ Repetir mapa</button>
+          <button id="meta-otro" class="meta-opcion" type="button" aria-pressed="false">🗺 Otro mapa</button>
+        </div>
+      </div>
+      <div class="meta-grupo" role="group" aria-labelledby="meta-dificultad-titulo">
+        <div class="kicker" id="meta-dificultad-titulo">Dificultad</div>
+        <div id="meta-dificultad" class="meta-opciones">
+          <button type="button" class="meta-opcion" data-nivel="1" aria-pressed="false">▁ Muy fácil</button>
+          <button type="button" class="meta-opcion" data-nivel="2" aria-pressed="false">▂ Fácil</button>
+          <button type="button" class="meta-opcion" data-nivel="3" aria-pressed="false">▃ Medio</button>
+          <button type="button" class="meta-opcion" data-nivel="4" aria-pressed="false">▅ Difícil</button>
+          <button type="button" class="meta-opcion" data-nivel="5" aria-pressed="false">▇ Hardcore</button>
+        </div>
+      </div>
+      <div class="meta-acciones">
+        <button id="meta-confirmar" class="boton-confirmar" type="button">Confirmar</button>
+        <button id="meta-salir" class="boton-salir" type="button">Salir al menú inicial</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pausa" class="oculto" role="dialog" aria-modal="true" aria-label="Pausa">
+    <div class="pausa-caja">
+      <div class="kicker">Pausa</div>
+      <button id="pausa-continuar" class="boton" type="button">Continuar</button>
+      <button id="pausa-reiniciar" class="secundario" type="button">Reiniciar partida</button>
+      <button id="pausa-opciones" class="secundario" type="button" aria-expanded="false">Opciones</button>
+      <div id="pausa-opciones-panel" class="oculto">
+        <label>Velocidad de reproducción
+          <select id="pausa-velocidad">
+            <option value="900">lenta</option>
+            <option value="450" selected>normal</option>
+            <option value="150">rápida</option>
+          </select>
+        </label>
+        <label class="veto"><input type="checkbox" id="pausa-camara" checked> La cámara sigue al rover</label>
+      </div>
+      <button id="pausa-salir" class="secundario" type="button">Salir al menú inicial</button>
+    </div>
+  </div>
+
+  <div id="menu">
+    <div class="caja asistente">
+      <div class="kicker">Rover autónomo · simulación planetaria</div>
+      <h1>ARES-X</h1>
+      <p>Configura la misión en cuatro pasos y pulsa Iniciar.</p>
+
+      <section class="paso">
+        <div class="titulo-seccion"><span class="num">1</span> Planeta y mapa</div>
+        <label title="Gigante: se usa modo sonda. Marte, Mercurio y el resto admiten rover o sonda.">Planeta
+          <select id="menu-planeta"></select>
+        </label>
+        <label>Tamaño del mapa
+          <select id="menu-tamano">
+            <option value="pequeno">Pequeño (20×30)</option>
+            <option value="mediano">Mediano (30×45)</option>
+            <option value="grande" selected>Grande (40×60)</option>
+          </select>
+        </label>
+        <label>Tipo de vehículo
+          <select id="menu-modo-planeta">
+            <option value="rover">rover</option>
+            <option value="sonda">sonda</option>
+          </select>
+        </label>
+        <div id="menu-planeta-aviso" class="aviso-planeta oculto" role="status">
+          <span id="menu-planeta-motivo"></span>
+          <button id="menu-usar-sonda" class="secundario" type="button">Usar sonda</button>
+        </div>
+        <div class="fila-compacta">
+          <label>Semilla <input id="menu-semilla" type="number" value="" min="0" placeholder="aleatoria"></label>
+          <label>Nivel
+            <select id="menu-nivel">
+              <option value="1">Muy fácil</option><option value="2">Fácil</option><option value="3">Medio</option>
+              <option value="4">Difícil</option><option value="5">Hardcore</option>
+            </select>
+          </label>
+          <button id="menu-aleatoria" class="secundario" type="button" title="Genera una semilla aleatoria real (1 a 999999)">Aleatoria</button>
+        </div>
+      </section>
+
+      <section class="paso">
+        <div class="titulo-seccion"><span class="num">2</span> Modo de control</div>
+        <label>Modo
+          <select id="menu-modo">
+            <option value="manual">Manual (con recomendaciones)</option>
+            <option value="rna">Solo RNA</option>
+            <option value="difuso">Solo difuso</option>
+            <option value="ag">Solo AG</option>
+            <option value="automatico">Híbrido</option>
+          </select>
+        </label>
+        <div id="menu-modo-desc" class="ayuda"></div>
+        <label class="veto" title="Con el veto, el supervisor no deja avanzar hacia barrancos u obstáculos detectados">
+          <input type="checkbox" id="menu-veto" checked> Veto de seguridad (rna, difuso, ag)
+        </label>
+        <label id="menu-misiones-fila" class="oculto">Misiones seguidas (automático)
+          <input id="menu-misiones" type="number" min="1" max="20" value="3">
+        </label>
+      </section>
+
+
+      <section class="paso paso-final">
+        <button id="iniciar" class="boton inicio" type="button"><span class="num">3</span> Iniciar misión</button>
+      </section>
+    </div>
+  </div>
+
+  <div id="mensaje" class="caja" style="padding:8px 16px;">Configura la misión y pulsa Iniciar misión.</div>
+  <ul id="registro" class="registro" aria-live="polite"></ul>
+
+  <script type="module" src="/static/app.js?v=r14"></script>
+</body>
+</html>

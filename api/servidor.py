@@ -1,0 +1,1096 @@
+"""API FastAPI de ARES-X (ARX-03). Capa delgada sobre juego/partida.py.
+
+Una sola partida por proceso, en memoria. Los errores siempre devuelven JSON con `motivo`:
+400 si la entrada no es válida, 409 si la partida ya terminó o la acción no se puede hacer ahora.
+Ninguna respuesta de error expone un traceback.
+
+Ejecutar en desarrollo (desde ares_x/):  uvicorn api.servidor:app --reload
+"""
+import csv
+import json
+import io
+import math
+import os
+import re
+import secrets
+import sys
+
+import numpy as np
+from typing import Any
+
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if RAIZ not in sys.path:
+    sys.path.insert(0, RAIZ)
+
+from integracion import forzar_probabilidad  # noqa: E402
+from juego import conduccion  # noqa: E402
+from genetico import GeneticPlanner  # noqa: E402
+from difuso import BATERIA_MAX, DISTANCIA_MAX, INCLINACION_MAX  # noqa: E402
+from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
+from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
+from juego.partida import Partida  # noqa: E402
+from simulador import MOVIMIENTOS  # noqa: E402
+
+MODOS = {"manual", "rna", "difuso", "ag", "automatico"}
+RUMBOS = {"N", "S", "E", "O", "NE", "NO", "SE", "SO"}
+EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito"}
+ESTADOS_TERMINALES = {"EXITO", "FRACASO", "SIN_RUTA", "MODO_SEGURO"}
+CARPETA_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+RADIO_EVASION = 3           # drones a esta distancia o menos activan la decisión de combate en automático
+
+
+class ErrorApi(Exception):
+    def __init__(self, status: int, motivo: str):
+        self.status = status
+        self.motivo = motivo
+
+
+class Sesion:
+    """Estado de la partida que sirve la API (uno por proceso)."""
+
+    def __init__(self, semilla: int = 11, nivel: int = 1, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE):
+        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas)
+        # el combate se crea después; se engancha para contar los drones destruidos en la victoria
+
+        self.semilla = semilla
+        self.nivel = nivel
+        self.modo = "manual"
+        self.combate = Combate(mundo=self.partida.mundo, rover=self.partida.rover, semilla=semilla)
+        self.partida.combate = self.combate
+        self.intervencion = None      # {tecnica, valor} mientras esté activa
+        self.veto = True              # veto de seguridad en los modos rna/difuso/ag (ARX-11)
+        self.historial = []           # una fila por acción del jugador o de la IA (ARX-15)
+        self.n = 0                    # contador de filas del historial
+
+    def terminada(self) -> bool:
+        return self.partida.estado in ESTADOS_TERMINALES
+
+    def exigir_activa(self):
+        if self.terminada():
+            raise ErrorApi(409, f"la partida ya terminó con estado {self.partida.estado}")
+
+
+class PartidaIn(BaseModel):
+    # Se valida a mano (validar_partida) para devolver un motivo legible; sin semilla, el backend elige una.
+    semilla: Any = None
+    nivel: Any = 1
+    tamano: Any = "grande"      # ARX-21: pequeno (20x30, el de las evaluaciones), mediano (30x45) o grande (40x60)
+    planeta: Any = "Marte"      # ev3-d39 B: planeta del escenario (validación; el terreno es el de Marte hasta el sprint 3)
+    modo: Any = "rover"         # "rover" o "sonda"
+
+
+SEMILLA_MAX = 2 ** 31 - 1
+# ARX-53: nombres de los niveles (pedido del usuario, 2026-11-14); los números 1 a 5 siguen valiendo
+NIVELES_POR_NOMBRE = {"muy_facil": 1, "muy facil": 1, "muy fácil": 1, "facil": 2, "fácil": 2,
+                      "medio": 3, "dificil": 4, "difícil": 4, "hardcore": 5}
+SEMILLA_ALEATORIA_MAX = 10 ** 6      # semillas aleatorias: 0 a 999999, fáciles de anotar para repetir
+
+
+TAMANOS = {"pequeno": (20, 30), "mediano": (30, 45), "grande": (40, 60)}
+
+
+def _tamano(nombre) -> tuple:
+    """ARX-21: nombre del tamaño del mapa → (filas, columnas). Entrada inválida → 400 legible."""
+    if nombre is None:
+        return TAMANOS["grande"]
+    if not isinstance(nombre, str) or nombre.strip().lower() not in TAMANOS:
+        raise ErrorApi(400, "tamaño inválido: usa pequeno, mediano o grande")
+    return TAMANOS[nombre.strip().lower()]
+
+
+def _validar_planeta(planeta, modo) -> None:
+    """CA-07: rover de ruedas en un gigante → 400 con la explicación y la sugerencia de modo sonda."""
+    from simulador import validar_compatibilidad, PERFILES
+    if not isinstance(planeta, str) or not isinstance(modo, str):
+        raise ErrorApi(400, "planeta y modo deben ser texto")
+    try:
+        validar_compatibilidad(planeta, modo)
+    except ValueError as exc:
+        sugerencia = None
+        if planeta in PERFILES and modo == "rover":
+            sugerencia = "usa modo sonda para este planeta"
+        raise ErrorApi(400, str(exc) + (f" Sugerencia: {sugerencia}." if sugerencia else ""))
+
+
+def validar_partida(datos: "PartidaIn") -> tuple:
+    """Devuelve (semilla, nivel) válidos o lanza ErrorApi(400) con un motivo legible (ARX-14)."""
+    s = datos.semilla
+    if s is None or (isinstance(s, str) and s.strip().lower() in ("", "aleatoria", "aleatorio", "random")):
+        semilla = secrets.randbelow(SEMILLA_ALEATORIA_MAX)
+    else:
+        mensaje_semilla = ("semilla inválida: escribe un número entero entre 0 y %d, o deja el campo vacío "
+                           "para una semilla aleatoria" % SEMILLA_MAX)
+        if isinstance(s, bool):
+            raise ErrorApi(400, mensaje_semilla)
+        if isinstance(s, str):
+            texto = s.strip()
+            if not re.fullmatch(r"\d+", texto):
+                raise ErrorApi(400, mensaje_semilla)
+            s = int(texto)
+        elif isinstance(s, float):
+            if not math.isfinite(s) or not s.is_integer():
+                raise ErrorApi(400, mensaje_semilla)
+            s = int(s)
+        elif not isinstance(s, int):
+            raise ErrorApi(400, mensaje_semilla)
+        if not 0 <= s <= SEMILLA_MAX:
+            raise ErrorApi(400, mensaje_semilla)
+        semilla = s
+    _validar_planeta(datos.planeta, datos.modo)
+    n = datos.nivel
+    mensaje_nivel = ("nivel inválido: usa un número entero entre 1 y 5, o un nombre: "
+                     "muy_facil, facil, medio, dificil, hardcore")
+    if isinstance(n, bool):
+        raise ErrorApi(400, mensaje_nivel)
+    if isinstance(n, str):
+        texto = n.strip().lower()
+        if texto in NIVELES_POR_NOMBRE:
+            n = NIVELES_POR_NOMBRE[texto]
+        elif re.fullmatch(r"\d+", texto or "x"):
+            n = int(texto)
+    if not isinstance(n, int) or not 1 <= n <= 5:
+        raise ErrorApi(400, mensaje_nivel)
+    return semilla, n
+
+
+class MoverIn(BaseModel):
+    rumbo: str
+
+
+class ModoIn(BaseModel):
+    modo: str
+    veto: Any = None                # opcional: bool; sin valor se conserva el actual
+
+
+class DisparoIn(BaseModel):
+    rumbo: str
+
+
+class EventoIn(BaseModel):
+    nombre: str
+
+
+class IntervencionIn(BaseModel):
+    tecnica: str                    # "rna", "difuso" o "apagar"
+    valor: Any = None   # rna: barranco|libre|obstaculo; difuso: número 0..1 (sin conversión previa)
+
+
+def _celda(c) -> list:
+    """Coordenada como enteros de Python (los numpy.int64 no se serializan a JSON)."""
+    return [int(c[0]), int(c[1])]
+
+
+def _estado(sesion: Sesion) -> dict:
+    p = sesion.partida
+    sug = p.sugerencia()
+    res = p.resumen()
+    return {
+        "semilla": sesion.semilla,
+        "nivel": sesion.nivel,
+        "planeta": getattr(sesion, "planeta", "Marte"),
+        "modo_planeta": getattr(sesion, "modo_planeta", "rover"),
+        "estado": p.estado_visible(),
+        "posicion": _celda(p.rover.posicion),
+        "rumbo": p.rover.rumbo,
+        "bateria": round(float(p.rover.bateria), 2),
+        "bateria_max": p.bateria_max,                # ARX-59: None en las evaluaciones congeladas
+        "recargas": int(p.recargas_hechas),          # recargas completadas en la estación
+        "puntaje": p.puntaje(),
+        "modo": sesion.modo,
+        "ambiente": p.ambiente,
+        "ambiente_restante": p.ambiente_restante,
+        "objetivo": _celda(p.objetivo) if p.objetivo else None,
+        "rumbo_sugerido": sug.get("rumbo"),
+        "colisiones": res.get("colisiones", 0),
+        "barrancos_pisados": res.get("barrancos_pisados", 0),
+        "npcs": sesion.combate.npcs(),
+        "eventos_combate": list(sesion.combate.eventos),
+        "intervencion": sesion.intervencion,
+        "veto": sesion.veto,
+        "avisos": list(p.avisos),
+        "ruta": [_celda(c) for c in (p.ruta or [])],
+        "municion": sesion.combate.municion,
+        "cooldown": sesion.combate.cooldown,
+    }
+
+
+def _ultimo_disparo(sesion: Sesion, motivos: list) -> dict:
+    """`ultimo` de un disparo: mismo formato que un movimiento (paso, accion, motivos). Un disparo no avanza la misión
+    ni escribe en su bitácora, así que el paso es el de la misión y los sensores van en blanco."""
+    tiro = getattr(sesion.combate, "ultimo_disparo", None) or {}
+    return {"paso": int(sesion.partida.mision.paso), "accion": "disparar", "velocidad": None,
+            "p_barranco": None, "p_obstaculo": None, "p_libre": None, "reglas": [], "motivos": list(motivos),
+            "rumbo": tiro.get("rumbo"), "objetivo": tiro.get("objetivo")}
+
+
+def _ultimo_paso(sesion: Sesion) -> dict:
+    """Lo que hizo la IA en el último paso (bitácora real, incluye la intervención activa)."""
+    bitacora = sesion.partida.bitacora()
+    if bitacora.empty:
+        return {}
+    fila = bitacora.iloc[-1]
+
+    def num(x):
+        return None if x is None or x != x else float(x)   # None o NaN -> None
+
+    pb, po = num(fila.get("p_barranco")), num(fila.get("p_obstaculo"))
+    reglas = [r for r in str(fila.get("reglas") or "").split(";") if r]
+    motivos = [m for m in str(fila.get("motivos") or "").split(";") if m]
+    return {
+        "paso": int(fila.get("paso")),
+        "accion": fila.get("accion"),
+        "velocidad": num(fila.get("velocidad")),
+        "p_barranco": pb,
+        "p_obstaculo": po,
+        "p_libre": None if pb is None or po is None else round(max(0.0, 1.0 - pb - po), 3),
+        "reglas": reglas,
+        "motivos": motivos,
+    }
+
+
+def _paneles(sesion: Sesion) -> dict:
+    """Entradas y salidas de cada técnica en el último paso; si no hay pasos, la sugerencia actual."""
+    sug = sesion.partida.sugerencia()
+    ultimo = _ultimo_paso(sesion)
+    base = ultimo if ultimo else {
+        "p_libre": sug.get("p_libre"), "p_obstaculo": sug.get("p_obstaculo"),
+        "p_barranco": sug.get("p_barranco"), "velocidad": sug.get("velocidad"),
+        "reglas": sug.get("reglas"), "accion": sug.get("accion"), "motivos": sug.get("motivos"),
+    }
+    return {
+        "rna": {"p_libre": base.get("p_libre"), "p_obstaculo": base.get("p_obstaculo"),
+                "p_barranco": base.get("p_barranco")},
+        # rna y ag no usan el difuso para moverse: se muestra «no usado», no una velocidad 0 (ARX-18.3)
+        "difuso": ({"usado": False, "velocidad": None, "reglas": None} if sesion.modo in ("rna", "ag")
+                   else {"usado": True, "velocidad": base.get("velocidad"), "reglas": base.get("reglas")}),
+        "ag": {"ruta_planeada": [_celda(c) for c in (sesion.partida.ruta or [])],
+               "desglose": sug.get("desglose")},
+        "supervisor": {"accion": base.get("accion"), "motivos": base.get("motivos")},
+        "intervencion": sesion.intervencion,
+        "paso": ultimo.get("paso") if ultimo else None,
+    }
+
+
+def _turno(sesion: Sesion, previos: list = ()):
+    """Un turno de combate: los drones actúan y, si el rover se queda sin batería, la partida termina.
+
+    `previos` son los eventos de la acción que ocupó el turno (p. ej. un disparo). tick() vacía la lista
+    de eventos, así que se reinyectan delante para que la respuesta muestre también el impacto.
+    """
+    sesion.combate.tick()
+    sesion.combate.eventos = list(previos) + sesion.combate.eventos
+    if sesion.partida.rover.bateria <= 0 and not sesion.terminada():
+        sesion.partida.mision.estado = "FRACASO"
+
+
+def _disparo_en_linea(sesion: Sesion):
+    """ARX-75: disparo para los modos rna, difuso y ag. Si un dron está cerca, en línea recta y en alcance, con
+    munición y sin enfriamiento, dispara (D-DISPARO-DRON). No evade ni replanifica: la técnica conduce el rover.
+    Devuelve (si_disparó, motivos)."""
+    c = sesion.combate
+    p = sesion.partida
+    r = p.rover.posicion
+    cercanos = c.drones_cerca(RADIO_EVASION)
+    if not cercanos:
+        return False, []
+    dron = min(cercanos, key=lambda d: distancia(d.pos, r))
+    df, dc = dron.pos[0] - r[0], dron.pos[1] - r[1]
+    en_linea = (df, dc) != (0, 0) and (df == 0 or dc == 0 or abs(df) == abs(dc))
+    paso = (int(np.sign(df)), int(np.sign(dc))) if en_linea else None
+    rumbo = next((k for k, v in MOVIMIENTOS.items() if v == paso), None) if paso else None
+    if rumbo is not None and distancia(dron.pos, r) <= ALCANCE_DISPARO and c.cooldown == 0 and c.municion > 0:
+        veto_motivo = _veto_disparo(sesion) if sesion.veto else None
+        if veto_motivo:
+            return False, [veto_motivo]
+        c.eventos = []
+        c.disparar(rumbo)
+        c.ultimo_disparo = {"rumbo": rumbo, "objetivo": dron.id}
+        return True, ["D-DISPARO-DRON"]
+    return False, []
+
+
+UMBRAL_RIESGO_DISPARO = 0.5    # celda de riesgo del mapa estimado a partir de la cual el supervisor veta el disparo
+BATERIA_CRITICA_DISPARO = 15.0  # batería por debajo de la cual el supervisor veta el disparo
+
+
+def _veto_disparo(sesion: Sesion):
+    """ARX-75: motivo por el que el supervisor no deja disparar (riesgo, batería crítica o modo seguro), o None."""
+    p = sesion.partida
+    pos = tuple(int(v) for v in p.rover.posicion)
+    if p.estado == "MODO_SEGURO" or p.rover.en_modo_seguro:
+        return "V-DISPARO-MODO-SEGURO"
+    if float(p.rover.bateria) < BATERIA_CRITICA_DISPARO:
+        return "V-DISPARO-BATERIA-CRITICA"
+    if float(p.mision.riesgo[pos]) >= UMBRAL_RIESGO_DISPARO:
+        return "V-DISPARO-RIESGO"
+    return None
+
+
+def _decidir_combate_automatico(sesion: Sesion):
+    """Capa de combate del modo automático (el supervisor congelado no conoce a los drones).
+
+    Si un dron está cerca y el rover puede dispararle en línea recta, dispara (D-DISPARO-DRON).
+    Si está cerca y no puede disparar, marca sus celdas vecinas como peligrosas y replanifica (V-DRON-CERCA).
+    Devuelve (si_disparó, motivos).
+    """
+    c = sesion.combate
+    p = sesion.partida
+    r = p.rover.posicion
+    cercanos = c.drones_cerca(RADIO_EVASION)
+    if not cercanos:
+        return False, []
+    dron = min(cercanos, key=lambda d: distancia(d.pos, r))
+    df, dc = dron.pos[0] - r[0], dron.pos[1] - r[1]
+    # Un dron sobre el rover (df == dc == 0) no tiene rumbo de disparo: se evade, no se dispara.
+    en_linea = (df, dc) != (0, 0) and (df == 0 or dc == 0 or abs(df) == abs(dc))
+    paso = (int(np.sign(df)), int(np.sign(dc))) if en_linea else None
+    rumbo = next((k for k, v in MOVIMIENTOS.items() if v == paso), None) if paso else None
+    if rumbo is not None and distancia(dron.pos, r) <= ALCANCE_DISPARO and c.cooldown == 0 and c.municion > 0:
+        c.eventos = []                      # solo los eventos de este disparo
+        c.disparar(rumbo)
+        c.ultimo_disparo = {"rumbo": rumbo, "objetivo": dron.id}
+        return True, ["D-DISPARO-DRON"]
+    # Evitar: solo la celda del dron cuenta como peligrosa para el plan, y se restaura después.
+    # Marcar también sus vecinos puede cortar el único pasillo hacia el refugio (SIN_RUTA).
+    mision = p.mision
+    celdas = [d.pos for d in c.drones_cerca(RADIO_EVASION)]
+    originales = {celda: mision.riesgo[celda] for celda in celdas}
+    ruta_anterior = list(mision.ruta)
+    for celda in celdas:
+        mision.riesgo[celda] = 1.0
+    try:
+        mision._planear()
+        if not mision.ruta:                 # sin ruta alternativa: se conserva el plan anterior
+            mision.ruta = ruta_anterior
+    finally:
+        for celda, valor in originales.items():
+            mision.riesgo[celda] = valor
+    return False, ["V-DRON-CERCA"]
+
+
+CAMPOS_HISTORIAL = ["n", "modo", "accion", "tecnica", "motivo", "paso_mision", "estado", "posicion", "bateria",
+                    "velocidad", "p_libre", "p_obstaculo", "p_barranco", "reglas", "ruta_largo", "fitness",
+                    "evento", "intervencion"]
+TECNICAS = {"humano", "rna", "difuso", "ag", "supervisor", "combate", "escenario"}
+
+
+def _anotar(sesion: Sesion, accion: str, tecnica: str, motivos=(), ultimo: dict = None):
+    """Añade una fila al historial con el estado después de la acción (ARX-15)."""
+    p = sesion.partida
+    u = ultimo or {}
+    fitness = None
+    if tecnica == "ag" and p.ruta:
+        des = p.sugerencia().get("desglose")
+        fitness = des.get("fitness") if des else None
+    sesion.n += 1
+    sesion.historial.append({
+        "n": sesion.n, "modo": sesion.modo, "accion": accion, "tecnica": tecnica,
+        "motivo": ";".join(m for m in motivos if m),
+        "paso_mision": int(p.mision.paso), "estado": p.estado,
+        "posicion": _celda(p.rover.posicion), "bateria": round(float(p.rover.bateria), 2),
+        "velocidad": u.get("velocidad"), "p_libre": u.get("p_libre"), "p_obstaculo": u.get("p_obstaculo"),
+        "p_barranco": u.get("p_barranco"), "reglas": ";".join(u.get("reglas") or []),
+        "ruta_largo": len(p.ruta or []), "fitness": fitness,
+        "evento": ";".join(sesion.combate.eventos), "intervencion": (
+            f"{sesion.intervencion['tecnica']}:{sesion.intervencion['valor']}" if sesion.intervencion else ""),
+    })
+
+
+def _filtrar_historial(sesion: Sesion, desde: int = 0, modo: str = None, tecnica: str = None,
+                       motivo: str = None) -> list:
+    filas = [f for f in sesion.historial if f["n"] >= desde]
+    if modo:
+        filas = [f for f in filas if f["modo"] == modo]
+    if tecnica:
+        filas = [f for f in filas if f["tecnica"] == tecnica]
+    if motivo:
+        filas = [f for f in filas if motivo in f["motivo"]]
+    return filas
+
+
+def _desglose_fitness(d) -> dict:
+    """Desglose del fitness con los nombres de la consigna (inviabilidad = penalización por restricciones)."""
+    return {"fitness": float(d.fitness), "ciencia": float(d.ciencia), "distancia": float(d.distancia),
+            "energia": float(d.energia), "riesgo": float(d.riesgo), "tiempo": float(d.tiempo),
+            "inviabilidad": float(d.penalizacion)}
+
+
+def _valor_entrada(texto, nombre: str, minimo: float, maximo: float):
+    """Valor numérico de una entrada manual del difuso; NaN, texto o fuera de rango → 400 legible."""
+    if texto is None:
+        return None
+    try:
+        v = float(texto)
+    except (TypeError, ValueError):
+        raise ErrorApi(400, f"{nombre} debe ser un número")
+    if not math.isfinite(v):
+        raise ErrorApi(400, f"{nombre} debe ser un número finito")
+    if not minimo <= v <= maximo:
+        raise ErrorApi(400, f"{nombre} fuera de rango [{minimo:g}, {maximo:g}]")
+    return v
+
+
+def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, temperatura: float = 0.0) -> dict:
+    """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2)."""
+    from difuso import CONJUNTOS, REGLAS, SALIDA, TEMPERATURA_TOLERANCIA, _rango
+    m = sesion.partida.mision
+    res = m.difuso.inferir(distancia, bateria, inclinacion, temperatura)
+    universos, curvas = {}, {}
+    for var, conjuntos in CONJUNTOS.items():
+        lo, hi = _rango(var)
+        xs = np.linspace(lo, hi, 101)
+        universos[var] = {"min": float(lo), "max": float(hi)}
+        curvas[var] = {"x": [round(float(x), 3) for x in xs],
+                       "conjuntos": {nombre: [round(float(f(x)), 4) for x in xs] for nombre, f in conjuntos.items()}}
+    ys = np.linspace(0.0, 1.0, 101)
+    return {
+        "entradas": {"distancia": float(distancia), "bateria": float(bateria), "inclinacion": float(inclinacion),
+                     "temperatura": float(temperatura)},
+        "universos": universos,
+        "curvas": curvas,
+        "punto_entrada": {var: {c: round(float(g), 4) for c, g in res.membresias[var].items()}
+                          for var in res.membresias},
+        "reglas_activadas": [{"id": i, "fuerza": round(float(f), 4), "motivo": mo}
+                             for i, f, mo in res.reglas_activadas],
+        "aborto": ({"activo": True, "motivo": f"temperatura {temperatura:g} °C por encima de la tolerancia "
+                                              f"({TEMPERATURA_TOLERANCIA:g} °C): abortar o aislar (§12)"}
+                   if temperatura > TEMPERATURA_TOLERANCIA else {"activo": False, "motivo": None}),
+        "reglas": [{"id": r["id"], "si": [list(c) for c in r["si"]], "entonces": r["entonces"],
+                    "motivo": r["motivo"]} for r in REGLAS],
+        "salida": {"velocidad": round(float(res.velocidad), 4), "fallback": bool(res.fallback),
+                   "universo": [round(float(y), 3) for y in ys],
+                   "conjuntos": {nombre: [round(float(f(y)), 4) for y in ys] for nombre, f in SALIDA.items()},
+                   "agregado": [round(float(a), 4) for a in res.agregado] if res.agregado is not None else None},
+    }
+
+
+_cache_evaluacion_rna = {}
+_cache_ag = {}
+_cache_comparacion = {}
+COMPARACION_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                "docs", "COMPARACION_POLITICAS.json")
+
+
+def _rna_entrada(sesion, proximidad, borde, gradiente, vibracion) -> dict:
+    """Entrada → normalización → activaciones de las capas → probabilidades → acción (CA-06, §10.1).
+
+    Las activaciones se calculan con los pesos del MLP (ReLU en las ocultas, softmax a la salida).
+    `rna.py` no se modifica. La acción la decide el supervisor con los mismos valores.
+    """
+    from rna import NOMBRES_RASGOS, CLASES
+    m = sesion.partida.mision
+    nn = m.rna.modelo if hasattr(m.rna, "modelo") else m.rna._rna.modelo
+    esc = m.rna.escalador if hasattr(m.rna, "escalador") else m.rna._rna.escalador
+    x = np.asarray([proximidad, borde, gradiente, vibracion], dtype=float)
+    z = esc.transform(x.reshape(1, -1))[0]
+    capas = [z]
+    a = z
+    for i, (W, b) in enumerate(zip(nn.coefs_, nn.intercepts_)):
+        pre = a @ W + b
+        a = np.maximum(pre, 0.0) if i < len(nn.coefs_) - 1 else pre
+        capas.append(a)
+    e = np.exp(capas[-1] - capas[-1].max())
+    probs = e / e.sum()
+    proba = {CLASES[c]: round(float(p), 4) for c, p in zip(nn.classes_, probs)}
+    # altimetria_m no es entrada de la RNA: se pasa 0 para que el supervisor pueda decidir
+    lectura = {"proximidad_frontal_m": float(proximidad), "altimetria_m": 0.0, "borde_barranco": bool(borde >= 0.5)}
+    dec = m.supervisor.decidir({k: float(v) for k, v in zip(["libre", "obstáculo", "barranco"],
+                                                             [proba.get("libre", 0), proba.get("obstáculo", 0),
+                                                              proba.get("barranco", 0)])},
+                               0.5, lectura, float(sesion.partida.rover.bateria))
+    return {
+        "entrada": dict(zip(NOMBRES_RASGOS, [float(v) for v in x])),
+        "normalizada": dict(zip(NOMBRES_RASGOS, [round(float(v), 4) for v in z])),
+        "activaciones": {"oculta_1": [round(float(v), 4) for v in capas[1]],
+                         "oculta_2": [round(float(v), 4) for v in capas[2]],
+                         "salida_logits": [round(float(v), 4) for v in capas[3]]},
+        "probabilidades": proba,
+        "confianza": round(float(probs.max()), 4),
+        "accion": dec.accion,
+        "motivos": list(dec.motivos),
+    }
+
+
+def _evaluacion_rna_notebook() -> dict:
+    """Evaluación reproducible del informe: 60 mapas (42/9/9), 400 muestras por mapa, prueba en los mapas 51-59.
+    Es la misma configuración de construir_notebook.py. Se calcula una vez por proceso."""
+    if "notebook" in _cache_evaluacion_rna:
+        return _cache_evaluacion_rna["notebook"]
+    from rna import generar_dataset, particion_por_mapas, NeuralPerception, CLASES
+    tr, _, te = particion_por_mapas(total_mapas=60)
+    X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400)
+    X_te, y_te = generar_dataset(te, muestras_por_mapa=400)
+    res = NeuralPerception(semilla=42).entrenar(X_tr, y_tr).evaluar(X_te, y_te)
+    datos = {
+        "configuracion": "notebook: 60 mapas (42/9/9), 400 muestras por mapa, semilla 42",
+        "clases": [CLASES[c] for c in sorted(CLASES)],
+        "matriz_confusion": res.matriz_confusion.tolist(),
+        "macro_f1": round(float(res.macro_f1), 3),
+        "recall_barranco": round(float(res.recall_barranco), 3),
+        "error_calibracion": round(float(res.error_calibracion), 3),
+        "linea_base_exactitud": round(float(res.precision_base), 3),
+        "muestras_prueba": int(len(y_te)),
+        "mapas_prueba": [int(v) for v in te],
+    }
+    _cache_evaluacion_rna["notebook"] = datos
+    return datos
+
+
+def _evaluacion_rna(sesion) -> dict:
+    """Matriz de confusión, macro-F1, recall de barrancos y línea base de la RNA del juego (CA-06).
+
+    Usa los mapas de prueba de la misma partición con la que se entrena el modelo del juego
+    (`integracion.rna_entrenada`: 30 mapas). Es distinta de la evaluación de 60 mapas del INFORME.
+    Se calcula una vez por proceso.
+    """
+    if "datos" in _cache_evaluacion_rna:
+        return _cache_evaluacion_rna["datos"]
+    from rna import generar_dataset, particion_por_mapas, CLASES
+    m = sesion.partida.mision
+    _, _, prueba = particion_por_mapas(total_mapas=30)
+    X, y = generar_dataset(prueba, muestras_por_mapa=300)
+    base = m.rna._rna if hasattr(m.rna, "_rna") else m.rna
+    res = base.evaluar(X, y)
+    datos = {
+        "clases": [CLASES[c] for c in sorted(CLASES)],
+        "matriz_confusion": res.matriz_confusion.tolist(),
+        "macro_f1": round(float(res.macro_f1), 4),
+        "recall_barranco": round(float(res.recall_barranco), 4),
+        "error_calibracion": round(float(res.error_calibracion), 4),
+        "linea_base_exactitud": round(float(res.precision_base), 4),
+        "muestras_prueba": int(len(y)),
+        "mapas_prueba": [int(v) for v in prueba],
+        "configuracion": "juego: 30 mapas (21/4/5), 300 muestras por mapa; modelo que usa la partida",
+    }
+    _cache_evaluacion_rna["datos"] = datos
+    return datos
+
+
+def _valor_rango(texto, nombre: str, minimo: float, maximo: float, por_defecto: float) -> float:
+    """Entrada manual de la RNA dentro de un rango; sin valor usa el por defecto de la lectura real."""
+    if texto is None:
+        return float(por_defecto)
+    v = _valor_entrada(texto, nombre, minimo, maximo)
+    return float(por_defecto) if v is None else float(v)
+
+
+_RAZONES = {
+    "RNA-MAX-PLIBRE": "la RNA ve la celda de enfrente como la más libre",
+    "AG-SIGUE-RUTA": "el AG sigue la ruta que planificó",
+    "D-VELOCIDAD-OK": "el difuso da velocidad suficiente",
+    "D-VELOCIDAD-BAJA": "el difuso da velocidad baja: conviene esperar",
+    "D-RODEO": "el difuso rodea el obstáculo",
+    "OK": "no hay peligro en la siguiente celda",
+    "REPLAN-SIN-RUTA": "no hay ruta: conviene replanificar",
+}
+
+
+def _razon_corta(modelo: str, motivos: list, accion) -> str:
+    """Una razón corta en español para la recomendación (ARX-55)."""
+    for m in motivos:
+        if m in _RAZONES:
+            return _RAZONES[m]
+    if motivos and motivos[0].startswith("V-"):
+        return f"la supervisión veta el paso ({motivos[0]})"
+    if accion == "detener":
+        return "conviene detenerse"
+    if accion == "replanificar":
+        return "conviene replanificar la ruta"
+    return f"{modelo} propone {accion}" if accion else f"{modelo} no tiene propuesta"
+
+
+def _rumbo_entre(a, b) -> str | None:
+    """Nombre del rumbo (N, NE...) de la celda a a la b, o None si no hay movimiento."""
+    from simulador import MOVIMIENTOS
+    paso = (b[0] - a[0], b[1] - a[1])
+    for nombre, delta in MOVIMIENTOS.items():
+        if tuple(delta) == paso:
+            return nombre
+    return None
+
+
+def _validar_rumbo(rumbo: str):
+    if rumbo not in RUMBOS:
+        raise ErrorApi(400, f"rumbo inválido: {rumbo!r}; usa uno de {sorted(RUMBOS)}")
+
+
+def crear_app(sesion: Sesion = None) -> FastAPI:
+    """Sin `sesion` la app arranca sin partida: la página muestra el menú y crea la partida con POST /partida."""
+    app = FastAPI(title="ARES-X API", version="0.3.0")
+    app.state.sesion = sesion
+
+    def activa() -> Sesion:
+        if app.state.sesion is None:
+            raise ErrorApi(409, "sin partida: crea una con POST /partida")
+        return app.state.sesion
+
+    @app.exception_handler(ErrorApi)
+    async def _error_api(request: Request, exc: ErrorApi):
+        return JSONResponse(status_code=exc.status, content={"ok": False, "motivo": exc.motivo})
+
+    @app.exception_handler(RequestValidationError)
+    async def _error_validacion(request: Request, exc: RequestValidationError):
+        return JSONResponse(status_code=400, content={"ok": False, "motivo": "entrada inválida",
+                                                      "detalle": exc.errors()[:3]})
+
+    @app.exception_handler(Exception)
+    async def _error_interno(request: Request, exc: Exception):
+        # Nunca se devuelve un traceback al cliente; el detalle queda fuera de la respuesta.
+        return JSONResponse(status_code=500, content={"ok": False, "motivo": "error interno"})
+
+    app.mount("/static", StaticFiles(directory=CARPETA_STATIC), name="static")
+
+    @app.middleware("http")
+    async def _sin_cache_interfaz(request: Request, call_next):
+        # O11: la interfaz se corrige a menudo; el navegador debe revalidar y no usar módulos JS viejos
+        respuesta = await call_next(request)
+        if request.url.path == "/" or request.url.path.startswith("/static/"):
+            respuesta.headers["Cache-Control"] = "no-cache"
+        return respuesta
+
+    @app.get("/")
+    def pagina():
+        return FileResponse(os.path.join(CARPETA_STATIC, "index.html"))
+
+    @app.get("/mapa")
+    def mapa():
+        """Terreno de la partida actual para dibujar la escena (no cambia la partida)."""
+        mundo = activa().partida.mundo
+        return {
+            "filas": int(mundo.tipo.shape[0]),
+            "columnas": int(mundo.tipo.shape[1]),
+            "tipo": mundo.tipo.tolist(),
+            "inicio": _celda(mundo.inicio),
+            "refugio": _celda(mundo.refugio),
+            "sitios": [{"pos": _celda(p), "valor": int(v)} for p, v in mundo.sitios.items()],
+            "estaciones": [[int(f), int(c)] for f, c in activa().partida.estaciones],   # ARX-59 (§14)
+        }
+
+    @app.get("/estado")
+    def estado():
+        """Nunca responde 500 por un submódulo: si algo falla, entrega lo que tiene y un campo `error`.
+        La traza completa queda en la consola del servidor."""
+        if app.state.sesion is None:
+            return {"sin_partida": True, "motivo": "sin partida: pulsa Iniciar partida"}
+        sesion = app.state.sesion
+        try:
+            return _estado(sesion)
+        except Exception as exc:
+            import logging
+            logging.getLogger("ares_x").exception("fallo al construir /estado")
+            p = sesion.partida
+            return {"semilla": sesion.semilla, "nivel": sesion.nivel, "estado": p.estado,
+                    "posicion": _celda(p.rover.posicion), "bateria": round(float(p.rover.bateria), 2),
+                    "modo": sesion.modo, "error": {"tipo": type(exc).__name__,
+                                                  "motivo": "error en un submódulo; ver la consola del servidor"}}
+
+    @app.post("/partida")
+    def nueva_partida(datos: PartidaIn):
+        semilla, nivel = validar_partida(datos)
+        try:
+            filas, columnas = _tamano(datos.tamano)
+            app.state.sesion = Sesion(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas)
+            app.state.sesion.planeta = datos.planeta
+            app.state.sesion.modo_planeta = datos.modo
+        except ValueError as exc:
+            raise ErrorApi(400, str(exc))
+        return _estado(app.state.sesion)
+
+    @app.post("/mover")
+    def mover(datos: MoverIn):
+        sesion = activa()
+        _validar_rumbo(datos.rumbo)
+        sesion.exigir_activa()
+        r = sesion.partida.mover_jugador(datos.rumbo)
+        if r.get("movido"):
+            _turno(sesion)
+        _anotar(sesion, "mover" if r.get("movido") else "bloqueado", "humano", [r.get("motivo")])
+        return {"movido": bool(r.get("movido")), "motivo": r.get("motivo"),
+                "estado": sesion.partida.estado_visible(), "eventos_combate": list(sesion.combate.eventos)}
+
+    @app.post("/paso")
+    def paso():
+        sesion = activa()
+        sesion.exigir_activa()
+        motivos_combate = []
+        if sesion.modo in conduccion.MODOS_CONDUCCION:
+            # Modos sueltos (ARX-11): la técnica elegida conduce el rover sola; con un dron en línea, dispara (ARX-75)
+            disparo_hecho, motivos_disparo = _disparo_en_linea(sesion)
+            if disparo_hecho:
+                _turno(sesion, previos=list(sesion.combate.eventos))
+                _anotar(sesion, "disparar", sesion.modo, motivos_disparo)
+                return {"accion": "disparar", "motivos": motivos_disparo,
+                        "estado": sesion.partida.estado_visible(), "ultimo": _ultimo_disparo(sesion, motivos_disparo),
+                        "eventos_combate": list(sesion.combate.eventos)}
+            r = sesion.partida.avanzar_modo(sesion.modo, sesion.veto)
+            motivos = motivos_disparo + r.get("motivos", [])   # el veto del disparo también queda anotado (ARX-75)
+            _turno(sesion)
+            _anotar(sesion, r.get("accion"), sesion.modo, motivos, _ultimo_paso(sesion))
+            return {"accion": r.get("accion"), "motivos": motivos,
+                    "estado": sesion.partida.estado_visible(), "ultimo": _ultimo_paso(sesion),
+                    "eventos_combate": list(sesion.combate.eventos)}
+        if sesion.modo == "automatico":
+            disparo_hecho, motivos_combate = _decidir_combate_automatico(sesion)
+            if disparo_hecho:
+                # El turno lo ocupó el disparo; la IA no avanza en este paso
+                disparo_eventos = list(sesion.combate.eventos)
+                _turno(sesion, previos=disparo_eventos)
+                _anotar(sesion, "disparar", "combate", motivos_combate)
+                return {"accion": "disparar", "motivos": motivos_combate,
+                        "estado": sesion.partida.estado_visible(), "ultimo": _ultimo_disparo(sesion, motivos_combate),
+                        "eventos_combate": list(sesion.combate.eventos)}
+        r = sesion.partida.avanzar_ia()
+        _turno(sesion)
+        ultimo = _ultimo_paso(sesion)
+        # La acción y los motivos son los del paso real (incluye la intervención activa)
+        motivos = ultimo.get("motivos", r.get("motivos", []))
+        _anotar(sesion, ultimo.get("accion", r.get("accion")), "supervisor", motivos_combate + motivos, ultimo)
+        return {"accion": ultimo.get("accion", r.get("accion")),
+                "motivos": motivos_combate + motivos if motivos_combate else motivos,
+                "estado": sesion.partida.estado_visible(), "ultimo": ultimo,
+                "eventos_combate": list(sesion.combate.eventos)}
+
+    @app.post("/modo")
+    def modo(datos: ModoIn):
+        sesion = activa()
+        if datos.modo not in MODOS:
+            raise ErrorApi(400, f"modo inválido: {datos.modo!r}; usa uno de {sorted(MODOS)}")
+        if datos.veto is not None:
+            if not isinstance(datos.veto, bool):
+                raise ErrorApi(400, "veto debe ser true o false")
+            sesion.veto = datos.veto
+        sesion.modo = datos.modo
+        sesion.partida.modo_ia = datos.modo
+        return _estado(sesion)
+
+    @app.post("/disparo")
+    def disparo(datos: DisparoIn):
+        sesion = activa()
+        _validar_rumbo(datos.rumbo)
+        sesion.exigir_activa()
+        sesion.combate.eventos = []         # solo los eventos de este disparo
+        try:
+            res = sesion.combate.disparar(datos.rumbo)
+        except ValueError as exc:
+            raise ErrorApi(409, str(exc))
+        disparo_eventos = list(sesion.combate.eventos)
+        _turno(sesion, previos=disparo_eventos)
+        _anotar(sesion, "disparar", "humano", [] if res.get("impacto") else ["sin impacto"])
+        return {**res, "eventos_combate": list(sesion.combate.eventos)}
+
+    @app.post("/evento")
+    def evento(datos: EventoIn):
+        sesion = activa()
+        if datos.nombre not in EVENTOS:
+            raise ErrorApi(400, f"evento inválido: {datos.nombre!r}; usa uno de {sorted(EVENTOS)}")
+        sesion.exigir_activa()
+        r = sesion.partida.disparar_evento(datos.nombre)
+        _anotar(sesion, f"evento:{datos.nombre}", "escenario", [datos.nombre])
+        return r
+
+    @app.get("/ag")
+    def diagnostico_ag(parada_sin_mejora: int = None):
+        """Diagnóstico del AG sobre los sitios pendientes (CA-04, RF-11): historial por generación con
+        cromosomas, fitness y operación; los 3 mejores con su desglose; cruces y mutaciones efectivas.
+        `parada_sin_mejora=n` para tras n generaciones sin mejora (§12). No cambia la partida."""
+        p = activa().partida
+        pendientes = {c: v for c, v in p.mundo.sitios.items() if c not in p.mision.visitados}
+        if not pendientes:
+            return {"sin_sitios": True, "motivo": "no quedan sitios científicos pendientes"}
+        clave = (p.mision.semilla, tuple(sorted(pendientes)), tuple(p.rover.posicion),
+                 p.mision.riesgo.tobytes(), parada_sin_mejora)
+        if clave in _cache_ag:
+            return _cache_ag[clave]
+        if parada_sin_mejora is not None and (isinstance(parada_sin_mejora, bool) or parada_sin_mejora < 1):
+            raise ErrorApi(400, "parada_sin_mejora debe ser un entero mayor que 0")
+        from dataclasses import replace as reemplazar
+        gp = GeneticPlanner(reemplazar(p.mundo, inicio=p.rover.posicion, sitios=pendientes), p.mision.riesgo,
+                            bateria=max(p.rover.bateria, 1.0), k_puntos=p.mision.k, poblacion=30,
+                            generaciones=30, semilla=p.mision.semilla)
+        res = gp.optimizar(parada_sin_mejora=parada_sin_mejora)
+        salida = {
+            "parametros": {"poblacion": gp.poblacion, "generaciones": gp.generaciones, "k_puntos": gp.k,
+                           "prob_cruce": gp.prob_cruce, "prob_mutacion": gp.prob_mutacion, "elite": gp.elite,
+                           "torneo": gp.torneo, "semilla": p.mision.semilla, "pesos": gp.pesos,
+                           "parada_sin_mejora": parada_sin_mejora},
+            "generaciones": res.historial,
+            "candidatos": [{"cromosoma": [list(map(int, c)) for c in cr],
+                            "fitness": float(d.fitness), "desglose": _desglose_fitness(d)}
+                           for cr, d in res.candidatos],
+            "mejor_ruta": [_celda(c) for c in res.mejor_ruta],
+            "mejor_desglose": _desglose_fitness(res.mejor_desglose),
+            "cruces": gp.cruces, "mutaciones": gp.mutaciones,
+            "generaciones_ejecutadas": len(res.historial),
+        }
+        if len(_cache_ag) >= 16:
+            _cache_ag.pop(next(iter(_cache_ag)))
+        _cache_ag[clave] = salida
+        return salida
+
+    @app.get("/rna")
+    def diagnostico_rna(proximidad: str = None, borde: str = None, gradiente: str = None,
+                        vibracion: str = None):
+        """Laboratorio RNA (CA-06): entrada editable → normalización → activaciones → probabilidades → acción.
+        Sin parámetros usa la celda de enfrente en el rumbo del rover."""
+        sesion = activa()
+        p = sesion.partida
+        from juego.conduccion import _observar
+        obs = _observar(p)
+        base = obs.get(p.rover.rumbo or "N") or next(iter(obs.values()))
+        rasgos = base["rasgos"]
+        prox = _valor_rango(proximidad, "proximidad", 0.0, 20.0, rasgos[0])
+        bor = _valor_rango(borde, "borde", 0.0, 1.0, rasgos[1])
+        grad = _valor_rango(gradiente, "gradiente", -10.0, 10.0, rasgos[2])
+        vib = _valor_rango(vibracion, "vibracion", -5.0, 5.0, rasgos[3])
+        return _rna_entrada(sesion, prox, bor, grad, vib)
+
+    @app.get("/rna/evaluacion")
+    def evaluacion_rna(modelo: str = "notebook"):
+        """Matriz de confusión, macro-F1, recall de barrancos y línea base de la RNA (CA-06).
+        `modelo=notebook` (por defecto): la cifra reproducible del informe. `modelo=juego`: el modelo que usa la partida.
+        La primera llamada de cada modelo tarda (entrena); después queda en caché."""
+        if modelo == "notebook":
+            return _evaluacion_rna_notebook()
+        if modelo == "juego":
+            return _evaluacion_rna(activa())
+        raise ErrorApi(400, "modelo debe ser notebook o juego")
+
+    @app.get("/difuso")
+    def diagnostico_difuso(distancia: str = None, bateria: str = None, inclinacion: str = None,
+                           temperatura: str = None):
+        """Laboratorio difuso (CA-05, §10.2). Sin parámetros usa el estado actual de la partida.
+        Las entradas manuales son opcionales; NaN o fuera de rango → 400 con motivo."""
+        sesion = activa()
+        p = sesion.partida
+        dist_actual = float(p.mision._distancia_a_riesgo_en_ruta())
+        d = _valor_entrada(distancia, "distancia", 0.0, DISTANCIA_MAX)
+        b = _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
+        i = _valor_entrada(inclinacion, "inclinacion", 0.0, INCLINACION_MAX)
+        t = _valor_entrada(temperatura, "temperatura", -80.0, 80.0)
+        return _difuso_datos(sesion,
+                             d if d is not None else min(dist_actual, DISTANCIA_MAX),
+                             b if b is not None else float(p.rover.bateria),
+                             i if i is not None else 0.0,
+                             t if t is not None else 0.0)
+
+    @app.get("/difuso/barrido")
+    def barrido_difuso(desde: float = 10.0, hasta: float = 1.0, paso: float = 1.0, bateria: str = None,
+                       inclinacion: str = None, temperatura: str = None):
+        """Barrido de la distancia (CA-05: de 10 m a 1 m). Devuelve velocidad y reglas por cada valor."""
+        sesion = activa()
+        if not (math.isfinite(desde) and math.isfinite(hasta) and math.isfinite(paso)) or paso <= 0:
+            raise ErrorApi(400, "desde, hasta y paso deben ser números finitos y el paso mayor que 0")
+        if not (0.0 <= min(desde, hasta) and max(desde, hasta) <= DISTANCIA_MAX):
+            raise ErrorApi(400, f"la distancia debe estar en [0, {DISTANCIA_MAX:g}]")
+        if (abs(desde - hasta) / paso) > 200:
+            raise ErrorApi(400, "barrido demasiado largo: como máximo 200 valores")
+        b = _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
+        i = _valor_entrada(inclinacion, "inclinacion", 0.0, INCLINACION_MAX)
+        b = float(sesion.partida.rover.bateria) if b is None else b
+        i = 0.0 if i is None else i
+        t = _valor_entrada(temperatura, "temperatura", -80.0, 80.0)
+        t = 0.0 if t is None else t
+        n = int(round(abs(desde - hasta) / paso)) + 1
+        valores = [desde + (hasta - desde) * k / (n - 1) for k in range(n)] if n > 1 else [desde]
+        filas = []
+        for d in valores:
+            res = sesion.partida.mision.difuso.inferir(d, b, i, t)
+            filas.append({"distancia": round(float(d), 3), "velocidad": round(float(res.velocidad), 4),
+                          "fallback": bool(res.fallback),
+                          "reglas": [{"id": r, "fuerza": round(float(f), 4)} for r, f, _ in res.reglas_activadas]})
+        return {"bateria": b, "inclinacion": i, "temperatura": t, "filas": filas}
+
+    @app.get("/moviles")
+    def moviles():
+        """Elementos móviles por paso (ARX-29): drones con su trayectoria, eventos del último turno y la ruta
+        planificada frente a la ejecutada. Obstáculos móviles, meteoritos y los demás eventos de ev3-d41 llegarán
+        en ARX-30; por ahora la lista de `obstaculos_moviles` va vacía."""
+        sesion = activa()
+        p = sesion.partida
+        drones = []
+        for n in sesion.combate.npcs():
+            tray = sesion.combate.trayectorias.get(n["id"], [n["pos"]])
+            drones.append({"id": f"dron-{n['id']}", "tipo": "dron", "pos": n["pos"], "trayectoria": tray,
+                           "estado": n["estado"], "vida": n["vida"]})
+        ejecutada = []
+        for f in sesion.historial:
+            pos = f["posicion"]
+            if not ejecutada or ejecutada[-1] != pos:
+                ejecutada.append(pos)
+        actual = [int(p.rover.posicion[0]), int(p.rover.posicion[1])]
+        if not ejecutada or ejecutada[-1] != actual:
+            ejecutada.append(actual)
+        # ARX-30 (borrador §10): los meteoritos van dentro de `moviles` y su evento en `eventos_del_paso`
+        for m in p.meteoritos:
+            f, c = m["impacto"]
+            # caída de 3 puntos que termina en el impacto (aproximada en diagonal, dentro del mapa)
+            trayectoria = [[max(0, f - k), max(0, c - k)] for k in (2, 1, 0)]
+            drones.append({"id": f"meteorito-{m['paso']}", "tipo": "meteorito", "pos": _celda(m["impacto"]),
+                           "trayectoria": trayectoria, "impacto": True,
+                           "zona_riesgo": [_celda(z) for z in m["zona_riesgo"]]})
+        eventos = [{"texto": e} for e in sesion.combate.eventos]
+        eventos += [{"nombre": "meteorito", "efecto": "zona_riesgo", "celdas": [_celda(c) for c in m["zona_riesgo"]]}
+                    for m in p.meteoritos if m["paso"] == int(p.mision.paso)]
+        return {
+            "paso": int(p.mision.paso),
+            "moviles": drones,
+            "obstaculos_moviles": [],
+            "eventos_del_paso": eventos,
+            "ruta": {"planificada": [_celda(c) for c in (p.ruta or [])], "ejecutada": ejecutada},
+        }
+
+    @app.get("/recomendacion")
+    def recomendacion():
+        """ARX-55: el paso que propone cada modelo desde la posición actual, sin ejecutarlo en la partida real.
+
+        Cada modelo corre sobre una copia de la partida. Modelos: hibrido (controlador completo), rna, difuso y ag.
+        Sirve en modo manual, para que los modelos actúen como recomendadores (pedido del usuario, 2026-11-14).
+        """
+        import copy
+        sesion = activa()
+        p = sesion.partida
+        if p.estado in ESTADOS_TERMINALES:
+            raise ErrorApi(409, f"la partida ya terminó con estado {p.estado}")
+        pos0 = tuple(int(x) for x in p.rover.posicion)
+        propuestas = []
+        for modelo in ("hibrido", "rna", "difuso", "ag"):
+            copia = copy.deepcopy(p)
+            if modelo == "hibrido":
+                r = copia.avanzar_ia()
+            else:
+                r = copia.avanzar_modo(modelo, sesion.veto)
+            pos1 = tuple(int(x) for x in copia.rover.posicion)
+            motivos = [m for m in (r.get("motivos") or []) if m]
+            propuestas.append({
+                "modelo": modelo,
+                "accion": r.get("accion"),
+                "rumbo": _rumbo_entre(pos0, pos1),
+                "razon": _razon_corta(modelo, motivos, r.get("accion")),
+                "motivos": motivos,
+            })
+        return {"posicion": list(pos0), "modo_actual": sesion.modo, "propuestas": propuestas}
+
+    @app.get("/objetivos")
+    def objetivos():
+        """ARX-66: condiciones de victoria de la misión (esquema acordado con Diseño). Progreso real del motor:
+        sitios científicos visitados y drones destruidos; llegar al refugio cumple la misión."""
+        sesion = activa()
+        p = sesion.partida
+        total_sitios = len(p.mundo.sitios)
+        visitados = len(p.mision.visitados)
+        total_drones = len(sesion.combate.drones)
+        destruidos = int(sesion.combate.bajas)
+        condiciones = [
+            {"nombre": "Sitios científicos", "progreso": visitados, "total": total_sitios,
+             "cumplido": visitados >= total_sitios, "obligatorio": True},
+            {"nombre": "Drones destruidos", "progreso": destruidos, "total": total_drones,
+             "cumplido": destruidos >= total_drones, "obligatorio": p.drones_obligatorios()},
+            {"nombre": "Llegar al refugio", "progreso": 1 if p.estado == "EXITO" else 0, "total": 1,
+             "cumplido": p.estado == "EXITO", "obligatorio": True},
+        ]
+        nombres = {1: "muy fácil", 2: "fácil", 3: "medio", 4: "difícil", 5: "hardcore"}
+        return {"mision": f"Visitar {total_sitios} sitios científicos y llegar al refugio (nivel {nombres.get(sesion.nivel, sesion.nivel)}).",
+                "condiciones": condiciones}
+
+    @app.get("/planetas")
+    def planetas():
+        """Planetas del escenario y su modo viable (ev3-d39 B, CA-07). El modo activo es el de la partida."""
+        from simulador import PERFILES
+        sesion = app.state.sesion
+        lista = []
+        for nombre, perfil in PERFILES.items():
+            lista.append({"nombre": nombre, "modo": perfil.modo, "viable": perfil.modo == "rover",
+                          "motivo": None if perfil.modo == "rover" else
+                          f"{nombre} es un gigante sin suelo accesible: no admite rodaje; usa modo sonda"})
+        activo = ({"planeta": getattr(sesion, "planeta", "Marte"), "modo": getattr(sesion, "modo_planeta", "rover")}
+                  if sesion is not None else None)
+        return {"planetas": lista, "modos": ["rover", "sonda"], "activo": activo}
+
+    @app.get("/comparacion")
+    def comparacion(semillas: int = 20):
+        """Comparación de políticas (RF-14, RF-15): híbrido frente a sin RNA, sin difuso y sin AG.
+        Con 20 semillas sirve docs/COMPARACION_POLITICAS.json (scripts/comparacion_politicas.py).
+        Otros valores calculan en la petición y tardan (1 a 40 semillas)."""
+        if isinstance(semillas, bool) or not 1 <= semillas <= 40:
+            raise ErrorApi(400, "semillas debe ser un entero entre 1 y 40")
+        if semillas in _cache_comparacion:
+            return _cache_comparacion[semillas]
+        if semillas == 20 and os.path.exists(COMPARACION_JSON):
+            with open(COMPARACION_JSON, encoding="utf-8") as f:
+                datos = json.load(f)
+        else:
+            from juego.comparacion import comparar
+            datos = comparar(range(1, semillas + 1))
+        _cache_comparacion[semillas] = datos
+        return datos
+
+    @app.get("/serie")
+    def serie_por_paso(desde: int = 0):
+        """Serie por paso para los gráficos en vivo: batería, velocidad difusa, acción y fitness de la ruta.
+        El fitness por paso solo se registra en modo ag (null en los demás); el resto de filas no lo tiene."""
+        sesion = activa()
+        filas = [{"n": f["n"], "modo": f["modo"], "accion": f["accion"], "tecnica": f["tecnica"],
+                  "bateria": f["bateria"], "velocidad": f["velocidad"], "p_libre": f["p_libre"],
+                  "p_obstaculo": f["p_obstaculo"], "p_barranco": f["p_barranco"], "fitness": f["fitness"]}
+                 for f in _filtrar_historial(sesion, desde)]
+        return {"total": len(filas), "filas": filas,
+                "nota": "fitness por paso: solo en modo ag; los demás modos devuelven null"}
+
+    @app.get("/historial")
+    def historial(desde: int = 0, modo: str = None, tecnica: str = None, motivo: str = None):
+        """Historial de decisiones (Panel D de la consigna): una fila por acción, filtrable."""
+        filas = _filtrar_historial(activa(), desde, modo, tecnica, motivo)
+        return {"total": len(filas), "filas": filas}
+
+    @app.get("/historial.csv")
+    def historial_csv(desde: int = 0, modo: str = None, tecnica: str = None, motivo: str = None):
+        """Exportación CSV del historial con las columnas de la bitácora (paso, estado, posición...) y las nuevas."""
+        filas = _filtrar_historial(activa(), desde, modo, tecnica, motivo)
+        buf = io.StringIO()
+        w = csv.DictWriter(buf, fieldnames=CAMPOS_HISTORIAL, extrasaction="ignore")
+        w.writeheader()
+        for f in filas:
+            w.writerow({**f, "posicion": f"({f['posicion'][0]}, {f['posicion'][1]})"})
+        return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": "attachment; filename=historial_decisiones.csv"})
+
+    @app.get("/paneles")
+    def paneles():
+        return _paneles(activa())
+
+    @app.post("/intervencion")
+    def intervencion(datos: IntervencionIn):
+        """Prueba causal (ARX-10): fuerza la salida de la RNA o del difuso en la misión de la partida."""
+        mision = activa().partida.mision
+        if datos.tecnica == "apagar":
+            mision.intervencion_rna = None
+            mision.intervencion_difuso = None
+            activa().intervencion = None
+            return {"ok": True, "tecnica": "apagar", "valor": None}
+        if datos.tecnica == "rna":
+            if datos.valor not in ("barranco", "libre", "obstaculo"):
+                raise ErrorApi(400, "rna: valor debe ser barranco, libre u obstaculo")
+            mision.intervencion_rna = forzar_probabilidad(datos.valor)
+            activa().intervencion = {"tecnica": "rna", "valor": datos.valor}
+            return {"ok": True, "tecnica": "rna", "valor": datos.valor}
+        if datos.tecnica == "difuso":
+            v = datos.valor
+            # bool es subclase de int en Python: se rechaza de forma explícita
+            if isinstance(v, bool) or not isinstance(v, (int, float)) or not 0.0 <= float(v) <= 1.0:
+                raise ErrorApi(400, "difuso: valor debe ser un número entre 0 y 1")
+            mision.intervencion_difuso = float(datos.valor)
+            activa().intervencion = {"tecnica": "difuso", "valor": float(datos.valor)}
+            return {"ok": True, "tecnica": "difuso", "valor": float(datos.valor)}
+        raise ErrorApi(400, f"técnica inválida: {datos.tecnica!r}; usa rna, difuso o apagar")
+
+    return app
+
+
+app = crear_app()

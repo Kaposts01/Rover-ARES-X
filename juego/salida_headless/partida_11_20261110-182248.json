@@ -1,0 +1,22 @@
+{
+  "semilla": 11,
+  "planeta": "Marte",
+  "n_obstaculos": 22,
+  "n_barrancos": 6,
+  "n_sitios": 3,
+  "bateria_inicial": 100.0,
+  "resumen": {
+    "estado": "EXITO",
+    "pasos": 65,
+    "sitios_visitados": 2,
+    "sitios_totales": 3,
+    "bateria_final": 22.0,
+    "vetos": 1,
+    "replanes": 2,
+    "colisiones": 0,
+    "barrancos_pisados": 0,
+    "nivel": 1,
+    "puntaje": 78
+  },
+  "nota": "parámetros de simulación ficticios, no especificaciones NASA"
+}

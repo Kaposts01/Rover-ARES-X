@@ -1,0 +1,503 @@
+{
+  "proyecto": "ARES-X",
+  "generado": "2026-11-14",
+  "dueno": "Orquestador (las sesiones motor y diseño informan cambios de estado; no editan este archivo)",
+  "sprints": [
+    {
+      "id": "S1",
+      "titulo": "Cerrar lo comprometido",
+      "listo_cuando": "Los cuatro laboratorios funcionan y pasan CA-04, CA-05, CA-06 y CA-08 del PDF; suite completa en verde."
+    },
+    {
+      "id": "S2",
+      "titulo": "Un mundo que obliga a decidir",
+      "listo_cuando": "En una partida automática de 5 minutos se ven al menos tres replanteos provocados por eventos, y cada ablación empeora al menos una métrica."
+    },
+    {
+      "id": "S3",
+      "titulo": "Planetas y temperatura",
+      "listo_cuando": "Pasa CA-07 y el laboratorio difuso muestra cuatro entradas."
+    },
+    {
+      "id": "S4",
+      "titulo": "Que se vea como un juego",
+      "listo_cuando": "La auditoría de diseño sube de B- a B+ o más."
+    },
+    {
+      "id": "S5",
+      "titulo": "Evidencia y entrega",
+      "listo_cuando": "La matriz docs/MATRIZ_REQUISITOS_PDF.md no tiene filas en «Falta»."
+    },
+    {
+      "id": "S6",
+      "titulo": "Pedido del 14/11: pantalla de inicio y juego",
+      "listo_cuando": "Los 18 comentarios del usuario (pedidos\\2026-11-14_rover_comentarios\\PEDIDO.md) están resueltos y capturados, y una partida en Hardcore cumple la meta de ev3-d43."
+    }
+  ],
+  "tareas": [
+    {
+      "id": "ARX-24",
+      "sprint": "S1",
+      "titulo": "Suite completa en verde (última conocida: 348 pasan, 1 falla)",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "Suite completa 343/343 en verde el 14/11 ~08:15 (verificada por el Orquestador)"
+    },
+    {
+      "id": "ARX-25",
+      "sprint": "S1",
+      "titulo": "GET /comparacion con contrato (§7) y 20 semillas",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "docs/COMPARACION_POLITICAS.json"
+    },
+    {
+      "id": "ARX-26",
+      "sprint": "S1",
+      "titulo": "Vista «Políticas» en los laboratorios",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "docs/capturas/sprint1/"
+    },
+    {
+      "id": "ARX-19",
+      "sprint": "S1",
+      "titulo": "Quitar Qwen y el modo generativo del backend (zip de respaldo primero)",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "Zip de respaldo aresx_respaldo_arx19_v2.zip; 0 referencias a Qwen en api/ y juego/ (verificado 14/11 12:50)"
+    },
+    {
+      "id": "ARX-19b",
+      "sprint": "S1",
+      "titulo": "Quitar Qwen y el modo generativo de la interfaz",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": ""
+    },
+    {
+      "id": "ARX-21",
+      "sprint": "S6",
+      "titulo": "Mapa grande configurable",
+      "estado": "en_curso",
+      "responsable": "motor",
+      "nota": "Backend hecho (pequeno 20x30, mediano 30x45, grande 40x60 por defecto; evaluación fija 20x30), verificado en /mapa el 14/11; faltan la suite completa (turno) y el selector en la interfaz"
+    },
+    {
+      "id": "ARX-27",
+      "sprint": "S1",
+      "titulo": "«Decisión de la IA» abierta por defecto y sin scroll",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": ""
+    },
+    {
+      "id": "ARX-28",
+      "sprint": "S2",
+      "titulo": "Escenario de evaluación donde cada técnica importe (ablaciones distintas)",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": "Hoy híbrido = sin RNA = sin difuso en /comparacion"
+    },
+    {
+      "id": "ARX-29",
+      "sprint": "S2",
+      "titulo": "Obstáculos móviles y meteoritos con zona de riesgo (GET /moviles)",
+      "estado": "en_curso",
+      "responsable": "motor",
+      "nota": "GET /moviles con drones y \u000bida (§10, 14/11 12:50); obstaculos_moviles es una clave aparte documentada, vacía hasta ARX-30"
+    },
+    {
+      "id": "ARX-30",
+      "sprint": "S2",
+      "titulo": "Sismo, baja conectividad y señal biológica con efecto real (ev3-d41 B)",
+      "estado": "en_curso",
+      "responsable": "motor",
+      "nota": "Meteoritos verificados en Chrome (Maestro New, ronda 15, 14/11): caen solos, estela, polvo y zona 3x3, aviso en pantalla, cadena de 5 con meteorito dentro 5/5. Faltan sismo, baja conectividad y señal biológica"
+    },
+    {
+      "id": "ARX-31",
+      "sprint": "S2",
+      "titulo": "AG recalculado ante cada evento grave, también en automático",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": ""
+    },
+    {
+      "id": "ARX-32",
+      "sprint": "S2",
+      "titulo": "Automático continuo con escenarios distintos (GET /escenarios)",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "ev3-d46 = A (14/11 19:10): cumplida con la cadena automática (verificada por Maestro New); sin GET /escenarios; las estadísticas pasan a ARX-77 (Diseño)"
+    },
+    {
+      "id": "ARX-33",
+      "sprint": "S2",
+      "titulo": "Estados CONFIGURACION, ALERTA, REPLANIFICACION, REFUGIO y MODO SEGURO",
+      "estado": "en_curso",
+      "responsable": "motor",
+      "nota": "El motor la da por hecha; falta verificar que /estado emita ALERTA, REFUGIO, etc. (sin eventos sigue en EXPLORACION)"
+    },
+    {
+      "id": "ARX-34",
+      "sprint": "S2",
+      "titulo": "Animaciones de móviles, meteoritos, polvo, sismo, interferencia y señal biológica",
+      "estado": "en_curso",
+      "responsable": "diseño",
+      "nota": "Meteorito con caída, polvo y zona de riesgo visto en Chrome (Maestro New, ronda 14, 14/11); faltan sismo, conectividad, señal biológica y obstáculos móviles"
+    },
+    {
+      "id": "ARX-35",
+      "sprint": "S2",
+      "titulo": "Ruta planificada (punteada) frente a ejecutada (sólida)",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": ""
+    },
+    {
+      "id": "ARX-36",
+      "sprint": "S2",
+      "titulo": "Vista del automático continuo e indicador de estados",
+      "estado": "en_curso",
+      "responsable": "diseño",
+      "nota": "Indicador con los estados del motor más SIN_RUTA; faltan los estados de ARX-33"
+    },
+    {
+      "id": "ARX-37",
+      "sprint": "S3",
+      "titulo": "GET /planetas y POST /partida con planeta y modo; bloqueo de Júpiter + rover (CA-07)",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "CA-07 verificado 14/11: Júpiter con rover da 400 con motivo y con sonda da 200; el terreno por planeta va en ARX-50"
+    },
+    {
+      "id": "ARX-38",
+      "sprint": "S3",
+      "titulo": "Temperatura como cuarta entrada del difuso, con aborto (ev3-d40 A)",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "Laboratorio: 4.ª entrada (−80 a 80 °C), R10/R11 y aborto sobre 60 °C, verificado en /difuso el 14/11; el sensor del motor pasa a ARX-50"
+    },
+    {
+      "id": "ARX-39",
+      "sprint": "S3",
+      "titulo": "Selector de planeta y modo en el asistente, con «Usar sonda»",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Con datos de prueba hasta que exista /planetas"
+    },
+    {
+      "id": "ARX-40",
+      "sprint": "S3",
+      "titulo": "Sonda 3D y aspecto por planeta (Marte, Mercurio, Júpiter)",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Rocas por planeta; capturas planetas/*_v3.png"
+    },
+    {
+      "id": "ARX-41",
+      "sprint": "S3",
+      "titulo": "Cuarta curva (temperatura) en el laboratorio difuso",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Curva real de /difuso (−80 a 80 °C, R10 y R11) en el laboratorio; la de prueba solo con ?demo (14/11); falta verlo en el navegador"
+    },
+    {
+      "id": "ARX-42",
+      "sprint": "S4",
+      "titulo": "Relieve, horizonte, cielo, encuadre cercano y modo cine (H)",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "12,3 FPS en render por software"
+    },
+    {
+      "id": "ARX-43",
+      "sprint": "S4",
+      "titulo": "Design-review de B- a B+ (sombras, detalle, paneles)",
+      "estado": "en_curso",
+      "responsable": "diseño",
+      "nota": "B (≈2,96/4). Rendimiento con GPU completo el 14/11: 120 FPS en todas las vistas, Júpiter incluido (mín. 113–119); falta la pasada completa de design-review"
+    },
+    {
+      "id": "ARX-44",
+      "sprint": "S4",
+      "titulo": "Medición del tiempo por paso del motor",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": ""
+    },
+    {
+      "id": "ARX-45",
+      "sprint": "S5",
+      "titulo": "Ablaciones más la ruta más corta como control, con dispersión en 20 semillas",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": "Falta el control de ruta más corta"
+    },
+    {
+      "id": "ARX-46",
+      "sprint": "S5",
+      "titulo": "Tiempos de entrenamiento y de decisión por separado",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": ""
+    },
+    {
+      "id": "ARX-47",
+      "sprint": "S5",
+      "titulo": "Pesos del fitness modificables en vivo (§17 del PDF)",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": ""
+    },
+    {
+      "id": "ARX-48",
+      "sprint": "S5",
+      "titulo": "INFORME_TECNICO, README y notebook al día",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": ""
+    },
+    {
+      "id": "ARX-13",
+      "sprint": "S5",
+      "titulo": "Guion del video de 6 a 8 minutos sobre el juego actual",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": ""
+    },
+    {
+      "id": "ARX-49",
+      "sprint": "S5",
+      "titulo": "Capturas finales de todas las vistas",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "15 vistas en docs/capturas/finales/, regenerables con capturas_finales.py; regenerar al cerrar los sprints 2 y 3"
+    },
+    {
+      "id": "ARX-50",
+      "sprint": "S6",
+      "titulo": "Escenario derivado del planeta y la dificultad; eventos por familia de clima",
+      "estado": "en_curso",
+      "responsable": "motor",
+      "nota": "ev3-d42 B; PLAN_PLANETAS.md revisado el 14/11 (temperatura interna, lava, hielo y arena densa); falta programarlo"
+    },
+    {
+      "id": "ARX-51",
+      "sprint": "S6",
+      "titulo": "Terrenos y efectos por familia (lava, hielo, arena densa, gaseoso); quitar el selector «Escenario»",
+      "estado": "en_curso",
+      "responsable": "diseño",
+      "nota": "ev3-d42 B; aspecto de los 8 planetas y medidor de calor con datos de prueba (14/11); faltan los peligros jugables con los campos de ARX-50 y verlo en el navegador; medidor de calor oculto fuera de ?demo (CALOR_MOTOR=false) hasta ARX-50"
+    },
+    {
+      "id": "ARX-52",
+      "sprint": "S6",
+      "titulo": "«Modo de planeta» → «Tipo de vehículo»; semilla aleatoria por defecto; escalones Muy fácil…Hardcore",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Inicio 2, 3 y 4. Textos y semilla aleatoria en api/static (14/11); sintaxis OK; falta verificarlo en el navegador"
+    },
+    {
+      "id": "ARX-53",
+      "sprint": "S6",
+      "titulo": "POST /partida sin semilla elige una aleatoria y la devuelve; nivel por nombre de escalón",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "Contrato §11; verificado 14/11: sin semilla devuelve una aleatoria; nivel «hardcore» = 5"
+    },
+    {
+      "id": "ARX-54",
+      "sprint": "S6",
+      "titulo": "Renombrar «Modo de IA», descripción corta por modo y panel de recomendaciones en manual",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Inicio 5, 6 y 7. «Modo de control» (ev3-d44 A), descripciones y recomendador; Híbrido = automatico; falta verlo en el navegador"
+    },
+    {
+      "id": "ARX-55",
+      "sprint": "S6",
+      "titulo": "GET /recomendacion: en manual, el paso que propone cada modelo y por qué",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "Contrato §12; verificado 14/11: propuestas de híbrido, RNA, difuso y AG sin mover el rover"
+    },
+    {
+      "id": "ARX-56",
+      "sprint": "S6",
+      "titulo": "Panel «Partida y simulación» ordenado como la pantalla inicial; botón «Iniciar» verde al final",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Juego 1 y 2. Panel en el orden de la pantalla inicial, «Iniciar» verde al final (14/11); falta verificarlo en el navegador"
+    },
+    {
+      "id": "ARX-57",
+      "sprint": "S6",
+      "titulo": "Enemigos y peligros nuevos por familia (lava que avanza, hielo que desliza, arena que ciega)",
+      "estado": "pendiente",
+      "responsable": "motor",
+      "nota": "Inicio 1; ev3-d42 B: enemigos y peligros propios por planeta"
+    },
+    {
+      "id": "ARX-58",
+      "sprint": "S6",
+      "titulo": "Medir la línea base por nivel: pasos y éxito en 20 semillas",
+      "estado": "en_curso",
+      "responsable": "motor",
+      "nota": "Con la garantía de drones (14/11), mapa pequeño: Muy fácil 100 % (51), Fácil 100 % (51), Medio 95 % (51), Difícil 75 % (51), Hardcore 95 % (47); grande, Muy fácil 80 % (77 pasos). Anomalía Hardcore > Difícil en revisión"
+    },
+    {
+      "id": "ARX-59",
+      "sprint": "S6",
+      "titulo": "Subir la dificultad por escalón hasta las metas de ev3-d43",
+      "estado": "en_curso",
+      "responsable": "motor",
+      "nota": "PROPUESTA (14/11): estaciones de recarga (ev3-d45 A) sin publicar; detrás de una bandera apagada. Criterio 2 de la API falla; 2/3 semillas de prueba en Fácil 40x60 (121 y 150 pasos). Causa: tramos sin cadena de estaciones y vuelta atrás. Pendiente: garantía al generar con cadena de estaciones (tramos ≤ batería máx./factor)"
+    },
+    {
+      "id": "ARX-60",
+      "sprint": "S6",
+      "titulo": "Pantallas de carga: cuenta 3-2-1 o barra al iniciar, y transición del vehículo al pulsar «Nueva»",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Juego 3 y 7. Cuenta 3-2-1 con barra; el vehículo se encoge y vuelve a crecer en «Nueva» y «Reiniciar» (14/11); falta verlo en el navegador"
+    },
+    {
+      "id": "ARX-61",
+      "sprint": "S6",
+      "titulo": "Menú de pausa con Esc: continuar, reiniciar, opciones y salir al menú inicial",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Juego 4. Esc: continuar, reiniciar, opciones y salir al menú (14/11); falta verlo en el navegador"
+    },
+    {
+      "id": "ARX-62",
+      "sprint": "S6",
+      "titulo": "Cámara que sigue al vehículo por defecto, en 3.ª persona y en vista de mapa",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Juego 5. Sigue al rover en 3.ª persona y en Mapa; se suelta al mover a mano; se agrega el botón «Mapa completo» (14/11); falta verlo en el navegador"
+    },
+    {
+      "id": "ARX-63",
+      "sprint": "S6",
+      "titulo": "Registro lateral de los últimos 10 eventos con animación de entrada y salida",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Juego 6. Últimos 10 eventos con animación; botón «Todo» = mapa completo (14/11); en el navegador revisar que no se solape con el aviso de intervención"
+    },
+    {
+      "id": "ARX-64",
+      "sprint": "S6",
+      "titulo": "Pantalla de meta: otro mapa, repetir, cambiar dificultad o salir",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Juego 8. Otro mapa, repetir, cambiar dificultad y salir (14/11); falta verlo en el navegador"
+    },
+    {
+      "id": "ARX-65",
+      "sprint": "S6",
+      "titulo": "Automático con N misiones: en la meta espera 3 s y pasa a la siguiente sin preguntar",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Cadena ×3 completa con salto de 3 s, veto conservado y pantalla final con resumen (verificado por Maestro New el 14/11)"
+    },
+    {
+      "id": "ARX-66",
+      "sprint": "S6",
+      "titulo": "Condiciones de victoria: recolectar o encontrar objetos y destruir N enemigos, según el escalón",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "Garantía de partida ganable con sitios y drones obligatorios; caza por BFS: Difícil 19/20, Medio 20/20, Hardcore 20/20 (mapa pequeño, 14/11); Muy fácil y Fácil 100 %"
+    },
+    {
+      "id": "ARX-67",
+      "sprint": "S6",
+      "titulo": "HUD de objetivos de misión (objetos recogidos, enemigos destruidos) y pantalla de meta con su resumen",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "HUD y meta con GET /objetivos real; sin partida se oculta (14/11); falta verlo en el navegador; condiciones opcionales («(opcional)») según el campo obligatorio"
+    },
+    {
+      "id": "ARX-68",
+      "sprint": "S6",
+      "titulo": "E1: /estado y /recomendacion dan 500 (semilla 641752, hardcore, ag, REFUGIO con dron atacando); /estado nunca debe dar 500",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "Ruta con saltos no adyacentes en sugerencia()/_rumbo; replanifica y /estado ya no da 500. Verificado el 14/11: semilla 641752 hardcore ag, 39 pasos hasta EXITO sin 500"
+    },
+    {
+      "id": "ARX-69",
+      "sprint": "S6",
+      "titulo": "E2 a E4 y lo por verificar: pausa sobre la configuración, carga pegada, salida ante un 500, resumen del modo, planeta y modo inválidos, semilla repetida",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "E2, E3, (b) y (c) verificados por Maestro New en el Chrome del usuario; E4 sin probar"
+    },
+    {
+      "id": "ARX-70",
+      "sprint": "S6",
+      "titulo": "N2 y N1: enviar planeta y vehículo en POST /partida; «Iniciar» no debe crear otra partida; la carga espera al motor",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "N2, N1 y N3 de interfaz verificados por Maestro New en el Chrome del usuario el 14/11 (Júpiter y sonda, el verde no crea partidas)"
+    },
+    {
+      "id": "ARX-71",
+      "sprint": "S6",
+      "titulo": "N3 y N4: crear partida Hardcore en menos de 2 s; la meta exige las condiciones de /objetivos",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "N3: Hardcore grande en 3,4 s (verificado por Maestro New el 14/11); N4 hecho"
+    },
+    {
+      "id": "ARX-72",
+      "sprint": "S6",
+      "titulo": "N6: Júpiter y sonda pegada en el refugio en el paso 64, con el motor al 100 % de un núcleo; replanificación cara tras N4; el refugio no se cruza ni termina sin el 100 % de objetivos (PEDIDO_2 punto 2)",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "N6 y N7 verificados por Maestro New el 14/11 (replanifica con FALTAN-OBJETIVOS y termina con resultado)"
+    },
+    {
+      "id": "ARX-73",
+      "sprint": "S6",
+      "titulo": "Aviso «El motor no responde a tiempo» cuando /paso tarda o no avanza; panel del automático sin datos de prueba",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Aviso de motor lento sin falsos positivos (N8) verificado por Maestro New el 14/11"
+    },
+    {
+      "id": "ARX-74",
+      "sprint": "S6",
+      "titulo": "Selector de planeta solo con el nombre; pantalla de meta combinada con íconos, Confirmar verde y Salir rojo; quitar «Escenario»",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Pantalla combinada y «Confirmar» verificados por Maestro New el 14/11"
+    },
+    {
+      "id": "ARX-75",
+      "sprint": "S6",
+      "titulo": "La IA dispara a drones en rango en los modos automáticos, con munición y veto del supervisor",
+      "estado": "hecha",
+      "responsable": "motor",
+      "nota": "Verificado en Chrome por Maestro New el 14/11 (ronda 11): dispara en rna, difuso y ag, 2/2 drones, ÉXITO; el veto no se dio en 48 disparos (falta un caso reproducible); ultimo del disparo con rumbo y objetivo; caza por BFS en todos los modos con IA (test_caza_modos)"
+    },
+    {
+      "id": "ARX-76",
+      "sprint": "S6",
+      "titulo": "Objetivos opcionales en el HUD y la meta («(opcional)» según el campo obligatorio de /objetivos)",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Antes figuraba como ARX-75 en los documentos de Diseño. El motor envía obligatorio (Maestro New lo vio a las 15:55); falta verlo en el navegador"
+    },
+    {
+      "id": "ARX-77",
+      "sprint": "S2",
+      "titulo": "Estadísticas del automático continuo en la interfaz: mediana de pasos, batería final y replanteos por cadena",
+      "estado": "hecha",
+      "responsable": "diseño",
+      "nota": "Verificado en Chrome (rondas 11 y 14): estadísticas, «3 de 3» y oculto en partidas sueltas"
+    }
+  ]
+}

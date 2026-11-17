@@ -170,7 +170,8 @@ Decisión del Maestro: el escenario exigente pasa a tener 10 sitios (además de 
 
 - **Escenario nuevo `exigente10`**: nivel 5, ruido 0,6, p_detectar 0,4, física de velocidad activa (los mismos que `exigente`) y **10 sitios científicos** (en vez de 4). `exigente` no cambia.
 - **Ruta de referencia por semilla**: vecino más cercano sobre los sitios y tramos BFS en el mapa real, sin riesgo, sin RNA ni difuso (es la línea base `ruta_corta` del arnés). Su longitud en pasos es **L_ref**. Se calcula con el mapa de la semilla, antes de cualquier variante.
-- **Batería por semilla**: **B = ⌈L_ref × COSTO_BATERIA_PASO × (1 + MARGEN)⌉**, con **MARGEN = 0,15** (el mismo margen de reserva que `MARGEN_ENERGIA`, integracion.py) y COSTO_BATERIA_PASO = 1,0. Es decir, la batería cubre la ruta de referencia con un 15 % de reserva.
+- **Batería por semilla** (corregida antes de medir, ver nota): **B = ⌈L_ref × COSTO_BATERIA_PASO × 1,15⌉ + MARGEN_ENERGIA**, con COSTO_BATERIA_PASO = 1,0 y **MARGEN_ENERGIA = 15** (integracion.py, margen absoluto que `_planear` exige: descarta la ruta si `pasos + 15 > batería`).
+- **Nota de corrección (antes de medir)**: la primera versión era B = ⌈L_ref × 1,15⌉. Una prueba de humo en dos semillas mostró que `_planear` descartaba la ruta con sitios (L_ref + 15 > B) y el juego salía directo al refugio. Por eso se añade MARGEN_ENERGIA. Ninguna cifra de partidas se había medido con la versión anterior; el cambio sale de la mecánica del juego, no del resultado.
 - **Factibilidad**: la ruta de referencia cabe en B por construcción. Se verifica y se publica por semilla (en la tabla, la columna de batería y L_ref).
 - **Qué no es**: la batería no es una garantía de victoria. Las recargas no existen en el arnés; los drones y los eventos pueden alargar la ruta. Las derrotas se publican con su causa, sin ajustar B.
 - **Regla**: B no se ajusta después de ver resultados. Si la tasa sale baja, se publica así.

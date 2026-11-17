@@ -372,7 +372,7 @@ class Partida:
 
     def __init__(self, semilla: int = 11, bateria: float = None, nivel: int = 1,
                  eventos_activos=EVENTOS_SOPORTADOS, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
-                 garantia: bool = True, planeta: str = termico.PLANETA_POR_DEFECTO):
+                 garantia: bool = True, planeta: str = termico.PLANETA_POR_DEFECTO, n_sitios: int = None):
         _t0_construccion = time.perf_counter()      # tiempo de pared, igual que _cronometrado
         self.tiempo_computo_s = 0.0
         self._cronometro_nivel = 0
@@ -393,7 +393,7 @@ class Partida:
         def _generar(semilla_mundo):
             return generar_mundo(semilla_mundo, filas=self.filas, columnas=self.columnas,
                                  n_obstaculos=round((20 + 2 * nivel) * escala), n_barrancos=round((4 + nivel) * escala),
-                                 n_sitios=3 if nivel <= 2 else 4)
+                                 n_sitios=n_sitios if n_sitios is not None else (3 if nivel <= 2 else 4))
         mundo = _generar(semilla)
         self.semilla_mundo = semilla
         if garantia:

@@ -24,7 +24,7 @@ import numpy as np
 from genetico import camino_bfs, mapa_estimado
 from integracion import ESTADOS_TERMINALES, Mision
 
-VARIANTES_ABLACION = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_mas_corta")   # ARX-28 y ARX-92d
+VARIANTES_ABLACION = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_mas_corta", "sin_ag_2opt")   # ARX-28, 92d y 92c
 VARIANTES_BASE = ("ruta_corta", "ag_puro")                              # ARX-45 (M19)
 VARIANTES = VARIANTES_ABLACION + VARIANTES_BASE
 MAX_PASOS = 400
@@ -37,7 +37,49 @@ ESCENARIOS = {
     # prob_fallo (ev3-d60 A): probabilidad de lectura NaN del sensor de proximidad, solo en este escenario. None = sin fallo
     # (comportamiento de 11dae05). La rellena la calibración (medición pedida por el Orquestador); no tiene valor aún.
     "exigente": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None, "fisica_velocidad": True},         # calibrado en ARX-28a (docs/planes/ARX-28_calibracion.md)
+    # ARX-92c (ev3-d73 A): 10 sitios y batería = ⌈L_ref × 1,15⌉ por semilla (criterio en ARX-92_ag_decide.md §12)
+    "exigente10": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None, "fisica_velocidad": True,
+                   "n_sitios": 10, "margen_bateria": 0.15},
 }
+
+
+def _orden_2opt(m: Mision):
+    """ARX-92c: orden de sitios del vecino más cercano mejorado con 2-opt (intercambio de tramos mientras baje el largo
+    de la ruta por BFS). Mapa real con la máscara de riesgo de la misión; sin AG."""
+    def planear(origen, pendientes):
+        transitable = m.riesgo < 0.5
+        largos = {}
+        def largo(a, b):
+            if (a, b) not in largos:
+                t = camino_bfs(a, b, transitable)
+                largos[(a, b)] = float("inf") if t is None else len(t) - 1
+            return largos[(a, b)]
+        ruta_vec = _orden_voraz(m)(origen, pendientes)
+        if not ruta_vec:
+            return []
+        orden = []
+        for c in ruta_vec[1:]:
+            if c in pendientes and c not in orden:
+                orden.append(c)
+        seq = [tuple(origen)] + orden + [tuple(m.mundo.refugio)]
+        mejora = True
+        while mejora:
+            mejora = False
+            for i in range(1, len(seq) - 2):
+                for j in range(i + 1, len(seq) - 1):
+                    antes = largo(seq[i - 1], seq[i]) + largo(seq[j], seq[j + 1])
+                    despues = largo(seq[i - 1], seq[j]) + largo(seq[i], seq[j + 1])
+                    if despues < antes:
+                        seq[i:j + 1] = seq[i:j + 1][::-1]
+                        mejora = True
+        ruta = [seq[0]]
+        for a, b in zip(seq, seq[1:]):
+            t = camino_bfs(a, b, transitable)
+            if t is None:
+                return []
+            ruta.extend(t[1:])
+        return ruta
+    return planear
 
 
 def _orden_voraz(m: Mision):
@@ -71,6 +113,27 @@ def _parametros_escenario(escenario: str) -> dict:
     return par
 
 
+def _bateria_referencia(semilla: int, par: dict) -> float:
+    """ARX-92c (criterio §12): batería = ⌈L_ref × COSTO × (1 + margen)⌉ + MARGEN_ENERGIA; L_ref = ruta voraz sin riesgo."""
+    import math
+    from genetico import COSTO_BATERIA_PASO
+    from juego.partida import Partida, FILAS_BASE, COLUMNAS_BASE
+    # batería ilimitada en la sonda: la ruta de referencia debe visitar todos los sitios (si no, _planear la descarta)
+    sonda = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False,
+                    n_sitios=par["n_sitios"], bateria=1e6)
+    m = sonda.mision
+    m.riesgo = np.zeros_like(m.riesgo)
+    m.usar_rna = False
+    m.usar_difuso = False
+    m._optimizar_ag = _orden_voraz(m)
+    m.objetivos = []
+    m._planear()
+    assert all(c in m.ruta for c in sonda.mundo.sitios), "la referencia debe pasar por todos los sitios"
+    largo_ref = len(m.ruta) - 1
+    from integracion import MARGEN_ENERGIA
+    return float(math.ceil(largo_ref * COSTO_BATERIA_PASO * (1 + par["margen_bateria"])) + MARGEN_ENERGIA)
+
+
 def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
     """Partida de la capa de juego con el escenario y, después, la variante aplicados antes de empezar."""
     from juego.partida import Partida
@@ -78,7 +141,11 @@ def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
         raise ValueError(f"variante desconocida: {variante!r}")
     par = _parametros_escenario(escenario)
     from juego.partida import FILAS_BASE, COLUMNAS_BASE
-    p = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False)   # 20x30, sin redibujar el mapa
+    if "n_sitios" in par:
+        p = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False,
+                    n_sitios=par["n_sitios"], bateria=_bateria_referencia(semilla, par))
+    else:
+        p = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False)   # 20x30, sin redibujar el mapa
     m = p.mision
     p.fisica_velocidad = bool(par.get("fisica_velocidad", False))      # ARX-28c: resbalón por velocidad, solo el exigente
     if par["ruido"] is not None or par["p_detectar"] is not None or par.get("prob_fallo") is not None:
@@ -98,6 +165,11 @@ def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
     elif variante == "sin_ag_vecino":
         # Partida() ya planificó con el AG al construirse: se sustituye el optimizador y se replanifica
         m._optimizar_ag = _orden_voraz(m)
+        m.objetivos = []
+        m._planear()
+    elif variante == "sin_ag_2opt":
+        # ARX-92c: línea base de mejora local. Orden del vecino más cercano mejorado por 2-opt; RNA y difuso activos
+        m._optimizar_ag = _orden_2opt(m)
         m.objetivos = []
         m._planear()
     elif variante == "sin_ag_mas_corta":

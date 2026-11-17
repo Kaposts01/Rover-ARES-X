@@ -274,6 +274,18 @@ def _ultimo_paso(sesion: Sesion) -> dict:
     }
 
 
+def _difuso_del_paso(ultimo, sesion) -> dict:
+    """QA ARX-88: el difuso se considera usado si el paso mostrado activó reglas del difuso. Sin pasos, se usa el modo
+    de la sesión (rna y ag no mueven con el difuso)."""
+    if ultimo:
+        usado = bool(ultimo.get("reglas"))
+    else:
+        usado = sesion.modo not in ("rna", "ag")
+    if not usado:
+        return {"usado": False, "velocidad": None, "reglas": None}
+    return {"usado": True, "velocidad": (ultimo or {}).get("velocidad"), "reglas": (ultimo or {}).get("reglas")}
+
+
 def _paneles(sesion: Sesion) -> dict:
     """Entradas y salidas de cada técnica en el último paso; si no hay pasos, la sugerencia actual."""
     sug = sesion.partida.sugerencia()
@@ -287,8 +299,8 @@ def _paneles(sesion: Sesion) -> dict:
         "rna": {"p_libre": base.get("p_libre"), "p_obstaculo": base.get("p_obstaculo"),
                 "p_barranco": base.get("p_barranco")},
         # rna y ag no usan el difuso para moverse: se muestra «no usado», no una velocidad 0 (ARX-18.3)
-        "difuso": ({"usado": False, "velocidad": None, "reglas": None} if sesion.modo in ("rna", "ag")
-                   else {"usado": True, "velocidad": base.get("velocidad"), "reglas": base.get("reglas")}),
+        # QA ARX-88: «usado» sale del paso mostrado (hubo reglas del difuso en ese paso), no del modo actual de la sesión
+        "difuso": (_difuso_del_paso(ultimo, sesion) if ultimo else _difuso_del_paso(None, sesion)),
         "ag": {"ruta_planeada": [_celda(c) for c in (sesion.partida.ruta or [])],
                "desglose": sug.get("desglose")},
         "supervisor": {"accion": base.get("accion"), "motivos": base.get("motivos")},

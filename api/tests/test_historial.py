@@ -459,3 +459,20 @@ def test_estado_expone_el_ultimo_replanteo_del_ag_tras_un_sismo(cliente):
     assert ultimo["motivo"] == "REPLAN-AG-SISMO" and ultimo["paso"] == sesion.partida.mision.paso
     eventos = cliente.get("/moviles").json()["eventos_del_paso"]
     assert {"nombre": "replanteo_ag", "motivo": "REPLAN-AG-SISMO"} in eventos
+
+
+def test_estado_expone_la_temperatura_interna_segun_el_planeta():
+    # ARX-83b: el planeta llega a Partida; T_int sube en Venus y se mantiene en Marte; los campos existen en ambos
+    campos = {"temperatura_interna", "tolerancia", "pasos_sobre_tolerancia"}
+    series = {}
+    for planeta in ("Venus", "Marte"):
+        c = TestClient(crear_app())
+        assert c.post("/partida", json={"semilla": 11, "nivel": 1, "planeta": planeta}).status_code == 200
+        assert campos <= set(c.get("/estado").json())
+        series[planeta] = [c.get("/estado").json()["temperatura_interna"]]
+        for _ in range(8):
+            c.post("/paso")
+            series[planeta].append(c.get("/estado").json()["temperatura_interna"])
+        assert c.get("/estado").json()["tolerancia"] == 60.0
+    assert series["Venus"][-1] > series["Venus"][0] and max(series["Venus"]) > 60.0     # sube (la sombra la frena)
+    assert max(series["Marte"]) <= series["Marte"][0]

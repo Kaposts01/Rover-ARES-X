@@ -36,6 +36,7 @@ from difuso import BATERIA_MAX, COLUMNAS_MEMBRESIA, DISTANCIA_MAX, INCLINACION_M
 from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
 from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
 from juego.partida import Partida  # noqa: E402
+from juego import termico  # noqa: E402
 from simulador import MOVIMIENTOS  # noqa: E402
 
 MODOS = {"manual", "rna", "difuso", "ag", "automatico"}
@@ -55,8 +56,9 @@ class ErrorApi(Exception):
 class Sesion:
     """Estado de la partida que sirve la API (uno por proceso)."""
 
-    def __init__(self, semilla: int = 11, nivel: int = 1, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE):
-        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas)
+    def __init__(self, semilla: int = 11, nivel: int = 1, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
+                 planeta: str = "Marte"):
+        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas, planeta=planeta)   # ARX-83b
         # el combate se crea después; se engancha para contar los drones destruidos en la victoria
 
         self.semilla = semilla
@@ -230,6 +232,9 @@ def _estado(sesion: Sesion) -> dict:
         "municion": sesion.combate.municion,
         "cooldown": sesion.combate.cooldown,
         "ultimo_replanteo": _ultimo_replanteo(p),    # ARX-31b: null si no hubo replanteo del AG
+        "temperatura_interna": round(p.t_int, 2),    # ARX-83b: T_int en °C (modelo de PLAN_PLANETAS)
+        "tolerancia": termico.TOLERANCIA,
+        "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
     }
 
 
@@ -724,7 +729,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         semilla, nivel = validar_partida(datos)
         try:
             filas, columnas = _tamano(datos.tamano)
-            app.state.sesion = Sesion(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas)
+            app.state.sesion = Sesion(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas,
+                                       planeta=datos.planeta)
             app.state.sesion.planeta = datos.planeta
             app.state.sesion.modo_planeta = datos.modo
         except ValueError as exc:

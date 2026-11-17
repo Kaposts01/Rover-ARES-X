@@ -131,3 +131,44 @@ Lo medido: la RNA reconoce barrancos con sus rasgos normales (recall 0,70–0,80
 Inferencia (no medida): la RNA depende casi por completo del rasgo `borde_barranco` para distinguir barranco de libre. Con la vibración sola, la separación es pequeña (ver `docs/planes/ARX-28f_rna_unica.md`, sección 1), y el control confirma que no alcanza.
 
 Para el informe (M2): la RNA queda con el resultado negativo de 28f. Con el escenario exigente, la RNA cambia una decisión en 3 de 20 semillas (4, 10 y 18), sin cambiar éxito ni colisiones. La explicación probable es la redundancia: la RNA casi no aporta información que el supervisor no tenga por el sensor de borde.
+
+## Regeneración única: método de atribución, ARX-91 y constantes de 28c
+
+### Método de atribución (90 + 91 y 28c)
+
+La regeneración cambió tres cosas a la vez: ARX-90 (la percepción no marca como riesgo los sitios pendientes, el inicio ni el refugio; ev3-d65 A), ARX-91 (el chequeo de obstáculo en ruta pasa a ser incondicional; ev3-d68 B) y ARX-28c (resbalón por velocidad en pendiente; ev3-d54 A). Para separar sus efectos se comparan tres versiones del exigente, con las mismas 20 semillas y las cuatro variantes:
+
+- **A**: copia guardada antes de ARX-90 (línea base).
+- **B**: el exigente con `fisica_velocidad=False` sobre el código actual. Recoge ARX-90 y ARX-91, sin ARX-28c.
+- **C**: el JSON regenerado, con todo.
+
+Así, 90 + 91 es el efecto de A a B, y 28c es el de B a C. La bandera `fisica_velocidad` es lo que separa B de C: `ESCENARIOS["exigente"]` la enciende (`juego/comparacion.py`), y `Partida` la deja apagada por defecto (`juego/partida.py`). El congelado no la usa. Los recuentos de cada paso están en la tabla de atribución de la sección «Resultado de 20 semillas»; aquí no se repiten.
+
+### ARX-91: el chequeo de obstáculo en ruta
+
+En `ab46b4a` (la base del proyecto al entrar a control de versiones), el chequeo de obstáculo en ruta solo corría si el difuso había parado el rover (`dec.accion == "detener"`, `integracion.py:196`). Desde `944296d` (ev3-d68 B) es incondicional, tanto en `Mision` (`integracion.py:196-198`) como en la sombra que usa `Partida` (`juego/partida.py:492-494`).
+
+Por qué: con la condición, la ablación «sin difuso» medía también una política oculta. Con el difuso apagado el rover nunca se paraba, así que el chequeo no corría. Con el chequeo incondicional, la ablación quita solo el difuso.
+
+Efecto sobre la RNA: en el híbrido, cuando el obstáculo está en la ruta, el chequeo reemplaza la decisión de la RNA (ver INFORME §4.2).
+
+Riesgo conocido, documentado en el código (docstring de `ARX-90` en `juego/partida.py`): una lectura ruidosa que sitúa el obstáculo una celda más lejos puede causar colisión. El ejemplo está en el exigente, semilla 20, sin difuso, paso 31.
+
+Nota de procedencia: el mensaje del commit `944296d` dice «desde ARX-91 (ab46b4a)», que es inexacto. Los comentarios se corrigieron en `603af29`.
+
+### Constantes del resbalón (ARX-28c, ev3-d69 A)
+
+Se fijaron antes de medir (ev3-d69 A) y no se ajustan tras ver las cifras. Cada una tiene su justificación:
+
+| Constante | Valor | Justificación |
+|---|---|---|
+| `INCLINACION_RESBALON` | 20° | Pendiente sobre la que la tracción de las ruedas deja de ser segura. Valor del plan («p. ej. 20°»). Supuesto de simulación |
+| `P_RESBALON` | 0,5 | La probabilidad de resbalar por avance es `P_RESBALON × velocidad`: el riesgo de perder agarre crece con la velocidad. El factor 0,5 es un supuesto |
+| `COSTO_RESBALON` | 1 % de batería | Esfuerzo extra de las ruedas al patinar y reanudar el avance. Supuesto |
+| `VELOCIDAD_SIN_RESBALON` | 0,3 | Por debajo de esta velocidad el avance es lento y no resbala (umbral del plan, v < 0,3) |
+
+El resbalón usa su generador propio (semilla `[semilla, 1317]`) y no altera los demás.
+
+La variante «sin difuso» usa velocidad fija 0,5 (`integracion.py:186`, rama `if not self.usar_difuso`), que es el punto medio del rango. Según ev3-d69 A, QA verifica que no pierda por cableado.
+
+**Sensibilidad publicada completa.** Rejilla 3×2: `P_RESBALON` en {0,25; 0,5; 0,75} y `COSTO_RESBALON` en {1; 2}, con 20 semillas y las cuatro variantes. Se genera con `scripts/rejilla_resbalon.py` en `docs/REJILLA_RESBALON_exigente.json` y `.csv`. Los valores fijados no cambian por lo que muestre la rejilla.

@@ -132,3 +132,86 @@ def comparar(semillas, escenario: str = "congelado") -> dict:
     return {"escenario": escenario, "semillas": semillas, "variantes": politicas, "filas": filas,
             "nota": "Arnés: capa de juego (juego/partida.py), misma semilla por variante. Sin atribución causal fuera "
                     "de estas condiciones (§14). Los intentos a barranco no se miden en el híbrido."}
+
+
+# ---------- traza de divergencias por técnica (ARX-28b) ----------
+TECNICA = {"sin_rna": "RNA", "sin_difuso": "difuso", "sin_ag": "AG"}
+
+
+def _filas_por_paso(p) -> dict:
+    """Filas de la bitácora agrupadas por paso, como tuplas comparables (posición, acción, velocidad, motivos)."""
+    por_paso = {}
+    for f in p.mision.log.filas:
+        por_paso.setdefault(f["paso"], []).append(f)
+    return por_paso
+
+
+def _correr_traza(semilla: int, variante: str, escenario: str):
+    p = partida_variante(semilla, variante, escenario)
+    orden = [c for c in p.mision.objetivos if c in p.mundo.sitios]
+    pasos = 0
+    while p.estado not in ESTADOS_TERMINALES and pasos < MAX_PASOS:
+        p.avanzar_ia()
+        pasos += 1
+    return p, orden
+
+
+def _firma(filas) -> tuple:
+    return tuple((f["posicion"], f["accion"], f["velocidad"], f["motivos"]) for f in filas)
+
+
+def _motivo_y_cambio(variante, fh, fv):
+    """Motivo (en el híbrido, que es quien tiene la técnica) y qué cambió, entre dos filas del mismo paso."""
+    mh = ";".join(f["motivos"] for f in fh)
+    cambios = []
+    if [f["accion"] for f in fh] != [f["accion"] for f in fv]:
+        cambios.append("decision")
+    if [f["velocidad"] for f in fh] != [f["velocidad"] for f in fv]:
+        cambios.append("velocidad")
+    if [f["posicion"] for f in fh] != [f["posicion"] for f in fv]:
+        cambios.append("ruta")
+    if variante == "sin_rna":
+        vetos = [m for m in mh.split(";") if m.startswith("V-RNA-")]
+        motivo = ";".join(vetos) if vetos else "RNA (probabilidades distintas; motivos: " + (mh or "-") + ")"
+    elif variante == "sin_difuso":
+        reglas = ";".join(f["reglas"] for f in fh if f["reglas"])
+        motivo = "regla difusa: " + (reglas or "-")
+    else:
+        motivo = "ruta del AG frente a vecino más cercano"
+    return motivo, "+".join(cambios) or "otros_motivos"
+
+
+def trazar_divergencias(semillas, escenario: str = "exigente") -> list:
+    """Comparación paso a paso del híbrido contra cada variante con la misma semilla.
+
+    Una fila por paso en que difiere lo registrado (posición, acción, velocidad o motivos). `origen`:
+    - "directa": ambos tenían el mismo estado previo (misma posición y batería al empezar el paso), por lo que la
+      diferencia la causa la técnica en ese paso (o, en el AG, el orden de sitios del plan);
+    - "consecuencia": las trayectorias ya se habían separado antes.
+    Con sin_ag se añade, en paso 0, la fila de orden de sitios si el plan inicial difiere.
+    """
+    filas = []
+    for s in semillas:
+        ph, orden_h = _correr_traza(s, "hibrido", escenario)
+        fh = _filas_por_paso(ph)
+        for var in ("sin_rna", "sin_difuso", "sin_ag"):
+            pv, orden_v = _correr_traza(s, var, escenario)
+            fv = _filas_por_paso(pv)
+            if var == "sin_ag" and orden_h != orden_v:
+                filas.append({"semilla": s, "variante": var, "tecnica": "AG", "paso": 0, "celda": str(ph.mundo.inicio),
+                              "origen": "directa", "motivo": "ruta del AG frente a vecino más cercano",
+                              "cambio": "ruta", "detalle": f"orden AG {orden_h} / orden voraz {orden_v}"})
+            previa_h = previa_v = None
+            for paso in sorted(set(fh) | set(fv)):
+                a, b = fh.get(paso, []), fv.get(paso, [])
+                igual_previo = previa_h == previa_v
+                if _firma(a) != _firma(b):
+                    motivo, cambio = _motivo_y_cambio(var, a, b)
+                    celda = (a or b)[-1]["posicion"]
+                    filas.append({"semilla": s, "variante": var, "tecnica": TECNICA[var], "paso": paso, "celda": celda,
+                                  "origen": "directa" if igual_previo else "consecuencia", "motivo": motivo,
+                                  "cambio": cambio,
+                                  "detalle": f"hibrido {_firma(a)} / {var} {_firma(b)}"})
+                previa_h = (a[-1]["posicion"], a[-1]["bateria"]) if a else previa_h
+                previa_v = (b[-1]["posicion"], b[-1]["bateria"]) if b else previa_v
+    return filas

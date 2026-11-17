@@ -7,24 +7,25 @@ Simulación de un rover en Marte que combina una red neuronal (RNA), lógica dif
 Requisitos: Python 3.11 o superior y CPU. No necesita claves ni Docker.
 
 ```bash
-# TODO-PAQUETE: requirements.txt con versiones fijas (incluir pygame-ce para el juego de escritorio)
-pip install -r requirements.txt
-
-# TODO-PAQUETE: script de arranque
-python -m uvicorn api.servidor:app --host 127.0.0.1 --port 8765
+python -m pip install -r requirements.txt
 ```
 
-Abre `http://127.0.0.1:8765/` en el navegador.
+Arranque con el script (crea `.venv-ares`, instala `requirements.txt` y arranca la API en `http://127.0.0.1:8765/`):
 
-- Juego de escritorio: `python juego/main.py`.
+- Windows: `arrancar.bat`. Pruebas: `arrancar.bat pruebas`.
+- bash: `./arrancar.sh`. Pruebas: `./arrancar.sh pruebas`.
+- Otro puerto: `ARES_PUERTO=8790` (en bash: `ARES_PUERTO=8790 ./arrancar.sh`; en Windows, `set ARES_PUERTO=8790` antes de `arrancar.bat`).
+
+Para las pruebas y el notebook: `python -m pip install -r requirements-dev.txt`.
+
+- Juego de escritorio: `python juego/main.py`. Requiere `pygame-ce`, que no está en `requirements.txt`: `python -m pip install pygame-ce`.
 - Sin ventana: `python -m juego --headless --semilla 11 --pasos 300 --nivel 3`.
-- Pruebas: `python -m pytest -q` (la suite completa tarda varios minutos).
 
 ## Técnicas
 
 - **RNA:** perceptrón multicapa de dos capas ocultas (32 y 16 neuronas), ReLU, tres clases (libre, obstáculo, barranco). Se entrena con mapas separados por semilla.
 - **Lógica difusa:** controlador Mamdani (min-max, centroide). Entradas: distancia al riesgo, batería e inclinación. Salida: velocidad en [0, 1].
-- **Algoritmo genético:** cromosoma de K puntos de paso, decodificado en una ruta con BFS. En el juego el AG corre, pero no decide el orden de visita de los sitios: lo fija la búsqueda exhaustiva de la ruta más corta (con hasta 6 sitios; con más, la voraz). TODO-ENTREGA2: actualizar si entra ARX-92.
+- **Algoritmo genético:** cromosoma de K puntos de paso, decodificado en una ruta con BFS. En el juego, el AG decide el orden de visita de los sitios, con la misma restricción de energía que la ejecución (entrega 2, ARX-92c). La búsqueda exhaustiva de la ruta más corta queda como respaldo, para cuando el AG no encuentra un orden viable (`juego/partida.py`, `_ag_con_todos_los_sitios`).
 - **Supervisor:** aplica vetos con código de motivo (`V-…`) y replantea con BFS si el rover queda parado varios pasos.
 
 ## Mapa sin garantía
@@ -50,6 +51,7 @@ El mapa grande arranca con 1,49 veces la batería del pequeño, porque su ruta e
 ## Límites
 
 - Solo Marte (modo rover). Los otros planetas no están implementados.
+- Con 10 sitios (escenario exigente), el híbrido gana 12 de 20 semillas, frente a 14 con el vecino más cercano y 17 con 2-opt. Es una falla de búsqueda del AG, declarada en `INFORME_TECNICO.md` (§4.3); el juego normal no la tiene.
 - Los valores sin fuente son supuestos de simulación, no especificaciones de misión.
 - En el escenario normal la RNA es redundante con el supervisor. El detalle y las demás limitaciones están en `INFORME_TECNICO.md`.
 

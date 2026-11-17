@@ -81,7 +81,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | RF-11 | Evolución del fitness y precisión de la RNA con controles por iteración | Parcial | Fitness por generación en `GET /ag` (Cumple en API). Falta la precisión de la RNA por iteración y la vista *(UI)* | 2 h + *(UI)* |
 | RF-12 | Exportar trazas a CSV y configuración/resultados a JSON; guardar semillas y versiones | Parcial | `juego/exportar.py:55-91` (CSV bitácora + JSON configuración). Versión del software no se registra | 1 h |
 | RF-13 | Fallos de sensor, pérdida de enlace y modo seguro sin excepción no controlada | Parcial | Falla de sensor `juego/partida.py` (`_evento_falla_sensor`, 3 pasos); modo seguro `integracion.py:209`; pérdida de enlace no existe | 3 h |
-| RF-14 | Comparar híbrido con ≥ 2 ablaciones (sin RNA, sin difuso o sin AG) | Parcial | `juego/comparacion.py` (`VARIANTES`): sin RNA y sin difuso medidas en el escenario exigente, 20 semillas (`docs/COMPARACION_POLITICAS_exigente.json`). La variante «sin AG» es `sin_ag_vecino` («sin AG: vecino más cercano»): mide la heurística voraz, no el AG. Redefinir con ARX-92; `intervencion.py:22` (`opciones_variantes`) | ARX-92 |
+| RF-14 | Comparar híbrido con ≥ 2 ablaciones (sin RNA, sin difuso o sin AG) | Parcial | `juego/comparacion.py` (`VARIANTES`): sin RNA y sin difuso medidas en el escenario exigente, 20 semillas (`docs/COMPARACION_POLITICAS_exigente.json`). La variante «sin AG» es `sin_ag_vecino` («sin AG: vecino más cercano»): mide la heurística voraz, no el AG. Las variantes `sin_ag_mas_corta` y `sin_ag_2opt` (entrega 2) TODO-CIFRAS, a la espera de la regeneración definitiva; `intervencion.py:22` (`opciones_variantes`) | TODO-CIFRAS |
 | RF-15 | ≥ 20 semillas con métricas y dispersión | Cumple | `docs/COMPARACION_POLITICAS.json` y `docs/COMPARACION_POLITICAS_exigente.json` (20 semillas): por variante, `pasos.desviacion` y `pasos.rango_intercuartil`, y lo mismo en `colisiones` y `bateria_final`; `docs/TABLA_MODOS.md` (medias y medianas) | — |
 
 ## 7. Eventos (§6)
@@ -170,7 +170,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 
 ## 13. Resumen de brechas por peso de rúbrica
 
-- **Integración (25 %):** replanteo del AG en el automático ante evento grave (§1); estados que faltan (§5); «sin AG» como ablación real del AG (RF-14, con ARX-92). Esfuerzo: ~8 h.
+- **Integración (25 %):** replanteo del AG en el automático ante evento grave (§1); estados que faltan (§5); «sin AG» como ablación del AG (RF-14; la entrega 2 la deja medible con `sin_ag_mas_corta` y `sin_ag_2opt`). Esfuerzo: ~8 h.
 - **RNA (15 %):** evidencia de activaciones y entrada→probabilidades (§2); endpoint de laboratorio y CA-06. Esfuerzo: ~7 h.
 - **Difuso (15 %):** temperatura (§3, decisión de alcance); membresías y curvas en la API. Esfuerzo: ~7 h (+4 h si entra la temperatura).
 - **AG (15 %):** exponer candidatos, historial y cromosomas por generación (§4, RF-11, CA-04). Esfuerzo: ~8 h.
@@ -186,7 +186,7 @@ M2 (variar una técnica altera una decisión, velocidad o ruta) no tiene un «cu
 |---|---|---|---|
 | Difuso | Cumple, con efecto en el resultado | Escenario exigente, 20 semillas: 20 de 20 con difuso y 15 de 20 sin él (`docs/COMPARACION_POLITICAS_exigente.json`). Divergencia directa en 20 de 20 semillas (`docs/TRAZA_DIVERGENCIAS_exigente.csv`) | — |
 | RNA | Parcial: altera decisiones, sin efecto en el resultado | Divergencia directa en 3 de 20 semillas (4, 10 y 18), con 1 a 4 pasos de diferencia; sin cambio de éxito ni de colisiones; redundante con el supervisor. Recall de barrancos 0,70–0,80 con `borde_barranco` y 0,000 sin él (ARX-28f) | No se abre ningún intento más salvo que lo pida el usuario |
-| AG | TODO-ENTREGA2 | Se escribe con la regeneración definitiva, con la entrega 2 (ARX-92c) integrada. El arnés mide `sin_ag_vecino` («sin AG: vecino más cercano»), que es la heurística voraz y no el AG | ARX-92c |
+| AG | Parcial: decide el orden de visita en el juego; con 10 sitios no supera a la mejora local | Medido con 10 sitios y 20 semillas (`docs/planes/mediciones/medicion_92c_ex10.json`): el híbrido gana 12 de 20, frente a 14 con el vecino más cercano y 17 con 2-opt. Es una falla de búsqueda del AG (INFORME §4.3). Con 3 y 4 sitios: TODO-CIFRAS | Penalización graduada de la inviabilidad y siembra con el vecino más cercano (trabajo futuro) |
 
 ## 14. Decisiones que chocan con fichas aprobadas (no resueltas en silencio)
 

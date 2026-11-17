@@ -94,10 +94,26 @@ M2 se evalúa técnica por técnica; no hay un «cumple» único.
 
 - **Difuso: cumple, con efecto en el resultado.** Sin difuso, la velocidad cambia en las 20 semillas. Esa velocidad es fija (0,5) en la variante, así que el efecto en el resultado es el de la comparación de éxitos: 20 de 20 con el difuso, 15 de 20 sin él (`docs/COMPARACION_POLITICAS_exigente.json`).
 - **RNA: parcial, altera decisiones, sin efecto en el resultado.** Con la RNA apagada, la decisión, la velocidad o la ruta cambian en 3 de 20 semillas (4, 10 y 18). En las tres, la RNA veta un obstáculo que está fuera de la ruta y obliga a replanificar. Cuesta entre 1 y 4 pasos (+4 en la semilla 4; +1 en las semillas 10 y 18) y no cambia el éxito ni las colisiones en ninguna semilla. Cuando el obstáculo está en la ruta, la decisión del supervisor prevalece (chequeo incondicional de ARX-91) y la decisión de la RNA queda enmascarada. En este diseño la RNA es redundante con el supervisor: altera decisiones puntuales, sin efecto en el resultado.
-- **AG: TODO-ENTREGA2.** Se escribe con la regeneración definitiva, con la entrega 2 (ARX-92c) integrada.
+- **AG: decide el orden de visita en el juego (entrega 2, §4.3).** Con 10 sitios, el híbrido gana menos partidas que las líneas base. La causa es una falla de búsqueda del AG, no una peor decisión.
 - **Recall de barrancos de la RNA sin `borde_barranco` (ARX-28f):** 0,70–0,80 con el rasgo y 0,000 sin él (sección 5).
 
 No se abre ningún intento más para la RNA salvo que el usuario lo pida.
+
+### 4.3 Entrega 2: el AG decide el orden de visita (ARX-92c, ev3-d80 A)
+
+En el juego, el AG decide el orden de visita de los sitios, con la misma restricción de energía que la ejecución (`juego/partida.py`, `_ag_con_todos_los_sitios`, línea 290; el método queda en `METODO_AG_ORDEN`, línea 280). La búsqueda exhaustiva de la ruta más corta queda como respaldo, para cuando el AG no encuentra un orden viable (líneas 355 a 374). Con más de seis sitios, el respaldo prueba un solo orden.
+
+**Medición con 10 sitios y 20 semillas** (escenario exigente de 10 sitios, columna con umbral, ev3-d74; `docs/planes/mediciones/medicion_92c_ex10.json`): sin AG, 2-opt 17; sin AG, permutación más corta 16; sin AG, vecino más cercano 14; híbrido 12; sin RNA 12; sin difuso 9; ruta corta (voraz) 7. El AG puro no se publica (ev3-d71). Sin umbral, el híbrido también gana 12: el umbral no explica la diferencia. Una mejora local simple supera al AG, y el AG supera a la ruta voraz.
+
+**Derrotas del híbrido** (8 de 20): 5 con sitios descartados, 2 sin batería en el camino y 1 de otra causa. El 12 de 20 mide una falla de búsqueda del AG, no una peor decisión: el fitness es plano entre rutas inviables y la población inicial es aleatoria. En 6 de las 8 derrotas (semillas 2, 3, 7, 9, 16 y 19) existía un orden completo y viable que el vecino más cercano y 2-opt encontraron. El juego normal, con seis sitios o menos, no se ve afectado por esta falla. Trabajo futuro, con diseño: penalizar la inviabilidad de forma graduada (M8) y sembrar la población con el vecino más cercano, medido con el mismo protocolo de 20 semillas; y un umbral relativo al largo de la ruta.
+
+**Umbral de empate** (ev3-d79): con 10 sitios, anula la preferencia del fitness en 19 de 40 planificaciones (en 13 de 20 semillas, al menos una). Se derivó del error de estimación con rutas de 3 y 4 sitios; revisarlo queda como trabajo futuro. El fitness no se presenta como decisor en el juego normal. Con el peso de riesgo ×5 como único cambio, la ruta elegida no cambia con el umbral en ninguna semilla (0 de 20 en el pequeño y 0 de 10 en el grande, cifras de QA). Sin umbral, cambia en 15 de 20 y 5 de 10. La receta está en `docs/planes/medicion_92a_pesos_umbral.py`. **TODO-CIFRAS:** la regeneración definitiva confirmará estas cifras.
+
+**Con 3 y 4 sitios**: TODO-CIFRAS. La regeneración definitiva medirá si el AG halla la mejor ruta en esos tamaños.
+
+**Presupuesto de cómputo:** el AG evalúa de 187 a 294 órdenes por planificación (media 239) y su mejor solución aparece, de media, en la generación 17,9 de 30. La búsqueda 2-opt evalúa de 45 a 180 pares (media 108) y hace 2,4 pasadas de media. Optimizan cosas distintas (fitness frente a largo). Aporta a M9 y M11.
+
+Las cifras de 10 sitios son de la medición única de 92c, la oficial. Las del congelado y del exigente de 5 sitios de las secciones anteriores se regeneran en la medición definitiva.
 
 ## 5. Resultados de la RNA
 

@@ -11,6 +11,12 @@ import pandas as pd
 # Tipos de celda del mundo real
 LIBRE, OBSTACULO, BARRANCO = 0, 1, 2
 
+# ARX-93 (ev3-d78 A): pista aparte, apagada por defecto. Encendida, las celdas BARRANCO quedan
+# DESNIVEL_BARRANCO_M metros bajo la elevación suave (firma física que la RNA puede aprender).
+# Apagada, el mundo es idéntico al de siempre. Solo se enciende en pruebas y mediciones.
+FIRMA_BARRANCO_ACTIVA = False
+DESNIVEL_BARRANCO_M = 3.0
+
 # Movimientos cardinales (fila, columna)
 # Ocho direcciones (ev3-d29 B). Una diagonal se permite si la celda de destino es transitable.
 MOVIMIENTOS = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "O": (0, -1),
@@ -110,6 +116,8 @@ def generar_mundo(semilla: int, filas: int = 20, columnas: int = 30,
 
     # Elevación suavizada: base de altimetría (supuesto de simulación)
     elevacion = np.cumsum(rng.normal(0, 0.2, size=(filas, columnas)), axis=1)
+    if FIRMA_BARRANCO_ACTIVA:
+        elevacion[tipo == BARRANCO] -= DESNIVEL_BARRANCO_M
 
     sitios = {}
     intentos = 0

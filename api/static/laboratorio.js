@@ -142,6 +142,46 @@ const COMPONENTES_AG = ["ciencia", "distancia", "energia", "riesgo", "tiempo", "
 let agDatos = null;
 let agCandidato = 0;
 
+// Pesos del fitness ajustables (ARX-47c, M10/M16). Valores por defecto = PESOS_POR_DEFECTO de genetico.py.
+// Rango [0, 5] según el plan; el servidor los recibe como ?w_<peso>= (ARX-47a) y rechaza lo fuera de rango.
+const PESOS_AG_DEFECTO = { ciencia: 1.0, distancia: 0.3, energia: 0.2, riesgo: 0.8, tiempo: 0.1 };
+const PESO_AG_MAX = 5;
+let pesosAgTocados = false;   // sin tocar los deslizadores no se envía ningún peso (consulta idéntica a la de siempre)
+const NOTA_PESOS_AG = "estos pesos afectan al laboratorio; en el juego el orden de visita lo fija la ruta más corta validada";
+
+function iniciarPesosAG() {
+  const cont = $("ag-pesos");
+  if (!cont) return;
+  for (const k of PESOS_AG) {
+    const fila = nodo("label", "", `${k} `);
+    const r = nodo("input");
+    r.type = "range"; r.id = `ag-peso-${k}`; r.min = "0"; r.max = String(PESO_AG_MAX); r.step = "0.05";
+    r.value = String(PESOS_AG_DEFECTO[k]);
+    const v = nodo("span", "", coma(PESOS_AG_DEFECTO[k], 2));
+    v.id = `ag-peso-${k}-v`;
+    r.addEventListener("input", () => { v.textContent = coma(Number(r.value), 2); pesosAgTocados = true; });
+    fila.appendChild(r);
+    fila.appendChild(v);
+    cont.appendChild(fila);
+  }
+  const aplicar = nodo("button", "boton", "Aplicar pesos");
+  aplicar.type = "button"; aplicar.id = "ag-pesos-aplicar";
+  aplicar.addEventListener("click", ejecutarAG);
+  const defecto = nodo("button", "boton", "Por defecto");
+  defecto.type = "button"; defecto.id = "ag-pesos-defecto";
+  defecto.addEventListener("click", () => {
+    for (const k of PESOS_AG) {
+      $(`ag-peso-${k}`).value = String(PESOS_AG_DEFECTO[k]);
+      $(`ag-peso-${k}-v`).textContent = coma(PESOS_AG_DEFECTO[k], 2);
+    }
+    pesosAgTocados = true;   // se envían los valores por defecto explícitos para sobrescribir los de la sesión
+    ejecutarAG();
+  });
+  cont.appendChild(aplicar);
+  cont.appendChild(defecto);
+  $("ag-pesos-nota").textContent = NOTA_PESOS_AG;
+}
+
 function textoCromosoma(cromosoma) {
   const pares = cromosoma.slice(0, 4).map(([f, c]) => `(${f},${c})`).join(" → ");
   return cromosoma.length > 4 ? `${pares} …` : pares;
@@ -257,7 +297,10 @@ async function ejecutarAG() {
   };
   contar();
   const reloj = setInterval(contar, 1000);
-  const datos = await deps.llamar("GET", "/ag" + (parada ? `?parada_sin_mejora=${parada}` : ""));
+  const q = new URLSearchParams();
+  if (parada) q.set("parada_sin_mejora", parada);
+  if (pesosAgTocados) for (const k of PESOS_AG) q.set(`w_${k}`, $(`ag-peso-${k}`).value);
+  const datos = await deps.llamar("GET", "/ag" + (q.toString() ? `?${q}` : ""));
   clearInterval(reloj);
   progreso.classList.add("oculto");
   boton.disabled = false;
@@ -584,6 +627,7 @@ export function iniciarLaboratorios(dependencias) {
 
   $("ag-ejecutar").addEventListener("click", ejecutarAG);
   iniciarPoliticas();
+  iniciarPesosAG();
   $("ag-generacion").addEventListener("change", (ev) => {
     if (!agDatos) return;
     const i = Number(ev.target.value);

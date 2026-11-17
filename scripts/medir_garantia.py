@@ -48,6 +48,8 @@ def causa(p, c, pasos):
         return "otra: sin terminar en %d pasos" % MAX_PASOS
     if p.estado == "SIN_RUTA":
         return "SIN_RUTA"
+    if "lleva 12 pasos detenido" in av:   # ARX-79c / ev3-d76: límite de tiempo de la caza
+        return "caza parada: 12 pasos sin avance (regla 79c)"
     if falta_sitios and bat0:
         return "bateria 0 con sitios pendientes"
     if falta_sitios and "bateria insuficiente" in av:

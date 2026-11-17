@@ -34,9 +34,12 @@ def test_bateria_de_referencia_cubre_la_ruta_voraz_con_margen():
         assert L + MARGEN_ENERGIA <= bat
 
 
-def test_partida_exigente10_planifica_todos_los_sitios():
+def test_partida_exigente10_planifica_todos_los_sitios_o_anota_el_respaldo():
+    # Tras la corrección de reserva (ARX-92c, §14) la semilla 2 puede quedar sin plan completo: en ese caso el
+    # envoltorio debe haber anotado AG-FALLBACK-GARANTIA. Plan completo o respaldo anotado, nunca en silencio (M1).
     p = comparacion.partida_variante(2, "hibrido", "exigente10")
-    assert all(c in p.mision.objetivos for c in p.mundo.sitios)
+    completo = all(c in p.mision.objetivos for c in p.mundo.sitios)
+    assert completo or p.mision._optimizar_ag.fallbacks
 
 
 def test_orden_2opt_no_es_mas_largo_que_el_voraz():

@@ -2,7 +2,8 @@
 
 Cromosoma: K celdas (puntos de paso) dentro del mapa. Se decodifica a una ruta contigua
 uniendo inicio → p1 → … → pK → refugio con BFS sobre el MAPA ESTIMADO (ev3-d02).
-Reparación: si un tramo no tiene camino, el punto se descarta y se cuenta como reparación.
+Reparación: si un tramo no tiene camino, el punto se descarta; los sitios que la ruta no toca se
+insertan en el mejor hueco (ARX-92b). Ambas cuentan como reparación y se exponen por separado.
 
 Subproblemas: laberinto (factibilidad del camino por BFS) y viajero (orden de visitas a sitios
 científicos, que determina cuándo se obtiene cada valor).
@@ -72,6 +73,8 @@ class Decodificacion:
     reparaciones: int
     inviable_sin_camino: bool
     orden_sitios: list          # sitios científicos en el orden en que se visitan
+    descartes: int = 0          # puntos sin camino descartados (reparación)
+    insertados: int = 0         # sitios omitidos que la reparación añadió a la ruta (ARX-92b)
 
 
 @dataclass
@@ -85,6 +88,8 @@ class Desglose:
     penalizacion: float
     reparaciones: int
     ruta_pasos: int
+    descartes: int = 0
+    insertados: int = 0
 
 
 @dataclass
@@ -133,28 +138,78 @@ class GeneticPlanner:
         tramo = cache[clave]
         return None if tramo is None else list(tramo)
 
-    def decodificar(self, cromosoma) -> Decodificacion:
-        ruta = [self.mundo.inicio]
-        reparaciones = 0
-        visitados = []
-        actual = self.mundo.inicio
-        for punto in list(cromosoma) + [self.mundo.refugio]:
-            if punto == actual:
+    def _unir(self, paradas):
+        """Une las paradas consecutivas con BFS; None si algún tramo no tiene camino."""
+        ruta = [paradas[0]]
+        for a, b in zip(paradas, paradas[1:]):
+            if a == b:
                 continue
-            if punto == self.mundo.refugio:
-                tramo = self._camino(actual, punto)
-                if tramo is None:
-                    return Decodificacion(ruta, reparaciones, True, visitados)
-            else:
-                tramo = self._camino(actual, punto)
-                if tramo is None:        # reparación: descartar el punto
-                    reparaciones += 1
-                    continue
+            tramo = self._camino(a, b)
+            if tramo is None:
+                return None
             ruta.extend(tramo[1:])
-            actual = punto
-            if punto in self.mundo.sitios and punto not in visitados:
-                visitados.append(punto)
-        return Decodificacion(ruta, reparaciones, False, visitados)
+        return ruta
+
+    def _largo(self, a, b):
+        if a == b:
+            return 0
+        tramo = self._camino(a, b)
+        return None if tramo is None else len(tramo) - 1
+
+    def decodificar(self, cromosoma) -> Decodificacion:
+        """Cromosoma → ruta contigua inicio → … → refugio que visita TODOS los sitios o es inviable (ARX-92b, M8).
+
+        1) Une los puntos con BFS; un punto sin camino se descarta (reparación por descarte).
+        2) Los sitios que la ruta no toca se insertan, uno a uno, en el hueco donde menos pasos añaden
+           (antes del refugio incluido); cada inserción cuenta como reparación. Un sitio sin hueco
+           alcanzable deja la decodificación como `inviable_sin_camino`.
+        """
+        mundo = self.mundo
+        paradas = [mundo.inicio]
+        descartes = 0
+        for punto in list(cromosoma):
+            if punto == paradas[-1] or punto == mundo.refugio:
+                continue
+            if self._largo(paradas[-1], punto) is None:
+                descartes += 1
+                continue
+            paradas.append(punto)
+        if self._largo(paradas[-1], mundo.refugio) is None:
+            ruta = self._unir(paradas) or [mundo.inicio]
+            return Decodificacion(ruta, descartes, True, self._sitios_en(ruta), descartes, 0)
+        paradas.append(mundo.refugio)
+
+        insertados = 0
+        sin_camino = False
+        ruta = self._unir(paradas)
+        for sitio in list(mundo.sitios):
+            if sitio in ruta:
+                continue
+            mejor = None
+            for i in range(len(paradas) - 1):
+                a, b = paradas[i], paradas[i + 1]
+                ida, vuelta, directo = self._largo(a, sitio), self._largo(sitio, b), self._largo(a, b)
+                if ida is None or vuelta is None or directo is None:
+                    continue
+                extra = ida + vuelta - directo
+                if mejor is None or extra < mejor[0]:
+                    mejor = (extra, i + 1)
+            if mejor is None:
+                sin_camino = True
+                continue
+            paradas.insert(mejor[1], sitio)
+            insertados += 1
+            ruta = self._unir(paradas)
+        return Decodificacion(ruta, descartes + insertados, sin_camino, self._sitios_en(ruta),
+                              descartes, insertados)
+
+    def _sitios_en(self, ruta):
+        """Sitios científicos por los que pasa la ruta, en orden de primera visita."""
+        vistos = []
+        for c in ruta:
+            if c in self.mundo.sitios and c not in vistos:
+                vistos.append(c)
+        return vistos
 
     # ---------- evaluación ----------
     def evaluar(self, cromosoma) -> Desglose:
@@ -176,7 +231,7 @@ class GeneticPlanner:
         fitness = (w["ciencia"] * ciencia - w["distancia"] * dist - w["energia"] * energia
                    - w["riesgo"] * riesgo - w["tiempo"] * tiempo - penal)
         return Desglose(fitness, ciencia, dist, energia, riesgo, tiempo, penal,
-                        d.reparaciones, pasos)
+                        d.reparaciones, pasos, d.descartes, d.insertados)
 
     # ---------- operadores ----------
     def _individuo_aleatorio(self):

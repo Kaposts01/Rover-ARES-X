@@ -163,3 +163,63 @@ Lectura: en el congelado el error es casi nulo (los pasos extra son esperas y re
 - **Exigente**: 120 filas comparadas con d67f96d: **0 cambian**. Decide el desempate en las semillas 9 y 16; en las semillas 1 a 8, 10 a 15 y 17 a 20 decide el fitness.
 - Definición: por planificación, «decide el desempate» si la ruta elegida no es la de mayor fitness (otra más corta queda dentro de 0,0223). «Decide el fitness» si la elegida es la de mayor fitness.
 - Lectura: el umbral solo se nota en unas pocas planificaciones, y en las medidas no cambió ninguna fila publicada.
+
+## 12. Exigente de 10 sitios (ev3-d73 A): criterio de batería, escrito ANTES de medir
+
+Decisión del Maestro: el escenario exigente pasa a tener 10 sitios (además de los 4 actuales, que no cambian) y la batería se recalibra con el criterio de esta sección. El criterio se fija aquí, antes de cualquier medición. No depende de qué variante gana ni de los resultados.
+
+- **Escenario nuevo `exigente10`**: nivel 5, ruido 0,6, p_detectar 0,4, física de velocidad activa (los mismos que `exigente`) y **10 sitios científicos** (en vez de 4). `exigente` no cambia.
+- **Ruta de referencia por semilla**: vecino más cercano sobre los sitios y tramos BFS en el mapa real, sin riesgo, sin RNA ni difuso (es la línea base `ruta_corta` del arnés). Su longitud en pasos es **L_ref**. Se calcula con el mapa de la semilla, antes de cualquier variante.
+- **Batería por semilla** (corregida antes de medir, ver nota): **B = ⌈L_ref × COSTO_BATERIA_PASO × 1,15⌉ + MARGEN_ENERGIA**, con COSTO_BATERIA_PASO = 1,0 y **MARGEN_ENERGIA = 15** (integracion.py, margen absoluto que `_planear` exige: descarta la ruta si `pasos + 15 > batería`).
+- **Nota de corrección (antes de medir)**: la primera versión era B = ⌈L_ref × 1,15⌉. Una prueba de humo en dos semillas mostró que `_planear` descartaba la ruta con sitios (L_ref + 15 > B) y el juego salía directo al refugio. Por eso se añade MARGEN_ENERGIA. Ninguna cifra de partidas se había medido con la versión anterior; el cambio sale de la mecánica del juego, no del resultado.
+- **Factibilidad**: la ruta de referencia cabe en B por construcción. Se verifica y se publica por semilla (en la tabla, la columna de batería y L_ref).
+- **Qué no es**: la batería no es una garantía de victoria. Las recargas no existen en el arnés; los drones y los eventos pueden alargar la ruta. Las derrotas se publican con su causa, sin ajustar B.
+- **Regla**: B no se ajusta después de ver resultados. Si la tasa sale baja, se publica así.
+- **Líneas base nuevas** (mismo mapa, mismo escenario, sin AG): **vecino más cercano** (`sin_ag_vecino`, ya existe) y **mejora local 2-opt** sobre el orden del vecino más cercano (`sin_ag_2opt`, nueva), con RNA y difuso activos. Sirven para decir si el AG aporta frente a una mejora local sencilla.
+
+## 13. Medición de 92c (20 semillas) y lectura de las preguntas del Orquestador
+
+Datos: `docs/planes/mediciones/medicion_92c.json` y `.log`. Criterios 1 y 4: 20/20 y 0 avisos de respaldo. Exigente de 10 sitios: híbrido 12/20 (8,1 sitios de media), vecino 14/20, 2-opt 17/20 (9,9), más corta 12/20, ag_puro 10/20. Publicado tal como salió; no se han cambiado códigos ni cifras.
+
+**(a) ¿Qué variante es «el AG decide el orden»?** El híbrido: el sistema completo con el AG de orden (pesos por defecto). `ag_puro` usa el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG aparte.
+
+**(b) ¿Por qué el híbrido visita 8,1 de 10?** En las 8 partidas que fallan, el plan inicial sí incluye los 10 sitios en 5 casos; el rover se queda sin batería por el camino (resultado de batería, tipo b). En los otros 3 (semillas 12, 16 y 19) el AG crudo también incluye los 10 sitios, pero `_planear` lo descarta porque `largo + MARGEN_ENERGIA > batería` (p. ej., semilla 12: 87 + 15 = 102 > 95), así que el plan queda solo con el refugio y la partida termina por «batería insuficiente». Esos 3 casos no son omisión del AG ni agotamiento en ruta: son un desajuste de viabilidad entre el envoltorio (que no aplica el margen de 15) y `_planear` (que sí lo aplica). Recuento: **5 de tipo b, 3 de desajuste de margen, 0 de omisión por el AG**.
+
+**(c) ¿Qué hace `sin_ag_mas_corta` con 10 sitios?** No es exhaustiva ni un tope: es el AG de orden con pesos solo de distancia, que con 10 sitios sigue siendo el AG (la enumeración exhaustiva solo se usa en la vía de respaldo, con 6 sitios o menos).
+
+**(d) ¿El umbral de 0,0223 anula los pesos en el exigente de 10 sitios?** Sí, en buena parte: de 40 planificaciones del híbrido, 19 eligen una ruta distinta de la de mayor fitness por el desempate (13 de 20 semillas tienen al menos una). Con esos pesos, el umbral no deja decidir al fitness en casi la mitad de los casos. Es la situación que ev3-d79 pide señalar.
+
+**Presupuesto frente a 2-opt (conteo, sin turno).** AG de orden: población 30 y 30 generaciones como máximo; órdenes distintos evaluados por planificación: 187 a 294 (media 239); mejor solución de media en la generación 17,9. 2-opt: 45 a 180 pares evaluados (media 108) y 2,4 pasadas de media. Con la misma cantidad de evaluaciones (≈240) 2-opt termina su búsqueda local mucho antes, pero optimiza el largo de la ruta, no el fitness, así que no compiten por el mismo objetivo. No se ha medido si converge antes en fitness con el mismo presupuesto: eso requiere una medición nueva.
+
+**Pendiente del Orquestador:** decidir si el caso de 3 semillas (desajuste de margen) se corrige y con qué criterio, antes de cualquier nueva medición. No se ha cambiado código.
+
+## 14. Corrección única de 92c: viabilidad del AG con la reserva de `_planear` (criterio escrito ANTES de codificar)
+
+Aprobada por el Maestro por delegación. Es la única corrección de 92c; **no hay segunda corrección**.
+
+- **Criterio**: la viabilidad del AG usa la misma reserva que `_planear` (largo + `MARGEN_ENERGIA` ≤ batería). Una ruta que no cumple esa reserva queda penalizada por debajo de cualquier ruta completa viable (se trata como no viable y recibe el piso de fitness de `optimizar_orden`).
+- **Motivo**: en la medición de 92c, 3 de las 8 partidas fallidas del híbrido en el exigente de 10 sitios tienen un AG crudo completo que `_planear` descarta por la reserva (§13). El envoltorio no aplicaba esa reserva.
+- **Reglas fijadas antes de medir** (no cambian después de ver resultados):
+  1. La columna oficial es **«con umbral»** (ev3-d74).
+  2. **«Sin umbral»** es diagnóstico y no pasa a oficial hoy, salga como salga.
+  3. **Se publica lo que salga frente a 2-opt**; no se ajusta nada para mejorar cifras.
+  4. **No hay segunda corrección.**
+- **Medición única**: exigente de 10 sitios, las mismas 20 semillas, todas las variantes, y el híbrido en dos columnas (con umbral y sin umbral). Con desglose de derrotas por semilla: batería agotada en el camino, o sitios descartados por `_planear`.
+- **Prueba**: una ruta con `largo + MARGEN_ENERGIA > batería` no puede ganar a una ruta completa viable (M8).
+
+## 15. Medición única de 92c tras la corrección de reserva (exigente de 10 sitios, 20 semillas)
+
+Datos: `docs/planes/mediciones/medicion_92c_ex10.json` y `.log`. Publicado tal como salió; no hay segunda corrección (§14). Corrección en 94cd918 (código) y 23f61b6 (script).
+
+**Éxitos (20 semillas, columna oficial «con umbral»):** híbrido 12/20; vecino más cercano 14/20; 2-opt 17/20; más corta (AG de orden, pesos de distancia) 16/20; sin RNA 12/20; sin difuso 9/20; ag_puro 9/20; ruta corta 7/20.
+
+**Híbrido, dos columnas:** con umbral 12/20; sin umbral (diagnóstico, no oficial) 12/20.
+
+**Desglose de derrotas del híbrido con umbral (8 fallos):**
+- Sitios descartados (el plan inicial no tiene sitios porque `_planear` rechaza la ruta del AG o el respaldo): semillas 2, 3, 7, 16, 19 (5).
+- Sin batería en el camino (plan con sitios, batería agotada): semillas 6 y 9 (2).
+- Otra causa: semilla 5 (9 de 10 sitios, plan completo).
+
+**Efecto de la corrección frente a la medición anterior (§13), mismas semillas:** recuperadas las semillas 1 y 12; perdidas las semillas 2 y 7, que antes tenían plan completo y ahora tienen plan sin sitios. Balance neto del híbrido: 0. Causa probable: con la reserva, el AG de orden no encuentra un orden viable en su búsqueda (en las semillas 1 a 3 y 7 se usó el respaldo). El respaldo con 10 sitios solo prueba un orden (el ordenado por número), y si no cabe, devuelve la ruta original, que `_planear` descarta. **No se corrige ahora** (no hay segunda corrección).
+
+**Lectura para el informe:** la corrección hace que el criterio de reserva sea coherente con el juego, pero en el exigente de 10 sitios no mejora el híbrido. Con el umbral y sin él, el híbrido da el mismo número de éxitos.

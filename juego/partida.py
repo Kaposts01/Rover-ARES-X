@@ -24,6 +24,8 @@ from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # 
 
 EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica")
 SENAL_DIST_MIN, SENAL_DIST_MAX = 3, 6    # distancia Chebyshev de la señal biológica al rover (ARX-30c)
+# ARX-30c (ev3-d50 C): probabilidad por paso de que la señal caiga sola, por nivel (supuesto de simulación)
+SENAL_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}
 TEXTO_SENAL = "Señal biológica anómala: lectura anómala, no confirma vida"   # ningún texto afirma vida
 GRIETAS_POR_NIVEL = {1: 1, 2: 1, 3: 2, 4: 2, 5: 3}                           # grietas por sismo (supuesto de simulación, ARX-30)
 SISMO_PROB_POR_NIVEL = {1: 0.003, 2: 0.004, 3: 0.006, 4: 0.007, 5: 0.009}   # probabilidad por paso (ARX-30)
@@ -1133,7 +1135,12 @@ class Partida:
                 and self.estado not in ESTADOS_TERMINALES
                 and self._rng_enlace.random() < ENLACE_PROB_POR_NIVEL[self.nivel]):
             self._evento_baja_conectividad()
-        # pendiente de ficha: nivel de aplicación de la señal espontánea (la señal biológica solo cae por POST /evento)
+        # ARX-30c (ev3-d50 C): la señal cae sola en todos los niveles, con generador propio; las reglas de ev3-d51 A
+        # (un solo objetivo pendiente, batería sin margen) las aplica _evento_senal_biologica: si no cabe, no se crea
+        if (self.meteoritos_activos and "senal_biologica" in self.eventos_activos
+                and self.estado not in ESTADOS_TERMINALES
+                and self._rng_senal.random() < SENAL_PROB_POR_NIVEL[self.nivel]):
+            self._evento_senal_biologica()
         if self.rover.bateria <= 0 and self.estado not in ESTADOS_TERMINALES:
             self.mision.estado = "FRACASO"
 
@@ -1290,15 +1297,22 @@ class Partida:
                 candidatas.append(celda)
         alcanzables = _alcanzables(self.mundo, tuple(self.rover.posicion))
         pendientes = [tuple(s) for s in self.mundo.sitios if s not in self.mision.visitados]
+        if len(pendientes) <= 1:      # ev3-d51 A: casi lista, la señal no aparece
+            return {"ok": False, "detalle": "queda un solo objetivo: no aparece la señal"}
         orden = [candidatas[i] for i in self._rng_senal.permutation(len(candidatas))] if candidatas else []
         celda = None
+        hubo_alcanzable = False
         for cand in orden:
             cand = (int(cand[0]), int(cand[1]))
             if (cand in alcanzables and tuple(self.mundo.refugio) in alcanzables
-                    and all(s in alcanzables for s in pendientes) and self._ganable_con_senal(cand)):
-                celda = cand
-                break
+                    and all(s in alcanzables for s in pendientes)):
+                hubo_alcanzable = True
+                if self._ganable_con_senal(cand):      # ev3-d51 A: batería para ir, volver y terminar (comprobación existente)
+                    celda = cand
+                    break
         if celda is None:
+            if hubo_alcanzable:
+                return {"ok": False, "detalle": "batería insuficiente para la señal"}
             return {"ok": False, "detalle": "sin celda alcanzable que deje la partida ganable"}
         self.senales.append({"paso": int(self.mision.paso), "celda": celda, "visitada": False})
         self._planear_con_senal(True)

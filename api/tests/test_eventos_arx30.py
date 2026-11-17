@@ -208,11 +208,7 @@ def test_partida_congelada_no_tiene_senales_espontaneas():
     for _ in range(3000):
         p._tick_ambiente()
     assert p.senales == []
-    # tampoco en la partida jugable: la caída espontánea de la señal queda pendiente de ficha
-    q = Partida(semilla=11, nivel=5)
-    for _ in range(3000):
-        q._tick_ambiente()
-    assert q.senales == []
+    # la partida jugable sí las tiene desde ev3-d50 C (ver test_la_senal_cae_sola_en_los_niveles_1_a_5)
 
 
 def test_arx66_con_la_senal_la_celda_es_alcanzable_y_la_partida_sigue_ganable():
@@ -234,3 +230,88 @@ def test_senal_en_estado_terminal_responde_ok_false():
     p.mision.estado = "FRACASO"
     r = p.disparar_evento("senal_biologica")
     assert r["ok"] is False and p.senales == []
+
+
+class _DadoSenal:
+    """random() siempre 0.0 (la señal siempre cae) y el resto del generador real (permutation)."""
+
+    def __init__(self, rng):
+        self._rng = rng
+
+    def random(self):
+        return 0.0
+
+    def permutation(self, n):
+        return self._rng.permutation(n)
+
+
+# ---------- ARX-30c ajuste: señal espontánea en todos los niveles (ev3-d50 C) y reglas de ev3-d51 A ----------
+SEMILLA_SENAL = 11
+TICKS_SENAL = 1500     # con la semilla 11 y 1500 ticks de _tick_ambiente cae al menos una señal en cada nivel
+
+
+def _senales_espontaneas(nivel, garantia=True):
+    p = Partida(semilla=SEMILLA_SENAL, nivel=nivel, garantia=garantia)
+    bat0 = p.rover.bateria
+    for _ in range(TICKS_SENAL):
+        p.rover.bateria = bat0      # el rover no conduce: se repone para que la partida no termine
+        p._tick_ambiente()
+        if p.senal_activa is not None:      # el rover no se mueve: se libera para contar nuevas caídas
+            p.senales[-1]["visitada"] = True
+    return p
+
+
+def test_la_senal_cae_sola_en_los_niveles_1_a_5():
+    for nivel in (1, 2, 3, 4, 5):
+        p = _senales_espontaneas(nivel)
+        assert len(p.senales) >= 1, f"nivel {nivel}: sin señal espontánea"
+
+
+def test_la_senal_no_cae_sola_sin_garantia():
+    for nivel in (1, 5):
+        assert _senales_espontaneas(nivel, garantia=False).senales == []
+
+
+def _partida_con_un_solo_pendiente():
+    p = Partida(semilla=11, nivel=1)
+    p.mision.visitados = set(list(p.mundo.sitios)[:-1])
+    assert len([s for s in p.mundo.sitios if s not in p.mision.visitados]) == 1
+    return p
+
+
+def test_la_senal_se_rechaza_si_queda_un_solo_objetivo():
+    p = _partida_con_un_solo_pendiente()
+    r = p.disparar_evento("senal_biologica")
+    assert r["ok"] is False and "un solo objetivo" in r["detalle"] and p.senales == []
+    # por la API, el mismo motivo y sin cambios
+    sesion = Sesion(semilla=11)
+    sesion.partida.mision.visitados = set(list(sesion.partida.mundo.sitios)[:-1])
+    r = TestClient(crear_app(sesion)).post("/evento", json={"nombre": "senal_biologica"}).json()
+    assert r["ok"] is False and "un solo objetivo" in r["detalle"] and sesion.partida.senales == []
+    # la espontánea tampoco se crea
+    p._rng_senal = _DadoSenal(p._rng_senal)
+    p._tick_ambiente()
+    assert p.senales == []
+
+
+def test_la_senal_se_rechaza_si_la_bateria_no_alcanza():
+    p = Partida(semilla=11, nivel=1)
+    assert len([s for s in p.mundo.sitios if s not in p.mision.visitados]) >= 2
+    p.rover.bateria = 6
+    r = p.disparar_evento("senal_biologica")
+    assert r["ok"] is False and "batería insuficiente" in r["detalle"] and p.senales == []
+    assert p.senal_activa is None
+    p._rng_senal = _DadoSenal(p._rng_senal)
+    p._tick_ambiente()
+    assert p.senales == []
+
+
+def test_arx66_muy_facil_y_facil_con_la_senal_espontanea_siguen_ganables():
+    for nivel in (1, 2):
+        p = _senales_espontaneas(nivel)
+        assert p.senales, f"nivel {nivel}"
+        q = Partida(semilla=SEMILLA_SENAL, nivel=nivel)
+        assert q.disparar_evento("senal_biologica")["ok"] is True
+        assert q._ganable_con_senal(q.senales[0]["celda"])
+        assert _es_ganable(q.mundo, q.rover.bateria, bateria_max=q.bateria_max, estaciones=q.estaciones,
+                           factor=q.mision.factor_ambiente)

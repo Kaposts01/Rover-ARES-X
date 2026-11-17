@@ -31,11 +31,11 @@ if RAIZ not in sys.path:
 
 from integracion import forzar_probabilidad  # noqa: E402
 from juego import conduccion  # noqa: E402
-from genetico import GeneticPlanner  # noqa: E402
+from genetico import GeneticPlanner, PESOS_POR_DEFECTO  # noqa: E402
 from difuso import BATERIA_MAX, COLUMNAS_MEMBRESIA, DISTANCIA_MAX, INCLINACION_MAX  # noqa: E402
 from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
 from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
-from juego.partida import Partida  # noqa: E402
+from juego.partida import Partida, METODO_ORDEN  # noqa: E402
 from juego import termico  # noqa: E402
 from simulador import MOVIMIENTOS  # noqa: E402
 
@@ -903,6 +903,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             "mejor_desglose": _desglose_fitness(res.mejor_desglose),
             "cruces": gp.cruces, "mutaciones": gp.mutaciones,
             "generaciones_ejecutadas": len(res.historial),
+            # ARX-92a: el orden que juega la partida lo elige el envoltorio, no este AG; se declara cómo
+            "orden_en_juego": {"metodo": METODO_ORDEN, "pesos": dict(getattr(p.mision, "pesos_ag", None) or PESOS_POR_DEFECTO)},
         }
         if len(_cache_ag) >= 16:
             _cache_ag.pop(next(iter(_cache_ag)))
@@ -1127,7 +1129,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             else:
                 datos = motor.comparar(range(1, semillas + 1), escenario=escenario)
         # ev3-d71: ag_puro no se publica (no mide el AG); mismo criterio que scripts/comparacion_politicas.py
-        no_publicar = ("ag_puro",)
+        no_publicar = ("ag_puro", "sin_ag_mas_corta")   # ARX-92d: sin_ag_mas_corta no se publica hasta regenerar
         datos = {**datos, "escenario": escenario,
                  "variantes": {v: r for v, r in datos["variantes"].items() if v not in no_publicar},
                  "filas": [f for f in datos["filas"] if f["variante"] not in no_publicar]}

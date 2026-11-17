@@ -40,3 +40,45 @@ def test_leer_los_sensores_no_consume_el_ruido_de_la_partida():
 def test_paneles_trae_los_sensores_que_pinta_el_panel_de_supervision():
     s = _cliente().get("/paneles").json()["sensores"]
     assert {"rumbo", "proximidad", "borde", "gradiente", "vibracion", "riesgo_enfrente", "falla"} <= set(s)
+
+
+def test_falla_de_sensor_responde_200_con_falla_true_en_estado_y_paneles():
+    cliente = _cliente()
+    r = cliente.post("/evento", json={"nombre": "falla_sensor"})
+    assert r.status_code == 200
+    assert cliente.get("/estado").status_code == 200
+    assert cliente.get("/paneles").status_code == 200
+    s = cliente.get("/estado").json()["sensores"]
+    assert s["falla"] is True
+    assert s["proximidad"] is None and s["borde"] is None and s["gradiente"] is None and s["vibracion"] is None
+
+
+def test_borde_del_mapa_no_da_riesgo_de_enfrente_y_las_lecturas_son_finitas():
+    import math
+    from api.servidor import _sensores
+    from juego.partida import Partida
+    p = Partida(semilla=11, nivel=1, filas=20, columnas=30)
+    p.rover.posicion = (0, 5)            # borde superior
+    p.rover.rumbo = "N"                  # hacia fuera del mapa
+    s = _sensores(p)
+    assert s["riesgo_enfrente"] is None
+    assert all(v is None or math.isfinite(v) for v in s.values() if isinstance(v, float))
+
+
+def test_lectura_no_finita_pasa_a_none(monkeypatch):
+    import numpy as np
+    from api import servidor
+    from juego.partida import Partida
+    p = Partida(semilla=11, nivel=1, filas=20, columnas=30)
+    monkeypatch.setattr(servidor.conduccion, "_observar",
+                        lambda partida: {"N": {"rasgos": np.array([np.nan, 0.5, np.inf, 0.1])}})
+    s = servidor._sensores(p)
+    assert s["proximidad"] is None and s["gradiente"] is None and s["borde"] == 0.5 and s["vibracion"] == 0.1
+
+
+def test_sin_rumbo_se_rotula_como_tal():
+    from api.servidor import _sensores
+    from juego.partida import Partida
+    p = Partida(semilla=11, nivel=1, filas=20, columnas=30)
+    p.rover.rumbo = None
+    assert _sensores(p)["rumbo"] == "sin rumbo"

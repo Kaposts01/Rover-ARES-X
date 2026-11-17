@@ -201,17 +201,29 @@ def _ultimo_replanteo(p) -> dict:
 
 def _sensores(p) -> dict:
     """ARX-86: lecturas de los sensores en el rumbo actual y riesgo estimado de la celda de enfrente. Usa copias del
-    sensor (no consume el ruido real de la partida)."""
+    sensor (no consume el ruido real de la partida). Durante una falla de sensor las lecturas son None (sin llamar a
+    _observar) y cualquier valor no finito pasa a None (QA: NaN rompía el JSON)."""
+    def finito(x, ndigitos=2):
+        return None if x is None or not math.isfinite(float(x)) else round(float(x), ndigitos)
+
     rumbo = p.rover.rumbo or "N"
-    obs = conduccion._observar(p)
-    rasgos = (obs.get(rumbo) or next(iter(obs.values())))["rasgos"]
     df, dc = MOVIMIENTOS[rumbo]
     f, c = p.rover.posicion[0] + df, p.rover.posicion[1] + dc
-    riesgo = float(p.mision.riesgo[f, c]) if 0 <= f < p.mision.riesgo.shape[0] and 0 <= c < p.mision.riesgo.shape[1] else None
-    return {"rumbo": rumbo, "proximidad": round(float(rasgos[0]), 2), "borde": round(float(rasgos[1]), 2),
-            "gradiente": round(float(rasgos[2]), 2), "vibracion": round(float(rasgos[3]), 2),
-            "riesgo_enfrente": None if riesgo is None else round(riesgo, 2),
-            "falla": bool(p._falla_restante > 0)}
+    riesgo = None
+    if 0 <= f < p.mision.riesgo.shape[0] and 0 <= c < p.mision.riesgo.shape[1]:
+        riesgo = finito(p.mision.riesgo[f, c])
+    falla = bool(p._falla_restante > 0)
+    rasgos = None
+    if not falla:
+        obs = conduccion._observar(p)
+        rasgos = (obs.get(rumbo) or next(iter(obs.values())))["rasgos"]
+    return {"rumbo": p.rover.rumbo or "sin rumbo",
+            "proximidad": None if rasgos is None else finito(rasgos[0]),
+            "borde": None if rasgos is None else finito(rasgos[1]),
+            "gradiente": None if rasgos is None else finito(rasgos[2]),
+            "vibracion": None if rasgos is None else finito(rasgos[3]),
+            "riesgo_enfrente": riesgo,
+            "falla": falla}
 
 
 def _estado(sesion: Sesion) -> dict:

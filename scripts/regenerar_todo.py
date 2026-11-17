@@ -6,6 +6,7 @@ Uso (desde la raíz del repositorio):
 Pasos, uno detrás de otro, un proceso a la vez:
     1. congelado: comparacion_politicas.py 20 congelado   -> docs/COMPARACION_POLITICAS.json
     2. exigente:  comparacion_politicas.py 20 exigente    -> docs/COMPARACION_POLITICAS_exigente.json
+    2b. exigente10: comparacion_politicas.py 20 exigente10 -> docs/COMPARACION_POLITICAS_exigente10.json (ARX-92c)
     3. traza:     traza_divergencias.py 20 exigente       -> docs/TRAZA_DIVERGENCIAS_exigente.csv
     4. tabla:     tabla_modos.py                           -> docs/tabla_modos.csv y docs/TABLA_MODOS.md
     5. rejilla:   rejilla_resbalon.py --salida docs        -> docs/REJILLA_RESBALON_exigente.{json,csv}
@@ -27,6 +28,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PASOS = [
     ("congelado", [sys.executable, "scripts/comparacion_politicas.py", "20", "congelado"]),
     ("exigente", [sys.executable, "scripts/comparacion_politicas.py", "20", "exigente"]),
+    ("exigente10", [sys.executable, "scripts/comparacion_politicas.py", "20", "exigente10"]),
     ("traza_exigente", [sys.executable, "scripts/traza_divergencias.py", "20", "exigente"]),
     ("tabla_modos", [sys.executable, "scripts/tabla_modos.py"]),
     ("rejilla_resbalon", [sys.executable, "scripts/rejilla_resbalon.py", "--salida", "docs"]),

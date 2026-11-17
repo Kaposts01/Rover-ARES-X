@@ -1141,7 +1141,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             else:
                 datos = motor.comparar(range(1, semillas + 1), escenario=escenario)
         # ev3-d71: ag_puro no se publica (no mide el AG); mismo criterio que scripts/comparacion_politicas.py
-        no_publicar = ("ag_puro", "sin_ag_mas_corta", "sin_ag_2opt")   # ARX-92d: sin_ag_mas_corta no se publica hasta regenerar
+        no_publicar = ("ag_puro",)   # ev3-d71: ag_puro no mide el AG. ARX-92 (regeneración): sin_ag_mas_corta y sin_ag_2opt se publican
         datos = {**datos, "escenario": escenario,
                  "variantes": {v: r for v, r in datos["variantes"].items() if v not in no_publicar},
                  "filas": [f for f in datos["filas"] if f["variante"] not in no_publicar]}

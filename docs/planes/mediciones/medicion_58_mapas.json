@@ -1,0 +1,1247 @@
+{
+ "filas": [
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 1,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 2,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 3,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 4,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 5,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 6,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 7,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 8,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 9,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 10,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 11,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 12,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 13,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 14,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 15,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 16,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 17,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 18,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 19,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 1,
+   "semilla": 20,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 1,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 2,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 3,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 4,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 5,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 6,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 7,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 8,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 9,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 10,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 11,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 12,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 13,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 14,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 15,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 16,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 17,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 18,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 19,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 2,
+   "semilla": 20,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 1,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 2,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 3,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 4,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 5,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 6,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 7,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 8,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 9,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 10,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 11,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 12,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 13,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 14,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 15,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 16,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 17,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 18,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 19,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 3,
+   "semilla": 20,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 1,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 2,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 3,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 4,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 5,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 6,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 7,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 8,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 9,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 10,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 11,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 12,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 13,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 14,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 15,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 16,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 17,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 18,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 19,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 4,
+   "semilla": 20,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 1,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 2,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 3,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 4,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 5,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 6,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 7,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 8,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 9,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 10,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 11,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 12,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 13,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 14,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 15,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 16,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 17,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 18,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 19,
+   "ganable": true
+  },
+  {
+   "tamano": "pequeno",
+   "nivel": 5,
+   "semilla": 20,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 1,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 2,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 3,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 4,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 5,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 6,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 7,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 8,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 9,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 10,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 11,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 12,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 13,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 14,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 15,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 16,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 17,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 18,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 19,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 1,
+   "semilla": 20,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 1,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 2,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 3,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 4,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 5,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 6,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 7,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 8,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 9,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 10,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 11,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 12,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 13,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 14,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 15,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 16,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 17,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 18,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 19,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 2,
+   "semilla": 20,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 1,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 2,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 3,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 4,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 5,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 6,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 7,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 8,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 9,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 10,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 11,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 12,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 13,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 14,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 15,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 16,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 17,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 18,
+   "ganable": true
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 19,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 3,
+   "semilla": 20,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 1,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 2,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 3,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 4,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 5,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 6,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 7,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 8,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 9,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 10,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 11,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 12,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 13,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 14,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 15,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 16,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 17,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 18,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 19,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 4,
+   "semilla": 20,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 1,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 2,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 3,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 4,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 5,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 6,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 7,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 8,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 9,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 10,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 11,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 12,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 13,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 14,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 15,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 16,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 17,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 18,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 19,
+   "ganable": false
+  },
+  {
+   "tamano": "grande",
+   "nivel": 5,
+   "semilla": 20,
+   "ganable": false
+  }
+ ],
+ "resumen": {
+  "pequeno-1": {
+   "ganables": 20,
+   "n": 20
+  },
+  "pequeno-2": {
+   "ganables": 20,
+   "n": 20
+  },
+  "pequeno-3": {
+   "ganables": 20,
+   "n": 20
+  },
+  "pequeno-4": {
+   "ganables": 20,
+   "n": 20
+  },
+  "pequeno-5": {
+   "ganables": 20,
+   "n": 20
+  },
+  "grande-1": {
+   "ganables": 20,
+   "n": 20
+  },
+  "grande-2": {
+   "ganables": 20,
+   "n": 20
+  },
+  "grande-3": {
+   "ganables": 4,
+   "n": 20
+  },
+  "grande-4": {
+   "ganables": 0,
+   "n": 20
+  },
+  "grande-5": {
+   "ganables": 0,
+   "n": 20
+  }
+ },
+ "segundos": 647
+}

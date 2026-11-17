@@ -62,6 +62,30 @@ en una instancia aparte (puerto distinto, o `TestClient` sin servidor), y se lan
 - **Limitación conocida:** el replanteo por sismo (fila `REPLAN-SISMO`) queda en la bitácora del motor (`mision.log`) y no
   aparece en `/historial`, que solo muestra las filas que anota la API. Se ve `evento:sismo` en el historial.
 
+## Ablaciones y traza de divergencias (ARX-28b)
+
+Escenario exigente: nivel 5, ruido 0,6, `p_detectar` 0,4, `prob_fallo` None (`ESCENARIOS` en `juego/comparacion.py`).
+Cuatro variantes con la misma semilla: híbrido, `sin_rna`, `sin_difuso` y `sin_ag`.
+
+- **Regenerar el JSON de 20 semillas:** desde `ares_x/`, `python scripts/comparacion_politicas.py 20 exigente`. Escribe
+  `docs/COMPARACION_POLITICAS_exigente.json`. Con el escenario `congelado` (sin el segundo argumento) escribe
+  `docs/COMPARACION_POLITICAS.json`, que sirve `GET /comparacion`.
+- **Regenerar la traza:** desde `ares_x/`, `python scripts/traza_divergencias.py 20 exigente`. Escribe
+  `docs/TRAZA_DIVERGENCIAS_exigente.csv`.
+- Los dos tardan varios minutos (cuatro partidas por semilla). Son trabajo pesado: uno a la vez en el equipo y con turno del
+  orquestador.
+- **Cómo leer la traza:** la columna `origen` separa `directa` (la primera divergencia por semilla y variante que cambia
+  decisión, velocidad o ruta), `directa_codigo` (solo cambia el código de motivo) y `consecuencia`. Las reglas están en
+  `CONTRATOS_GRAFICOS.md` §7.
+- **Resultado actual (20 semillas):** el difuso altera en 20 de 20 semillas, sobre todo la velocidad (16 de 20 directas).
+  La variante `sin_ag` reemplaza el planificador de orden (hoy, permutación más corta por búsqueda exhaustiva) por el vecino más cercano: el orden difiere en 12 de 20 semillas y tarda 4,35 pasos más de media. No atribuye efecto al AG (ver ARX-92). La RNA cambia una decisión en 2 de 20
+  (semillas 4 y 18), sin cambiar éxito ni colisiones. Nada de esto es una medición de la RNA fuera del escenario exigente.
+- **Límite de la clasificación:** la directa compara solo la posición y la batería del paso anterior. `paros_seguidos`, la ruta
+  y el generador no entran en la comparación. QA lo comprobó en las semillas 4 y 18 con el estado oculto.
+- **Limitación de la RNA sin borde (ARX-28f, control previo):** con `borde_barranco` falso, la RNA no predice barrancos
+  (recall 0,000). Con los rasgos normales, 0,70–0,80. Detalle en `docs/planes/ARX-28_calibracion.md`, sección «28f». Escrito
+  como medición; la causa (dependencia del rasgo de borde) es inferencia.
+
 ## Evaluación congelada
 
 `juego/comparacion.py` (`partida_variante`) y `juego/conduccion.py` (`correr`) crean la partida con
@@ -110,7 +134,8 @@ Estado: en `feat/arx-30-bc`, QA vuelta 2 (17/11): aprobado con observaciones. Pe
   ganables en la prueba de QA). En Medio, Difícil y Hardcore la señal se rechaza por batería en 12 de 12 casos, así que casi
   nunca aparece. La causa es previa a la rama: el estimador de `_es_ganable` y `_plan_con_paradas` es optimista en el mapa
   grande (ya ocurre en `main` sin eventos). Lo sigue la tarea ARX-79. La reserva de 5 % está aprobada (ficha ev3-d56, opción A);
-  **la decisión abierta sobre la reserva en el mapa grande es la ficha ev3-d59**. Mientras tanto, no contar con la señal en el mapa grande. En
+  la ficha ev3-d59 está aprobada (opción A, 17/11: «integrar ya y arreglar el mapa grande en ARX-79»). Mientras no se arregle
+  en ARX-79, no contar con la señal en el mapa grande. En
   pequeño, el barrido de QA (12 semillas por nivel) acepta la señal en los 5 niveles y todas las aceptadas terminan en EXITO.
 - **O-b (BAJO):** la fila «Señal biológica» desaparece del panel de objetivos al visitarla, y `/objetivos` no la devuelve.
   Sin resolver.

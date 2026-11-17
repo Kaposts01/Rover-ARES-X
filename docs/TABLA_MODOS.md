@@ -6,10 +6,10 @@ Arnés: capa de juego (`juego/partida.py`, semillas 1 a 20, sin combate ni event
 
 | Configuración | Éxito | Colisiones (media) | Intentos a barranco (media) | Pasos (mediana) |
 |---|---|---|---|---|
-| automático (supervisor completo) | 19/20 | 0.00 | 0.00 | 41 |
-| rna, veto encendido | 20/20 | 0.00 | 0.00 | 40 |
-| rna, veto apagado | 20/20 | 0.10 | 0.00 | 40 |
-| difuso, veto encendido | 20/20 | 0.00 | 0.00 | 41.5 |
-| difuso, veto apagado | 20/20 | 0.40 | 0.15 | 42.5 |
-| ag, veto encendido | 20/20 | 0.00 | 0.00 | 41 |
-| ag, veto apagado | 20/20 | 0.55 | 0.15 | 41 |
+| automático (supervisor completo) | 20/20 | 0.00 | 0.00 | 43 |
+| rna, veto encendido | 20/20 | 0.00 | 0.00 | 44.5 |
+| rna, veto apagado | 20/20 | 0.05 | 0.00 | 44.5 |
+| difuso, veto encendido | 20/20 | 0.00 | 0.00 | 43 |
+| difuso, veto apagado | 20/20 | 0.35 | 0.10 | 44 |
+| ag, veto encendido | 20/20 | 0.00 | 0.00 | 43 |
+| ag, veto apagado | 20/20 | 0.35 | 0.10 | 43 |

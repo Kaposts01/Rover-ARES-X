@@ -47,6 +47,13 @@ PROB_ORDEN_PERDIDA = 0.5                # en manual, probabilidad de perder una 
 ENLACE_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}   # corte espontáneo por paso (supuesto de simulación)
 BATERIA_BAJA = 15.0
 
+# ARX-28c (ev3-d54 A): resbalón por velocidad en pendiente, solo con la bandera fisica_velocidad (escenario exigente).
+# Constantes CONGELADAS por ev3-d69 A: no se ajustan tras ver cifras; la sensibilidad se publica aparte (rejilla 3x2).
+INCLINACION_RESBALON = 20.0     # grados: sobre esta pendiente la tracción de las ruedas deja de ser segura (plan: «p. ej. 20°»)
+P_RESBALON = 0.5                # probabilidad = P_RESBALON * velocidad: el riesgo de perder agarre crece con la velocidad
+COSTO_RESBALON = 1.0            # % de batería: esfuerzo extra de las ruedas al patinar y reanudar el avance (supuesto)
+VELOCIDAD_SIN_RESBALON = 0.3    # por debajo de esta velocidad el avance es lento y no resbala (plan: v < 0,3)
+
 NIVEL_MAX = 5
 # ARX-21: tamaño del mapa. 20x30 es el de las evaluaciones congeladas (informe y /comparacion).
 FILAS_BASE, COLUMNAS_BASE = 20, 30
@@ -386,6 +393,8 @@ class Partida:
         self.mision.rna = _RnaSegura(self.mision.rna)
         # El planificador de la misión pasa a respetar el objetivo fijado por el jugador (ev3-d27).
         self.mision._planear = self._planear_con_objetivo
+        # ARX-90: regla de percepción (método ligado: sobrevive a copy y deepcopy de la partida)
+        self.mision._actualizar_mapa_estimado = self._actualizar_mapa_percepcion
         self._falla_restante = 0           # pasos de IA detenida por falla de sensor
         self._prob_fallo_base = None       # probabilidad de fallo del sensor antes de la falla
         self._ambiente = "normal"          # "normal" | "tormenta" | "noche"
@@ -394,6 +403,9 @@ class Partida:
         self._rng_sismo = np.random.default_rng([int(semilla), 1314])     # ARX-30a: propio, no altera los meteoritos
         self._rng_enlace = np.random.default_rng([int(semilla), 1315])    # ARX-30b: propio, no altera meteoritos ni sismos
         self._rng_senal = np.random.default_rng([int(semilla), 1316])     # ARX-30c: propio
+        self._rng_resbalon = np.random.default_rng([int(semilla), 1317])  # ARX-28c: propio, no altera los demás
+        self.fisica_velocidad = False      # ARX-28c: apagada por defecto; solo la enciende el escenario exigente
+        self.resbalones = 0
         self.senales = []                  # señales biológicas: [{"paso", "celda", "visitada"}] (ARX-30c)
         self._ultimo_corte = None          # paso del último corte de enlace (para /moviles)
         self.enlace_restante = 0           # pasos que quedan de corte de enlace (ARX-30b)
@@ -518,6 +530,7 @@ class Partida:
         sombra.sensor = SensorSuite(rng=sombra.rng, ruido=m.sensor.ruido,
                                     prob_fallo=m.sensor.prob_fallo)
         sombra.riesgo = m.riesgo.copy()
+        sombra._actualizar_mapa_estimado = lambda *a: self._actualizar_mapa_percepcion(*a, destino=sombra)
         sombra.ruta = list(m.ruta)
 
         if self._ruta_inconsistente():
@@ -541,7 +554,8 @@ class Partida:
         if sombra.riesgo[siguiente] >= 0.5:
             dec = Decision("replanificar", 0.0, ["V-RUTA-CON-RIESGO"])
         distancia = lectura["proximidad_frontal_m"]
-        if dec.accion == "detener" and sombra._obstaculo_en_ruta(pos, rumbo, distancia):
+        # incondicional desde ARX-91 (ab46b4a es donde nació la versión que dependía de la parada del difuso)
+        if sombra._obstaculo_en_ruta(pos, rumbo, distancia):
             dec = Decision("replanificar", 0.0, ["V-OBSTACULO-EN-RUTA"])
         paros = m.paros_seguidos + 1 if dec.accion == "detener" else 0
         if paros >= PASOS_PARADO_MAXIMO:
@@ -987,8 +1001,11 @@ class Partida:
         paso_previo, filas_previas = m.paso, len(m.log.filas)
         des = decision.get("desglose")
         self._fitness_paso = des["fitness"] if des else None     # ARX-80: el fitness medido antes de actuar
+        pos_previa, visitados_previos = self.rover.posicion, set(m.visitados)     # ARX-28c: para el resbalón
         try:
             m.paso_mision()
+            if self.fisica_velocidad:
+                self._resbalar_si_corresponde(pos_previa, filas_previas, visitados_previos)
             self._tras_paso_estacion()
             self._revisar_victoria()
             if m.paso > paso_previo:
@@ -1007,6 +1024,38 @@ class Partida:
             self._fitness_paso = None
         return {**decision, **self._posicion_estado()}
 
+    def _resbalar_si_corresponde(self, pos_previa, filas_previas, visitados_previos) -> None:
+        """ARX-28c: tras un avance, si la celda alcanzada es empinada, resbala con probabilidad P_RESBALON * velocidad.
+
+        El rover vuelve a la celda anterior, gasta COSTO_RESBALON y la bitácora anota D-RESBALON. Despacio no resbala.
+
+        La inclinación se mide con la elevación REAL del mundo (mundo.elevacion), no con la estimada que ve el difuso.
+        """
+        m = self.mision
+        if len(m.log.filas) != filas_previas + 1:
+            return
+        fila = m.log.filas[-1]
+        nueva = self.rover.posicion
+        if fila.get("accion") != "avanzar" or nueva == pos_previa:
+            return
+        v = float(fila.get("velocidad") or 0.0)
+        if v < VELOCIDAD_SIN_RESBALON:
+            return
+        inclinacion = abs(float(self.mundo.elevacion[nueva] - self.mundo.elevacion[pos_previa])) * GRADOS_POR_GRADIENTE
+        if inclinacion <= INCLINACION_RESBALON:
+            return
+        if self._rng_resbalon.random() >= P_RESBALON * v:
+            return
+        self.rover.posicion = pos_previa
+        self.rover.consumir(COSTO_RESBALON)
+        m.ruta.insert(0, pos_previa)       # la celda alcanzada vuelve a ser la siguiente de la ruta
+        if nueva in self.mundo.sitios and nueva in m.visitados and nueva not in visitados_previos:
+            m.visitados.discard(nueva)
+        self.resbalones += 1
+        fila["posicion"] = str(pos_previa)
+        fila["bateria"] = round(self.rover.bateria, 2)
+        fila["motivos"] = (fila["motivos"] + ";" if fila.get("motivos") else "") + "D-RESBALON"
+
     def _paso_con_falla(self) -> None:
         """Paso de IA detenida por falla de sensor: no llama a paso_mision ni mueve al rover."""
         m = self.mision
@@ -1022,6 +1071,25 @@ class Partida:
 
     def _posicion_estado(self) -> dict:
         return {"posicion": self.rover.posicion, "bateria": float(self.rover.bateria), "estado": self.estado}
+
+    # ---------- regla de percepción (ARX-90) ----------
+    def _actualizar_mapa_percepcion(self, pos, rumbo, distancia, destino=None):
+        """Regla de percepción (ARX-90): un sensor ruidoso no marca como riesgo un sitio pendiente, el inicio ni el refugio.
+
+        Esas celdas son LIBRE por construcción, así que marcarlas es siempre un falso positivo, y una marca basta para
+        bloquear la ruta y agotar las recuperaciones (ARX-90, semilla 7 del escenario exigente). Envuelve, sobre la
+        instancia, a Mision._actualizar_mapa_estimado (Mision está congelada). Igual para las cuatro variantes del arnés.
+
+        Riesgo conocido (no corregido en ARX-90): una lectura ruidosa que sitúa el obstáculo una celda más lejos puede causar
+        colisión; desde ARX-91 la ablación sin difuso también consulta _obstaculo_en_ruta (chequeo incondicional). Ejemplo: exigente, semilla 20,
+        sin difuso, paso 31 (celda (14,27), obstáculo estimado a 0,05).
+        """
+        m = destino if destino is not None else self.mision
+        celda = m._celda_observada(pos, rumbo, distancia)
+        if celda is not None and (celda in (m.mundo.inicio, m.mundo.refugio)
+                                  or (celda in m.mundo.sitios and celda not in m.visitados)):
+            return
+        Mision._actualizar_mapa_estimado(m, pos, rumbo, distancia)
 
     # ---------- planificación con objetivo fijado (ev3-d27) ----------
     def _planear_con_objetivo(self) -> bool:

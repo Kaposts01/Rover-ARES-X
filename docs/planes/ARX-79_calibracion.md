@@ -57,3 +57,34 @@ Decisión del Maestro: la batería inicial del mapa grande pasa a ser proporcion
 - **Aviso «Mapa sin garantía de victoria»**: se queda.
 - **Límite conocido de R**: sale de victorias, y las del grande son solo de niveles 1 y 2 (lo fácil). Por eso R puede subestimar lo que hace falta en niveles 3 a 5; no se ajusta hasta llegar al 100 %.
 - **Regla de medición (79d)**: 20 semillas por nivel en el grande, tasa publicada tal como salga. No se ajusta R hasta llegar al 100 %. Si a las 15:00 no está aprobada por QA, se aplica el repliegue D (mapa pequeño por defecto).
+
+## 79d · medición final con batería proporcional (ev3-d75 A) · código fc9693a
+
+Medido con `scripts/medir_garantia.py` (20 semillas por nivel, niveles 1 a 5, con eventos por defecto, tope de 500 pasos). Ficheros: `docs/planes/mediciones/medicion_79d_grande.json` y `..._79d_pequeno.json`. Las cifras se leen de esos JSON; no se han ajustado.
+
+**Grande (40×60), batería inicial 149, 143, 137, 131, 125 por nivel**
+
+| Nivel | Éxito | Causas de las derrotas |
+|---|---|---|
+| 1 | 20/20 | — |
+| 2 | 20/20 | — |
+| 3 | 10/20 | caza sin batería 4, batería 0 con sitios pendientes 2, batería insuficiente 2, 12 pasos parado (regla 79c) 2 |
+| 4 | 6/20 | caza sin batería, batería 0, batería insuficiente, faltan drones |
+| 5 | 4/20 | caza sin batería, batería 0, batería insuficiente, faltan drones, SIN_RUTA |
+
+Totales de derrotas grande: caza sin batería 22, batería 0 con sitios pendientes 7, batería insuficiente 4, faltan drones (el refugio queda bloqueado) 2, impacto de meteorito 2, 12 pasos parado 2, SIN_RUTA 1. Suman 40.
+
+**Pequeño (20×30), batería 100, 96, 92, 88, 84 (sin cambios)**: 20/20 en todos los niveles, igual que 79a.
+
+**Regla de 79c (límite de 12 pasos parado cazando, ev3-d76 condicionada)**
+- Partidas que terminan por «12 pasos parado»: **2 de 200** (1 % del total), las dos en el nivel 3 del grande (semillas 13 y 16). Sobre el grande solo, 2 de 100 (2 %).
+- Umbral de ev3-d76: 2 % o menos. **Queda dentro del umbral**, por lo que la regla se mantiene como está. Con más de 2 %, la alternativa era abandonar la caza, replanificar y no volver a ese dron durante N pasos, con FRACASO solo tras K abandonos.
+
+**Aviso «Mapa sin garantía de victoria»** (las filas guardan los últimos 3 avisos, así que es un mínimo): nivel 3, 7 partidas; nivel 4, 12; nivel 5, 8.
+
+**Lectura.** La dificultad crece con el nivel en el grande (100 % en 1 y 2, 50 % en 3, 30 % en 4, 20 % en 5), y el pequeño no cambia. La tasa se publica tal como sale, sin ajustar R hasta llegar al 100 %, según la regla del criterio. Cada derrota del grande tiene causa registrada. La batería proporcional sí da victorias en el grande (en 79a, 0/20 en niveles 3 a 5).
+
+**Límites conocidos**
+- R (1,49) sale de victorias de niveles 1 y 2; puede subestimar lo que hace falta en niveles 3 a 5.
+- La regla de 79c es un límite de tiempo de la caza: 12 pasos seguidos con el rover en la misma celda, sin contar fallos de sensor. Corta un bucle, no resuelve la caza. Un arreglo de fondo (rodear o forzar el avance) cambia el juego y queda como decisión del Maestro.
+- El aviso «sin garantía» se queda, como pidió el Maestro.

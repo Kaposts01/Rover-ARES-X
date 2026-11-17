@@ -163,3 +163,15 @@ Lectura: en el congelado el error es casi nulo (los pasos extra son esperas y re
 - **Exigente**: 120 filas comparadas con d67f96d: **0 cambian**. Decide el desempate en las semillas 9 y 16; en las semillas 1 a 8, 10 a 15 y 17 a 20 decide el fitness.
 - Definición: por planificación, «decide el desempate» si la ruta elegida no es la de mayor fitness (otra más corta queda dentro de 0,0223). «Decide el fitness» si la elegida es la de mayor fitness.
 - Lectura: el umbral solo se nota en unas pocas planificaciones, y en las medidas no cambió ninguna fila publicada.
+
+## 12. Exigente de 10 sitios (ev3-d73 A): criterio de batería, escrito ANTES de medir
+
+Decisión del Maestro: el escenario exigente pasa a tener 10 sitios (además de los 4 actuales, que no cambian) y la batería se recalibra con el criterio de esta sección. El criterio se fija aquí, antes de cualquier medición. No depende de qué variante gana ni de los resultados.
+
+- **Escenario nuevo `exigente10`**: nivel 5, ruido 0,6, p_detectar 0,4, física de velocidad activa (los mismos que `exigente`) y **10 sitios científicos** (en vez de 4). `exigente` no cambia.
+- **Ruta de referencia por semilla**: vecino más cercano sobre los sitios y tramos BFS en el mapa real, sin riesgo, sin RNA ni difuso (es la línea base `ruta_corta` del arnés). Su longitud en pasos es **L_ref**. Se calcula con el mapa de la semilla, antes de cualquier variante.
+- **Batería por semilla**: **B = ⌈L_ref × COSTO_BATERIA_PASO × (1 + MARGEN)⌉**, con **MARGEN = 0,15** (el mismo margen de reserva que `MARGEN_ENERGIA`, integracion.py) y COSTO_BATERIA_PASO = 1,0. Es decir, la batería cubre la ruta de referencia con un 15 % de reserva.
+- **Factibilidad**: la ruta de referencia cabe en B por construcción. Se verifica y se publica por semilla (en la tabla, la columna de batería y L_ref).
+- **Qué no es**: la batería no es una garantía de victoria. Las recargas no existen en el arnés; los drones y los eventos pueden alargar la ruta. Las derrotas se publican con su causa, sin ajustar B.
+- **Regla**: B no se ajusta después de ver resultados. Si la tasa sale baja, se publica así.
+- **Líneas base nuevas** (mismo mapa, mismo escenario, sin AG): **vecino más cercano** (`sin_ag_vecino`, ya existe) y **mejora local 2-opt** sobre el orden del vecino más cercano (`sin_ag_2opt`, nueva), con RNA y difuso activos. Sirven para decir si el AG aporta frente a una mejora local sencilla.

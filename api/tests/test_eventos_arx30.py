@@ -115,15 +115,33 @@ def test_con_enlace_cortado_la_ia_sigue_pero_recomendacion_e_intervencion_dan_40
 
 
 def test_el_enlace_vuelve_tras_los_pasos_sin_enlace():
-    p = Partida(semilla=11, nivel=1, garantia=False)
+    # B3 (QA): con la sesión de la API, tras PASOS_SIN_ENLACE pasos el enlace vuelve y la orden deja de perderse
     sesion = Sesion(semilla=11)
     cliente = TestClient(crear_app(sesion))
+    p = sesion.partida
+    p._rng_enlace = _DadoFijo(0.0)           # mientras haya corte, toda orden se pierde
     cliente.post("/evento", json={"nombre": "baja_conectividad"})
+    assert cliente.get("/estado").json()["enlace"] == {"activo": True, "restante": PASOS_SIN_ENLACE}
     for _ in range(PASOS_SIN_ENLACE):
-        assert cliente.get("/estado").json()["enlace"]["activo"] is True
-        sesion.partida._tick_ambiente()
-    assert cliente.get("/estado").json()["enlace"] == {"activo": False, "restante": 0}
-    assert p.enlace_restante == 0
+        r = cliente.post("/mover", json={"rumbo": _rumbo_libre(p)}).json()
+        assert r["movido"] is False and r["motivo"] == "sin enlace"
+    assert cliente.get("/estado").json()["enlace"]["activo"] is False
+    r = cliente.post("/mover", json={"rumbo": _rumbo_libre(p)}).json()
+    assert r["movido"] is True               # con el dado en 0.0 una orden perdida seguiría fallando: ya no hay corte
+
+
+def test_en_manual_movimiento_logrado_y_orden_perdida_avanzan_el_mismo_paso():
+    # B1 (QA): ambos caminos suman un paso de misión y un turno de combate
+    sesion = Sesion(semilla=11)
+    cliente = TestClient(crear_app(sesion))
+    p = sesion.partida
+    paso0 = p.mision.paso
+    assert cliente.post("/mover", json={"rumbo": _rumbo_libre(p)}).json()["movido"] is True
+    assert p.mision.paso == paso0 + 1
+    p._rng_enlace = _DadoFijo(0.0)
+    cliente.post("/evento", json={"nombre": "baja_conectividad"})
+    assert cliente.post("/mover", json={"rumbo": _rumbo_libre(p)}).json()["motivo"] == "sin enlace"
+    assert p.mision.paso == paso0 + 2
 
 
 def test_partida_congelada_no_tiene_cortes_de_enlace_espontaneos():
@@ -315,3 +333,96 @@ def test_arx66_muy_facil_y_facil_con_la_senal_espontanea_siguen_ganables():
         assert q._ganable_con_senal(q.senales[0]["celda"])
         assert _es_ganable(q.mundo, q.rover.bateria, bateria_max=q.bateria_max, estaciones=q.estaciones,
                            factor=q.mision.factor_ambiente)
+
+
+# ---------- ARX-30c (QA C1): la ganabilidad de la señal cuenta la caza de drones y el meteorito ----------
+def _sesion_automatica(semilla, nivel, eventos):
+    sesion = Sesion(semilla=semilla, nivel=nivel)
+    app = crear_app(sesion)
+    cliente = TestClient(app)
+    cliente.post("/partida", json={"semilla": semilla, "nivel": nivel, "tamano": "pequeno"})
+    cliente.post("/modo", json={"modo": "automatico", "veto": True})
+    app.state.sesion.partida.eventos_activos = tuple(eventos)
+    return app, cliente
+
+
+def _jugar(app, cliente, senal_en=None):
+    for n in range(700):
+        if n == senal_en:
+            cliente.post("/evento", json={"nombre": "senal_biologica"})
+        estado = cliente.post("/paso").json().get("estado")
+        if estado in ESTADOS_TERMINALES:
+            return estado
+    return estado
+
+
+import pytest
+
+
+@pytest.mark.parametrize("semilla,nivel", [(5, 3), (6, 5)])
+def test_senal_con_drones_obligatorios_no_deja_sin_ganar_las_repros_de_qa(semilla, nivel):
+    # Repros de QA (fracaso9): semilla 5 nivel 3 y semilla 6 nivel 5, señal forzada en el paso 3, todos los eventos
+    from juego.partida import EVENTOS_SOPORTADOS
+    app, cliente = _sesion_automatica(semilla, nivel, EVENTOS_SOPORTADOS)
+    assert _jugar(app, cliente, None) == "EXITO"            # sin señal: se gana (línea base)
+    app, cliente = _sesion_automatica(semilla, nivel, EVENTOS_SOPORTADOS)
+    assert _jugar(app, cliente, 3) == "EXITO"               # con señal: se gana (la señal se acepta o se rechaza)
+
+
+@pytest.mark.parametrize("nivel", [3, 5])
+def test_ninguna_senal_aceptada_con_drones_deja_sin_ganar(nivel):
+    from juego.partida import EVENTOS_SOPORTADOS
+    for semilla in range(1, 7):
+        for paso_senal in (3, 10, 20):
+            app, cliente = _sesion_automatica(semilla, nivel, EVENTOS_SOPORTADOS)
+            assert _jugar(app, cliente, paso_senal) == "EXITO", (semilla, nivel, paso_senal)
+
+
+def _celda_alcanzable(p):
+    """Una celda alcanzable a distancia Chebyshev >= 3 del rover, distinta de sitios, refugio y estaciones."""
+    r = tuple(p.rover.posicion)
+    for c in sorted(_alcanzables(p.mundo, r)):
+        if (max(abs(c[0] - r[0]), abs(c[1] - r[1])) >= 3 and c not in p.mundo.sitios
+                and c != tuple(p.mundo.refugio) and c not in p.estaciones):
+            return (int(c[0]), int(c[1]))
+    raise AssertionError("sin celda alcanzable")
+
+
+def _bateria_minima(p, celda):
+    """Batería mínima (pasos de 0,5) con la que _ganable_con_senal acepta la celda en el estado actual de p."""
+    b = 1.0
+    while b < 300:
+        p.rover.bateria = b
+        if p._ganable_con_senal(celda):
+            return b
+        b += 0.5
+    raise AssertionError("nunca ganable")
+
+
+def test_ganable_con_senal_cuenta_la_caza_de_los_drones_vivos():
+    from juego.partida import MARGEN_CAZA
+    app, cliente = _sesion_automatica(5, 3, ("senal_biologica",))
+    p = app.state.sesion.partida
+    celda = _celda_alcanzable(p)
+    assert p.combate is not None and any(d.vivo for d in p.combate.drones)
+    p.bateria_max = 300.0                                  # sin paradas en estaciones: solo cuenta la ruta
+    p.estaciones = []
+    con_drones = _bateria_minima(p, celda)
+    for d in p.combate.drones:
+        d.estado = "muerto"
+    sin_drones = _bateria_minima(p, celda)
+    assert con_drones > sin_drones            # la caza se cuenta: ruta a cada dron + MARGEN_CAZA por dron
+    assert con_drones - sin_drones >= MARGEN_CAZA
+
+
+def test_ganable_con_senal_reserva_el_dano_del_meteorito():
+    from juego.partida import DANO_METEORITO
+    app, cliente = _sesion_automatica(5, 1, ("senal_biologica",))
+    p = app.state.sesion.partida
+    celda = _celda_alcanzable(p)
+    p.bateria_max = 300.0
+    p.estaciones = []
+    sin = _bateria_minima(p, celda)
+    p.eventos_activos = ("senal_biologica", "meteorito")
+    con = _bateria_minima(p, celda)
+    assert con - sin == pytest.approx(DANO_METEORITO, abs=0.5)

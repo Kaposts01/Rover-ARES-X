@@ -1081,6 +1081,7 @@ class Partida:
                 m.ruta.pop(0)
             else:
                 m._planear()
+        m.paso += 1        # ARX-30c (QA B1): un movimiento logrado avanza el mismo paso que una orden perdida
         self._tick_ambiente()
         self._actualizar_estado_tras_movimiento()
         return self._resultado_movimiento(True, "movido")
@@ -1247,7 +1248,8 @@ class Partida:
 
     def _ganable_con_senal(self, celda) -> bool:
         """ARX-66 con la señal: desde la posición actual hay un orden señal, sitios pendientes y refugio que cabe en la
-        batería (con paradas en estaciones, como _es_ganable). No considera los drones obligatorios."""
+        batería (con paradas en estaciones, como _es_ganable). Cuenta además la caza de los drones obligatorios vivos
+        (cazas con MARGEN_CAZA, igual que _es_ganable) y reserva DANO_METEORITO si el meteorito está activo."""
         import itertools
         mascara = np.asarray(self.mundo.tipo == LIBRE)
         origen = tuple(int(x) for x in self.rover.posicion)
@@ -1269,10 +1271,20 @@ class Partida:
 
         bat_max = self.bateria_max if self.bateria_max is not None else self.rover.bateria
         est = [tuple(int(v) for v in e) for e in self.estaciones]
-        for orden in itertools.permutations(pendientes):
-            if _plan_con_paradas(origen, [celda, *orden, refugio], self.rover.bateria, bat_max, est, largo, tramo,
-                                 factor=self.mision.factor_ambiente) is not None:
-                return True
+        cazas = []
+        if self.drones_obligatorios() and self.combate is not None:
+            cazas = [tuple(int(v) for v in d.pos) for d in self.combate.drones if d.vivo]
+        if len(pendientes) + len(cazas) > 6:        # la señal va primero y no se permuta
+            return False
+        bateria = self.rover.bateria
+        if "meteorito" in self.eventos_activos:
+            bateria -= DANO_METEORITO
+        for orden_s in itertools.permutations(pendientes):
+            for orden_d in itertools.permutations(cazas):
+                seq = [celda, *orden_s, *orden_d, refugio]
+                if _plan_con_paradas(origen, seq, bateria, bat_max, est, largo, tramo, cazas,
+                                     factor=self.mision.factor_ambiente) is not None:
+                    return True
         return False
 
     def _evento_senal_biologica(self) -> dict:

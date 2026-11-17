@@ -28,7 +28,7 @@ EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "n
 # Mitigación de costo (plan §7, M2 de QA: ~3,5 s por replanteo del AG en 40x60): solo sismo (si la grieta toca la ruta)
 # y señal biológica (siempre). Meteorito y barranco replanifican por BFS, como antes de 31a (riesgo y veto del motor).
 # Como máximo un replanteo del AG por paso.
-EVENTOS_GRAVES = ("sismo", "senal_biologica", "bateria_baja")
+EVENTOS_GRAVES = ("sismo", "senal_biologica")
 SENAL_DIST_MIN, SENAL_DIST_MAX = 3, 6    # distancia Chebyshev de la señal biológica al rover (ARX-30c)
 # ARX-30c (ev3-d50 C): probabilidad por paso de que la señal caiga sola, por nivel (supuesto de simulación)
 SENAL_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}
@@ -1456,8 +1456,6 @@ class Partida:
 
     def _evento_bateria_baja(self) -> dict:
         self.rover.bateria = BATERIA_BAJA
-        if "bateria_baja" in EVENTOS_GRAVES:
-            self._replanear_ag("bateria_baja")
         return {"ok": True, "detalle": f"batería fijada en {BATERIA_BAJA}"}
 
     # ---------- puntaje (ev3-d24) ----------

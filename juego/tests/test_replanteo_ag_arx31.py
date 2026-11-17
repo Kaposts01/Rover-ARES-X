@@ -34,7 +34,13 @@ def _celda_barranco(p):
 
 
 def test_eventos_graves_declarados():
-    assert set(EVENTOS_GRAVES) == {"sismo", "senal_biologica", "bateria_baja"}
+    assert set(EVENTOS_GRAVES) == {"sismo", "senal_biologica"}
+
+
+def test_bateria_baja_no_replanea_con_ag():
+    p = _partida()
+    p.disparar_evento("bateria_baja")
+    assert _filas_ag(p) == []                         # Mision._planear descarta los sitios igual: no se gasta el AG
 
 
 def test_sismo_con_grieta_en_la_ruta_replanea_con_ag():

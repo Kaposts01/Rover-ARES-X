@@ -35,7 +35,7 @@ ESCENARIOS = {
     "congelado": {"nivel": 1, "ruido": None, "p_detectar": None, "prob_fallo": None},      # None = no se toca: valores por defecto de Mision
     # prob_fallo (ev3-d60 A): probabilidad de lectura NaN del sensor de proximidad, solo en este escenario. None = sin fallo
     # (comportamiento de 11dae05). La rellena la calibración (medición pedida por el Orquestador); no tiene valor aún.
-    "exigente": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None},         # calibrado en ARX-28a (docs/planes/ARX-28_calibracion.md)
+    "exigente": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None, "fisica_velocidad": True},         # calibrado en ARX-28a (docs/planes/ARX-28_calibracion.md)
 }
 
 
@@ -79,6 +79,7 @@ def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
     from juego.partida import FILAS_BASE, COLUMNAS_BASE
     p = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False)   # 20x30, sin redibujar el mapa
     m = p.mision
+    p.fisica_velocidad = bool(par.get("fisica_velocidad", False))      # ARX-28c: resbalón por velocidad, solo el exigente
     if par["ruido"] is not None or par["p_detectar"] is not None or par.get("prob_fallo") is not None:
         # El escenario se aplica sobre la instancia y se replanifica con el mapa estimado nuevo
         if par["ruido"] is not None:

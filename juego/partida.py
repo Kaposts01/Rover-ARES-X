@@ -37,6 +37,13 @@ PROB_ORDEN_PERDIDA = 0.5                # en manual, probabilidad de perder una 
 ENLACE_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}   # corte espontáneo por paso (supuesto de simulación)
 BATERIA_BAJA = 15.0
 
+# ARX-28c (ev3-d54 A): resbalón por velocidad en pendiente, solo con la bandera fisica_velocidad (escenario exigente).
+# PENDIENTE de ficha: el plan fija el mecanismo, no estos valores. Provisionales, sin calibrar.
+INCLINACION_RESBALON = 20.0     # grados desde los que una celda alcanzada puede hacer resbalar (plan: «p. ej. 20°»; PENDIENTE)
+P_RESBALON = 0.5                # probabilidad = P_RESBALON * velocidad (PENDIENTE)
+COSTO_RESBALON = 1.0            # % de batería extra por resbalón (PENDIENTE)
+VELOCIDAD_SIN_RESBALON = 0.3    # por debajo de esta velocidad no resbala (plan: v < 0,3)
+
 NIVEL_MAX = 5
 # ARX-21: tamaño del mapa. 20x30 es el de las evaluaciones congeladas (informe y /comparacion).
 FILAS_BASE, COLUMNAS_BASE = 20, 30
@@ -358,6 +365,9 @@ class Partida:
         self._rng_sismo = np.random.default_rng([int(semilla), 1314])     # ARX-30a: propio, no altera los meteoritos
         self._rng_enlace = np.random.default_rng([int(semilla), 1315])    # ARX-30b: propio, no altera meteoritos ni sismos
         self._rng_senal = np.random.default_rng([int(semilla), 1316])     # ARX-30c: propio
+        self._rng_resbalon = np.random.default_rng([int(semilla), 1317])  # ARX-28c: propio, no altera los demás
+        self.fisica_velocidad = False      # ARX-28c: apagada por defecto; solo la enciende el escenario exigente
+        self.resbalones = 0
         self.senales = []                  # señales biológicas: [{"paso", "celda", "visitada"}] (ARX-30c)
         self._ultimo_corte = None          # paso del último corte de enlace (para /moviles)
         self.enlace_restante = 0           # pasos que quedan de corte de enlace (ARX-30b)
@@ -903,7 +913,10 @@ class Partida:
             return {**decision, **self._posicion_estado()}
 
         paso_previo, filas_previas = m.paso, len(m.log.filas)
+        pos_previa, visitados_previos = self.rover.posicion, set(m.visitados)
         m.paso_mision()
+        if self.fisica_velocidad:
+            self._resbalar_si_corresponde(pos_previa, filas_previas, visitados_previos)
         self._tras_paso_estacion()
         self._revisar_victoria()
         if m.paso > paso_previo:
@@ -919,6 +932,36 @@ class Partida:
                                 velocidad=0.0, p_barranco=None, p_obstaculo=None,
                                 reglas="", motivos=m.estado if terminal else "FALTAN-OBJETIVOS")
         return {**decision, **self._posicion_estado()}
+
+    def _resbalar_si_corresponde(self, pos_previa, filas_previas, visitados_previos) -> None:
+        """ARX-28c: tras un avance, si la celda alcanzada es empinada, resbala con probabilidad P_RESBALON * velocidad.
+
+        El rover vuelve a la celda anterior, gasta COSTO_RESBALON y la bitácora anota D-RESBALON. Despacio no resbala.
+        """
+        m = self.mision
+        if len(m.log.filas) != filas_previas + 1:
+            return
+        fila = m.log.filas[-1]
+        nueva = self.rover.posicion
+        if fila.get("accion") != "avanzar" or nueva == pos_previa:
+            return
+        v = float(fila.get("velocidad") or 0.0)
+        if v < VELOCIDAD_SIN_RESBALON:
+            return
+        inclinacion = abs(float(self.mundo.elevacion[nueva] - self.mundo.elevacion[pos_previa])) * GRADOS_POR_GRADIENTE
+        if inclinacion <= INCLINACION_RESBALON:
+            return
+        if self._rng_resbalon.random() >= P_RESBALON * v:
+            return
+        self.rover.posicion = pos_previa
+        self.rover.consumir(COSTO_RESBALON)
+        m.ruta.insert(0, pos_previa)       # la celda alcanzada vuelve a ser la siguiente de la ruta
+        if nueva in self.mundo.sitios and nueva in m.visitados and nueva not in visitados_previos:
+            m.visitados.discard(nueva)
+        self.resbalones += 1
+        fila["posicion"] = str(pos_previa)
+        fila["bateria"] = round(self.rover.bateria, 2)
+        fila["motivos"] = (fila["motivos"] + ";" if fila.get("motivos") else "") + "D-RESBALON"
 
     def _paso_con_falla(self) -> None:
         """Paso de IA detenida por falla de sensor: no llama a paso_mision ni mueve al rover."""

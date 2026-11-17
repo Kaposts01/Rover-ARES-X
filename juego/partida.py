@@ -23,6 +23,10 @@ from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # 
                        generar_mundo, paso_fisico)
 
 EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica")
+# ARX-31a: eventos graves ante los que el AG vuelve a planificar el orden de visita (ev3-d07 B: fuera de ellos, solo BFS).
+# Cada uno solo cuenta si toca la ruta vigente: sismo (grieta en la ruta), meteorito (zona de riesgo sobre la ruta),
+# barranco (celda en la ruta); la señal biológica y la batería baja siempre. Como máximo un replanteo del AG por paso.
+EVENTOS_GRAVES = ("sismo", "meteorito", "barranco", "senal_biologica", "bateria_baja")
 SENAL_DIST_MIN, SENAL_DIST_MAX = 3, 6    # distancia Chebyshev de la señal biológica al rover (ARX-30c)
 # ARX-30c (ev3-d50 C): probabilidad por paso de que la señal caiga sola, por nivel (supuesto de simulación)
 SENAL_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}
@@ -360,6 +364,7 @@ class Partida:
         self._ultimo_corte = None          # paso del último corte de enlace (para /moviles)
         self.enlace_restante = 0           # pasos que quedan de corte de enlace (ARX-30b)
         self._objetivo = None              # celda fijada por el jugador, o None
+        self._paso_replan_ag = None        # paso del último replanteo del AG por evento grave (ARX-31a)
         # Mision() ya planificó con el AG original: se replanifica con el envoltorio que exige todos los sitios
         self.mision.objetivos = []
         self.mision._planear()
@@ -1169,6 +1174,24 @@ class Partida:
             return {"ok": True, "detalle": f"{nombre} durante {PASOS_AMBIENTE[nombre]} pasos"}
         return self._evento_bateria_baja()
 
+    def _replanear_ag(self, motivo: str) -> bool:
+        """ARX-31a: vuelve a correr el AG ante un evento grave (motivo en EVENTOS_GRAVES, en mayúsculas en la fila).
+
+        Vacía mision.objetivos, llama a la planificación (AG), pone paros_seguidos en 0 y anota una fila
+        «replanificar» con REPLAN-AG-<MOTIVO>. Como máximo uno por paso. No actúa (devuelve False) si la partida
+        terminó, si el jugador fijó un objetivo o si se está cazando drones por BFS: ahí el plan no es del AG.
+        """
+        m = self.mision
+        if (self.estado in ESTADOS_TERMINALES or self._objetivo is not None or self._caza_con_bfs()
+                or self._paso_replan_ag == m.paso):
+            return False
+        self._paso_replan_ag = m.paso
+        m.objetivos = []
+        m.paros_seguidos = 0
+        m._planear()
+        m._registrar("replanificar", 0.0, [f"REPLAN-AG-{motivo.upper()}"], {}, None)
+        return True
+
     def _evento_meteorito(self) -> dict:
         """ARX-30: impacto a 2–3 celdas del rover. La celda del impacto y su entorno quedan como zona de riesgo (el
         supervisor veta entrar y la misión replanifica); el impacto cuesta DANO_METEORITO de batería."""
@@ -1195,6 +1218,9 @@ class Partida:
                             if self.mundo.dentro((impacto[0] + df, impacto[1] + dc))
                             and self.mundo.tipo[(impacto[0] + df, impacto[1] + dc)] == LIBRE]
         self.meteoritos.append({"paso": int(self.mision.paso), "impacto": impacto, "zona_riesgo": zona})
+        ruta = {tuple(x) for x in (self.mision.ruta or [])}
+        if "meteorito" in EVENTOS_GRAVES and any(tuple(z) in ruta for z in zona):
+            self._replanear_ag("meteorito")
         self._avisar("Meteorito: impacto en una zona de riesgo cercana")
         return {"ok": True, "detalle": f"meteorito en {impacto}; zona de riesgo alrededor", "impacto": impacto}
 
@@ -1232,8 +1258,9 @@ class Partida:
             self.mision.riesgo[g] = 1.0
         ruta = {tuple(x) for x in (self.mision.ruta or [])}
         if any(g in ruta for g in grietas):
-            self.mision._planear()
-            self.mision._registrar("replanificar", 0.0, ["REPLAN-SISMO"], {}, None)
+            if not ("sismo" in EVENTOS_GRAVES and self._replanear_ag("sismo")):
+                self.mision._planear()
+                self.mision._registrar("replanificar", 0.0, ["REPLAN-SISMO"], {}, None)
         self.sismos.append({"paso": int(self.mision.paso), "grietas": grietas})
         self._avisar("Sismo: grietas nuevas cerca del rover")
         return {"ok": True, "detalle": f"sismo: {len(grietas)} grieta(s) en {grietas}", "grietas": grietas}
@@ -1330,7 +1357,8 @@ class Partida:
                 return {"ok": False, "detalle": "batería insuficiente para la señal"}
             return {"ok": False, "detalle": "sin celda alcanzable que deje la partida ganable"}
         self.senales.append({"paso": int(self.mision.paso), "celda": celda, "visitada": False})
-        self._planear_con_senal(True)
+        if not ("senal_biologica" in EVENTOS_GRAVES and self._replanear_ag("senal")):
+            self._planear_con_senal(True)
         self._avisar(TEXTO_SENAL)
         return {"ok": True, "detalle": f"señal anómala en {celda}; no confirma vida", "celda": celda,
                 "afirma_vida": False}
@@ -1344,6 +1372,8 @@ class Partida:
                     and celda not in (self.mundo.inicio, self.mundo.refugio)):
                 self.mundo.marcar_barranco(celda)
                 self.mision.riesgo[celda] = 1.0
+                if "barranco" in EVENTOS_GRAVES and celda in {tuple(x) for x in (self.mision.ruta or [])}:
+                    self._replanear_ag("barranco")
                 return {"ok": True, "detalle": f"barranco en {celda}"}
         return {"ok": False, "detalle": "sin celda libre adyacente al rover"}
 
@@ -1361,6 +1391,8 @@ class Partida:
 
     def _evento_bateria_baja(self) -> dict:
         self.rover.bateria = BATERIA_BAJA
+        if "bateria_baja" in EVENTOS_GRAVES:
+            self._replanear_ag("bateria_baja")
         return {"ok": True, "detalle": f"batería fijada en {BATERIA_BAJA}"}
 
     # ---------- puntaje (ev3-d24) ----------

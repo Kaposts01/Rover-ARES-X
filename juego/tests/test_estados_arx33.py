@@ -39,7 +39,7 @@ def test_replanificacion_tras_sismo_con_grieta_en_la_ruta():
     else:
         raise AssertionError("no hubo sismo con grieta en la ruta")
     fila = p.mision.log.filas[-1]
-    assert fila["accion"] == "replanificar" and "REPLAN-SISMO" in fila["motivos"]
+    assert fila["accion"] == "replanificar" and fila["motivos"] in ("REPLAN-AG-SISMO", "REPLAN-SISMO")
     assert p.estado_visible() == "REPLANIFICACION"
 
 

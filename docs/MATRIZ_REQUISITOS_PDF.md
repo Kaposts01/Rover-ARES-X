@@ -94,8 +94,8 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | Falla de sensor | Cumple | `juego/partida.py:387` (`_evento_falla_sensor`) | — |
 | Sismo | Cumple | `juego/partida.py:1117` (`_evento_sismo`, ARX-30a): grietas BARRANCO con replanteo del AG y veto del supervisor; control en la interfaz (ARX-30e) | — |
 | Meteorito o impacto próximo | Cumple | `juego/partida.py:1088` (`_evento_meteorito`, ARX-30): zona de riesgo 3×3, cuesta batería | — |
-| Señal biológica anómala / objeto alienígena | Falta (opcional narrativo) | No existe en esta rama (ARX-30c, bloqueada por ev3-d49). El PDF lo marca como opcional | 2 h |
-| Baja conectividad | Falta | No existe en esta rama (ARX-30b, bloqueada por ev3-d48) | 2 h |
+| Señal biológica anómala / objeto alienígena | Cumple (opcional en el PDF; con límite en mapa grande, ARX-79) | `juego/partida.py:1290` (`_evento_senal_biologica`, ARX-30c): objetivo obligatorio (ev3-d49 B), «no confirma vida» | — |
+| Baja conectividad | Cumple | `juego/partida.py:1238` (`_evento_baja_conectividad`, ARX-30b): efecto de ev3-d48 A (manual y 409 en la IA) | — |
 | Ráfaga / viento en modo sonda | Falta | No hay modo sonda | depende de RF-01 |
 
 ## 8. Pantalla y laboratorios (§8, §9)

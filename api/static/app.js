@@ -1425,6 +1425,17 @@ function pintarObjetivos(o) {
     barra.appendChild(relleno);
     caja.append(fila, barra);
   }
+  // ARX-30c: /objetivos no trae la señal; /estado.senal = [f,c] solo mientras está activa y sin visitar
+  if (estado && Array.isArray(estado.senal)) {
+    const fila = document.createElement("div");
+    fila.className = "cond";
+    const nombre = document.createElement("span");
+    nombre.textContent = "Señal biológica";
+    const cuenta = document.createElement("span");
+    cuenta.textContent = "0/1";
+    fila.append(nombre, cuenta);
+    caja.appendChild(fila);
+  }
 }
 
 async function refrescarMovilesYEscenario() {
@@ -1585,7 +1596,10 @@ async function refrescarEstado() {
 function aplicarEnlaceYSenal(datos) {
   if (!datos || typeof datos !== "object") return;
   if (datos.enlace && datos.enlace.activo === false) efectos.activarInterferencia(false);
+  // ARX-30c: tras recargar en mitad de un corte, el enlace caído enciende la interferencia sin esperar al evento de /moviles
+  if (datos.enlace && datos.enlace.activo === true) efectos.activarInterferencia(true);
   if ("senal" in datos && datos.senal === null) efectos.quitarSenalBiologica(scene);
+  if ("senal" in datos && ultimosObjetivos) pintarObjetivos(ultimosObjetivos);   // la línea de señal sigue a /estado
 }
 
 // Control de eventos (ARX-30e): mismo orden que EVENTOS de la API; solo con partida en curso

@@ -1428,9 +1428,9 @@ function pintarObjetivos(o) {
   // ARX-30c: /objetivos no trae la señal; /estado.senal = [f,c] solo mientras está activa y sin visitar
   if (estado && Array.isArray(estado.senal)) {
     const fila = document.createElement("div");
-    fila.className = "cond opcional";
+    fila.className = "cond";
     const nombre = document.createElement("span");
-    nombre.textContent = "Señal biológica (opcional)";
+    nombre.textContent = "Señal biológica";
     const cuenta = document.createElement("span");
     cuenta.textContent = "0/1";
     fila.append(nombre, cuenta);

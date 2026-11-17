@@ -4,7 +4,9 @@ Envuelve Mision (integracion.py) sin modificar los módulos congelados. El jugad
 mover_jugador(); la IA sugiere con sugerencia() (sin efectos) y ejecuta con avanzar_ia().
 """
 import copy
+import functools
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -289,10 +291,34 @@ def _ag_con_todos_los_sitios(m, optimizar_original):
     return optimizar
 
 
+def _cronometrado(metodo):
+    """ARX-89b: suma al acumulador tiempo_computo_s el tiempo de pared del método. Las llamadas anidadas (avanzar_modo
+    llama a avanzar_ia) no se cuentan dos veces."""
+    @functools.wraps(metodo)
+    def envuelto(self, *args, **kwargs):
+        if self._cronometro_nivel:
+            return metodo(self, *args, **kwargs)
+        self._cronometro_nivel += 1
+        t0 = time.perf_counter()
+        try:
+            return metodo(self, *args, **kwargs)
+        finally:
+            self.tiempo_computo_s += time.perf_counter() - t0
+            self._cronometro_nivel -= 1
+    return envuelto
+
+
 class Partida:
+    # ARX-89b: tiempo de cómputo acumulado de la partida (construcción con el AG inicial, pasos, movimientos y eventos)
+    tiempo_computo_s = 0.0
+    _cronometro_nivel = 0
+
     def __init__(self, semilla: int = 11, bateria: float = None, nivel: int = 1,
                  eventos_activos=EVENTOS_SOPORTADOS, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
                  garantia: bool = True, planeta: str = termico.PLANETA_POR_DEFECTO):
+        _t0_construccion = time.perf_counter()
+        self.tiempo_computo_s = 0.0
+        self._cronometro_nivel = 0
         if isinstance(nivel, bool) or not isinstance(nivel, int) or not 1 <= nivel <= NIVEL_MAX:
             raise ValueError(f"nivel inválido: {nivel!r} (debe estar entre 1 y {NIVEL_MAX})")
         con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
@@ -394,6 +420,7 @@ class Partida:
         self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4)
         self.combate = None                # Combate de la sesión; lo asigna la API para contar los drones destruidos
         self.modo_ia = "manual"            # modo de la sesión; decide si la IA puede disparar (N12)
+        self.tiempo_computo_s += time.perf_counter() - _t0_construccion
 
     # ---------- atributos de lectura ----------
     @property
@@ -794,6 +821,7 @@ class Partida:
         self.avisos.append(texto)
         del self.avisos[:-20]
 
+    @_cronometrado
     def avanzar_modo(self, modo: str, veto: bool = True) -> dict:
         """Un paso conducido solo por rna, difuso o ag (ARX-11). Ver juego/conduccion.py."""
         if self._recargando > 0:
@@ -931,6 +959,7 @@ class Partida:
             return True
         return max(abs(ruta[1][0] - pos[0]), abs(ruta[1][1] - pos[1])) > 1
 
+    @_cronometrado
     def avanzar_ia(self) -> dict:
         m = self.mision
         if self.estado in ESTADOS_TERMINALES:
@@ -1093,6 +1122,7 @@ class Partida:
         return {"ok": True, "detalle": f"objetivo en {destino}, {len(ruta) - 1} pasos"}
 
     # ---------- jugador ----------
+    @_cronometrado
     def mover_jugador(self, rumbo: str) -> dict:
         m = self.mision
         if self.estado in ESTADOS_TERMINALES:
@@ -1221,6 +1251,7 @@ class Partida:
                          f"{termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA} pasos sobre {termico.TOLERANCIA:.0f} °C")
 
     # ---------- eventos ----------
+    @_cronometrado
     def disparar_evento(self, nombre: str) -> dict:
         if nombre not in EVENTOS_SOPORTADOS or nombre not in self.eventos_activos:
             return {"ok": False, "detalle": f"evento no soportado: {nombre!r}"}

@@ -310,6 +310,11 @@ def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None, anotar=None, con
                 if t is None:
                     return None
                 c.extend(t[1:])
+            # ARX-92c (corrección aprobada por el Maestro): la viabilidad usa la misma reserva que _planear
+            # (largo + MARGEN_ENERGIA ≤ batería). Una ruta que no la cumple devuelve None y queda por debajo de
+            # cualquier ruta completa viable (piso de fitness en optimizar_orden).
+            if len(c) - 1 + MARGEN_ENERGIA > m.rover.bateria:
+                return None
             return c
 
         res = gp.optimizar_orden(construir, con_paso=AG_ORDEN_CON_PASO if con_paso is None else con_paso,

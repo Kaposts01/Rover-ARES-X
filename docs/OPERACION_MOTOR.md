@@ -12,15 +12,16 @@ Estado al 14/11/2026. Guía para levantar el servidor, no el informe de la entre
   Medio 95 %, Difícil 75 %, Hardcore 95 %. Mapa grande 40×60 en Muy fácil (10 semillas): 80 %.
 - Pendiente: calibrar `MARGEN_CAZA` con el coste real de la caza (hoy 10 pasos por dron es una suposición); revisar
   los fallos de Muy fácil en 40×60; ARX-75 (disparo en rna, difuso y ag); ARX-79 (ganabilidad de la señal en el mapa
-  grande, ver «Baja de conectividad y señal biológica»); integrar `feat/arx-30-bc` en `main`.
+  grande, ver «Baja de conectividad y señal biológica»). El sismo y el meteorito ya están (ver «Eventos del motor»);
+  ARX-30b y ARX-30c están en `feat/arx-30-bc`, pendientes de integrar en `main`.
 - ARX-59 (escala por escalón): decidido (ev3-d45 A: estaciones de recarga y más objetivos); a medias detrás de
   `ESTACIONES_ACTIVAS = False`; se retoma al final del sprint (ev3-d47 B).
   Con ev3-d45 A y 5 o más sitios, usar heurística (vecino más cercano más 2-opt) en vez de enumerar órdenes.
 
 ## Retomar la sesión
 
-- Reabrir desde `C:\Users\Usuario\Downloads` (no desde `ares_x`), con
-  `claude --resume 8fabbd07-ce6f-5b4c-97eb-59ae80452d6d`. La conversación está en `~/.claude/projects/C--Users-Usuario-Downloads/`.
+- La sesión que trabaja en este proyecto es `Lider_Rover`, desde la carpeta `ares_x`. Los ids y cómo reabrirla están en
+  `00-Sistema-Agentico\REANUDAR_SESIONES.md`. La sesión antigua del motor, que se abría desde `Downloads`, ya no es la que trabaja.
 - Antes de tocar nada, leer este documento y `docs/tareas_sprints.json` (tareas de la entrega; ARX-75 sigue asignada).
 
 ## Levantar el servidor 8765
@@ -40,6 +41,26 @@ python -m uvicorn api.servidor:app --host 127.0.0.1 --port 8765
 
 Mientras el usuario prueba la interfaz en 8765, no crear partidas ni lanzar pasos desde otra sesión. Las mediciones van
 en una instancia aparte (puerto distinto, o `TestClient` sin servidor), y se lanzan en segundo plano, de una en una.
+
+## Eventos del motor (ARX-30, 17/11)
+
+- **Disparo manual:** `POST /evento` con `{"nombre": "..."}`. Nombres válidos (`EVENTOS` en `api/servidor.py`): `barranco`,
+  `falla_sensor`, `bateria_baja`, `tormenta`, `noche`, `meteorito`, `sismo`. Un nombre fuera de la lista responde 400.
+  Un evento que no encuentra celda segura responde `ok: false` (por ejemplo, el sismo sin celda que no deje el refugio aislado).
+- **Interfaz:** panel «5 · Eventos» en `api/static/index.html`: selector `#evento-nombre` con los nombres de `EVENTOS` y
+  botón «Disparar» (`#evento-disparar`). Está deshabilitado sin partida o con la partida terminada. Muestra la respuesta
+  como aviso y la registra en el historial de pantalla. La lista del selector está escrita a mano: al añadir un evento hay
+  que editarla también.
+- **Generadores propios:** los eventos espontáneos no comparten el generador de la partida.
+  - Meteorito: `_rng_ambiente`, semilla `[semilla, 1313]` (como antes de ARX-30; su secuencia no cambia).
+  - Sismo: `_rng_sismo`, semilla `[semilla, 1314]`.
+  - Baja conectividad y señal biológica: sin generador todavía (ARX-30b y 30c).
+- **Solo en partidas jugables:** los eventos espontáneos dependen de `meteoritos_activos` (la bandera `garantia`). Las
+  evaluaciones congeladas no tienen eventos espontáneos; no quitar `garantia=False` de la evaluación.
+- **Probabilidades y grietas:** `SISMO_PROB_POR_NIVEL`, `METEORITO_PROB_POR_NIVEL` y `GRIETAS_POR_NIVEL` en `juego/partida.py`.
+  Son supuestos de simulación, no datos del PDF.
+- **Limitación conocida:** el replanteo por sismo (fila `REPLAN-SISMO`) queda en la bitácora del motor (`mision.log`) y no
+  aparece en `/historial`, que solo muestra las filas que anota la API. Se ve `evento:sismo` en el historial.
 
 ## Evaluación congelada
 
@@ -88,8 +109,8 @@ Estado: en `feat/arx-30-bc`, QA vuelta 2 (17/11): aprobado con observaciones. Pe
   caza y `MARGEN_ENERGIA` 15 %): en Muy fácil, semilla 5, la señal aceptada deja la partida en batería 0 (1 de 9 semillas
   ganables en la prueba de QA). En Medio, Difícil y Hardcore la señal se rechaza por batería en 12 de 12 casos, así que casi
   nunca aparece. La causa es previa a la rama: el estimador de `_es_ganable` y `_plan_con_paradas` es optimista en el mapa
-  grande (ya ocurre en `main` sin eventos). Lo sigue la tarea ARX-79. **La reserva definitiva depende de la ficha ev3-d56,
-  que sigue abierta**; hoy es la de 5 %, y no es definitiva. Mientras tanto, no contar con la señal en el mapa grande. En
+  grande (ya ocurre en `main` sin eventos). Lo sigue la tarea ARX-79. La reserva de 5 % está aprobada (ficha ev3-d56, opción A);
+  **la decisión abierta sobre la reserva en el mapa grande es la ficha ev3-d59**. Mientras tanto, no contar con la señal en el mapa grande. En
   pequeño, el barrido de QA (12 semillas por nivel) acepta la señal en los 5 niveles y todas las aceptadas terminan en EXITO.
 - **O-b (BAJO):** la fila «Señal biológica» desaparece del panel de objetivos al visitarla, y `/objetivos` no la devuelve.
   Sin resolver.
@@ -140,7 +161,7 @@ Estado al 14/11 (noche). Sin publicar en 8765.
   - ARX-59: decidido ev3-d45 A y a medias. La duración está en 107–171 pasos frente a 300–500; la semilla 2018 queda
     parada. Se retoma al final del sprint (ev3-d47 B).
   - Veto del disparo en la interfaz: falta una semilla reproducible.
-- **Cómo retomar:** `claude --resume 8fabbd07-ce6f-5b4c-97eb-59ae80452d6d` desde `C:\Users\Usuario\Downloads`.
+- **Cómo retomar:** ver `00-Sistema-Agentico\REANUDAR_SESIONES.md` (sesión `Lider_Rover`). La sesión de `Downloads` de entonces ya no trabaja aquí.
 
 
 ## Estado al 15/11 (20:3x)

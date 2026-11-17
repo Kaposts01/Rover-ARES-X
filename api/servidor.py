@@ -920,8 +920,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
     @app.get("/moviles")
     def moviles():
         """Elementos móviles por paso (ARX-29): drones con su trayectoria, eventos del último turno y la ruta
-        planificada frente a la ejecutada. Obstáculos móviles, meteoritos y los demás eventos de ev3-d41 llegarán
-        en ARX-30; por ahora la lista de `obstaculos_moviles` va vacía."""
+        planificada frente a la ejecutada. Los obstáculos móviles llegarán en ARX-29; por ahora la lista de
+        `obstaculos_moviles` va vacía."""
         sesion = activa()
         p = sesion.partida
         drones = []

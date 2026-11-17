@@ -249,26 +249,32 @@ def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(
     return False
 
 
-METODO_ORDEN = "exhaustiva puntuada por el fitness"     # ARX-92a: cómo decide el envoltorio el orden de los sitios
+METODO_ORDEN = "exhaustiva puntuada por el fitness"     # ARX-92a: respaldo (vía b) cuando el AG no da un orden viable
+METODO_AG_ORDEN = "AG sobre el orden de los sitios"      # ARX-92c: cómo decide la partida el orden de visita
+AVISO_FALLBACK = "AG-FALLBACK-GARANTIA"                  # ARX-92c: el mejor orden del AG no era viable; juega la vía b
 # ARX-92a (ev3-d74 B, umbral único): permutaciones viables a este fitness o menos del mejor se consideran empatadas y gana
 # la más corta. Fijado en docs/planes/ARX-92_ag_decide.md (p90 del error de fitness del exigente, 20 semillas).
 UMBRAL_EMPATE = 0.0223
+# ARX-92c: la partida no usa punto de paso por tramo (el AG decide el ORDEN; el camino entre sitios es el BFS de la
+# garantía). Con True el cromosoma añade un punto de paso opcional por tramo; cambia la ruta jugada y la cifra congelada.
+AG_ORDEN_CON_PASO = False
 
 
-def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None):
-    """ARX-66 / ARX-59 / ARX-92a: la ruta visita todos los sitios pendientes. El orden es el de la permutación VIABLE
-    de mayor fitness (exhaustiva puntuada por el fitness del AG, con los pesos dados o los de defecto), no el de la
-    permutación más corta. El AG no decide qué sitios se visitan (la victoria los exige todos).
-    Viable = llega al refugio con la batería y el factor de la garantía (con paradas en estaciones si las hay). Con
-    más de 6 sitios no se enumeran las permutaciones y se conserva el orden dado. A igual fitness gana la más corta y,
-    después, la primera en el orden de enumeración (determinista). El método queda en `optimizar.metodo`."""
+def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None, anotar=None, con_paso=None, parada_sin_mejora=None):
+    """ARX-66 / ARX-59 / ARX-92a / ARX-92c: la ruta visita todos los sitios pendientes y el orden lo decide un AG real
+    (`GeneticPlanner.optimizar_orden`: permutación de sitios, cruce OX, mutación por intercambio, elitismo) puntuado por
+    el fitness con los pesos dados o los de defecto. La viabilidad es restricción dura: el mismo `_plan_con_paradas` y
+    factor de la garantía (con paradas en estaciones si las hay); un orden inviable no puede ganar. Si el mejor orden del
+    AG no es viable (ningún orden evaluado lo es), cae a la vía b de 92a (permutación viable de mayor fitness entre todas,
+    con más de 6 sitios solo el orden dado), lo anota con AG-FALLBACK-GARANTIA (`anotar` y `optimizar.fallbacks`) y,
+    si tampoco hay ninguna, devuelve la ruta de `optimizar_original`. Entre viables a UMBRAL_EMPATE del mejor fitness
+    gana la más corta (desempate de 92a). El método queda en `optimizar.metodo`."""
     import itertools
     from genetico import GeneticPlanner as _GP
 
     def optimizar(origen, pendientes):
-        ruta_ag = optimizar_original(origen, pendientes)
         if not pendientes:
-            return ruta_ag
+            return optimizar_original(origen, pendientes)
         origen = tuple(int(v) for v in origen)
         pts = [tuple(int(v) for v in p) for p in pendientes]
         mascara = m.riesgo < 0.5
@@ -292,35 +298,52 @@ def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None):
         capacidad = max(float(getattr(m, "bateria_max", None) or m.rover.bateria), 1.0)
         gp = _GP(desde, m.riesgo, bateria=capacidad, k_puntos=m.k, poblacion=30, generaciones=30,
                  pesos=dict(elegido_pesos) if elegido_pesos else None, semilla=m.semilla)
+
+        def construir(seq):
+            """Ruta viable por la secuencia (sitios, puntos de paso y refugio) o None."""
+            if con_estaciones:
+                return _plan_con_paradas(origen, list(seq), m.rover.bateria, m.bateria_max, m.estaciones, largo, tramo,
+                                         factor=m.factor_ambiente)
+            c = [origen]
+            for destino in seq:
+                t = tramo(c[-1], destino)
+                if t is None:
+                    return None
+                c.extend(t[1:])
+            return c
+
+        res = gp.optimizar_orden(construir, con_paso=AG_ORDEN_CON_PASO if con_paso is None else con_paso,
+                                 umbral_empate=UMBRAL_EMPATE, parada_sin_mejora=parada_sin_mejora)
+        optimizar.ultimo, optimizar.gp = res, gp
+        if res.viable:
+            optimizar.decisiones.append(res.desempate_cambio)
+            return res.mejor_ruta
+        # Respaldo (vía b de 92a): ningún orden evaluado por el AG es viable; se prueban todas las permutaciones
+        optimizar.fallbacks.append(AVISO_FALLBACK)
+        if anotar is not None:
+            anotar(AVISO_FALLBACK + ": el mejor orden del AG no es viable; juega la permutación viable de mejor fitness")
         validas = []            # (fitness, largo de la ruta, ruta) de cada permutación viable
         candidatos = itertools.permutations(pts) if len(pts) <= 6 else [tuple(pts)]
         for orden in candidatos:
-            seq = list(orden) + [tuple(int(v) for v in m.mundo.refugio)]
-            if con_estaciones:
-                c = _plan_con_paradas(origen, seq, m.rover.bateria, m.bateria_max, m.estaciones, largo, tramo,
-                                      factor=m.factor_ambiente)
-            else:
-                c = [origen]
-                for destino in seq:
-                    t = tramo(c[-1], destino)
-                    if t is None:
-                        c = None
-                        break
-                    c.extend(t[1:])
+            c = construir(list(orden) + [tuple(int(v) for v in m.mundo.refugio)])
             if c is None:
                 continue
             validas.append((gp.evaluar_ruta(c, capacidad).fitness, len(c), c))
         if not validas:
             optimizar.decisiones.append(False)
-            return ruta_ag
+            return optimizar_original(origen, pendientes)
         fmax = max(v[0] for v in validas)
-        mejor_fitness = next(v for v in validas if v[0] == fmax)        # la que decidiría solo el fitness
+        mejor_fitness = next(v for v in validas if v[0] == fmax)
         empate = [v for v in validas if v[0] >= fmax - UMBRAL_EMPATE]
-        elegido = min(empate, key=lambda v: v[1])                       # la más corta del empate (primera si hay igual)
-        optimizar.decisiones.append(elegido[2] is not mejor_fitness[2])  # True: el desempate cambió la ruta
+        elegido = min(empate, key=lambda v: v[1])
+        optimizar.decisiones.append(elegido[2] is not mejor_fitness[2])
         return elegido[2]
-    optimizar.metodo = METODO_ORDEN
-    optimizar.decisiones = []       # ARX-92a: por cada planificación, True si decidió el desempate y no el fitness
+    optimizar.metodo = METODO_AG_ORDEN
+    optimizar.metodo_respaldo = METODO_ORDEN
+    optimizar.decisiones = []       # por cada planificación, True si decidió el desempate y no el fitness
+    optimizar.fallbacks = []        # ARX-92c: un AVISO_FALLBACK por cada vez que se cayó a la vía b
+    optimizar.ultimo = None         # último ResultadoAG del modo orden y su planificador (para /ag y pruebas)
+    optimizar.gp = None
     return optimizar
 
 
@@ -409,7 +432,7 @@ class Partida:
         self.mision.bateria_max = self.bateria_max
         self.mision.estaciones = self.estaciones
         self.mision.factor_ambiente = AMBIENTE_FACTOR_POR_NIVEL[nivel] if con_estaciones else 1.0
-        self.mision._optimizar_ag = _ag_con_todos_los_sitios(self.mision, self.mision._optimizar_ag)
+        self.mision._optimizar_ag = _ag_con_todos_los_sitios(self.mision, self.mision._optimizar_ag, anotar=self._avisar)
         # ARX-66 / N12: mientras se cazan drones obligatorios, el refugio no es destino (Mision.paso_mision fijaría EXITO
         # al llegar sin moverse, y la caza nunca se ejecutaría).
         _quedan_sitios_original = self.mision._quedan_sitios
@@ -450,13 +473,13 @@ class Partida:
                     temperatura = self.termico.t_int
                 return _inferir(distancia, bateria, inclinacion, temperatura)
             self.mision.difuso.inferir = _inferir_con_temperatura
+        self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4); antes de planificar: el AG puede anotar AG-FALLBACK-GARANTIA (ARX-92c)
         # Mision() ya planificó con el AG original: se replanifica con el envoltorio que exige todos los sitios
         self.mision.objetivos = []
         self.mision._planear()
         self.intentos_barranco = 0         # movimientos intentados hacia un barranco (modos sueltos, ARX-11)
         self.esperas = 0                   # pasos de espera del modo difuso (ARX-11)
         self._historial = []               # últimas celdas visitadas por los modos sueltos (ARX-11)
-        self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4)
         self.combate = None                # Combate de la sesión; lo asigna la API para contar los drones destruidos
         self.modo_ia = "manual"            # modo de la sesión; decide si la IA puede disparar (N12)
         self.tiempo_computo_s += time.perf_counter() - _t0_construccion

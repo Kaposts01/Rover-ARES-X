@@ -45,8 +45,11 @@ def _largos_por_orden(p, pend):
 
 
 def test_declara_el_metodo():
+    # ARX-92c: la partida decide el orden con el AG; la exhaustiva por fitness (92a) queda como respaldo declarado
     p = _partida(3)
-    assert p.mision._optimizar_ag.metodo == METODO_ORDEN == "exhaustiva puntuada por el fitness"
+    assert METODO_ORDEN == "exhaustiva puntuada por el fitness"
+    assert p.mision._optimizar_ag.metodo_respaldo == METODO_ORDEN
+    assert p.mision._optimizar_ag.metodo == "AG sobre el orden de los sitios"
 
 
 @pytest.mark.parametrize("semilla", SEMILLAS)

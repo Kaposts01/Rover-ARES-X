@@ -78,7 +78,7 @@ Cuatro variantes con la misma semilla: híbrido, `sin_rna`, `sin_difuso` y `sin_
   decisión, velocidad o ruta), `directa_codigo` (solo cambia el código de motivo) y `consecuencia`. Las reglas están en
   `CONTRATOS_GRAFICOS.md` §7.
 - **Resultado actual (20 semillas):** el difuso altera en 20 de 20 semillas, sobre todo la velocidad (16 de 20 directas).
-  El AG altera el orden de sitios en 12 de 20 y sin AG tarda 4,35 pasos más de media. La RNA cambia una decisión en 2 de 20
+  La variante `sin_ag` reemplaza el AG por la permutación voraz (vecino más cercano): el orden difiere en 12 de 20 semillas y tarda 4,35 pasos más de media. Es permutación más corta frente a vecino más cercano; no atribuye efecto al AG (ver ARX-92). La RNA cambia una decisión en 2 de 20
   (semillas 4 y 18), sin cambiar éxito ni colisiones. Nada de esto es una medición de la RNA fuera del escenario exigente.
 - **Límite de la clasificación:** la directa compara solo la posición y la batería del paso anterior. `paros_seguidos`, la ruta
   y el generador no entran en la comparación. QA lo comprobó en las semillas 4 y 18 con el estado oculto.

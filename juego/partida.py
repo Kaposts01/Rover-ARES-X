@@ -22,12 +22,15 @@ from rna import _rasgos_celda  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
 
-EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo")
+EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad")
 GRIETAS_POR_NIVEL = {1: 1, 2: 1, 3: 2, 4: 2, 5: 3}                           # grietas por sismo (supuesto de simulación, ARX-30)
 SISMO_PROB_POR_NIVEL = {1: 0.003, 2: 0.004, 3: 0.006, 4: 0.007, 5: 0.009}   # probabilidad por paso (ARX-30)
 METEORITO_PROB_POR_NIVEL = {1: 0.004, 2: 0.006, 3: 0.008, 4: 0.010, 5: 0.012}   # probabilidad por paso (ARX-30)
 DANO_METEORITO = 5.0                    # % de batería que cuesta el impacto (supuesto de simulación, ARX-30)
 PASOS_FALLA_SENSOR = 3
+PASOS_SIN_ENLACE = 4                    # pasos que dura un corte de enlace (ev3-d48 A, ARX-30b)
+PROB_ORDEN_PERDIDA = 0.5                # en manual, probabilidad de perder una orden de /mover durante el corte (ev3-d48 A)
+ENLACE_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}   # corte espontáneo por paso (supuesto de simulación)
 BATERIA_BAJA = 15.0
 
 NIVEL_MAX = 5
@@ -345,6 +348,9 @@ class Partida:
         self._ambiente_restante = 0
         self._rng_ambiente = np.random.default_rng([int(semilla), 1313])  # propio, no comparte el de Mision
         self._rng_sismo = np.random.default_rng([int(semilla), 1314])     # ARX-30a: propio, no altera los meteoritos
+        self._rng_enlace = np.random.default_rng([int(semilla), 1315])    # ARX-30b: propio, no altera meteoritos ni sismos
+        self._ultimo_corte = None          # paso del último corte de enlace (para /moviles)
+        self.enlace_restante = 0           # pasos que quedan de corte de enlace (ARX-30b)
         self._objetivo = None              # celda fijada por el jugador, o None
         # Mision() ya planificó con el AG original: se replanifica con el envoltorio que exige todos los sitios
         self.mision.objetivos = []
@@ -989,6 +995,14 @@ class Partida:
             return self._resultado_movimiento(False, "rover en modo seguro")
         if self.rover.bateria <= 0:
             return self._resultado_movimiento(False, "sin batería")
+        if self.modo_ia == "manual" and self.enlace_restante > 0 and self._rng_enlace.random() < PROB_ORDEN_PERDIDA:
+            # ARX-30b (ev3-d48 A): la orden no llega; el tiempo pasa igual y el rover no se mueve
+            m.paso += 1
+            self._tick_ambiente()
+            m.log.registrar(paso=m.paso, estado=m.estado, posicion=str(self.rover.posicion),
+                            bateria=round(self.rover.bateria, 2), accion="detener", velocidad=0.0,
+                            p_barranco=None, p_obstaculo=None, reglas="", motivos="D-SIN-ENLACE")
+            return self._resultado_movimiento(False, "sin enlace")
         df, dc = RUMBOS_JUGADOR[rumbo]
         destino = (self.rover.posicion[0] + df, self.rover.posicion[1] + dc)
         if not self.mundo.dentro(destino):
@@ -1065,6 +1079,13 @@ class Partida:
                 and self.estado not in ESTADOS_TERMINALES
                 and self._rng_sismo.random() < SISMO_PROB_POR_NIVEL[self.nivel]):
             self._evento_sismo()
+        # ARX-30b: el corte de enlace se descuenta y puede caer solo (generador propio, tras el bloque de sismo)
+        if self.enlace_restante > 0:
+            self.enlace_restante -= 1
+        elif (self.meteoritos_activos and "baja_conectividad" in self.eventos_activos
+                and self.estado not in ESTADOS_TERMINALES
+                and self._rng_enlace.random() < ENLACE_PROB_POR_NIVEL[self.nivel]):
+            self._evento_baja_conectividad()
         if self.rover.bateria <= 0 and self.estado not in ESTADOS_TERMINALES:
             self.mision.estado = "FRACASO"
 
@@ -1080,6 +1101,8 @@ class Partida:
             return self._evento_meteorito()
         if nombre == "sismo":
             return self._evento_sismo()
+        if nombre == "baja_conectividad":
+            return self._evento_baja_conectividad()
         if nombre in PASOS_AMBIENTE:
             self._iniciar_ambiente(nombre)
             return {"ok": True, "detalle": f"{nombre} durante {PASOS_AMBIENTE[nombre]} pasos"}
@@ -1153,6 +1176,17 @@ class Partida:
         self.sismos.append({"paso": int(self.mision.paso), "grietas": grietas})
         self._avisar("Sismo: grietas nuevas cerca del rover")
         return {"ok": True, "detalle": f"sismo: {len(grietas)} grieta(s) en {grietas}", "grietas": grietas}
+
+    def _evento_baja_conectividad(self) -> dict:
+        """ARX-30b (ev3-d48 A): corte de enlace de PASOS_SIN_ENLACE pasos. En manual, cada orden de /mover se pierde con
+        PROB_ORDEN_PERDIDA; en los modos de IA el rover sigue, pero /intervencion y /recomendacion responden 409."""
+        if self.estado in ESTADOS_TERMINALES:
+            return {"ok": False, "detalle": "partida terminada"}
+        self.enlace_restante = PASOS_SIN_ENLACE
+        self._ultimo_corte = int(self.mision.paso)
+        self._avisar("Baja conectividad: sin enlace con la base")
+        return {"ok": True, "detalle": f"baja conectividad: sin enlace {PASOS_SIN_ENLACE} pasos",
+                "restante": int(self.enlace_restante)}
 
     def _evento_barranco(self) -> dict:
         f, c = self.rover.posicion

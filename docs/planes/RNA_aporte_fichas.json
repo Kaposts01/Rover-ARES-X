@@ -1,0 +1,26 @@
+[
+  {
+    "code": "ev3-d78",
+    "title": "ARES-X (RNA): sin el rasgo de borde la RNA no ve ningún barranco; con una firma física de −3 m vería el 84 % y podría alertar a dos celdas. ¿Se hace antes de las 19:00 o se documenta?",
+    "what": "Medido hoy (28f y RNA_aporte §3): la RNA reconoce barrancos (recall 0,70–0,80) solo por el rasgo borde_barranco, que es la misma lectura del LIDAR que el supervisor usa antes que ella; sin ese rasgo predice 0 de 250 y 0 de 135. Causa: en el simulador un barranco es una etiqueta sin firma física (la elevación no baja ahí, simulador.py:112). Medición fuera de línea de 17 s (scripts en docs/planes/RNA_aporte_medicion*.py, sin tocar el repo): si los barrancos quedan 3 m por debajo, la RNA sin borde alcanza recall 0,842 (48 de 57, 4 falsos positivos en 5558 lecturas; con −2 m cae a 0,561 y con −1 m a 0,088) y puede anticipar un barranco a dos celdas con recall 0,667 (10 de 15, 0 falsos positivos), algo que hoy nadie da: el LIDAR solo ve los vecinos y el mapa estimado nace con el 80 % de los peligros. Con el mundo actual, la RNA cambia decisiones en 3 de 20 semillas sin tocar éxito ni colisiones (M2). Pedido del usuario (08:25): «veamos como podemos reparar».",
+    "impact": "M2 (aporte de cada técnica), M5 y M6 (métricas de la RNA), M3 y M7 (motivo y evidencia por paso). Solo la opción A puede mover M2, y no está garantizado (ev3-d63 exige ≥ 5 de 20 semillas con divergencia; se publica tal como salga). Cambia simulador.py, rna.py e integracion.py: debe salir de la punta de integración (prioridad 3) y compite con la entrega 2 de ARX-92 por el segundo frente. Congelación a las 19:00.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Alerta temprana completa (firma física + RNA sin borde + dos celdas), condicionada al hueco de las 15:00", "detail": "ARX-93a–e: barrancos 3 m bajo la elevación suave; RNA con 3 rasgos (sin borde); rasgo nuevo de desnivel a dos celdas y marca de riesgo en el mapa estimado sin veto nuevo; medición de 20 semillas con turno y publicación tal como salga. ~4 h de agente + ~1 h de QA: de 15:00 a 19:00 sin margen; se abre solo si a las 15:00 cerró 92d y hay segundo frente; si no, cae a C sin otra ficha. M2 posible (no garantizado), M5/M6 honestos (umbral escrito: recall ≥ 0,7 sin borde, ≥ 0,5 a dos celdas, falsos positivos ≤ 0,2 %)."},
+      {"key": "B", "label": "Solo firma física y RNA sin borde", "detail": "ARX-93a y 93b: la RNA deja de copiar el mapa (recall esperado 0,84) y M5/M6 se reportan honestos; el supervisor conserva el veto del LIDAR. ~2 h + QA. M2 no cambia (mismo horizonte que el veto de borde): gasta la ventana sin tocar lo que el informe necesita."},
+      {"key": "C", "label": "Documentar la limitación con los números medidos", "detail": "Sin código: párrafo de M2 (texto listo en RNA_aporte §9) con los recall de 28f y la medición de hoy (qué haría falta y cuánto rendiría), y ARX-93 declarada como trabajo futuro con plan. 0,5 h de Esp_Docs. M2 queda con el negativo honesto de la RNA."}
+    ],
+    "recommended": "C",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3078,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-93", "ARX-28f", "ARX-48"],
+    "evidence": [],
+    "evidenceNote": "docs/planes/RNA_aporte.md §3 (tablas) y §9 (texto); docs/planes/ARX-28_calibracion.md:118-135; TEXTO_M2_INFORME.md; genetico.py:24-36 (p_detectar 0,8); integracion.py:45-50 (orden de vetos). Recomiendo C como piso por prioridad 4 y plazo; A solo si hay hueco a las 15:00. La responde el Maestro por delegación."
+  }
+]

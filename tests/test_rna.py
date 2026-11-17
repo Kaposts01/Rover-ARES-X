@@ -6,7 +6,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from rna import NeuralPerception, generar_dataset, particion_por_mapas  # noqa: E402
+from rna import (  # noqa: E402
+    NOMBRES_RASGOS, NOMBRES_RASGOS_TERRENO, NeuralPerception, generar_dataset,
+    particion_por_mapas,
+)
 
 
 def test_particion_por_mapas_sin_solapamiento():
@@ -57,3 +60,35 @@ def test_explicacion_contiene_evidencia():
     e = rna.explicar(Xtr[0])
     assert set(e) == {"entrada", "normalizada", "probabilidades", "confianza"}
     assert sum(e["probabilidades"].values()) == pytest.approx(1.0, abs=0.01)
+
+
+def test_perfil_actual_no_cambia_y_terreno_quita_el_borde():
+    Xa, ya = generar_dataset([0, 1], muestras_por_mapa=50)
+    Xt, yt = generar_dataset([0, 1], muestras_por_mapa=50, perfil="terreno")
+    assert Xa.shape[1] == len(NOMBRES_RASGOS) == 4
+    assert Xt.shape[1] == len(NOMBRES_RASGOS_TERRENO) == 3
+    assert np.array_equal(ya, yt)
+    assert np.array_equal(Xt, Xa[:, [0, 2, 3]])
+    with pytest.raises(ValueError):
+        generar_dataset([0], perfil="otro")
+
+
+def test_explicacion_del_modelo_terreno_tiene_tres_entradas():
+    Xtr, ytr = generar_dataset(range(10), muestras_por_mapa=200, perfil="terreno")
+    rna = NeuralPerception(semilla=0, nombres=NOMBRES_RASGOS_TERRENO).entrenar(Xtr, ytr)
+    e = rna.explicar(Xtr[0])
+    assert list(e["entrada"]) == NOMBRES_RASGOS_TERRENO
+    assert "borde_barranco" not in e["normalizada"]
+
+
+def test_recall_sin_borde_con_firma_fisica_en_20_mapas(monkeypatch):
+    import simulador
+    monkeypatch.setattr(simulador, "FIRMA_BARRANCO_ACTIVA", True)
+    tr, _, te = particion_por_mapas(total_mapas=60)
+    assert len(te) >= 9
+    te = np.arange(100, 120)  # 20 mapas de prueba distintos de los de entrenamiento
+    Xtr, ytr = generar_dataset(tr, muestras_por_mapa=400, perfil="terreno")
+    Xte, yte = generar_dataset(te, muestras_por_mapa=400, perfil="terreno")
+    rna = NeuralPerception(semilla=42, nombres=NOMBRES_RASGOS_TERRENO).entrenar(Xtr, ytr)
+    res = rna.evaluar(Xte, yte)
+    assert res.recall_barranco >= 0.7  # umbral escrito antes (medido 0,842 fuera de línea)

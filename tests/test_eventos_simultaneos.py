@@ -2,7 +2,7 @@
 
 Se disparan varios eventos en el mismo paso (antes de avanzar) y se fija el orden de vetos y avisos que resulta
 del motor. Orden en el motor: los eventos se aplican en el orden de las llamadas a disparar_evento; los vetos los
-decide después Mision.paso_mision (REPLAN-SISMO se anota al disparar el sismo; V-RUTA-CON-RIESGO sale en el primer
+decide después Mision.paso_mision (REPLAN-AG-SISMO se anota al disparar el sismo, ARX-31a; V-RUTA-CON-RIESGO sale en el primer
 paso). Dos corridas con la misma semilla deben dar exactamente el mismo orden y los mismos avisos.
 Solo pruebas: no cambia el motor.
 """
@@ -66,14 +66,14 @@ def test_triple_orden_de_vetos_y_avisos_fijado_semilla_3():
     assert r["avisos_tras_eventos"] == ["Sismo: grietas nuevas cerca del rover",
                                         "Meteorito: impacto en una zona de riesgo cercana"]
     assert r["avisos"] == r["avisos_tras_eventos"]
-    # el sismo cae en la ruta (REPLAN-SISMO) y, en el primer paso, el veto por riesgo en la ruta
-    assert r["motivos"][:3] == ["REPLAN-SISMO", "V-RUTA-CON-RIESGO", "OK"]
+    # el sismo cae en la ruta (REPLAN-AG-SISMO, ARX-31a) y, en el primer paso, el veto por riesgo en la ruta
+    assert r["motivos"][:3] == ["REPLAN-AG-SISMO", "V-RUTA-CON-RIESGO", "OK"]
     assert r["vetos"] == 1
 
 
 def test_triple_orden_semilla_7_termina_sin_ruta_tras_el_veto():
     r = _corrida(TRIPLE, 7, 40)
-    assert r["motivos"] == ["REPLAN-SISMO", "V-RUTA-CON-RIESGO"]
+    assert r["motivos"] == ["REPLAN-AG-SISMO", "V-RUTA-CON-RIESGO"]
     assert r["vetos"] == 1
     assert r["estado"] == "SIN_RUTA"
     assert r["avisos"] == ["Sismo: grietas nuevas cerca del rover",

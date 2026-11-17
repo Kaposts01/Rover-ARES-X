@@ -1,0 +1,1595 @@
+[
+ {
+  "nivel": 1,
+  "semilla": 1,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 49,
+  "bateria_final": 48.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 1,
+  "t_generacion_s": 2.57,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 1,
+  "semilla": 2,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 58,
+  "bateria_final": 49.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 2,
+  "t_generacion_s": 1.62,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 3,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 48,
+  "bateria_final": 59.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 3,
+  "t_generacion_s": 1.49,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 4,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 38,
+  "bateria_final": 53.0,
+  "sitios": "3/3",
+  "drones_vivos": 2,
+  "variante_mapa": 4,
+  "t_generacion_s": 1.55,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 5,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 34,
+  "bateria_final": 60.0,
+  "sitios": "3/3",
+  "drones_vivos": 2,
+  "variante_mapa": 5,
+  "t_generacion_s": 1.48,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover",
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 1,
+  "semilla": 6,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 47,
+  "bateria_final": 50.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 6,
+  "t_generacion_s": 1.49,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 7,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 47,
+  "bateria_final": 50.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 7,
+  "t_generacion_s": 1.56,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 8,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 49,
+  "bateria_final": 44.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 8,
+  "t_generacion_s": 1.61,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 9,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 57,
+  "bateria_final": 38.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 9,
+  "t_generacion_s": 1.56,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 10,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 54,
+  "bateria_final": 44.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 10,
+  "t_generacion_s": 1.53,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 11,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 60,
+  "bateria_final": 34.5,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 11,
+  "t_generacion_s": 1.62,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 12,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 54,
+  "bateria_final": 49.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 12,
+  "t_generacion_s": 1.77,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 1,
+  "semilla": 13,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 37,
+  "bateria_final": 60.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 13,
+  "t_generacion_s": 1.48,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 14,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 40,
+  "bateria_final": 58.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 14,
+  "t_generacion_s": 1.51,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 15,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 46,
+  "bateria_final": 52.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 15,
+  "t_generacion_s": 1.72,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 1,
+  "semilla": 16,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 51,
+  "bateria_final": 45.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 16,
+  "t_generacion_s": 1.5,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 17,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 57,
+  "bateria_final": 48.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 17,
+  "t_generacion_s": 1.57,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 1,
+  "semilla": 18,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 48,
+  "bateria_final": 49.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 18,
+  "t_generacion_s": 1.75,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 19,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 47,
+  "bateria_final": 55.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 19,
+  "t_generacion_s": 1.58,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 1,
+  "semilla": 20,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 43,
+  "bateria_final": 50.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 20,
+  "t_generacion_s": 1.48,
+  "causa": "EXITO",
+  "avisos": [
+   "Baja conectividad: sin enlace con la base"
+  ]
+ },
+ {
+  "nivel": 2,
+  "semilla": 1,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 51,
+  "bateria_final": 46.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 1,
+  "t_generacion_s": 1.6,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 2,
+  "semilla": 2,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 45,
+  "bateria_final": 56.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 2,
+  "t_generacion_s": 1.52,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 3,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 35,
+  "bateria_final": 67.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 3,
+  "t_generacion_s": 1.68,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 4,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 40,
+  "bateria_final": 52.5,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 4,
+  "t_generacion_s": 1.61,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 5,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 58,
+  "bateria_final": 31.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 5,
+  "t_generacion_s": 1.48,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover",
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 2,
+  "semilla": 6,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 37,
+  "bateria_final": 56.0,
+  "sitios": "3/3",
+  "drones_vivos": 2,
+  "variante_mapa": 6,
+  "t_generacion_s": 1.5,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 7,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 46,
+  "bateria_final": 49.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 7,
+  "t_generacion_s": 1.37,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 8,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 35,
+  "bateria_final": 53.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 8,
+  "t_generacion_s": 1.66,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 9,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 47,
+  "bateria_final": 44.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 9,
+  "t_generacion_s": 1.65,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 10,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 54,
+  "bateria_final": 43.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 10,
+  "t_generacion_s": 1.52,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 11,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 60,
+  "bateria_final": 32.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 11,
+  "t_generacion_s": 1.62,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 2,
+  "semilla": 12,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 57,
+  "bateria_final": 42.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 12,
+  "t_generacion_s": 1.57,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 2,
+  "semilla": 13,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 62,
+  "bateria_final": 32.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 13,
+  "t_generacion_s": 1.63,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 14,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 46,
+  "bateria_final": 47.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 14,
+  "t_generacion_s": 1.72,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 15,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 52,
+  "bateria_final": 42.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 15,
+  "t_generacion_s": 1.71,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 2,
+  "semilla": 16,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 47,
+  "bateria_final": 45.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 16,
+  "t_generacion_s": 1.37,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 17,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 36,
+  "bateria_final": 65.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 17,
+  "t_generacion_s": 1.64,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 2,
+  "semilla": 18,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 60,
+  "bateria_final": 39.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 18,
+  "t_generacion_s": 1.47,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 19,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 61,
+  "bateria_final": 32.0,
+  "sitios": "3/3",
+  "drones_vivos": 0,
+  "variante_mapa": 19,
+  "t_generacion_s": 1.71,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 2,
+  "semilla": 20,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 52,
+  "bateria_final": 39.0,
+  "sitios": "3/3",
+  "drones_vivos": 1,
+  "variante_mapa": 20,
+  "t_generacion_s": 1.42,
+  "causa": "EXITO",
+  "avisos": [
+   "Baja conectividad: sin enlace con la base"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 1,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 47,
+  "bateria_final": 46.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 1,
+  "t_generacion_s": 1.58,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 2,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 62,
+  "bateria_final": 33.5,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 30023,
+  "t_generacion_s": 1.57,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 3,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 53,
+  "bateria_final": 44.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10010,
+  "t_generacion_s": 1.46,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 4,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 62,
+  "bateria_final": 17.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 40032,
+  "t_generacion_s": 1.85,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 5,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 64,
+  "bateria_final": 13.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 90068,
+  "t_generacion_s": 1.62,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 6,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 48,
+  "bateria_final": 38.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 280202,
+  "t_generacion_s": 1.71,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 7,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 48,
+  "bateria_final": 45.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 7,
+  "t_generacion_s": 1.45,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 3,
+  "semilla": 8,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 55,
+  "bateria_final": 30.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 50043,
+  "t_generacion_s": 1.59,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 3,
+  "semilla": 9,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 55,
+  "bateria_final": 32.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 70058,
+  "t_generacion_s": 1.89,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 10,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 54,
+  "bateria_final": 39.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10017,
+  "t_generacion_s": 1.69,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Sismo: grietas nuevas cerca del rover",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 11,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 41,
+  "bateria_final": 51.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 40039,
+  "t_generacion_s": 1.57,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Replanteo por el mapa real tras quedarse sin ruta estimada"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 12,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 56,
+  "bateria_final": 37.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 12,
+  "t_generacion_s": 1.66,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 13,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 67,
+  "bateria_final": 17.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 40041,
+  "t_generacion_s": 1.79,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 14,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 68,
+  "bateria_final": 19.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 20028,
+  "t_generacion_s": 1.61,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 15,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 70,
+  "bateria_final": 18.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 20029,
+  "t_generacion_s": 1.77,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Sismo: grietas nuevas cerca del rover",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 16,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 66,
+  "bateria_final": 15.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 40044,
+  "t_generacion_s": 1.3,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 17,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 56,
+  "bateria_final": 40.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 120101,
+  "t_generacion_s": 1.56,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 18,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 58,
+  "bateria_final": 33.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10025,
+  "t_generacion_s": 1.52,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 19,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 63,
+  "bateria_final": 26.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 50054,
+  "t_generacion_s": 1.78,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 3,
+  "semilla": 20,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 49,
+  "bateria_final": 38.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 40048,
+  "t_generacion_s": 1.61,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Baja conectividad: sin enlace con la base",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 1,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 52,
+  "bateria_final": 34.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 160113,
+  "t_generacion_s": 1.79,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 2,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 50,
+  "bateria_final": 36.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 30023,
+  "t_generacion_s": 1.7,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 3,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 47,
+  "bateria_final": 46.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 70052,
+  "t_generacion_s": 1.5,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 4,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 50,
+  "bateria_final": 34.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 420298,
+  "t_generacion_s": 2.26,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 4,
+  "semilla": 5,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 60,
+  "bateria_final": 14.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 110082,
+  "t_generacion_s": 1.7,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 6,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 61,
+  "bateria_final": 13.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10013,
+  "t_generacion_s": 1.56,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 7,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 56,
+  "bateria_final": 29.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 60049,
+  "t_generacion_s": 1.52,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 8,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 50,
+  "bateria_final": 31.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10015,
+  "t_generacion_s": 1.45,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 4,
+  "semilla": 9,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 45,
+  "bateria_final": 42.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 260191,
+  "t_generacion_s": 1.86,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 10,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 48,
+  "bateria_final": 38.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 100080,
+  "t_generacion_s": 1.62,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover",
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 11,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 48,
+  "bateria_final": 35.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 40039,
+  "t_generacion_s": 1.74,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 12,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 56,
+  "bateria_final": 34.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 20026,
+  "t_generacion_s": 1.69,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 13,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 60,
+  "bateria_final": 21.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 40041,
+  "t_generacion_s": 1.74,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 14,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 50,
+  "bateria_final": 39.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 14,
+  "t_generacion_s": 1.67,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 15,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 52,
+  "bateria_final": 34.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 300225,
+  "t_generacion_s": 1.97,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover",
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 16,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 64,
+  "bateria_final": 10.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 80072,
+  "t_generacion_s": 1.59,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 17,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 52,
+  "bateria_final": 45.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 50052,
+  "t_generacion_s": 1.48,
+  "causa": "EXITO",
+  "avisos": [
+   "Sismo: grietas nuevas cerca del rover",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 18,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 48,
+  "bateria_final": 42.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 18,
+  "t_generacion_s": 1.54,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 4,
+  "semilla": 19,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 60,
+  "bateria_final": 19.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 20033,
+  "t_generacion_s": 1.76,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 4,
+  "semilla": 20,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 60,
+  "bateria_final": 21.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 30041,
+  "t_generacion_s": 1.62,
+  "causa": "EXITO",
+  "avisos": [
+   "Baja conectividad: sin enlace con la base",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 1,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 55,
+  "bateria_final": 26.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 240169,
+  "t_generacion_s": 1.9,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 2,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 46,
+  "bateria_final": 33.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10009,
+  "t_generacion_s": 1.66,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 3,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 42,
+  "bateria_final": 48.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 410290,
+  "t_generacion_s": 1.87,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 4,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 57,
+  "bateria_final": 6.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 60046,
+  "t_generacion_s": 1.69,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 5,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 53,
+  "bateria_final": 18.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 50040,
+  "t_generacion_s": 1.66,
+  "causa": "EXITO",
+  "avisos": [
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 6,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 64,
+  "bateria_final": 7.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10013,
+  "t_generacion_s": 1.42,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 7,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 54,
+  "bateria_final": 30.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10014,
+  "t_generacion_s": 1.31,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 5,
+  "semilla": 8,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 52,
+  "bateria_final": 25.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 70057,
+  "t_generacion_s": 1.7,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 9,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 58,
+  "bateria_final": 20.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 80065,
+  "t_generacion_s": 1.54,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Baja conectividad: sin enlace con la base"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 10,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 47,
+  "bateria_final": 37.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 10,
+  "t_generacion_s": 1.48,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 11,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 63,
+  "bateria_final": 12.5,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 190144,
+  "t_generacion_s": 1.83,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 12,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 59,
+  "bateria_final": 23.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 60054,
+  "t_generacion_s": 1.64,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Meteorito: impacto en una zona de riesgo cercana"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 13,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 52,
+  "bateria_final": 28.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 270202,
+  "t_generacion_s": 1.82,
+  "causa": "EXITO",
+  "avisos": [
+   "Baja conectividad: sin enlace con la base",
+   "Meteorito: impacto en una zona de riesgo cercana",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 14,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 53,
+  "bateria_final": 28.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 100084,
+  "t_generacion_s": 1.84,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 15,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 58,
+  "bateria_final": 26.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 310232,
+  "t_generacion_s": 2.14,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos",
+   "Sismo: grietas nuevas cerca del rover"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 16,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 58,
+  "bateria_final": 20.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 50051,
+  "t_generacion_s": 1.56,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 17,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 61,
+  "bateria_final": 17.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 100087,
+  "t_generacion_s": 1.56,
+  "causa": "EXITO",
+  "avisos": [
+   "Baja conectividad: sin enlace con la base",
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 18,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 51,
+  "bateria_final": 32.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 40046,
+  "t_generacion_s": 1.67,
+  "causa": "EXITO",
+  "avisos": []
+ },
+ {
+  "nivel": 5,
+  "semilla": 19,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 59,
+  "bateria_final": 18.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 520383,
+  "t_generacion_s": 2.06,
+  "causa": "EXITO",
+  "avisos": [
+   "Faltan drones: 2 vivos; el refugio queda bloqueado hasta destruirlos",
+   "Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos"
+  ]
+ },
+ {
+  "nivel": 5,
+  "semilla": 20,
+  "estado": "EXITO",
+  "exito": true,
+  "pasos": 48,
+  "bateria_final": 32.0,
+  "sitios": "4/4",
+  "drones_vivos": 0,
+  "variante_mapa": 430321,
+  "t_generacion_s": 1.88,
+  "causa": "EXITO",
+  "avisos": [
+   "Baja conectividad: sin enlace con la base"
+  ]
+ }
+]

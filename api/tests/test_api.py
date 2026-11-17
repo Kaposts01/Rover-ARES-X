@@ -27,7 +27,8 @@ def test_estado_inicial_en_el_inicio_con_bateria_completa(cliente):
     datos = r.json()
     assert datos["posicion"] == [19, 0]
     assert datos["bateria"] == 100.0
-    assert datos["estado"] == "EXPLORACION"
+    # ARX-33a: en el paso 0 el estado visible es CONFIGURACION (antes EXPLORACION)
+    assert datos["estado"] == "CONFIGURACION"
 
 
 def test_post_partida_crea_nueva_y_valida_nivel(cliente):

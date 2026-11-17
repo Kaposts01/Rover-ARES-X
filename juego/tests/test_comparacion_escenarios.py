@@ -1,4 +1,5 @@
 """ARX-28b: escenarios de evaluación del arnés de comparación (congelado y exigente)."""
+import json
 import os
 import sys
 
@@ -7,14 +8,6 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from juego import comparacion  # noqa: E402
-
-# Filas del escenario congelado con semillas 1-3, obtenidas ANTES de tocar el código (main, e71d0dd).
-_COMUN = {1: (46, 49.0), 2: (52, 39.0), 3: (41, 62.0)}
-FILAS_CONGELADO = [
-    {"semilla": s, "variante": v, "estado": "EXITO", "exito": True, "pasos": _COMUN[s][0], "colisiones": 0,
-     "bateria_final": _COMUN[s][1], "sitios_visitados": 3}
-    for v in comparacion.VARIANTES for s in (1, 2, 3)
-]
 
 R_PRUEBA, P_PRUEBA = 0.3, 0.6   # valores de prueba (no son los de ARX-28a)
 
@@ -25,8 +18,19 @@ def exigente_fijado(monkeypatch):
 
 
 def test_regresion_congelado_filas_identicas():
-    d = comparacion.comparar(range(1, 4))
-    assert d["filas"] == FILAS_CONGELADO
+    # ARX-45/ev3-d64 (B2 de QA): vigila el JSON publicado. Las 4 variantes originales con 20 semillas deben dar las
+    # mismas filas que docs/COMPARACION_POLITICAS.json. Si cambia el código, este test avisa antes que el informe.
+    ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "docs",
+                        "COMPARACION_POLITICAS.json")
+    with open(ruta, encoding="utf-8") as f:
+        publicado = json.load(f)
+    d = comparacion.comparar(range(1, 21))
+    # ARX-92d: sin_ag_mas_corta aún no está publicada; el JSON trae sin_ag renombrado a sin_ag_vecino (mismas cifras)
+    vigiladas = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino")
+    obtenidas = [f for f in d["filas"] if f["variante"] in vigiladas]
+    esperadas = [f for f in publicado["filas"] if f["variante"] in vigiladas]
+    assert len(obtenidas) == 80
+    assert obtenidas == esperadas
     assert d["escenario"] == "congelado"
 
 
@@ -95,3 +99,36 @@ def test_exigente_prob_fallo_es_determinista(monkeypatch):
     a = comparacion.correr(1, "hibrido", "exigente")
     b = comparacion.correr(1, "hibrido", "exigente")
     assert a == b
+
+
+def test_ruta_corta_existe_en_ambos_escenarios(exigente_fijado):
+    for v in ("ruta_corta", "ag_puro"):
+        assert v in comparacion.VARIANTES
+        for esc in ("congelado", "exigente"):
+            f = comparacion.correr(1, v, esc)
+            assert f["variante"] == v and f["pasos"] > 0
+            assert comparacion.correr(1, v, esc) == f      # determinista
+
+
+def test_ruta_corta_planifica_sin_riesgos():
+    p = comparacion.partida_variante(1, "ruta_corta")
+    assert p.mision.usar_rna is False and p.mision.usar_difuso is False
+    assert p.mision.riesgo.max() == 0.0
+
+
+def test_resumen_dispersion_caso_pequeno():
+    r = comparacion._resumen([1, 2, 3, 4])
+    assert r == {"media": 2.5, "mediana": 2.5, "desviacion": 1.291, "rango_intercuartil": 1.5}
+    assert comparacion._resumen([5])["desviacion"] == 0.0
+
+
+def test_ag_puro_mantiene_el_mapa_de_riesgo_fijo():
+    p = comparacion.partida_variante(1, "ag_puro")
+    m = p.mision
+    inicial = m.riesgo.copy()
+    assert m.usar_rna is False and m.usar_difuso is False
+    for _ in range(40):
+        if p.estado in comparacion.ESTADOS_TERMINALES:
+            break
+        p.avanzar_ia()
+        assert (m.riesgo == inicial).all()

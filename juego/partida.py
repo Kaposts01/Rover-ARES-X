@@ -4,7 +4,9 @@ Envuelve Mision (integracion.py) sin modificar los módulos congelados. El jugad
 mover_jugador(); la IA sugiere con sugerencia() (sin efectos) y ejecuta con avanzar_ia().
 """
 import copy
+import functools
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -18,11 +20,20 @@ from integracion import (ESTADOS_TERMINALES, MARGEN_ENERGIA,  # noqa: E402
                          GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO,
                          Decision, Mision, _rumbo, camino_valido)
 from difuso import ResultadoDifuso, aplanar_membresias  # noqa: E402
+from juego import termico  # noqa: E402
 from rna import _rasgos_celda  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
 
+PASOS_CAZA_SIN_AVANCE = 12   # ARX-79c: pasos seguidos sin salir de la celda durante la caza antes de fracasar con causa
 EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica")
+# ARX-31a: eventos graves ante los que el AG vuelve a planificar el orden de visita (ev3-d07 B: fuera de ellos, solo BFS).
+# Mitigación de costo (plan §7, M2 de QA: ~3,5 s por replanteo del AG en 40x60): solo sismo (si la grieta toca la ruta)
+# y señal biológica (siempre). Meteorito y barranco replanifican por BFS, como antes de 31a (riesgo y veto del motor).
+# Como máximo un replanteo del AG por paso.
+# Costo conocido: el replanteo con AG tarda unos 3,5 s en 40x60, solo con sismo que toca la ruta y con señal biológica
+# (eventos raros). Población y generaciones se mantienen (M9 exige >= 30 y >= 30).
+EVENTOS_GRAVES = ("sismo", "senal_biologica")
 SENAL_DIST_MIN, SENAL_DIST_MAX = 3, 6    # distancia Chebyshev de la señal biológica al rover (ARX-30c)
 # ARX-30c (ev3-d50 C): probabilidad por paso de que la señal caiga sola, por nivel (supuesto de simulación)
 SENAL_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}
@@ -36,6 +47,13 @@ PASOS_SIN_ENLACE = 4                    # pasos que dura un corte de enlace (ev3
 PROB_ORDEN_PERDIDA = 0.5                # en manual, probabilidad de perder una orden de /mover durante el corte (ev3-d48 A)
 ENLACE_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}   # corte espontáneo por paso (supuesto de simulación)
 BATERIA_BAJA = 15.0
+
+# ARX-28c (ev3-d54 A): resbalón por velocidad en pendiente, solo con la bandera fisica_velocidad (escenario exigente).
+# Constantes CONGELADAS por ev3-d69 A: no se ajustan tras ver cifras; la sensibilidad se publica aparte (rejilla 3x2).
+INCLINACION_RESBALON = 20.0     # grados: sobre esta pendiente la tracción de las ruedas deja de ser segura (plan: «p. ej. 20°»)
+P_RESBALON = 0.5                # probabilidad = P_RESBALON * velocidad: el riesgo de perder agarre crece con la velocidad
+COSTO_RESBALON = 1.0            # % de batería: esfuerzo extra de las ruedas al patinar y reanudar el avance (supuesto)
+VELOCIDAD_SIN_RESBALON = 0.3    # por debajo de esta velocidad el avance es lento y no resbala (plan: v < 0,3)
 
 NIVEL_MAX = 5
 # ARX-21: tamaño del mapa. 20x30 es el de las evaluaciones congeladas (informe y /comparacion).
@@ -71,7 +89,29 @@ class _RnaSegura:
         return getattr(self._rna, nombre)
 
 
-MARGEN_CAZA = 10   # pasos extra estimados por cada dron obligatorio (persecución desde su zona de patrulla)
+MARGEN_CAZA = 10   # suelo del margen de caza: pasos extra por dron obligatorio (persecución desde su zona de patrulla)
+MARGEN_CAZA_DIVISOR = 3   # ARX-79b (plan 79, sec. 3): el margen de caza es max(MARGEN_CAZA, lado mayor del mapa / 3)
+# ARX-79b: factor de seguridad de la garantía = 1 + K_ESCALA·(escala − 1) + K_NIVEL·(nivel − 1), con escala = área / (20·30).
+# El plan 79 (sec. 3) propone K_ESCALA = 0,15 y K_NIVEL = 0,05. Con esos valores NINGUNA variante de 40x60 pasa la garantía
+# (batería 100 − 4·(nivel − 1) frente a rutas de ~65–80 pasos × 1,45 + 15) y en 20x30 Hardcore deja de hallar variante en
+# 3 de 5 semillas (rompe 2 pruebas de api/tests/test_eventos_arx30.py que pasaban). El Maestro eligió la batería
+# proporcional al tamaño (ev3-d75 A), así que K queda en 0 por esa decisión (factor 1,0); la fórmula y su prueba están listas.
+FACTOR_SEGURIDAD_K_ESCALA = 0.0
+FACTOR_SEGURIDAD_K_NIVEL = 0.0
+FACTOR_SEGURIDAD_PLAN = (0.15, 0.05)    # valores del plan 79, descartados por la evidencia anterior
+AVISO_SIN_GARANTIA = "Mapa sin garantía de victoria para este nivel y tamaño"
+
+
+def margen_caza(filas: int, columnas: int) -> float:
+    """ARX-79b: pasos extra por dron obligatorio, proporcional al mapa. La persecución recorre del orden del lado mayor
+    (en 8 direcciones la «diagonal» en celdas es max(filas, columnas): 60 en 40x60) dividido por 3; en 20x30 vale 10."""
+    return max(float(MARGEN_CAZA), max(int(filas), int(columnas)) / MARGEN_CAZA_DIVISOR)
+
+
+def factor_seguridad_garantia(filas: int, columnas: int, nivel: int) -> float:
+    """ARX-79b: multiplicador del recorrido estimado por la garantía (1,0 en 20x30 nivel 1; ≈1,45 en 40x60 nivel 1)."""
+    escala = (int(filas) * int(columnas)) / (FILAS_BASE * COLUMNAS_BASE)
+    return 1.0 + FACTOR_SEGURIDAD_K_ESCALA * (escala - 1.0) + FACTOR_SEGURIDAD_K_NIVEL * (int(nivel) - 1)
 
 
 def _drones_obligatorios(mundo, semilla: int, nivel: int) -> list:
@@ -90,6 +130,9 @@ AMBIENTE_FACTOR_POR_NIVEL = {1: 1.3, 2: 1.3, 3: 1.2, 4: 1.1, 5: 1.0}   # margen 
 FACTOR_DESVIO = 2.0                                              # ARX-59: desvío con el peor caso de tormenta
 RESERVA_DESVIO = 5.0                                          # batería de reserva para el desvío a estación
 RECARGA_PASOS = 3                                             # pasos parado para recargar en una estación
+# ARX-79 (ev3-d75 A): batería inicial del mapa más grande que el pequeño = batería por nivel × RAZON_BATERIA_GRANDE.
+# R = mediana de pasos de las victorias del grande (77,5) / mediana del pequeño (52,0) = 1,49 (ver ARX-79_calibracion.md).
+RAZON_BATERIA_GRANDE = 1.49
 BATERIA_MAX_POR_NIVEL = {1: 60.0, 2: 56.0, 3: 52.0, 4: 48.0, 5: 44.0}   # calibrar: la ruta completa no llega sin recargar
 
 
@@ -170,16 +213,17 @@ def _cadena_a_destino(pos, bat, destino, estaciones, largo, factor, bateria_max)
     return list(reversed(cadena))
 
 
-def _plan_con_paradas(origen, seq, bateria, bateria_max, estaciones, largo, tramo, cazas=(), factor=1.0):
+def _plan_con_paradas(origen, seq, bateria, bateria_max, estaciones, largo, tramo, cazas=(), factor=1.0, margen_caza_pasos=None):
     """Camino por la secuencia seq (sitios, drones, refugio) con paradas en estaciones cuando falta batería.
 
     Un tramo directo cuesta largo × factor. Si no alcanza, se busca una cadena de estaciones (ARX-59).
     Devuelve la lista de celdas, o None si no hay forma de llegar al final con MARGEN_ENERGIA.
-    Cada dron de cazas cuesta MARGEN_CAZA pasos extra. Tras una estación la batería vuelve al máximo.
+    Cada dron de cazas cuesta margen_caza_pasos (por omisión MARGEN_CAZA) pasos extra. Tras una estación la batería vuelve al máximo.
     """
     camino, pos, bat = [origen], origen, float(bateria)
+    mc = MARGEN_CAZA if margen_caza_pasos is None else margen_caza_pasos
     for destino in seq:
-        extra = MARGEN_CAZA if destino in cazas else 0
+        extra = mc if destino in cazas else 0
         d = largo(pos, destino)
         if d is not None and d * factor <= bat:
             bat -= d * factor + extra
@@ -197,7 +241,7 @@ def _plan_con_paradas(origen, seq, bateria, bateria_max, estaciones, largo, tram
     return camino if bat >= MARGEN_ENERGIA else None
 
 
-def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(), factor=1.0) -> bool:
+def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(), factor=1.0, margen_caza_pasos=None) -> bool:
     """ARX-66 / ARX-59: existe un orden de sitios y drones obligatorios, con paradas en estaciones, que llega al
     refugio con la batería disponible. Sin estaciones equivale a comprobar la ruta completa sin recargar."""
     import itertools
@@ -227,21 +271,37 @@ def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(
     for orden_s in itertools.permutations(pts):
         for orden_d in itertools.permutations(cazas):
             seq = list(orden_s) + list(orden_d) + [refugio]
-            if _plan_con_paradas(origen, seq, bateria, tope, est, largo, tramo, cazas, factor) is not None:
+            if _plan_con_paradas(origen, seq, bateria, tope, est, largo, tramo, cazas, factor, margen_caza_pasos) is not None:
                 return True
     return False
 
 
-def _ag_con_todos_los_sitios(m, optimizar_original):
-    """ARX-66 / ARX-59: la ruta visita todos los sitios pendientes, en el orden más corto por el mapa real, con
-    paradas en estaciones cuando falta batería. El AG no decide qué sitios se visitan (la victoria los exige todos).
-    Con pocos sitios se prueban todos los órdenes; la ruta que usa la misión es la que validó la garantía."""
+METODO_ORDEN = "exhaustiva puntuada por el fitness"     # ARX-92a: respaldo (vía b) cuando el AG no da un orden viable
+METODO_AG_ORDEN = "AG sobre el orden de los sitios"      # ARX-92c: cómo decide la partida el orden de visita
+AVISO_FALLBACK = "AG-FALLBACK-GARANTIA"                  # ARX-92c: el mejor orden del AG no era viable; juega la vía b
+# ARX-92a (ev3-d74 B, umbral único): permutaciones viables a este fitness o menos del mejor se consideran empatadas y gana
+# la más corta. Fijado en docs/planes/ARX-92_ag_decide.md (p90 del error de fitness del exigente, 20 semillas).
+UMBRAL_EMPATE = 0.0223
+# ARX-92c: la partida no usa punto de paso por tramo (el AG decide el ORDEN; el camino entre sitios es el BFS de la
+# garantía). Con True el cromosoma añade un punto de paso opcional por tramo; cambia la ruta jugada y la cifra congelada.
+AG_ORDEN_CON_PASO = False
+
+
+def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None, anotar=None, con_paso=None, parada_sin_mejora=None):
+    """ARX-66 / ARX-59 / ARX-92a / ARX-92c: la ruta visita todos los sitios pendientes y el orden lo decide un AG real
+    (`GeneticPlanner.optimizar_orden`: permutación de sitios, cruce OX, mutación por intercambio, elitismo) puntuado por
+    el fitness con los pesos dados o los de defecto. La viabilidad es restricción dura: el mismo `_plan_con_paradas` y
+    factor de la garantía (con paradas en estaciones si las hay); un orden inviable no puede ganar. Si el mejor orden del
+    AG no es viable (ningún orden evaluado lo es), cae a la vía b de 92a (permutación viable de mayor fitness entre todas,
+    con más de 6 sitios solo el orden dado), lo anota con AG-FALLBACK-GARANTIA (`anotar` y `optimizar.fallbacks`) y,
+    si tampoco hay ninguna, devuelve la ruta de `optimizar_original`. Entre viables a UMBRAL_EMPATE del mejor fitness
+    gana la más corta (desempate de 92a). El método queda en `optimizar.metodo`."""
     import itertools
+    from genetico import GeneticPlanner as _GP
 
     def optimizar(origen, pendientes):
-        ruta_ag = optimizar_original(origen, pendientes)
         if not pendientes:
-            return ruta_ag
+            return optimizar_original(origen, pendientes)
         origen = tuple(int(v) for v in origen)
         pts = [tuple(int(v) for v in p) for p in pendientes]
         mascara = m.riesgo < 0.5
@@ -260,36 +320,101 @@ def _ag_con_todos_los_sitios(m, optimizar_original):
             return largos[(a, b)]
 
         con_estaciones = getattr(m, "estaciones_activas", False)
-        mejor = None
+        elegido_pesos = pesos if pesos is not None else getattr(m, "pesos_ag", None)
+        desde = replace(m.mundo, inicio=origen, sitios={p: m.mundo.sitios.get(p, 1) for p in pts})
+        capacidad = max(float(getattr(m, "bateria_max", None) or m.rover.bateria), 1.0)
+        gp = _GP(desde, m.riesgo, bateria=capacidad, k_puntos=m.k, poblacion=30, generaciones=30,
+                 pesos=dict(elegido_pesos) if elegido_pesos else None, semilla=m.semilla)
+
+        def construir(seq):
+            """Ruta viable por la secuencia (sitios, puntos de paso y refugio) o None."""
+            if con_estaciones:
+                return _plan_con_paradas(origen, list(seq), m.rover.bateria, m.bateria_max, m.estaciones, largo, tramo,
+                                         factor=m.factor_ambiente)
+            c = [origen]
+            for destino in seq:
+                t = tramo(c[-1], destino)
+                if t is None:
+                    return None
+                c.extend(t[1:])
+            # ARX-92c (corrección aprobada por el Maestro): la viabilidad usa la misma reserva que _planear
+            # (largo + MARGEN_ENERGIA ≤ batería). Una ruta que no la cumple devuelve None y queda por debajo de
+            # cualquier ruta completa viable (piso de fitness en optimizar_orden).
+            if len(c) - 1 + MARGEN_ENERGIA > m.rover.bateria:
+                return None
+            return c
+
+        res = gp.optimizar_orden(construir, con_paso=AG_ORDEN_CON_PASO if con_paso is None else con_paso,
+                                 umbral_empate=UMBRAL_EMPATE, parada_sin_mejora=parada_sin_mejora)
+        optimizar.ultimo, optimizar.gp = res, gp
+        if res.viable:
+            optimizar.decisiones.append(res.desempate_cambio)
+            return res.mejor_ruta
+        # Respaldo (vía b de 92a): ningún orden evaluado por el AG es viable; se prueban todas las permutaciones
+        optimizar.fallbacks.append(AVISO_FALLBACK)
+        if anotar is not None:
+            anotar(AVISO_FALLBACK + ": el mejor orden del AG no es viable; juega la permutación viable de mejor fitness")
+        validas = []            # (fitness, largo de la ruta, ruta) de cada permutación viable
         candidatos = itertools.permutations(pts) if len(pts) <= 6 else [tuple(pts)]
         for orden in candidatos:
-            seq = list(orden) + [tuple(int(v) for v in m.mundo.refugio)]
-            if con_estaciones:
-                c = _plan_con_paradas(origen, seq, m.rover.bateria, m.bateria_max, m.estaciones, largo, tramo,
-                                      factor=m.factor_ambiente)
-            else:
-                c = [origen]
-                for destino in seq:
-                    t = tramo(c[-1], destino)
-                    if t is None:
-                        c = None
-                        break
-                    c.extend(t[1:])
-            if c is not None and (mejor is None or len(c) < len(mejor)):
-                mejor = c
-        return mejor if mejor is not None else ruta_ag
+            c = construir(list(orden) + [tuple(int(v) for v in m.mundo.refugio)])
+            if c is None:
+                continue
+            validas.append((gp.evaluar_ruta(c, capacidad).fitness, len(c), c))
+        if not validas:
+            optimizar.decisiones.append(False)
+            return optimizar_original(origen, pendientes)
+        fmax = max(v[0] for v in validas)
+        mejor_fitness = next(v for v in validas if v[0] == fmax)
+        empate = [v for v in validas if v[0] >= fmax - UMBRAL_EMPATE]
+        elegido = min(empate, key=lambda v: v[1])
+        optimizar.decisiones.append(elegido[2] is not mejor_fitness[2])
+        return elegido[2]
+    optimizar.metodo = METODO_AG_ORDEN
+    optimizar.metodo_respaldo = METODO_ORDEN
+    optimizar.decisiones = []       # por cada planificación, True si decidió el desempate y no el fitness
+    optimizar.fallbacks = []        # ARX-92c: un AVISO_FALLBACK por cada vez que se cayó a la vía b
+    optimizar.ultimo = None         # último ResultadoAG del modo orden y su planificador (para /ag y pruebas)
+    optimizar.gp = None
     return optimizar
 
 
+def _cronometrado(metodo):
+    """ARX-89b: suma al acumulador tiempo_computo_s el TIEMPO DE PARED (time.perf_counter, reloj de pared, no CPU) del
+    método. Se usa pared porque time.process_time tiene resolución de unos 15 ms en Windows y pierde los pasos cortos.
+    Las llamadas anidadas (avanzar_modo llama a avanzar_ia) no se cuentan dos veces."""
+    @functools.wraps(metodo)
+    def envuelto(self, *args, **kwargs):
+        if self._cronometro_nivel:
+            return metodo(self, *args, **kwargs)
+        self._cronometro_nivel += 1
+        t0 = time.perf_counter()
+        try:
+            return metodo(self, *args, **kwargs)
+        finally:
+            self.tiempo_computo_s += time.perf_counter() - t0
+            self._cronometro_nivel -= 1
+    return envuelto
+
+
 class Partida:
+    # ARX-89b: tiempo de cómputo acumulado de la partida (construcción con el AG inicial, pasos, movimientos y eventos)
+    tiempo_computo_s = 0.0
+    _cronometro_nivel = 0
+
     def __init__(self, semilla: int = 11, bateria: float = None, nivel: int = 1,
                  eventos_activos=EVENTOS_SOPORTADOS, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
-                 garantia: bool = True):
+                 garantia: bool = True, planeta: str = termico.PLANETA_POR_DEFECTO, n_sitios: int = None):
+        _t0_construccion = time.perf_counter()      # tiempo de pared, igual que _cronometrado
+        self.tiempo_computo_s = 0.0
+        self._cronometro_nivel = 0
         if isinstance(nivel, bool) or not isinstance(nivel, int) or not 1 <= nivel <= NIVEL_MAX:
             raise ValueError(f"nivel inválido: {nivel!r} (debe estar entre 1 y {NIVEL_MAX})")
         con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
         if bateria is None:
             bateria = BATERIA_MAX_POR_NIVEL[nivel] if con_estaciones else 100.0 - 4.0 * (nivel - 1)
+            if int(filas) * int(columnas) > FILAS_BASE * COLUMNAS_BASE and not con_estaciones:
+                bateria *= RAZON_BATERIA_GRANDE          # ARX-79 (ev3-d75 A): el grande tiene batería proporcional
         self.nivel = nivel
         self.semilla = semilla
         self.eventos_activos = tuple(eventos_activos)
@@ -302,9 +427,12 @@ class Partida:
         def _generar(semilla_mundo):
             return generar_mundo(semilla_mundo, filas=self.filas, columnas=self.columnas,
                                  n_obstaculos=round((20 + 2 * nivel) * escala), n_barrancos=round((4 + nivel) * escala),
-                                 n_sitios=3 if nivel <= 2 else 4)
+                                 n_sitios=n_sitios if n_sitios is not None else (3 if nivel <= 2 else 4))
         mundo = _generar(semilla)
         self.semilla_mundo = semilla
+        self.factor_seguridad = factor_seguridad_garantia(self.filas, self.columnas, nivel)   # ARX-79b
+        self.margen_caza = margen_caza(self.filas, self.columnas)                             # ARX-79b
+        self._sin_garantia = False
         if garantia:
             # ARX-66: toda partida generada debe ser ganable (sitios, drones obligatorios y regreso al refugio con la
             # batería inicial). Si no lo es, se prueba una variante determinista del mismo mapa; la semilla no cambia.
@@ -314,13 +442,23 @@ class Partida:
             minimo = 2 if nivel <= 2 else 1          # niveles bajos: al menos 2 estaciones en cualquier tamaño
             n_est = max(minimo, round(ESTACIONES_POR_NIVEL[nivel] * escala_grande)) if con_estaciones else 0
             fac = AMBIENTE_FACTOR_POR_NIVEL[nivel] if con_estaciones else 1.0
+            fac *= self.factor_seguridad               # ARX-79b
+            ganable = False
             for k in range(1, 60):
                 drones = _drones_obligatorios(mundo, semilla, nivel)
                 est = _colocar_estaciones(mundo, self.semilla_mundo, n_est)
-                if _es_ganable(mundo, bat0, drones, bateria_max=bat_max, estaciones=est, factor=fac):
+                if _es_ganable(mundo, bat0, drones, bateria_max=bat_max, estaciones=est, factor=fac,
+                               margen_caza_pasos=self.margen_caza):
+                    ganable = True
                     break
                 self.semilla_mundo = semilla + 10007 * k
                 mundo = _generar(self.semilla_mundo)
+            else:   # la última variante generada no se había comprobado
+                drones = _drones_obligatorios(mundo, semilla, nivel)
+                est = _colocar_estaciones(mundo, self.semilla_mundo, n_est)
+                ganable = _es_ganable(mundo, bat0, drones, bateria_max=bat_max, estaciones=est, factor=fac,
+                                      margen_caza_pasos=self.margen_caza)
+            self._sin_garantia = not ganable
         self.mision = Mision(mundo, semilla=semilla, bateria=bateria)
         self._fitness_paso = None          # ARX-80: fitness del AG ya medido en el paso en curso (avanzar_ia)
         self._fitness_ultimo = 0.0         # último fitness finito medido; se arrastra si no hay plan del AG
@@ -341,7 +479,7 @@ class Partida:
         self.mision.bateria_max = self.bateria_max
         self.mision.estaciones = self.estaciones
         self.mision.factor_ambiente = AMBIENTE_FACTOR_POR_NIVEL[nivel] if con_estaciones else 1.0
-        self.mision._optimizar_ag = _ag_con_todos_los_sitios(self.mision, self.mision._optimizar_ag)
+        self.mision._optimizar_ag = _ag_con_todos_los_sitios(self.mision, self.mision._optimizar_ag, anotar=self._avisar)
         # ARX-66 / N12: mientras se cazan drones obligatorios, el refugio no es destino (Mision.paso_mision fijaría EXITO
         # al llegar sin moverse, y la caza nunca se ejecutaría).
         _quedan_sitios_original = self.mision._quedan_sitios
@@ -361,19 +499,39 @@ class Partida:
         self._rng_sismo = np.random.default_rng([int(semilla), 1314])     # ARX-30a: propio, no altera los meteoritos
         self._rng_enlace = np.random.default_rng([int(semilla), 1315])    # ARX-30b: propio, no altera meteoritos ni sismos
         self._rng_senal = np.random.default_rng([int(semilla), 1316])     # ARX-30c: propio
+        self._rng_resbalon = np.random.default_rng([int(semilla), 1317])  # ARX-28c: propio, no altera los demás
+        self.fisica_velocidad = False      # ARX-28c: apagada por defecto; solo la enciende el escenario exigente
+        self.resbalones = 0
         self.senales = []                  # señales biológicas: [{"paso", "celda", "visitada"}] (ARX-30c)
         self._ultimo_corte = None          # paso del último corte de enlace (para /moviles)
         self.enlace_restante = 0           # pasos que quedan de corte de enlace (ARX-30b)
         self._objetivo = None              # celda fijada por el jugador, o None
+        self._paso_replan_ag = None        # paso del último replanteo del AG por evento grave (ARX-31a)
+        # ARX-83a: temperatura interna. Solo con garantia=True; el aborto y la inyección al difuso, además, solo con
+        # termico.ABORTO_TERMICO_ACTIVO (apagada por defecto). La evaluación congelada no la usa.
+        self.planeta = planeta
+        self.termico = termico.Termico(planeta)
+        self._termico_activo = bool(garantia) and self.termico.activo     # planeta sin modelo: inactivo, sin ValueError
+        if self._termico_activo:
+            _inferir = self.mision.difuso.inferir
+
+            def _inferir_con_temperatura(distancia, bateria, inclinacion, temperatura=0.0):
+                if termico.ABORTO_TERMICO_ACTIVO:
+                    temperatura = self.termico.t_int
+                return _inferir(distancia, bateria, inclinacion, temperatura)
+            self.mision.difuso.inferir = _inferir_con_temperatura
+        self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4); antes de planificar: el AG puede anotar AG-FALLBACK-GARANTIA (ARX-92c)
         # Mision() ya planificó con el AG original: se replanifica con el envoltorio que exige todos los sitios
         self.mision.objetivos = []
         self.mision._planear()
         self.intentos_barranco = 0         # movimientos intentados hacia un barranco (modos sueltos, ARX-11)
         self.esperas = 0                   # pasos de espera del modo difuso (ARX-11)
         self._historial = []               # últimas celdas visitadas por los modos sueltos (ARX-11)
-        self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4)
+        if self._sin_garantia:             # ARX-79b: ninguna de las 59 variantes pasó la garantía
+            self._avisar(AVISO_SIN_GARANTIA)
         self.combate = None                # Combate de la sesión; lo asigna la API para contar los drones destruidos
         self.modo_ia = "manual"            # modo de la sesión; decide si la IA puede disparar (N12)
+        self.tiempo_computo_s += time.perf_counter() - _t0_construccion
 
     # ---------- atributos de lectura ----------
     @property
@@ -391,19 +549,31 @@ class Partida:
     def estado_visible(self) -> str:
         """Estado que muestra la interfaz (ARX-33). Los estados terminales se devuelven tal cual.
 
-        Deriva de la misión sin tocar integracion.py: REPLANIFICACION si la última acción fue replanificar;
+        Deriva de la misión sin tocar integracion.py: CONFIGURACION antes del primer paso; REPLANIFICACION si la
+        última acción fue replanificar (también tras un sismo con grieta en la ruta);
         REFUGIO si ya no quedan sitios por visitar (la ruta va al refugio); ALERTA y EXPLORACION como en la misión.
         """
         from integracion import ESTADOS_TERMINALES
         estado = self.mision.estado
         if estado in ESTADOS_TERMINALES:
             return estado
+        if self.mision.paso == 0:
+            return "CONFIGURACION"        # antes del primer paso (ARX-33a)
         filas = self.mision.log.filas
         if filas and filas[-1].get("accion") == "replanificar":
             return "REPLANIFICACION"
         if not self.mision._quedan_sitios():
             return "REFUGIO"
         return estado
+
+    @property
+    def t_int(self) -> float:
+        """Temperatura interna del rover en °C (ARX-83a)."""
+        return float(self.termico.t_int)
+
+    @property
+    def pasos_sobre_tolerancia(self) -> int:
+        return int(self.termico.pasos_sobre_tolerancia)
 
     @property
     def ruta(self) -> list:
@@ -482,7 +652,8 @@ class Partida:
         if sombra.riesgo[siguiente] >= 0.5:
             dec = Decision("replanificar", 0.0, ["V-RUTA-CON-RIESGO"])
         distancia = lectura["proximidad_frontal_m"]
-        if dec.accion == "detener" and sombra._obstaculo_en_ruta(pos, rumbo, distancia):
+        # incondicional desde ARX-91 (ab46b4a es donde nació la versión que dependía de la parada del difuso)
+        if sombra._obstaculo_en_ruta(pos, rumbo, distancia):
             dec = Decision("replanificar", 0.0, ["V-OBSTACULO-EN-RUTA"])
         paros = m.paros_seguidos + 1 if dec.accion == "detener" else 0
         if paros >= PASOS_PARADO_MAXIMO:
@@ -629,8 +800,19 @@ class Partida:
             m.estado = "FRACASO"
             self._avisar("Faltan drones por destruir y no queda munición")
             return
-        mascara = np.asarray(self.mundo.tipo == LIBRE)
         origen = tuple(int(x) for x in self.rover.posicion)
+        # ARX-79c: el BFS de la caza ignora la parada del difuso; si el rover no sale de su celda, el BFS vuelve a
+        # trazar la misma ruta y la partida se queda repitiendo D-DIFUSO-LENTO / V-PARADO-SIN-AVANCE. Se corta con causa.
+        if getattr(self, "_caza_ult_pos", None) == origen:
+            if self._falla_restante == 0:
+                self._caza_sin_avance = getattr(self, "_caza_sin_avance", 0) + 1
+        else:
+            self._caza_ult_pos, self._caza_sin_avance = origen, 0
+        if self._caza_sin_avance >= PASOS_CAZA_SIN_AVANCE:
+            m.estado = "FRACASO"
+            self._avisar("Faltan drones por destruir y el rover lleva %d pasos detenido: la caza no avanza" % PASOS_CAZA_SIN_AVANCE)
+            return
+        mascara = np.asarray(self.mundo.tipo == LIBRE)
         vivos = sorted([d for d in self.combate.drones if d.vivo],
                        key=lambda d: max(abs(d.pos[0] - origen[0]), abs(d.pos[1] - origen[1])))
         tramos, largos = {}, {}
@@ -763,6 +945,7 @@ class Partida:
         self.avisos.append(texto)
         del self.avisos[:-20]
 
+    @_cronometrado
     def avanzar_modo(self, modo: str, veto: bool = True) -> dict:
         """Un paso conducido solo por rna, difuso o ag (ARX-11). Ver juego/conduccion.py."""
         if self._recargando > 0:
@@ -900,6 +1083,7 @@ class Partida:
             return True
         return max(abs(ruta[1][0] - pos[0]), abs(ruta[1][1] - pos[1])) > 1
 
+    @_cronometrado
     def avanzar_ia(self) -> dict:
         m = self.mision
         if self.estado in ESTADOS_TERMINALES:
@@ -926,8 +1110,11 @@ class Partida:
         paso_previo, filas_previas = m.paso, len(m.log.filas)
         des = decision.get("desglose")
         self._fitness_paso = des["fitness"] if des else None     # ARX-80: el fitness medido antes de actuar
+        pos_previa, visitados_previos = self.rover.posicion, set(m.visitados)     # ARX-28c: para el resbalón
         try:
             m.paso_mision()
+            if self.fisica_velocidad:
+                self._resbalar_si_corresponde(pos_previa, filas_previas, visitados_previos)
             self._tras_paso_estacion()
             self._revisar_victoria()
             if m.paso > paso_previo:
@@ -945,6 +1132,38 @@ class Partida:
         finally:
             self._fitness_paso = None
         return {**decision, **self._posicion_estado()}
+
+    def _resbalar_si_corresponde(self, pos_previa, filas_previas, visitados_previos) -> None:
+        """ARX-28c: tras un avance, si la celda alcanzada es empinada, resbala con probabilidad P_RESBALON * velocidad.
+
+        El rover vuelve a la celda anterior, gasta COSTO_RESBALON y la bitácora anota D-RESBALON. Despacio no resbala.
+
+        La inclinación se mide con la elevación REAL del mundo (mundo.elevacion), no con la estimada que ve el difuso.
+        """
+        m = self.mision
+        if len(m.log.filas) != filas_previas + 1:
+            return
+        fila = m.log.filas[-1]
+        nueva = self.rover.posicion
+        if fila.get("accion") != "avanzar" or nueva == pos_previa:
+            return
+        v = float(fila.get("velocidad") or 0.0)
+        if v < VELOCIDAD_SIN_RESBALON:
+            return
+        inclinacion = abs(float(self.mundo.elevacion[nueva] - self.mundo.elevacion[pos_previa])) * GRADOS_POR_GRADIENTE
+        if inclinacion <= INCLINACION_RESBALON:
+            return
+        if self._rng_resbalon.random() >= P_RESBALON * v:
+            return
+        self.rover.posicion = pos_previa
+        self.rover.consumir(COSTO_RESBALON)
+        m.ruta.insert(0, pos_previa)       # la celda alcanzada vuelve a ser la siguiente de la ruta
+        if nueva in self.mundo.sitios and nueva in m.visitados and nueva not in visitados_previos:
+            m.visitados.discard(nueva)
+        self.resbalones += 1
+        fila["posicion"] = str(pos_previa)
+        fila["bateria"] = round(self.rover.bateria, 2)
+        fila["motivos"] = (fila["motivos"] + ";" if fila.get("motivos") else "") + "D-RESBALON"
 
     def _paso_con_falla(self) -> None:
         """Paso de IA detenida por falla de sensor: no llama a paso_mision ni mueve al rover."""
@@ -971,7 +1190,7 @@ class Partida:
         instancia, a Mision._actualizar_mapa_estimado (Mision está congelada). Igual para las cuatro variantes del arnés.
 
         Riesgo conocido (no corregido en ARX-90): una lectura ruidosa que sitúa el obstáculo una celda más lejos puede causar
-        colisión; la ablación sin difuso no se detiene y no consulta _obstaculo_en_ruta. Ejemplo: exigente, semilla 20,
+        colisión; desde ARX-91 la ablación sin difuso también consulta _obstaculo_en_ruta (chequeo incondicional). Ejemplo: exigente, semilla 20,
         sin difuso, paso 31 (celda (14,27), obstáculo estimado a 0,05).
         """
         m = destino if destino is not None else self.mision
@@ -1081,6 +1300,7 @@ class Partida:
         return {"ok": True, "detalle": f"objetivo en {destino}, {len(ruta) - 1} pasos"}
 
     # ---------- jugador ----------
+    @_cronometrado
     def mover_jugador(self, rumbo: str) -> dict:
         m = self.mision
         if self.estado in ESTADOS_TERMINALES:
@@ -1190,10 +1410,26 @@ class Partida:
                 and self.estado not in ESTADOS_TERMINALES
                 and self._rng_senal.random() < SENAL_PROB_POR_NIVEL[self.nivel]):
             self._evento_senal_biologica()
+        self._tick_termico()
         if self.rover.bateria <= 0 and self.estado not in ESTADOS_TERMINALES:
             self.mision.estado = "FRACASO"
 
+    def _tick_termico(self) -> None:
+        """ARX-83a: actualiza T_int y, con la bandera encendida, aborta con MODO_SEGURO y V-TEMPERATURA tras más de
+        PASOS_MAXIMOS_SOBRE_TOLERANCIA pasos seguidos sobre la tolerancia."""
+        if not self._termico_activo or self.estado in ESTADOS_TERMINALES:
+            return
+        self.termico.paso(termico.es_sombra(self.mundo, self.rover.posicion))
+        if termico.ABORTO_TERMICO_ACTIVO and self.termico.debe_abortar:
+            m = self.mision
+            self.rover.en_modo_seguro = True
+            m.estado = "MODO_SEGURO"
+            m._registrar("modo_seguro", 0.0, ["V-TEMPERATURA"], {}, None)
+            self._avisar(f"Aborto térmico: {self.t_int:.0f} °C interna, más de "
+                         f"{termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA} pasos sobre {termico.TOLERANCIA:.0f} °C")
+
     # ---------- eventos ----------
+    @_cronometrado
     def disparar_evento(self, nombre: str) -> dict:
         if nombre not in EVENTOS_SOPORTADOS or nombre not in self.eventos_activos:
             return {"ok": False, "detalle": f"evento no soportado: {nombre!r}"}
@@ -1213,6 +1449,24 @@ class Partida:
             self._iniciar_ambiente(nombre)
             return {"ok": True, "detalle": f"{nombre} durante {PASOS_AMBIENTE[nombre]} pasos"}
         return self._evento_bateria_baja()
+
+    def _replanear_ag(self, motivo: str) -> bool:
+        """ARX-31a: vuelve a correr el AG ante un evento grave (motivo en EVENTOS_GRAVES, en mayúsculas en la fila).
+
+        Vacía mision.objetivos, llama a la planificación (AG), pone paros_seguidos en 0 y anota una fila
+        «replanificar» con REPLAN-AG-<MOTIVO>. Como máximo uno por paso. No actúa (devuelve False) si la partida
+        terminó, si el jugador fijó un objetivo o si se está cazando drones por BFS: ahí el plan no es del AG.
+        """
+        m = self.mision
+        if (self.estado in ESTADOS_TERMINALES or self._objetivo is not None or self._caza_con_bfs()
+                or self._paso_replan_ag == m.paso):
+            return False
+        self._paso_replan_ag = m.paso
+        m.objetivos = []
+        m.paros_seguidos = 0
+        m._planear()
+        m._registrar("replanificar", 0.0, [f"REPLAN-AG-{motivo.upper()}"], {}, None)
+        return True
 
     def _evento_meteorito(self) -> dict:
         """ARX-30: impacto a 2–3 celdas del rover. La celda del impacto y su entorno quedan como zona de riesgo (el
@@ -1240,6 +1494,9 @@ class Partida:
                             if self.mundo.dentro((impacto[0] + df, impacto[1] + dc))
                             and self.mundo.tipo[(impacto[0] + df, impacto[1] + dc)] == LIBRE]
         self.meteoritos.append({"paso": int(self.mision.paso), "impacto": impacto, "zona_riesgo": zona})
+        ruta = {tuple(x) for x in (self.mision.ruta or [])}
+        if "meteorito" in EVENTOS_GRAVES and any(tuple(z) in ruta for z in zona):
+            self._replanear_ag("meteorito")
         self._avisar("Meteorito: impacto en una zona de riesgo cercana")
         return {"ok": True, "detalle": f"meteorito en {impacto}; zona de riesgo alrededor", "impacto": impacto}
 
@@ -1277,8 +1534,9 @@ class Partida:
             self.mision.riesgo[g] = 1.0
         ruta = {tuple(x) for x in (self.mision.ruta or [])}
         if any(g in ruta for g in grietas):
-            self.mision._planear()
-            self.mision._registrar("REPLAN", 0.0, ["REPLAN-SISMO"], {}, None)
+            if not ("sismo" in EVENTOS_GRAVES and self._replanear_ag("sismo")):
+                self.mision._planear()
+                self.mision._registrar("replanificar", 0.0, ["REPLAN-SISMO"], {}, None)
         self.sismos.append({"paso": int(self.mision.paso), "grietas": grietas})
         self._avisar("Sismo: grietas nuevas cerca del rover")
         return {"ok": True, "detalle": f"sismo: {len(grietas)} grieta(s) en {grietas}", "grietas": grietas}
@@ -1331,7 +1589,8 @@ class Partida:
             for orden_d in itertools.permutations(cazas):
                 seq = [celda, *orden_s, *orden_d, refugio]
                 if _plan_con_paradas(origen, seq, bateria, bat_max, est, largo, tramo, cazas,
-                                     factor=self.mision.factor_ambiente) is not None:
+                                     factor=self.mision.factor_ambiente * self.factor_seguridad,
+                                     margen_caza_pasos=self.margen_caza) is not None:
                     return True
         return False
 
@@ -1375,7 +1634,8 @@ class Partida:
                 return {"ok": False, "detalle": "batería insuficiente para la señal"}
             return {"ok": False, "detalle": "sin celda alcanzable que deje la partida ganable"}
         self.senales.append({"paso": int(self.mision.paso), "celda": celda, "visitada": False})
-        self._planear_con_senal(True)
+        if not ("senal_biologica" in EVENTOS_GRAVES and self._replanear_ag("senal")):
+            self._planear_con_senal(True)
         self._avisar(TEXTO_SENAL)
         return {"ok": True, "detalle": f"señal anómala en {celda}; no confirma vida", "celda": celda,
                 "afirma_vida": False}
@@ -1389,6 +1649,8 @@ class Partida:
                     and celda not in (self.mundo.inicio, self.mundo.refugio)):
                 self.mundo.marcar_barranco(celda)
                 self.mision.riesgo[celda] = 1.0
+                if "barranco" in EVENTOS_GRAVES and celda in {tuple(x) for x in (self.mision.ruta or [])}:
+                    self._replanear_ag("barranco")
                 return {"ok": True, "detalle": f"barranco en {celda}"}
         return {"ok": False, "detalle": "sin celda libre adyacente al rover"}
 

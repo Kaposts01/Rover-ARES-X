@@ -6,8 +6,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from integracion import Mision, SafetySupervisor  # noqa: E402
-from simulador import generar_mundo  # noqa: E402
+import integracion  # noqa: E402
+from integracion import Mision, SafetySupervisor, aporte_rna  # noqa: E402
+from simulador import BARRANCO, LIBRE, generar_mundo  # noqa: E402
 
 LECTURA_OK = {"proximidad_frontal_m": 12.0, "borde_barranco": False,
               "celdas_barranco": [], "altimetria_m": 0.5}
@@ -55,3 +56,85 @@ def test_mision_llega_al_refugio_en_mapas_base(semilla):
     res = Mision(m, semilla=semilla).ejecutar(max_pasos=400)
     assert res["estado"] == "EXITO"
     assert res["bateria_final"] >= 0
+
+
+class _RnaFalsa:
+    """RNA de prueba: devuelve siempre la misma distribución de probabilidades."""
+
+    def __init__(self, p_barranco):
+        self.p = p_barranco
+
+    def explicar(self, rasgos):
+        return {"probabilidades": {"libre": 1 - self.p, "obstáculo": 0.0, "barranco": self.p}}
+
+
+def _mundo_con_barranco_a_dos(columnas=12):
+    """Fila libre de ancho `columnas` salvo un barranco a dos celdas del rover, sobre la ruta recta."""
+    m = generar_mundo(semilla=5, filas=3, columnas=columnas, n_obstaculos=0, n_barrancos=0, n_sitios=0)
+    m.tipo[:] = LIBRE
+    return m
+
+
+def test_aporte_apagado_no_marca_alerta_ni_entrena_el_modelo_nuevo():
+    assert integracion.RNA_APORTE_ACTIVA is False
+    mision = Mision(generar_mundo(semilla=7), semilla=7)
+    mision.ejecutar(max_pasos=60)
+    assert mision.aporte_rna is False and mision.alerta_rna_2 is False and mision._rna_alerta2 is None
+    assert not any("RNA-RIESGO-2" in m for m in mision.log.a_dataframe()["motivos"])
+
+
+def test_alerta_a_dos_celdas_marca_riesgo_sin_veto_y_la_ruta_lo_evita(monkeypatch):
+    monkeypatch.setattr(integracion, "ALERTA_RNA_2_ACTIVA", True)
+    # La RNA falsa ve un barranco a dos celdas que el mapa estimado no conoce y que el sensor de proximidad
+    # no marca (la celda real es libre): lo que se prueba es el mecanismo de marca y replanificación.
+    with aporte_rna(True):
+        mundo = generar_mundo(semilla=5, filas=5, columnas=12, n_obstaculos=0, n_barrancos=0, n_sitios=0)
+        mundo.tipo[:] = LIBRE
+        mision = Mision(mundo, semilla=5, rna=_RnaFalsa(0.0), rna_alerta2=_RnaFalsa(0.9))
+    mision.riesgo[:] = 0.0
+    fila, col = mundo.inicio
+    mision._planear()
+    assert (fila, col + 2) in mision.ruta
+    mision.paso_mision()
+    assert mision.riesgo[fila, col + 2] == pytest.approx(0.9)
+    bitacora = mision.log.a_dataframe()
+    assert any("RNA-RIESGO-2:" in str(m) for m in bitacora["motivos"])
+    assert not any("V-" in str(m) for m in bitacora["motivos"])     # sin veto nuevo
+    assert (fila, col + 2) not in mision.ruta   # la ruta ya lo evita
+    assert mision.colisiones == 0 and mision.vetos == 0
+
+
+def test_alerta_no_marca_donde_el_mapa_ya_conocia_el_riesgo(monkeypatch):
+    monkeypatch.setattr(integracion, "ALERTA_RNA_2_ACTIVA", True)
+    with aporte_rna(True):
+        mundo = generar_mundo(semilla=5, filas=5, columnas=12, n_obstaculos=0, n_barrancos=0, n_sitios=0)
+        mundo.tipo[:] = LIBRE
+        mision = Mision(mundo, semilla=5, rna=_RnaFalsa(0.0), rna_alerta2=_RnaFalsa(0.9))
+    fila, col = mundo.inicio
+    mision.riesgo[:] = 0.0
+    mision.riesgo[fila, col + 2] = 1.0
+    mision._planear()
+    mision.paso_mision()
+    assert not any("RNA-RIESGO-2" in str(m) for m in mision.log.a_dataframe()["motivos"])
+
+
+def test_con_el_borde_encendido_los_vetos_no_cambian():
+    with aporte_rna(True):
+        mundo = generar_mundo(semilla=5, filas=5, columnas=12, n_obstaculos=0, n_barrancos=0, n_sitios=0)
+        mundo.tipo[:] = LIBRE
+        mision = Mision(mundo, semilla=5, rna=_RnaFalsa(0.0), rna_alerta2=_RnaFalsa(0.0))
+    fila, col = mundo.inicio
+    mision.riesgo[:] = 0.0
+    mundo.tipo[fila, col + 1] = BARRANCO       # barranco de enfrente: el LIDAR sigue vetando primero
+    mision.ruta = [mundo.inicio, (fila, col + 1), (fila, col + 2)]
+    mision.paso_mision()
+    assert "V-RUTA-CON-RIESGO" in mision.log.a_dataframe()["motivos"].iloc[-1] or         mision.log.a_dataframe()["accion"].iloc[-1] == "replanificar"
+
+
+def test_aporte_encendido_deja_la_alerta_a_dos_celdas_apagada():
+    with aporte_rna(True):
+        mundo = generar_mundo(semilla=5, filas=5, columnas=12, n_obstaculos=0, n_barrancos=0, n_sitios=0)
+        mision = Mision(mundo, semilla=5, rna=_RnaFalsa(0.0), rna_alerta2=_RnaFalsa(0.9))
+    assert mision.aporte_rna is True and mision.alerta_rna_2 is False
+    mision.paso_mision()
+    assert not any("RNA-RIESGO-2" in str(m) for m in mision.log.a_dataframe()["motivos"])

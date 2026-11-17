@@ -65,35 +65,53 @@ Opciones para el usuario (ficha, sin decidir aquí): (A) aceptar y declarar en e
 
 ## Resultado de 20 semillas
 
+> **Provisional: se regenera tras ARX-92.** Estas cifras son de la regeneración única (ev3-d64), anteriores a ARX-92.
+
 Escenario exigente (nivel 5, ruido 0,6, p_detectar 0,4, `prob_fallo` = None), semillas 1 a 20, cuatro variantes. Archivos: `docs/COMPARACION_POLITICAS_exigente.json` (`python scripts/comparacion_politicas.py 20 exigente`) y `docs/TRAZA_DIVERGENCIAS_exigente.csv` (`python scripts/traza_divergencias.py 20 exigente`). El congelado `docs/COMPARACION_POLITICAS.json` no se tocó.
 
-Medición de éxito, colisiones y pasos (JSON):
+Medición de éxito, colisiones y pasos (JSON regenerado, ev3-d64 A; `ruta_corta` rotulada como voraz; `ag_puro` no se publica hasta ARX-92):
 
 | variante | éxitos | colisiones (media) | pasos (media) |
 |---|---|---|---|
-| hibrido | 19/20 | 0,0 | 50,85 |
-| sin_rna | 19/20 | 0,0 | 50,65 |
-| sin_difuso | 20/20 | 0,0 | 50,85 |
-| sin_ag | 20/20 | 0,0 | 55,2 |
+| hibrido | 20/20 | 0,0 | 54,3 |
+| sin_rna | 20/20 | 0,0 | 54,0 |
+| sin_difuso | 15/20 | 0,05 | 55,65 |
+| sin_ag (orden de sitios: vecino más cercano) | 19/20 | 0,0 | 58,3 |
+| ruta_corta (voraz, vecino más cercano) | 15/20 | 0,0 | 59,15 |
 
-La semilla 7 termina en `SIN_RUTA` en el híbrido y en `sin_rna`; `sin_difuso` y `sin_ag` la ganan.
+La semilla 7 termina en EXITO en el híbrido y en `sin_rna` (antes SIN_RUTA; cambio de ARX-90, atribución por resta, ver abajo).
 
-Divergencias paso a paso frente al híbrido (misma semilla), con la regla de clasificación técnica: «directa» es la PRIMERA divergencia por (semilla, variante) que altera decisión, velocidad o ruta, con ambas partidas empezando el paso en la misma celda y con la misma batería; «directa_codigo» son las divergencias que solo cambian el código de motivo (se cuentan aparte y no cuentan como directa); «consecuencia» es el resto. Se omiten las filas de fin de partida. Una fila es un paso en que difiere lo registrado (celda, acción, velocidad o motivo).
+Divergencias paso a paso frente al híbrido (misma semilla), con la regla de clasificación técnica: «directa» es la PRIMERA divergencia por (semilla, variante) que altera decisión, velocidad o ruta, con ambas partidas empezando el paso en la misma celda y con la misma batería; «directa_codigo» son las divergencias que solo cambian el código de motivo (se cuentan aparte y no cuentan como directa); «consecuencia» es el resto. Se omiten las filas de fin de partida. Traza: 1403 filas (`docs/TRAZA_DIVERGENCIAS_exigente.csv`, regenerada en la tanda de ev3-d64).
 
 | técnica (variante) | semillas con directa real | filas totales | directas | directa_codigo | consecuencia |
 |---|---|---|---|---|---|
-| RNA (sin_rna) | 2 de 20 (4 y 18) | 90 | 2 | 4 | 84 |
-| difuso (sin_difuso) | 20 de 20 | 803 | 20 | 0 | 783 |
-| Orden de sitios: vecino más cercano (sin_ag) | 12 de 20 (3-9, 11-14, 17) | 446 | 12 | 0 | 434 |
+| RNA (sin_rna) | 3 de 20 (4, 10 y 18) | 110 | 3 | 0 | 107 |
+| difuso (sin_difuso) | 20 de 20 | 781 | 20 | 0 | 761 |
+| Orden de sitios: vecino más cercano (sin_ag) | 12 de 20 (3-9, 11-14, 17) | 512 | 12 | 0 | 500 |
 
 Qué cambia en las filas directas:
-- RNA: 2 directas, semilla 4 paso 2 y semilla 18 paso 2 (el híbrido veta por la RNA con `V-RNA-OBSTACULO` al salir y `sin_rna` avanza; cambian decisión, velocidad y ruta). Cuestan +3 pasos (semilla 4) y +1 paso (semilla 18); no tocan el éxito ni las colisiones. Las 4 filas `directa_codigo` (semilla 2 paso 2, semilla 4 paso 1, semilla 12 paso 46, semilla 13 paso 43) son vetos de la RNA redundantes con `V-OBSTACULO-EN-RUTA`: misma acción `replanificar` en la misma celda, solo cambia el código de motivo (`V-RNA-OBSTACULO` o `V-RNA-BARRANCO`). Las otras 84 filas son consecuencia. Códigos `V-RNA-*` registrados en el híbrido en las 90 filas: 8.
-- Difuso: 20 directas (una por semilla); 16 cambian solo la velocidad y 4 decisión, velocidad y ruta. Motivo: reglas difusas activadas en el híbrido (R4 en 14, R1 en 4, R1;R7;R9 en 2).
-- Orden de sitios (sin_ag, vecino más cercano en lugar de la permutación más corta): 12 directas, todas en la fila de paso 0 por el orden de sitios del plan inicial, que difiere en 12 semillas; todas cambian la ruta. No mide el aporte del AG.
+- RNA: 3 directas, todas con `V-RNA-OBSTACULO` y cambio de decisión, velocidad y ruta: semilla 4 paso 2, semilla 18 paso 2 (las mismas dos de la medición anterior) y semilla 10 paso 22 (nueva en esta regeneración; su causa no está verificada). Las 4 filas `directa_codigo` de la medición anterior (semillas 2, 4, 12 y 13) ya no aparecen en esta traza: 0 `directa_codigo`; no lo hemos investigado. Las semillas 4 y 18 cuestan +3 y +1 pasos, y ninguna de las tres cambia el éxito ni las colisiones de la RNA en esta tabla.
+- Difuso: 20 directas (una por semilla); todas cambian la velocidad. Motivo: reglas difusas activadas en el híbrido (R4 en la mayoría).
+- Orden de sitios (sin_ag, vecino más cercano en lugar de la permutación más corta): 12 directas, todas en la fila de paso 0 por el orden de sitios del plan inicial; todas cambian la ruta. No mide el aporte del AG.
 
-Sobre la RNA, lo medido: no altera el éxito (19/20 en híbrido y en `sin_rna`, misma semilla fallida) ni las colisiones (0 en las cuatro variantes). Cambia una decisión en 2 semillas de 20 (la 4 y la 18), una vez en cada una, con un veto `V-RNA-OBSTACULO` en el paso 2 que cuesta pasos y no éxito. En las demás divergencias el veto de la RNA es redundante con el del supervisor para el resultado. Si M2 queda demostrado para la RNA en estos términos lo decide el Maestro; las divergencias que solo cambian el código de motivo (semillas 2, 4, 12 y 13) se cuentan aparte como `directa_codigo` y no se usan como criterio.
+Sobre la RNA, lo medido: en esta regeneración cambia una decisión en 3 semillas de 20 (4, 10 y 18). En el resultado final, `hibrido` y `sin_rna` dan 20/20 y las mismas colisiones (0 en ambas); la RNA no cambia el éxito en esta tabla. Si M2 queda demostrado para la RNA en estos términos lo decide el Maestro.
 
-Hallazgo de QA (17/11/2026), sin suavizar: en la semilla 7 el híbrido PIERDE (`SIN_RUTA` en el paso 18, tras paradas por `D-DIFUSO-LENTO`) y `sin_difuso` la gana. En este escenario el difuso empeora el resultado en esa semilla; `sin_rna` también la pierde y `sin_ag` también la gana.
+Tabla de atribución (exigente, 4 variantes originales, 20 semillas). Método: A = copia guardada pre-ARX-90; B = exigente con `fisica_velocidad=False` sobre el código actual (90+91); C = JSON regenerado (todo). 90+91 = A→B; 28c = B→C.
+
+| causa | filas con cambio | cambios de éxito | delta colisiones |
+|---|---|---|---|
+| 90+91 (A→B) | 28 | hibrido s7 y sin RNA s7: SIN_RUTA → EXITO | 0 en total |
+| 28c (B→C) | 73 | sin difuso s1, s5, s8, s11, s16 y sin AG s13: EXITO → FRACASO | +1 (sin difuso s11) |
+| total (A→C) | 73 | 8 | +1 |
+
+Inferencia por resta, no medida fila a fila: 90 frente a 91 por separado. La corrida de ARX-91 (contra la base que ya incluye 90) dio −1 colisión en el exigente; por resta, 90 aporta +1 y 91 aporta −1, y su suma es 0 en A→B. No se ha medido cada uno por separado.
+
+Casos concretos de 28c:
+- `sin_ag` s13 (EXITO con 28c apagado, 67 pasos → FRACASO con 28c, 78 pasos): cinco resbalones (pasos 13, 14, 27, 30 y 57, con 1 % de batería cada uno) y la batería llega a 0. Es el coste de batería de 28c; no hay colisión.
+- `sin_difuso` s11 (EXITO con 28c apagado, 50 pasos → FRACASO con 28c, 72 pasos, con 1 colisión en el paso 46): seis resbalones (pasos 14, 20, 21, 26, 41 y 43); la colisión llega tres pasos después del resbalón del paso 43, y la batería termina en 0. La explicación de QA (17/11, `pedidos\2026-11-17_qa_arx28\ARX-28c_qa.md`, y el diagnóstico de ARX-90 para la semilla 20): el resbalón restaura posición y ruta de forma consistente, y la colisión es una lectura ruidosa que sitúa un obstáculo no detectado una celda más lejos; es el mismo mecanismo que la semilla 20 de ARX-90 (sin difuso no se detiene). Explicación de QA; no verificada por nosotros fila a fila.
+- Explicación de QA para la RNA, semilla 10 (`repro\s10_rna.py` en `pedidos\2026-11-17_qa_arx28\`): tras ARX-91, cuando el obstáculo está en la ruta, `V-OBSTACULO-EN-RUTA` reemplaza la decisión de la RNA en el propio híbrido (`integracion.py:190-199`). Por eso los vetos de la RNA que sobreviven son solo los de obstáculos vistos fuera de la ruta, como en la semilla 10, y por eso la RNA no cambia éxito ni colisiones. No verificada por nosotros fila a fila.
+
+Hallazgo de QA (17/11/2026), sin suavizar: en la semilla 7 el híbrido PERDÍA (`SIN_RUTA` en el paso 18, tras paradas por `D-DIFUSO-LENTO`) y `sin_difuso` la ganaba. Tras ARX-90 el híbrido y `sin_rna` ganan la semilla 7 (EXITO en 53 pasos). En este escenario el difuso puede empeorar el resultado, como en la semilla 7 antes de ARX-90.
 
 Prueba: `juego/tests/test_trazas_divergencia.py` falla si alguna técnica no tiene divergencia directa en las 20 semillas (CSV) o en la semilla 4 recalculada en vivo.
 
@@ -114,4 +132,45 @@ Lo medido: la RNA reconoce barrancos con sus rasgos normales (recall 0,70–0,80
 
 Inferencia (no medida): la RNA depende casi por completo del rasgo `borde_barranco` para distinguir barranco de libre. Con la vibración sola, la separación es pequeña (ver `docs/planes/ARX-28f_rna_unica.md`, sección 1), y el control confirma que no alcanza.
 
-Para el informe (M2): la RNA queda con el resultado negativo de 28f. Con el escenario exigente, la RNA cambia una decisión en 2 de 20 semillas, sin cambiar éxito ni colisiones. La explicación probable es la redundancia: la RNA casi no aporta información que el supervisor no tenga por el sensor de borde.
+Para el informe (M2): la RNA queda con el resultado negativo de 28f. Con el escenario exigente, la RNA cambia una decisión en 3 de 20 semillas (4, 10 y 18), sin cambiar éxito ni colisiones. La explicación probable es la redundancia: la RNA casi no aporta información que el supervisor no tenga por el sensor de borde.
+
+## Regeneración única: método de atribución, ARX-91 y constantes de 28c
+
+### Método de atribución (90 + 91 y 28c)
+
+La regeneración cambió tres cosas a la vez: ARX-90 (la percepción no marca como riesgo los sitios pendientes, el inicio ni el refugio; ev3-d65 A), ARX-91 (el chequeo de obstáculo en ruta pasa a ser incondicional; ev3-d68 B) y ARX-28c (resbalón por velocidad en pendiente; ev3-d54 A). Para separar sus efectos se comparan tres versiones del exigente, con las mismas 20 semillas y las cuatro variantes:
+
+- **A**: copia guardada antes de ARX-90 (línea base).
+- **B**: el exigente con `fisica_velocidad=False` sobre el código actual. Recoge ARX-90 y ARX-91, sin ARX-28c.
+- **C**: el JSON regenerado, con todo.
+
+Así, 90 + 91 es el efecto de A a B, y 28c es el de B a C. La bandera `fisica_velocidad` es lo que separa B de C: `ESCENARIOS["exigente"]` la enciende (`juego/comparacion.py`), y `Partida` la deja apagada por defecto (`juego/partida.py`). El congelado no la usa. Los recuentos de cada paso están en la tabla de atribución de la sección «Resultado de 20 semillas»; aquí no se repiten.
+
+### ARX-91: el chequeo de obstáculo en ruta
+
+En `ab46b4a` (la base del proyecto al entrar a control de versiones), el chequeo de obstáculo en ruta solo corría si el difuso había parado el rover (`dec.accion == "detener"`, `integracion.py:196`). Desde `944296d` (ev3-d68 B) es incondicional, tanto en `Mision` (`integracion.py:196-198`) como en la sombra que usa `Partida` (`juego/partida.py:492-494`).
+
+Por qué: con la condición, la ablación «sin difuso» medía también una política oculta. Con el difuso apagado el rover nunca se paraba, así que el chequeo no corría. Con el chequeo incondicional, la ablación quita solo el difuso.
+
+Efecto sobre la RNA: en el híbrido, cuando el obstáculo está en la ruta, el chequeo reemplaza la decisión de la RNA (ver INFORME §4.2).
+
+Riesgo conocido, documentado en el código (docstring de `ARX-90` en `juego/partida.py`): una lectura ruidosa que sitúa el obstáculo una celda más lejos puede causar colisión. El ejemplo está en el exigente, semilla 20, sin difuso, paso 31.
+
+Nota de procedencia: el mensaje del commit `944296d` dice «desde ARX-91 (ab46b4a)», que es inexacto. Los comentarios se corrigieron en `603af29`.
+
+### Constantes del resbalón (ARX-28c, ev3-d69 A)
+
+Se fijaron antes de medir (ev3-d69 A) y no se ajustan tras ver las cifras. Cada una tiene su justificación:
+
+| Constante | Valor | Justificación |
+|---|---|---|
+| `INCLINACION_RESBALON` | 20° | Pendiente sobre la que la tracción de las ruedas deja de ser segura. Valor del plan («p. ej. 20°»). Supuesto de simulación |
+| `P_RESBALON` | 0,5 | La probabilidad de resbalar por avance es `P_RESBALON × velocidad`: el riesgo de perder agarre crece con la velocidad. El factor 0,5 es un supuesto |
+| `COSTO_RESBALON` | 1 % de batería | Esfuerzo extra de las ruedas al patinar y reanudar el avance. Supuesto |
+| `VELOCIDAD_SIN_RESBALON` | 0,3 | Por debajo de esta velocidad el avance es lento y no resbala (umbral del plan, v < 0,3) |
+
+El resbalón usa su generador propio (semilla `[semilla, 1317]`) y no altera los demás.
+
+La variante «sin difuso» usa velocidad fija 0,5 (`integracion.py:186`, rama `if not self.usar_difuso`), que es el punto medio del rango. Según ev3-d69 A, QA verifica que no pierda por cableado.
+
+**Sensibilidad publicada completa.** Rejilla 3×2: `P_RESBALON` en {0,25; 0,5; 0,75} y `COSTO_RESBALON` en {1; 2}, con 20 semillas y las cuatro variantes. Se genera con `scripts/rejilla_resbalon.py` en `docs/REJILLA_RESBALON_exigente.json` y `.csv`. Los valores fijados no cambian por lo que muestre la rejilla.

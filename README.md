@@ -1,86 +1,75 @@
-# ARES-X · rover autónomo con IA híbrida (RNA + lógica difusa + AG)
+# ARES-X · rover autónomo con IA híbrida
 
-Entrega individual de la evaluación ev3. Simulación ficticia con parámetros de referencia; no es una misión real.
+Simulación de un rover en Marte que combina una red neuronal (RNA), lógica difusa y un algoritmo genético (AG), con un supervisor de seguridad. Incluye un juego de escritorio y una interfaz en el navegador servida por una API FastAPI. Es una simulación ficticia con parámetros de referencia, no una misión real.
 
-## Instalación desde cero
+## Instalación y arranque
 
-Requisitos: Python 3.11 o superior, CPU. Sin claves, sin pagos y sin Google Colab.
-
-```bash
-cd ares_x
-pip install -r requirements.txt
-pip install pygame-ce                 # solo para el juego de escritorio
-python -m pytest -q                   # pruebas: juego, módulos de IA y API
-```
-
-Ejecutar la API y la escena 3D (desde `ares_x/`):
+Requisitos: Python 3.14 o superior (probado con 3.14.5) y CPU. No necesita claves ni Docker.
 
 ```bash
-python -m uvicorn api.servidor:app --port 8765
-# abrir http://127.0.0.1:8765/ en el navegador
+python -m pip install -r requirements.txt
 ```
 
-Juego de escritorio: `python juego/main.py`. Sin ventana: `python -m juego --headless --semilla 11 --pasos 300 --salida salida_juego`.
+Arranque con el script (crea `.venv-ares`, instala `requirements.txt` y arranca la API en `http://127.0.0.1:8765/`):
 
-Notebook de entrega: `ARES_X_entregable.ipynb` (regenerable con `python construir_notebook.py`).
+- Windows: `arrancar.bat`. Pruebas: `arrancar.bat pruebas`.
+- bash: `./arrancar.sh`. Pruebas: `./arrancar.sh pruebas`.
+- Otro puerto: `ARES_PUERTO=8790` (en bash: `ARES_PUERTO=8790 ./arrancar.sh`; en Windows, `set ARES_PUERTO=8790` antes de `arrancar.bat`).
 
-## Semilla de demostración
+Para las pruebas y el notebook: `python -m pip install -r requirements-dev.txt`.
 
-`semilla = 11` (mapa de Marte con 20 obstáculos, 4 barrancos y 3 sitios científicos). Con esa semilla la misión termina en `EXITO` en 60 pasos, según la sección 6 del notebook.
+- Juego de escritorio: `python juego/main.py`. Necesita `pygame-ce` con versión fija, instalado aparte: `python -m pip install pygame-ce==2.5.8`. Solo lo usa el juego de escritorio; la demo web, con `arrancar`, no lo necesita.
+- Sin ventana: `python -m juego --headless --semilla 11 --pasos 300 --nivel 3`.
 
-## Uso
+## Técnicas
 
-- `simulador.py`: mapa 2D, rover, sensores con ruido y bitácora (`MissionLogger`).
-- `rna.py`: MLP 32-16 (ReLU, 3 clases) entrenado con mapas separados por semilla.
-- `difuso.py`: controlador Mamdani con 9 reglas; conjuntos de 3 niveles en distancia, batería e inclinación.
-- `genetico.py`: AG con K puntos de paso, elitismo y desglose del fitness.
-- `integracion.py`: supervisor de seguridad con códigos de motivo (`V-…`), replanteo con BFS y máquina de estados.
+- **RNA:** perceptrón multicapa de dos capas ocultas (32 y 16 neuronas), ReLU, tres clases (libre, obstáculo, barranco). Se entrena con mapas separados por semilla.
+- **Lógica difusa:** controlador Mamdani (min-max, centroide). Entradas: distancia al riesgo, batería e inclinación. Salida: velocidad en [0, 1].
+- **Algoritmo genético:** cromosoma de K puntos de paso, decodificado en una ruta con BFS. En el juego, el AG decide el orden de visita de los sitios, con la misma restricción de energía que la ejecución (entrega 2, ARX-92c). La búsqueda exhaustiva de la ruta más corta queda como respaldo, para cuando el AG no encuentra un orden viable (`juego/partida.py`, `_ag_con_todos_los_sitios`).
+- **Supervisor:** aplica vetos con código de motivo (`V-…`) y replantea con BFS si el rover queda parado varios pasos.
 
-## Experimento
+## Mapa sin garantía
 
-`ARES_X_ejecutado.ipynb` es la versión ejecutada del notebook: 20 semillas por variante, con media, mediana y dispersión.
+Si al generar la partida ninguna de las 59 variantes del mapa pasa la comprobación de ganabilidad, la partida muestra el aviso **«Mapa sin garantía de victoria para este nivel y tamaño»**. Se puede jugar igual, pero no hay garantía de que sea ganable.
 
-- Híbrido, sin RNA y sin difuso: 100 % de éxito cada uno (movimiento en 8 direcciones).
-- RNA forzada a «barranco»: la decisión cambia en 20 de 20 semillas; el éxito cae a 0 % (vetos).
-- RNA forzada a «libre»: ninguna decisión cambia (0 de 20).
+## Ganabilidad por nivel
 
-## Exportación
+El mapa es ganable si hay una ruta por el terreno real que visita todos los sitios, cumple con los drones obligatorios y llega al refugio con la batería inicial. Se demuestra con cualquier semilla: no hay mapa especial.
 
-La última celda del notebook escribe `mision_traza.csv` (una fila por paso) y `mision_resumen.json` (configuración, semilla y resultado).
+Dos cifras distintas, y las dos son ciertas.
 
-## Límites del modelo
+**Mapas con variante ganable según el estimador de garantía** (de 20 semillas):
 
-- Solo Marte (modo rover). Júpiter, Saturno, Urano y Neptuno, Venus, Mercurio y Tierra no están implementados.
-- Sin interfaz interactiva (ipywidgets multipaso); solo bitácora y tablas.
-- Sin eventos de sismo, tormenta ni falla de sensor en la misión.
-- La RNA es redundante con los sensores en el escenario normal: su efecto se demuestra con la intervención, no con la ablación.
-- El plan omite sitios científicos por energía (en promedio se visitan menos de 3).
+| Nivel | Pequeño (20×30) | Grande (40×60) |
+|---|---|---|
+| Muy fácil | 20 | 20 |
+| Fácil | 20 | 20 |
+| Medio | 20 | 4 |
+| Difícil | 20 | 0 |
+| Hardcore | 20 | 0 |
 
-## Supuestos de simulación
+**Partidas ganadas por el piloto automático** (de 20 semillas):
 
-- Gradiente de altura a grados: 20 °/unidad (`GRADOS_POR_GRADIENTE`).
-- Vibración media por clase de terreno (`VIBRACION_MEDIA`).
-- Margen de batería de 15 % sobre el camino al refugio (`MARGEN_ENERGIA`).
-- Todos los valores numéricos sin fuente son supuestos de simulación, no especificaciones NASA.
+| Nivel | Pequeño (20×30) | Grande (40×60) | Batería inicial, grande |
+|---|---|---|---|
+| Muy fácil | 20 | 20 | 149 |
+| Fácil | 20 | 20 | 143 |
+| Medio | 20 | 10 | 137 |
+| Difícil | 20 | 6 | 131 |
+| Hardcore | 20 | 4 | 125 |
 
-## Uso de IA generativa
+El mapa grande arranca con 1,49 veces la batería del pequeño, porque su ruta es más larga. En el grande, de Medio a Hardcore, la mayoría de las semillas nacen con el aviso «Mapa sin garantía» (16, 20 y 20 de 20 semillas, respectivamente).
 
-Se usaron asistentes de IA: Claude (Anthropic) para generar y depurar código y redactar documentación; y una imagen de fondo del menú generada con IA (Google Gemini) por el estudiante. La imagen es ilustrativa y no tiene carácter oficial ni respaldo de ninguna agencia espacial. La defensa individual cubre explicar una predicción de la RNA, una regla difusa y una operación genética.
+**Pendiente declarado:** en los niveles Medio a Hardcore del grande, el estimador de garantía es conservador: el piloto automático gana partidas en mapas que no pasan la comprobación. Por ejemplo, en Difícil el estimador no halla variante ganable en ninguna semilla, y el piloto gana 6 de 20.
 
-## Desarrollo: API (ARX-03)
+## Límites
 
-La API FastAPI sirve la partida en JSON. Desde `ares_x/`:
+- Solo Marte (modo rover). Los otros planetas no están implementados.
+- Con 10 sitios (escenario exigente), el híbrido gana 12 de 20 semillas, frente a 14 con el vecino más cercano y 17 con 2-opt. Es una falla de búsqueda del AG, declarada en `INFORME_TECNICO.md` (§4.3); el juego normal no la tiene.
+- Los valores sin fuente son supuestos de simulación, no especificaciones de misión.
+- En el escenario normal la RNA es redundante con el supervisor. El detalle y las demás limitaciones están en `INFORME_TECNICO.md`.
 
-```bash
-pip install -r requirements.txt
-python -m uvicorn api.servidor:app --host 127.0.0.1 --port 8765   # http://127.0.0.1:8765/docs (sin --reload)
-python -m pytest -q api/tests              # pruebas de la API
-```
+## Documentación
 
-Operación del motor, reinicio del 8765 y estado para retomar: `docs/OPERACION_MOTOR.md`.
-
-Modos `rna`, `difuso` y `ag` conducen solos (ARX-11); `POST /modo` acepta `veto` (true por defecto).
-Rutas principales: `GET /estado`, `POST /partida`, `POST /mover`, `POST /paso`, `POST /modo`,
-`POST /disparo`, `POST /evento`, `GET /paneles`. `POST /intervencion` queda como esqueleto hasta ARX-10.
-Los errores devuelven 400 (entrada inválida), 409 (partida terminada o acción no permitida) o 501 (pendiente),
-siempre con el campo `motivo`.
+- `INFORME_TECNICO.md`: arquitectura, experimentos, resultados y limitaciones.
+- `ARES_X_entregable.ipynb`: notebook de la entrega (se regenera con `python construir_notebook.py`).

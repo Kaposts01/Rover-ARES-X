@@ -1205,6 +1205,7 @@ if (matchMedia("(max-width: 760px)").matches) {
 
 // Estados del rover (ARX-36): etiqueta, icono y color. El motor manda el código en /estado.estado
 const ESTADOS_VISUAL = {
+  CONFIGURACION: { etiqueta: "CONFIGURACIÓN", icono: "⚙", color: "#c8d2e4", pulso: false },
   EXPLORACION: { etiqueta: "EXPLORACIÓN", icono: "◎", color: "#5fd3ff", pulso: false },
   ALERTA: { etiqueta: "ALERTA", icono: "▲", color: "#ffb454", pulso: true },
   REPLANIFICACION: { etiqueta: "REPLANIFICACIÓN", icono: "↻", color: "#c39bff", pulso: true },
@@ -1215,7 +1216,7 @@ const ESTADOS_VISUAL = {
   SIN_RUTA: { etiqueta: "SIN RUTA", icono: "⊘", color: "#ffb454", pulso: true },
 };
 // Datos de prueba para los estados que el motor aún no emite (solo con ?demo=estados en la URL)
-const ESTADOS_DEMO = ["EXPLORACION", "ALERTA", "REPLANIFICACION", "REFUGIO", "MODO_SEGURO", "SIN_RUTA", "EXITO", "FRACASO"];
+const ESTADOS_DEMO = ["CONFIGURACION", "EXPLORACION", "ALERTA", "REPLANIFICACION", "REFUGIO", "MODO_SEGURO", "SIN_RUTA", "EXITO", "FRACASO"];
 const modoDemoEstados = new URLSearchParams(location.search).get("demo") === "estados";
 
 function pintarEstadoBadge(codigo) {
@@ -1380,21 +1381,25 @@ async function refrescarPaneles() {
 // Móviles, eventos y automático continuo (adaptador: motor o datos de prueba)
 // Objetivos de misión (ARX-67): bloque en el HUD y resumen en la meta
 let ultimosObjetivos = null;
-// Medidor de calor interno (ARX-51): solo para el rover; datos de prueba hasta ARX-50
-// Interruptor: true cuando /estado publique la temperatura interna del rover (ARX-50). Hasta entonces, solo con ?demo=estados
-const CALOR_MOTOR = false;
+// Medidor de calor interno (ARX-51, ARX-83c): solo para el rover; lee la temperatura interna real de /estado
+let calorSobreTolerancia = false;
 function pintarCalor(datos) {
   const fila = document.getElementById("fila-calor");
   const caja = document.getElementById("barra-calor-caja");
-  const visible = modoPlanetaActivo === "rover" && Boolean(datos) && (CALOR_MOTOR || modoDemoEstados);
+  const visible = modoPlanetaActivo === "rover" && Boolean(datos) && typeof datos.temperatura_interna === "number";
   fila.classList.toggle("oculto", !visible);
   caja.classList.toggle("oculto", !visible);
   if (!visible) return;
-  const t = datos.temperatura_interna;
+  const t = Math.round(datos.temperatura_interna * 10) / 10;
   document.getElementById("h-calor").textContent = `${t} °C`;
   const barra = document.getElementById("h-calor-barra");
   barra.style.width = `${Math.min(100, (t / (datos.tolerancia * 1.3)) * 100)}%`;
   barra.style.background = t >= datos.tolerancia ? "#ff5d6c" : t >= datos.tolerancia * 0.66 ? "#ffb454" : "#6ee7a8";
+  const sobre = t > datos.tolerancia;
+  const nota = datos.aborto_termico_activo === false ? " (aborto térmico desactivado)" : "";
+  // registro lateral y no avisar(): el aviso del paso lo taparía en el mismo ciclo (C1 de QA)
+  if (sobre && !calorSobreTolerancia) registrarEvento(`aviso: Calor interno sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
+  calorSobreTolerancia = sobre;
 }
 
 function pintarObjetivos(o) {
@@ -1441,7 +1446,7 @@ function pintarObjetivos(o) {
 async function refrescarMovilesYEscenario() {
   if (!estado || estado.sin_partida) return;
   pintarObjetivos(await adaptador.objetivos());
-  pintarCalor(adaptador.calorPrueba());
+  pintarCalor(estado);
   const datos = await adaptador.moviles();
   aplicarMoviles(datos, scene, alturaTerreno, (texto) => avisar(texto), agregarGrietas);
   aplicarEnlaceYSenal(estado);

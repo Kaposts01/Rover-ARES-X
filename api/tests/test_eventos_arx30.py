@@ -46,7 +46,8 @@ def test_partida_congelada_no_tiene_sismos_espontaneos():
 
 
 def test_regresion_ticks_de_meteoritos_no_cambian_con_el_sismo():
-    p = Partida(semilla=11, nivel=5, filas=40, columnas=60)
+    # ARX-79: batería 84 explícita = la del nivel 5 antes del factor por tamaño; fija el generador (la lista no cambia)
+    p = Partida(semilla=11, nivel=5, filas=40, columnas=60, bateria=84.0)
     ticks = []
     for k in range(3000):
         antes = len(p.meteoritos)

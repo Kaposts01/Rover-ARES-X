@@ -94,3 +94,172 @@ def test_mismo_seed_mismo_resultado():
     a = GeneticPlanner(m, riesgo, semilla=5, poblacion=30, generaciones=30).optimizar()
     b = GeneticPlanner(m, riesgo, semilla=5, poblacion=30, generaciones=30).optimizar()
     assert a.mejor == b.mejor
+
+
+# ---------- ARX-92b: decodificación completa y reparación (M8) ----------
+def mundo_con_sitios(sitios):
+    m = mundo_vacio()
+    m.sitios = dict(sitios)
+    return m
+
+
+def test_decodificar_inserta_los_sitios_omitidos():
+    m = mundo_con_sitios({(2, 3): 1.0, (7, 8): 1.0, (4, 10): 1.0})
+    gp = GeneticPlanner(m, np.zeros(m.forma), k_puntos=1, semilla=0)
+    d = gp.decodificar([(5, 5)])           # el cromosoma no contiene ningún sitio
+    assert not d.inviable_sin_camino
+    assert set(d.orden_sitios) == set(m.sitios)
+    assert all(s in d.ruta for s in m.sitios)
+    assert d.insertados >= 1 and d.reparaciones == d.descartes + d.insertados
+    assert d.ruta[0] == m.inicio and d.ruta[-1] == m.refugio
+    for a, b in zip(d.ruta, d.ruta[1:]):
+        assert max(abs(a[0] - b[0]), abs(a[1] - b[1])) == 1
+
+
+def test_sitio_ya_cubierto_por_la_ruta_no_se_inserta():
+    m = mundo_vacio()
+    gp0 = GeneticPlanner(m, np.zeros(m.forma), k_puntos=1, semilla=0)
+    base = gp0.decodificar([]).ruta
+    sitio = base[len(base) // 2]
+    m.sitios = {sitio: 1.0}
+    gp = GeneticPlanner(m, np.zeros(m.forma), k_puntos=1, semilla=0)
+    d = gp.decodificar([])
+    assert d.insertados == 0 and d.orden_sitios == [sitio]
+
+
+def test_sitio_inalcanzable_deja_la_ruta_inviable():
+    m = mundo_vacio()
+    riesgo = np.zeros(m.forma)
+    riesgo[0:3, 8:11] = 1.0
+    m.sitios = {(1, 9): 1.0}               # dentro de una zona no transitable
+    riesgo[1, 9] = 0.0
+    riesgo[0, 8:11] = riesgo[2, 8:11] = riesgo[1, 8] = riesgo[1, 10] = 1.0
+    gp = GeneticPlanner(m, riesgo, k_puntos=1, semilla=0)
+    d = gp.decodificar([])
+    assert d.inviable_sin_camino is True
+    assert d.insertados == 0
+    assert gp.evaluar([]).penalizacion >= 1.0
+
+
+def test_evaluar_y_ag_exponen_contadores_y_no_devuelven_rutas_incompletas():
+    m = generar_mundo(semilla=11, n_obstaculos=20, n_barrancos=4, n_sitios=3)
+    riesgo = mapa_estimado(m, np.random.default_rng(11))
+    gp = GeneticPlanner(m, riesgo, bateria=100, k_puntos=3, semilla=11)
+    res = gp.optimizar()
+    for cromosoma, des in res.candidatos:
+        d = gp.decodificar(cromosoma)
+        assert d.inviable_sin_camino or set(d.orden_sitios) == set(m.sitios)
+        assert des.descartes + des.insertados == des.reparaciones
+        assert des.insertados == d.insertados
+    assert hasattr(res.mejor_desglose, "insertados")
+
+
+# ---------- ARX-92c: modo «orden» (permutación de sitios) ----------
+import itertools  # noqa: E402
+
+
+def _mundo_orden(semilla, n_sitios=3):
+    m = generar_mundo(semilla=semilla, n_obstaculos=20, n_barrancos=4, n_sitios=n_sitios)
+    return m, mapa_estimado(m, np.random.default_rng(semilla))
+
+
+def _gp_orden(m, riesgo, semilla=0, **kw):
+    return GeneticPlanner(m, riesgo, bateria=1000.0, poblacion=30, generaciones=30, semilla=semilla, **kw)
+
+
+def _optimo_exhaustivo(gp):
+    """Mayor fitness entre todas las permutaciones (ruta = unión por BFS con refugio)."""
+    mejor = None
+    for orden in itertools.permutations(gp.mundo.sitios):
+        ruta = gp._unir([gp.mundo.inicio] + list(orden) + [gp.mundo.refugio])
+        if ruta is None:
+            continue
+        f = gp.evaluar_ruta(ruta).fitness
+        mejor = f if mejor is None else max(mejor, f)
+    return mejor
+
+
+@pytest.mark.parametrize("semilla", range(1, 21))
+def test_orden_con_tres_sitios_alcanza_el_optimo_de_la_exhaustiva(semilla):
+    m, riesgo = _mundo_orden(semilla)
+    gp = _gp_orden(m, riesgo, semilla)
+    optimo = _optimo_exhaustivo(gp)
+    if optimo is None:
+        pytest.skip("sin permutación alcanzable")
+    res = gp.optimizar_orden()
+    assert res.viable and res.modo == "orden"
+    assert res.mejor_desglose.fitness == pytest.approx(optimo, abs=1e-9)
+
+
+def test_orden_candidatos_son_ordenes_completos_y_sin_repetir():
+    m, riesgo = _mundo_orden(4, n_sitios=4)
+    res = _gp_orden(m, riesgo, 4).optimizar_orden(con_paso=True)
+    assert len(res.candidatos) >= 3
+    ordenes = [tuple(c[0]) for c, _ in res.candidatos]
+    assert len(set(ordenes)) == len(ordenes)
+    for orden in ordenes:
+        assert sorted(orden) == sorted(m.sitios)          # todos los sitios, ninguno omitido ni repetido
+    for gen in res.historial:
+        for ind in gen["poblacion"]:
+            assert sorted(map(tuple, ind["cromosoma"])) == sorted(m.sitios)
+    assert all(c in res.mejor_ruta for c in m.sitios)
+
+
+def test_orden_determinista_por_semilla_y_cambia_con_otra():
+    m, riesgo = _mundo_orden(6, n_sitios=4)
+    a = _gp_orden(m, riesgo, 5).optimizar_orden(con_paso=True)
+    b = _gp_orden(m, riesgo, 5).optimizar_orden(con_paso=True)
+    assert a.mejor == b.mejor and a.mejor_ruta == b.mejor_ruta
+    assert [g["mejor"] for g in a.historial] == [g["mejor"] for g in b.historial]
+    c = _gp_orden(m, riesgo, 6).optimizar_orden(con_paso=True)
+    assert [g["poblacion"] for g in a.historial] != [g["poblacion"] for g in c.historial]
+
+
+def test_orden_elitismo_y_operadores_cuentan():
+    m, riesgo = _mundo_orden(7, n_sitios=4)
+    gp = _gp_orden(m, riesgo, 7)
+    res = gp.optimizar_orden(con_paso=True)
+    mejores = [g["mejor"] for g in res.historial]
+    assert all(b >= a - 1e-12 for a, b in zip(mejores, mejores[1:]))
+    assert gp.cruces > 0 and gp.mutaciones > 0
+    assert len(res.historial) == 30
+
+
+def test_orden_con_punto_de_paso_da_ruta_contigua_que_visita_todo():
+    m, riesgo = _mundo_orden(8, n_sitios=3)
+    gp = _gp_orden(m, riesgo, 8)
+    res = gp.optimizar_orden(con_paso=True)
+    ruta = res.mejor_ruta
+    assert ruta[0] == m.inicio and ruta[-1] == m.refugio
+    for a, b in zip(ruta, ruta[1:]):
+        assert max(abs(a[0] - b[0]), abs(a[1] - b[1])) == 1
+    assert all(riesgo[c] < 0.5 for c in ruta)
+    assert all(s in ruta for s in m.sitios)
+
+
+def test_orden_inviable_por_bateria_no_puede_ganar_y_se_declara():
+    m, riesgo = _mundo_orden(9, n_sitios=3)
+    gp = GeneticPlanner(m, riesgo, bateria=3.0, poblacion=30, generaciones=30, semilla=9)
+    res = gp.optimizar_orden()
+    assert res.viable is False and res.mejor_ruta == [] and res.candidatos == []
+
+
+def test_orden_restriccion_dura_elige_el_unico_orden_viable():
+    m, riesgo = _mundo_orden(10, n_sitios=3)
+    gp = _gp_orden(m, riesgo, 10)
+    unico = tuple(m.sitios)[::-1]
+
+    def construir(seq):
+        visitas = tuple(c for c in seq if c in m.sitios)
+        return gp._unir([m.inicio] + list(seq)) if visitas == unico else None
+
+    res = gp.optimizar_orden(construir)
+    assert res.viable and tuple(map(tuple, res.mejor[0:3])) == unico
+
+
+def test_orden_desempate_prefiere_la_mas_corta_dentro_del_umbral():
+    m, riesgo = _mundo_orden(11, n_sitios=3)
+    gp = _gp_orden(m, riesgo, 11)
+    ancho = gp.optimizar_orden(umbral_empate=10.0)           # todo empata: gana la ruta más corta
+    largos = [len(gp._unir([m.inicio] + list(o) + [m.refugio])) for o in itertools.permutations(m.sitios)]
+    assert len(ancho.mejor_ruta) == min(largos)

@@ -31,11 +31,12 @@ if RAIZ not in sys.path:
 
 from integracion import forzar_probabilidad  # noqa: E402
 from juego import conduccion  # noqa: E402
-from genetico import GeneticPlanner  # noqa: E402
+from genetico import GeneticPlanner, PESOS_POR_DEFECTO  # noqa: E402
 from difuso import BATERIA_MAX, COLUMNAS_MEMBRESIA, DISTANCIA_MAX, INCLINACION_MAX  # noqa: E402
 from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
 from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
-from juego.partida import Partida  # noqa: E402
+from juego.partida import Partida, METODO_ORDEN  # noqa: E402
+from juego import termico  # noqa: E402
 from simulador import MOVIMIENTOS  # noqa: E402
 
 MODOS = {"manual", "rna", "difuso", "ag", "automatico"}
@@ -55,8 +56,9 @@ class ErrorApi(Exception):
 class Sesion:
     """Estado de la partida que sirve la API (uno por proceso)."""
 
-    def __init__(self, semilla: int = 11, nivel: int = 1, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE):
-        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas)
+    def __init__(self, semilla: int = 11, nivel: int = 1, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
+                 planeta: str = "Marte"):
+        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas, planeta=planeta)   # ARX-83b
         # el combate se crea después; se engancha para contar los drones destruidos en la victoria
 
         self.semilla = semilla
@@ -68,6 +70,7 @@ class Sesion:
         self.veto = True              # veto de seguridad en los modos rna/difuso/ag (ARX-11)
         self.historial = []           # una fila por acción del jugador o de la IA (ARX-15)
         self.n = 0                    # contador de filas del historial
+        self.pesos_ag = None          # ARX-47a: pesos del fitness del laboratorio /ag (None = los de defecto); no afecta al juego
 
     def terminada(self) -> bool:
         return self.partida.estado in ESTADOS_TERMINALES
@@ -187,6 +190,15 @@ def _celda(c) -> list:
     return [int(c[0]), int(c[1])]
 
 
+def _ultimo_replanteo(p) -> dict:
+    """ARX-31b: {paso, motivo} del último replanteo del AG por un evento grave (fila REPLAN-AG-* de la bitácora), o None."""
+    for fila in reversed(p.mision.log.filas):
+        motivos = str(fila.get("motivos", ""))
+        if motivos.startswith("REPLAN-AG-"):
+            return {"paso": int(fila["paso"]), "motivo": motivos}
+    return None
+
+
 def _estado(sesion: Sesion) -> dict:
     p = sesion.partida
     sug = p.sugerencia()
@@ -220,6 +232,11 @@ def _estado(sesion: Sesion) -> dict:
         "ruta": [_celda(c) for c in (p.ruta or [])],
         "municion": sesion.combate.municion,
         "cooldown": sesion.combate.cooldown,
+        "ultimo_replanteo": _ultimo_replanteo(p),    # ARX-31b: null si no hubo replanteo del AG
+        "temperatura_interna": round(p.t_int, 2),    # ARX-83b: T_int en °C (modelo de PLAN_PLANETAS)
+        "tolerancia": termico.TOLERANCIA,
+        "aborto_termico_activo": termico.ABORTO_TERMICO_ACTIVO,    # O2 de QA: la interfaz aclara si el aborto está apagado
+        "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
     }
 
 
@@ -402,7 +419,7 @@ def _anotar(sesion: Sesion, accion: str, tecnica: str, motivos=(), ultimo: dict 
     sesion.historial.append({
         "n": sesion.n, "modo": sesion.modo, "accion": accion, "tecnica": tecnica,
         "motivo": ";".join(m for m in motivos if m),
-        "paso_mision": int(p.mision.paso), "estado": p.estado,
+        "paso_mision": int(p.mision.paso), "estado": p.estado_visible(),   # ARX-33b: el mismo estado que /estado
         "posicion": _celda(p.rover.posicion), "bateria": round(float(p.rover.bateria), 2),
         "velocidad": u.get("velocidad"), "p_libre": u.get("p_libre"), "p_obstaculo": u.get("p_obstaculo"),
         "p_barranco": u.get("p_barranco"), "reglas": ";".join(u.get("reglas") or []),
@@ -492,6 +509,37 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
 _cache_evaluacion_rna = {}
 _cache_ag = {}
 _cache_comparacion = {}
+ESCENARIOS_COMPARACION = ("congelado", "exigente")   # ARX-28d; si el motor declara ESCENARIOS, manda el motor
+
+
+PESO_MAX = 5.0
+
+
+def _pesos_ag(sesion, pedidos: dict) -> dict:
+    """Pesos del laboratorio /ag: los pedidos (validados en [0, 5]) sobre los de la sesión o los de defecto."""
+    from genetico import PESOS_POR_DEFECTO
+    pesos = dict(getattr(sesion, "pesos_ag", None) or PESOS_POR_DEFECTO)
+    for nombre, crudo in pedidos.items():
+        if crudo is None:
+            continue
+        try:
+            v = float(crudo)
+        except (TypeError, ValueError):
+            raise ErrorApi(400, f"w_{nombre} debe ser un número entre 0 y {PESO_MAX:g}")
+        if not 0.0 <= v <= PESO_MAX:   # también rechaza nan e inf
+            raise ErrorApi(400, f"w_{nombre} debe estar entre 0 y {PESO_MAX:g} (recibido: {crudo!s:.20})")
+        pesos[nombre] = v
+    if any(c is not None for c in pedidos.values()):
+        sesion.pesos_ag = dict(pesos)
+    return pesos
+
+
+def _escenarios_comparacion():
+    try:
+        from juego.comparacion import ESCENARIOS
+        return tuple(ESCENARIOS)
+    except ImportError:
+        return ESCENARIOS_COMPARACION
 COMPARACION_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                 "docs", "COMPARACION_POLITICAS.json")
 
@@ -714,7 +762,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         semilla, nivel = validar_partida(datos)
         try:
             filas, columnas = _tamano(datos.tamano)
-            app.state.sesion = Sesion(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas)
+            app.state.sesion = Sesion(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas,
+                                       planeta=datos.planeta)
             app.state.sesion.planeta = datos.planeta
             app.state.sesion.modo_planeta = datos.modo
         except ValueError as exc:
@@ -816,38 +865,58 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         return r
 
     @app.get("/ag")
-    def diagnostico_ag(parada_sin_mejora: int = None):
+    def diagnostico_ag(parada_sin_mejora: int = None, w_ciencia: str = None, w_distancia: str = None,
+                       w_energia: str = None, w_riesgo: str = None, w_tiempo: str = None):
         """Diagnóstico del AG sobre los sitios pendientes (CA-04, RF-11): historial por generación con
         cromosomas, fitness y operación; los 3 mejores con su desglose; cruces y mutaciones efectivas.
-        `parada_sin_mejora=n` para tras n generaciones sin mejora (§12). No cambia la partida."""
-        p = activa().partida
+        `parada_sin_mejora=n` para tras n generaciones sin mejora (§12).
+        `w_ciencia, w_distancia, w_energia, w_riesgo, w_tiempo` en [0, 5] cambian los pesos del fitness solo en este
+        laboratorio (ARX-47a): se guardan en la sesión y se reutilizan. No cambia la partida."""
+        sesion = activa()
+        p = sesion.partida
+        pesos = _pesos_ag(sesion, {"ciencia": w_ciencia, "distancia": w_distancia, "energia": w_energia,
+                                   "riesgo": w_riesgo, "tiempo": w_tiempo})
         pendientes = {c: v for c, v in p.mundo.sitios.items() if c not in p.mision.visitados}
         if not pendientes:
             return {"sin_sitios": True, "motivo": "no quedan sitios científicos pendientes"}
         clave = (p.mision.semilla, tuple(sorted(pendientes)), tuple(p.rover.posicion),
-                 p.mision.riesgo.tobytes(), parada_sin_mejora)
+                 p.mision.riesgo.tobytes(), parada_sin_mejora, tuple(sorted(pesos.items())))
         if clave in _cache_ag:
             return _cache_ag[clave]
         if parada_sin_mejora is not None and (isinstance(parada_sin_mejora, bool) or parada_sin_mejora < 1):
             raise ErrorApi(400, "parada_sin_mejora debe ser un entero mayor que 0")
-        from dataclasses import replace as reemplazar
-        gp = GeneticPlanner(reemplazar(p.mundo, inicio=p.rover.posicion, sitios=pendientes), p.mision.riesgo,
-                            bateria=max(p.rover.bateria, 1.0), k_puntos=p.mision.k, poblacion=30,
-                            generaciones=30, semilla=p.mision.semilla)
-        res = gp.optimizar(parada_sin_mejora=parada_sin_mejora)
+        # ARX-92c: el laboratorio corre el MISMO AG sobre el orden que decide la partida (mismo envoltorio, pesos del lab)
+        from juego.partida import (AG_ORDEN_CON_PASO, AVISO_FALLBACK, METODO_AG_ORDEN, UMBRAL_EMPATE,
+                                   _ag_con_todos_los_sitios)
+        envoltorio = _ag_con_todos_los_sitios(p.mision, lambda o, pe: [], pesos=dict(pesos),
+                                              parada_sin_mejora=parada_sin_mejora)
+        ruta_jugada = envoltorio(tuple(p.rover.posicion), pendientes)
+        res = envoltorio.ultimo
+        cae = bool(envoltorio.fallbacks)
+        gp = envoltorio.gp
+        candidatos = [{"cromosoma": [list(map(int, c)) for c in cr[0]],
+                       "orden": [list(map(int, c)) for c in cr[0]],
+                       "pasos": [None if q is None else list(map(int, q)) for q in cr[1]],
+                       "fitness": float(d.fitness), "desglose": _desglose_fitness(d)}
+                      for cr, d in res.candidatos]
         salida = {
+            "modo": "orden",
             "parametros": {"poblacion": gp.poblacion, "generaciones": gp.generaciones, "k_puntos": gp.k,
                            "prob_cruce": gp.prob_cruce, "prob_mutacion": gp.prob_mutacion, "elite": gp.elite,
                            "torneo": gp.torneo, "semilla": p.mision.semilla, "pesos": gp.pesos,
-                           "parada_sin_mejora": parada_sin_mejora},
+                           "parada_sin_mejora": parada_sin_mejora, "umbral_empate": UMBRAL_EMPATE,
+                           "punto_de_paso": AG_ORDEN_CON_PASO},
             "generaciones": res.historial,
-            "candidatos": [{"cromosoma": [list(map(int, c)) for c in cr],
-                            "fitness": float(d.fitness), "desglose": _desglose_fitness(d)}
-                           for cr, d in res.candidatos],
-            "mejor_ruta": [_celda(c) for c in res.mejor_ruta],
+            "candidatos": candidatos,
+            "mejor_ruta": [_celda(c) for c in ruta_jugada],
             "mejor_desglose": _desglose_fitness(res.mejor_desglose),
             "cruces": gp.cruces, "mutaciones": gp.mutaciones,
             "generaciones_ejecutadas": len(res.historial),
+            "viable": bool(res.viable), "ordenes_evaluados": res.evaluados,
+            "fallback": AVISO_FALLBACK if cae else None,
+            # El orden que juega la partida es el de este AG (92c); la vía b de 92a queda de respaldo declarado
+            "orden_en_juego": {"metodo": METODO_AG_ORDEN, "respaldo": METODO_ORDEN,
+                               "pesos": dict(getattr(p.mision, "pesos_ag", None) or PESOS_POR_DEFECTO)},
         }
         if len(_cache_ag) >= 16:
             _cache_ag.pop(next(iter(_cache_ag)))
@@ -962,6 +1031,9 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                     for s in p.sismos if s["paso"] == int(p.mision.paso)]
         eventos += [{"nombre": "senal_biologica", "efecto": "lectura_anomala", "celdas": [_celda(s["celda"])],
                      "afirma_vida": False} for s in p.senales if s["paso"] == int(p.mision.paso)]
+        replanteo = _ultimo_replanteo(p)
+        if replanteo is not None and replanteo["paso"] == int(p.mision.paso):      # ARX-31b
+            eventos.append({"nombre": "replanteo_ag", "motivo": replanteo["motivo"]})
         if p._ultimo_corte is not None and p._ultimo_corte == int(p.mision.paso):
             eventos.append({"nombre": "baja_conectividad", "efecto": "sin_enlace", "restante": int(p.enlace_restante)})
         return {
@@ -1041,21 +1113,39 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         return {"planetas": lista, "modos": ["rover", "sonda"], "activo": activo}
 
     @app.get("/comparacion")
-    def comparacion(semillas: int = 20):
+    def comparacion(semillas: int = 20, escenario: str = "congelado"):
         """Comparación de políticas (RF-14, RF-15): híbrido frente a sin RNA, sin difuso y sin AG.
-        Con 20 semillas sirve docs/COMPARACION_POLITICAS.json (scripts/comparacion_politicas.py).
-        Otros valores calculan en la petición y tardan (1 a 40 semillas)."""
+        `escenario=congelado` (por defecto) o `exigente` (ARX-28d). Con 20 semillas sirve el JSON del escenario
+        (docs/COMPARACION_POLITICAS.json o docs/COMPARACION_POLITICAS_<escenario>.json); otros valores calculan
+        en la petición y tardan (1 a 40 semillas). La caché distingue escenario y número de semillas."""
         if isinstance(semillas, bool) or not 1 <= semillas <= 40:
             raise ErrorApi(400, "semillas debe ser un entero entre 1 y 40")
-        if semillas in _cache_comparacion:
-            return _cache_comparacion[semillas]
-        if semillas == 20 and os.path.exists(COMPARACION_JSON):
-            with open(COMPARACION_JSON, encoding="utf-8") as f:
+        validos = _escenarios_comparacion()
+        if escenario not in validos:
+            raise ErrorApi(400, "escenario debe ser uno de: " + ", ".join(validos)
+                           + f" (recibido: {str(escenario)[:40]!r})")
+        clave = (escenario, semillas)
+        if clave in _cache_comparacion:
+            return _cache_comparacion[clave]
+        ruta = COMPARACION_JSON if escenario == "congelado" else COMPARACION_JSON.replace(
+            ".json", f"_{escenario}.json")
+        if semillas == 20 and os.path.exists(ruta):
+            with open(ruta, encoding="utf-8") as f:
                 datos = json.load(f)
         else:
-            from juego.comparacion import comparar
-            datos = comparar(range(1, semillas + 1))
-        _cache_comparacion[semillas] = datos
+            from juego import comparacion as motor
+            if escenario == "congelado":
+                datos = motor.comparar(range(1, semillas + 1))
+            elif not hasattr(motor, "ESCENARIOS"):
+                raise ErrorApi(400, f"el escenario {escenario} aún no está disponible en el motor de comparación")
+            else:
+                datos = motor.comparar(range(1, semillas + 1), escenario=escenario)
+        # ev3-d71: ag_puro no se publica (no mide el AG); mismo criterio que scripts/comparacion_politicas.py
+        no_publicar = ()   # ev3-d71 corregido: ag_puro se publica entre las ablaciones; ARX-92 regeneración
+        datos = {**datos, "escenario": escenario,
+                 "variantes": {v: r for v, r in datos["variantes"].items() if v not in no_publicar},
+                 "filas": [f for f in datos["filas"] if f["variante"] not in no_publicar]}
+        _cache_comparacion[clave] = datos
         return datos
 
     @app.get("/serie")

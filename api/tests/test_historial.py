@@ -225,6 +225,8 @@ def test_estado_visible_emite_replanificacion_refugio_y_alerta(cliente):
     # ARX-33: /estado.estado usa ALERTA, REPLANIFICACION, REFUGIO y MODO_SEGURO además de EXPLORACION
     from juego.partida import Partida
     p = Partida(semilla=11)
+    assert p.estado_visible() == "CONFIGURACION"        # ARX-33a: antes del primer paso
+    p.mision.paso = 1
     assert p.estado_visible() == "EXPLORACION"
     p.mision.estado = "ALERTA"
     assert p.estado_visible() == "ALERTA"
@@ -419,3 +421,58 @@ def test_csv_anterior_sin_columnas_nuevas_sigue_siendo_legible():
     viejo = "n,modo,accion,tecnica,motivo,fitness\n1,manual,mover,humano,,\n"
     filas = list(csv.DictReader(io.StringIO(viejo)))
     assert filas[0]["accion"] == "mover" and "fitness_ag" not in filas[0]
+
+
+def test_historial_usa_el_estado_visible_tras_un_sismo_con_grieta_en_la_ruta(cliente):
+    # ARX-33b: la fila del historial y /estado muestran el mismo estado en el mismo paso
+    sesion = cliente.app.state.sesion
+    cliente.post("/paso")
+    for _ in range(80):
+        ruta = {tuple(c) for c in sesion.partida.mision.ruta}
+        antes = len(sesion.partida.sismos)
+        cliente.post("/evento", json={"nombre": "sismo"})
+        if len(sesion.partida.sismos) > antes and any(tuple(g) in ruta for g in sesion.partida.sismos[-1]["grietas"]):
+            break
+        cliente.post("/paso")
+    else:
+        raise AssertionError("no hubo sismo con grieta en la ruta")
+    estado = cliente.get("/estado").json()["estado"]
+    ultima = cliente.get("/historial").json()["filas"][-1]
+    assert estado == "REPLANIFICACION" and ultima["estado"] == estado
+
+
+def test_estado_expone_el_ultimo_replanteo_del_ag_tras_un_sismo(cliente):
+    # ARX-31b: ultimo_replanteo en /estado y el evento replanteo_ag en /moviles
+    sesion = cliente.app.state.sesion
+    assert cliente.get("/estado").json()["ultimo_replanteo"] is None
+    cliente.post("/paso")
+    for _ in range(80):
+        ruta = {tuple(c) for c in sesion.partida.mision.ruta}
+        antes = len(sesion.partida.sismos)
+        cliente.post("/evento", json={"nombre": "sismo"})
+        if len(sesion.partida.sismos) > antes and any(tuple(g) in ruta for g in sesion.partida.sismos[-1]["grietas"]):
+            break
+        cliente.post("/paso")
+    else:
+        raise AssertionError("no hubo sismo con grieta en la ruta")
+    ultimo = cliente.get("/estado").json()["ultimo_replanteo"]
+    assert ultimo["motivo"] == "REPLAN-AG-SISMO" and ultimo["paso"] == sesion.partida.mision.paso
+    eventos = cliente.get("/moviles").json()["eventos_del_paso"]
+    assert {"nombre": "replanteo_ag", "motivo": "REPLAN-AG-SISMO"} in eventos
+
+
+def test_estado_expone_la_temperatura_interna_segun_el_planeta():
+    # ARX-83b: el planeta llega a Partida; T_int sube en Venus y se mantiene en Marte; los campos existen en ambos
+    campos = {"temperatura_interna", "tolerancia", "pasos_sobre_tolerancia", "aborto_termico_activo"}
+    series = {}
+    for planeta in ("Venus", "Marte"):
+        c = TestClient(crear_app())
+        assert c.post("/partida", json={"semilla": 11, "nivel": 1, "planeta": planeta}).status_code == 200
+        assert campos <= set(c.get("/estado").json())
+        series[planeta] = [c.get("/estado").json()["temperatura_interna"]]
+        for _ in range(8):
+            c.post("/paso")
+            series[planeta].append(c.get("/estado").json()["temperatura_interna"])
+        assert c.get("/estado").json()["tolerancia"] == 60.0
+    assert series["Venus"][-1] > series["Venus"][0] and max(series["Venus"]) > 60.0     # sube (la sombra la frena)
+    assert max(series["Marte"]) <= series["Marte"][0]

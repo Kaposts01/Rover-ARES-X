@@ -1,4 +1,4 @@
-"""Genera docs/TRAZA_DIVERGENCIAS_<escenario>.csv: divergencias paso a paso del híbrido frente a sin_rna, sin_difuso y sin_ag.
+"""Genera docs/TRAZA_DIVERGENCIAS_<escenario>.csv: divergencias paso a paso del híbrido frente a sin_rna, sin_difuso, sin_ag_vecino y sin_ag_mas_corta.
 
 Uso (desde ares_x/):  python scripts/traza_divergencias.py [n_semillas] [escenario]
 """

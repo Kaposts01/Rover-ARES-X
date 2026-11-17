@@ -82,10 +82,6 @@ export async function moviles() {
   return datos;
 }
 export const fuente = (clave) => fuentes[clave] || "sin consultar";
-// Temperatura interna del rover (docs/PLAN_PLANETAS.md). Datos de prueba hasta que ARX-50 la exponga en /estado.
-export function calorPrueba() {
-  return { temperatura_interna: 42, tolerancia: 60 };
-}
 
 // Datos de prueba de la cuarta entrada del difuso (temperatura, °C). Mismo formato que las otras tres:
 // universo, curvas con 101 puntos y punto de entrada. Se quita cuando el motor devuelva curvas.temperatura.

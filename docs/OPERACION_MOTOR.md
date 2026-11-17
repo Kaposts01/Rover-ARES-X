@@ -77,14 +77,18 @@ Cuatro variantes con la misma semilla: híbrido, `sin_rna`, `sin_difuso` y `sin_
 - **Cómo leer la traza:** la columna `origen` separa `directa` (la primera divergencia por semilla y variante que cambia
   decisión, velocidad o ruta), `directa_codigo` (solo cambia el código de motivo) y `consecuencia`. Las reglas están en
   `CONTRATOS_GRAFICOS.md` §7.
-- **Resultado actual (20 semillas):** el difuso altera en 20 de 20 semillas, sobre todo la velocidad (16 de 20 directas).
-  La variante `sin_ag` reemplaza el planificador de orden (hoy, permutación más corta por búsqueda exhaustiva) por el vecino más cercano: el orden difiere en 12 de 20 semillas y tarda 4,35 pasos más de media. No atribuye efecto al AG (ver ARX-92). La RNA cambia una decisión en 2 de 20
-  (semillas 4 y 18), sin cambiar éxito ni colisiones. Nada de esto es una medición de la RNA fuera del escenario exigente.
+- **Resultado actual (20 semillas, regeneración definitiva `fcd2835`):** en el exigente (4 sitios), el híbrido gana 20/20 con 54,3 pasos de media; sin difuso, 15/20; sin RNA, 20/20 con 54,0. La traza tiene 1403 filas: 35 directas (20 del difuso, 3 de la RNA y 12 del orden de sitios por vecino más cercano, que no mide el AG). Detalle en el contrato §7 y en el INFORME §4.2–§4.3.
 - **Límite de la clasificación:** la directa compara solo la posición y la batería del paso anterior. `paros_seguidos`, la ruta
   y el generador no entran en la comparación. QA lo comprobó en las semillas 4 y 18 con el estado oculto.
 - **Limitación de la RNA sin borde (ARX-28f, control previo):** con `borde_barranco` falso, la RNA no predice barrancos
   (recall 0,000). Con los rasgos normales, 0,70–0,80. Detalle en `docs/planes/ARX-28_calibracion.md`, sección «28f». Escrito
   como medición; la causa (dependencia del rasgo de borde) es inferencia.
+
+## Medición de tiempos (ARX-44 y ARX-46)
+
+- Los tiempos de ARX-44 (tiempo por paso) y de ARX-46 (entrenamiento y decisión) son **de pared**: el reloj de la medición, no tiempo de CPU.
+- Se miden con el equipo cargado por otras sesiones (la medición no tiene el equipo en reposo). Por eso no se comparan con cifras de otra medición sin repetirla en el mismo estado.
+- Un trabajo pesado a la vez y con turno del orquestador también al medir.
 
 ## Evaluación congelada
 

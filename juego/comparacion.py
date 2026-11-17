@@ -19,11 +19,11 @@ VARIANTES = ("hibrido", "sin_rna", "sin_difuso", "sin_ag")
 MAX_PASOS = 400
 
 # Escenarios de evaluación (ARX-28b). "congelado" es la evaluación del informe: 20x30, nivel 1, parámetros por defecto.
-# "exigente": nivel 5 con sensor más ruidoso y detección de peligros más pobre. RUIDO y P_DETECTAR los fija ARX-28a
-# (calibración); mientras sean None el escenario exigente no se puede usar. Los rellena 28a, no se inventan aquí.
+# "exigente": nivel 5 con sensor más ruidoso y detección de peligros más pobre. ruido y p_detectar los fijó ARX-28a
+# (calibración; ver docs/planes/ARX-28_calibracion.md). Si alguno fuera None el escenario no se podría usar.
 ESCENARIOS = {
     "congelado": {"nivel": 1, "ruido": None, "p_detectar": None},      # None = no se toca: valores por defecto de Mision
-    "exigente": {"nivel": 5, "ruido": None, "p_detectar": None},       # ruido y p_detectar: pendientes de ARX-28a
+    "exigente": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4},         # calibrado en ARX-28a (docs/planes/ARX-28_calibracion.md)
 }
 
 

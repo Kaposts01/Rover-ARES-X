@@ -68,9 +68,9 @@ Medido con `scripts/medir_garantia.py` (20 semillas por nivel, niveles 1 a 5, co
 |---|---|---|
 | 1 | 20/20 | — |
 | 2 | 20/20 | — |
-| 3 | 10/20 | caza sin batería 4, batería 0 con sitios pendientes 2, batería insuficiente 2, 12 pasos parado (regla 79c) 2 |
-| 4 | 6/20 | caza sin batería, batería 0, batería insuficiente, faltan drones |
-| 5 | 4/20 | caza sin batería, batería 0, batería insuficiente, faltan drones, SIN_RUTA |
+| 3 | 10/20 | caza sin batería 4, impacto de meteorito 2, 12 pasos parado (regla 79c) 2, batería 0 con sitios pendientes 1, batería insuficiente 1 |
+| 4 | 6/20 | caza sin batería 8, batería 0 con sitios pendientes 3, SIN_RUTA 1, batería insuficiente 1, faltan drones (refugio bloqueado) 1 |
+| 5 | 4/20 | caza sin batería 10, batería 0 con sitios pendientes 3, batería insuficiente 2, faltan drones (refugio bloqueado) 1 |
 
 Totales de derrotas grande: caza sin batería 22, batería 0 con sitios pendientes 7, batería insuficiente 4, faltan drones (el refugio queda bloqueado) 2, impacto de meteorito 2, 12 pasos parado 2, SIN_RUTA 1. Suman 40.
 

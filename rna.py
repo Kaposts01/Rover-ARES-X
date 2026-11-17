@@ -15,6 +15,10 @@ from simulador import BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite, gene
 
 CLASES = {LIBRE: "libre", OBSTACULO: "obstáculo", BARRANCO: "barranco"}
 NOMBRES_RASGOS = ["proximidad_frontal_m", "borde_barranco", "gradiente_altura_m", "vibracion"]
+# ARX-93b (ev3-d78 A): modelo aparte, sin el rasgo de borde (que es la lectura del LIDAR del supervisor).
+# El modelo actual y NOMBRES_RASGOS no cambian; /rna y el panel usan la lista del modelo activo.
+NOMBRES_RASGOS_TERRENO = ["proximidad_frontal_m", "gradiente_altura_m", "vibracion"]
+PERFILES_RASGOS = {"actual": NOMBRES_RASGOS, "terreno": NOMBRES_RASGOS_TERRENO}
 
 # Media de la vibración según lo que hay delante (supuesto de simulación: débil señal)
 VIBRACION_MEDIA = {LIBRE: 0.2, OBSTACULO: 0.6, BARRANCO: 0.4}
@@ -40,8 +44,21 @@ def _rasgos_celda(mundo, pos, rumbo, sensor, rng):
     ], int(clase)
 
 
-def generar_dataset(semillas, muestras_por_mapa=400, ruido=0.1, prob_fallo=0.0):
-    """Muestras etiquetadas a partir de mapas con las semillas indicadas."""
+def _rasgos_terreno(mundo, pos, rumbo, sensor, rng):
+    """Como _rasgos_celda pero sin borde_barranco: la RNA solo ve proximidad, gradiente y vibración."""
+    rasgos, clase = _rasgos_celda(mundo, pos, rumbo, sensor, rng)
+    return [rasgos[0], rasgos[2], rasgos[3]], clase
+
+
+def generar_dataset(semillas, muestras_por_mapa=400, ruido=0.1, prob_fallo=0.0, perfil="actual"):
+    """Muestras etiquetadas a partir de mapas con las semillas indicadas.
+
+    perfil="actual" (por defecto) es el modelo entregable, con borde_barranco;
+    perfil="terreno" es el modelo de ARX-93, sin ese rasgo (mismo flujo de azar).
+    """
+    if perfil not in PERFILES_RASGOS:
+        raise ValueError(f"Perfil de rasgos desconocido: {perfil}")
+    rasgos_de = _rasgos_celda if perfil == "actual" else _rasgos_terreno
     X, y = [], []
     for semilla in semillas:
         rng = np.random.default_rng(10_000 + semilla)
@@ -53,7 +70,7 @@ def generar_dataset(semillas, muestras_por_mapa=400, ruido=0.1, prob_fallo=0.0):
             if mundo.tipo[pos] != LIBRE:
                 continue
             rumbo = rng.choice(list(MOVIMIENTOS))
-            rasgos, clase = _rasgos_celda(mundo, pos, rumbo, sensor, rng)
+            rasgos, clase = rasgos_de(mundo, pos, rumbo, sensor, rng)
             X.append(rasgos)
             y.append(clase)
     X = np.nan_to_num(np.array(X, dtype=float), nan=0.0)
@@ -79,7 +96,8 @@ class ResultadoRNA:
 
 
 class NeuralPerception:
-    def __init__(self, semilla=42):
+    def __init__(self, semilla=42, nombres=None):
+        self.nombres = list(nombres) if nombres is not None else list(NOMBRES_RASGOS)
         self.modelo = MLPClassifier(hidden_layer_sizes=(32, 16), activation="relu",
                                     max_iter=300, random_state=semilla,
                                     early_stopping=True, validation_fraction=0.15)
@@ -127,8 +145,8 @@ class NeuralPerception:
         normalizada = self.escalador.transform(x.reshape(1, -1))[0]
         proba = self.predecir_proba(x)[0]
         return {
-            "entrada": dict(zip(NOMBRES_RASGOS, x.tolist())),
-            "normalizada": dict(zip(NOMBRES_RASGOS, np.round(normalizada, 3).tolist())),
+            "entrada": dict(zip(self.nombres, x.tolist())),
+            "normalizada": dict(zip(self.nombres, np.round(normalizada, 3).tolist())),
             "probabilidades": {CLASES[c]: round(float(p), 3)
                                for c, p in zip(self.modelo.classes_, proba)},
             "confianza": round(float(proba.max()), 3),

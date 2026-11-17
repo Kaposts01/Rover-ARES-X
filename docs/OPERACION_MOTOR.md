@@ -86,6 +86,12 @@ Cuatro variantes con la misma semilla: híbrido, `sin_rna`, `sin_difuso` y `sin_
   (recall 0,000). Con los rasgos normales, 0,70–0,80. Detalle en `docs/planes/ARX-28_calibracion.md`, sección «28f». Escrito
   como medición; la causa (dependencia del rasgo de borde) es inferencia.
 
+## Medición de tiempos (ARX-44 y ARX-46)
+
+- Los tiempos de ARX-44 (tiempo por paso) y de ARX-46 (entrenamiento y decisión) son **de pared**: el reloj de la medición, no tiempo de CPU.
+- Se miden con el equipo cargado por otras sesiones (la medición no tiene el equipo en reposo). Por eso no se comparan con cifras de otra medición sin repetirla en el mismo estado.
+- Un trabajo pesado a la vez y con turno del orquestador también al medir.
+
 ## Evaluación congelada
 
 `juego/comparacion.py` (`partida_variante`) y `juego/conduccion.py` (`correr`) crean la partida con

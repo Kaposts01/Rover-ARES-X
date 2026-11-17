@@ -165,7 +165,7 @@ Parámetro opcional: `semillas` (entero de 1 a 40; por defecto 20). Con 20 semil
 }
 ```
 
-Cifras reales de la ejecución de 20 semillas (tasa de éxito, mediana de pasos y colisiones media): híbrido 19/20 (41), sin RNA 19/20 (41), sin difuso 19/20 (41), sin AG 19/20 (44). Las cuatro tienen 0 colisiones. El bloque «hibrido» de arriba es el real (copiado del archivo); las demás variantes siguen la misma forma y sus valores reales están en el archivo.
+Cifras de la ejecución de 20 semillas anterior a la regeneración (**provisionales: se regeneran tras ARX-92**; tasa de éxito, mediana de pasos y colisiones media): híbrido 19/20 (41), sin RNA 19/20 (41), sin difuso 19/20 (41), «sin AG: vecino más cercano» 19/20 (44). Las cuatro tienen 0 colisiones. El bloque «hibrido» de arriba es el real (copiado del archivo); las demás variantes siguen la misma forma y sus valores reales están en el archivo.
 
 ### Escenario «exigente» (ARX-28a y 28b)
 
@@ -183,6 +183,8 @@ Resultados de 20 semillas, en `docs/COMPARACION_POLITICAS_exigente.json` (genera
 El híbrido y el sin RNA terminan `SIN_RUTA` en la semilla 7 (paso 18); sin difuso (48 pasos) y sin AG (57) la ganan.
 
 ### Traza de divergencias (`docs/TRAZA_DIVERGENCIAS_exigente.csv`)
+
+> **Provisional: se regenera tras ARX-92.** Los recuentos de la tabla de abajo son de la traza anterior a la regeneración. La traza regenerada da 3 semillas con divergencia directa de la RNA (4, 10 y 18), 20 del difuso y 12 del AG; ver INFORME §4.2.
 
 Una fila por paso en que una variante difiere del híbrido con la misma semilla. Columnas: `semilla`, `variante`, `tecnica`, `paso`, `celda`, `origen`, `motivo`, `cambio`, `detalle`. Se omiten los pasos en que una de las dos partidas ya terminó (artefacto de fin de partida).
 

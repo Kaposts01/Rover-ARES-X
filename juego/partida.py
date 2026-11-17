@@ -946,7 +946,7 @@ class Partida:
         instancia, a Mision._actualizar_mapa_estimado (Mision está congelada). Igual para las cuatro variantes del arnés.
 
         Riesgo conocido (no corregido en ARX-90): una lectura ruidosa que sitúa el obstáculo una celda más lejos puede causar
-        colisión; la ablación sin difuso no se detiene y no consulta _obstaculo_en_ruta. Ejemplo: exigente, semilla 20,
+        colisión; desde ARX-91 la ablación sin difuso también consulta _obstaculo_en_ruta (chequeo incondicional). Ejemplo: exigente, semilla 20,
         sin difuso, paso 31 (celda (14,27), obstáculo estimado a 0,05).
         """
         m = destino if destino is not None else self.mision

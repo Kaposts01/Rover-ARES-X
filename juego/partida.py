@@ -18,6 +18,7 @@ from integracion import (ESTADOS_TERMINALES, MARGEN_ENERGIA,  # noqa: E402
                          GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO,
                          Decision, Mision, _rumbo, camino_valido)
 from difuso import ResultadoDifuso  # noqa: E402
+from juego import termico  # noqa: E402
 from rna import _rasgos_celda  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
@@ -288,7 +289,7 @@ def _ag_con_todos_los_sitios(m, optimizar_original):
 class Partida:
     def __init__(self, semilla: int = 11, bateria: float = None, nivel: int = 1,
                  eventos_activos=EVENTOS_SOPORTADOS, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
-                 garantia: bool = True):
+                 garantia: bool = True, planeta: str = termico.PLANETA_POR_DEFECTO):
         if isinstance(nivel, bool) or not isinstance(nivel, int) or not 1 <= nivel <= NIVEL_MAX:
             raise ValueError(f"nivel inválido: {nivel!r} (debe estar entre 1 y {NIVEL_MAX})")
         con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
@@ -365,6 +366,19 @@ class Partida:
         self.enlace_restante = 0           # pasos que quedan de corte de enlace (ARX-30b)
         self._objetivo = None              # celda fijada por el jugador, o None
         self._paso_replan_ag = None        # paso del último replanteo del AG por evento grave (ARX-31a)
+        # ARX-83a: temperatura interna. Solo con garantia=True; el aborto y la inyección al difuso, además, solo con
+        # termico.ABORTO_TERMICO_ACTIVO (apagada por defecto). La evaluación congelada no la usa.
+        self.planeta = planeta
+        self.termico = termico.Termico(planeta)
+        self._termico_activo = bool(garantia)
+        if self._termico_activo:
+            _inferir = self.mision.difuso.inferir
+
+            def _inferir_con_temperatura(distancia, bateria, inclinacion, temperatura=0.0):
+                if termico.ABORTO_TERMICO_ACTIVO:
+                    temperatura = self.termico.t_int
+                return _inferir(distancia, bateria, inclinacion, temperatura)
+            self.mision.difuso.inferir = _inferir_con_temperatura
         # Mision() ya planificó con el AG original: se replanifica con el envoltorio que exige todos los sitios
         self.mision.objetivos = []
         self.mision._planear()
@@ -407,6 +421,15 @@ class Partida:
         if not self.mision._quedan_sitios():
             return "REFUGIO"
         return estado
+
+    @property
+    def t_int(self) -> float:
+        """Temperatura interna del rover en °C (ARX-83a)."""
+        return float(self.termico.t_int)
+
+    @property
+    def pasos_sobre_tolerancia(self) -> int:
+        return int(self.termico.pasos_sobre_tolerancia)
 
     @property
     def ruta(self) -> list:
@@ -1150,8 +1173,23 @@ class Partida:
                 and self.estado not in ESTADOS_TERMINALES
                 and self._rng_senal.random() < SENAL_PROB_POR_NIVEL[self.nivel]):
             self._evento_senal_biologica()
+        self._tick_termico()
         if self.rover.bateria <= 0 and self.estado not in ESTADOS_TERMINALES:
             self.mision.estado = "FRACASO"
+
+    def _tick_termico(self) -> None:
+        """ARX-83a: actualiza T_int y, con la bandera encendida, aborta con MODO_SEGURO y V-TEMPERATURA tras más de
+        PASOS_MAXIMOS_SOBRE_TOLERANCIA pasos seguidos sobre la tolerancia."""
+        if not self._termico_activo or self.estado in ESTADOS_TERMINALES:
+            return
+        self.termico.paso(termico.es_sombra(self.mundo, self.rover.posicion))
+        if termico.ABORTO_TERMICO_ACTIVO and self.termico.debe_abortar:
+            m = self.mision
+            self.rover.en_modo_seguro = True
+            m.estado = "MODO_SEGURO"
+            m._registrar("modo_seguro", 0.0, ["V-TEMPERATURA"], {}, None)
+            self._avisar(f"Aborto térmico: {self.t_int:.0f} °C interna, más de "
+                         f"{termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA} pasos sobre {termico.TOLERANCIA:.0f} °C")
 
     # ---------- eventos ----------
     def disparar_evento(self, nombre: str) -> dict:

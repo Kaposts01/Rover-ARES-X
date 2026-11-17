@@ -71,5 +71,5 @@ El mapa grande arranca con 1,49 veces la batería del pequeño, porque su ruta e
 
 ## Documentación
 
-- `INFORME_TECNICO.md`: arquitectura, experimentos, resultados y limitaciones.
+- `INFORME_TECNICO.md`: arquitectura, experimentos, resultados y limitaciones. El trabajo futuro del diseño del juego está en su sección 9.
 - `ARES_X_entregable.ipynb`: notebook de la entrega (se regenera con `python construir_notebook.py`).

@@ -4,7 +4,7 @@ Simulación de un rover en Marte que combina una red neuronal (RNA), lógica dif
 
 ## Instalación y arranque
 
-Requisitos: Python 3.11 o superior y CPU. No necesita claves ni Docker.
+Requisitos: Python 3.14 o superior (probado con 3.14.5) y CPU. No necesita claves ni Docker.
 
 ```bash
 python -m pip install -r requirements.txt

@@ -5,6 +5,17 @@
 # Puerto: ARES_PUERTO=8790 ./arrancar.sh
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Requisito: Python 3.14 o superior (ver requirements.txt). ARES_PYTHON permite elegir el intérprete a probar.
+BASE="${ARES_PYTHON:-python}"
+command -v "$BASE" >/dev/null 2>&1 || BASE=python3
+VERSION=$("$BASE" -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>/dev/null || echo "0.0")
+MAYOR="${VERSION%%.*}"; MENOR="${VERSION#*.}"
+if [ "$MAYOR" -lt 3 ] || { [ "$MAYOR" -eq 3 ] && [ "$MENOR" -lt 14 ]; }; then
+    echo "ARES-X requiere Python 3.14 o superior; versión detectada ${VERSION}; instálalo desde python.org" >&2
+    exit 2
+fi
+
 if [ -x ".venv-ares/bin/python" ]; then PY=".venv-ares/bin/python"
 elif [ -x ".venv-ares/Scripts/python.exe" ]; then PY=".venv-ares/Scripts/python.exe"
 else python3 -m venv .venv-ares 2>/dev/null || python -m venv .venv-ares

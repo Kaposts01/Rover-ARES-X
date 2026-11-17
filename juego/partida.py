@@ -22,6 +22,7 @@ from rna import _rasgos_celda  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
 
+PASOS_CAZA_SIN_AVANCE = 12   # ARX-79c: pasos seguidos sin salir de la celda durante la caza antes de fracasar con causa
 EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica")
 SENAL_DIST_MIN, SENAL_DIST_MAX = 3, 6    # distancia Chebyshev de la señal biológica al rover (ARX-30c)
 # ARX-30c (ev3-d50 C): probabilidad por paso de que la señal caiga sola, por nivel (supuesto de simulación)
@@ -657,8 +658,19 @@ class Partida:
             m.estado = "FRACASO"
             self._avisar("Faltan drones por destruir y no queda munición")
             return
-        mascara = np.asarray(self.mundo.tipo == LIBRE)
         origen = tuple(int(x) for x in self.rover.posicion)
+        # ARX-79c: el BFS de la caza ignora la parada del difuso; si el rover no sale de su celda, el BFS vuelve a
+        # trazar la misma ruta y la partida se queda repitiendo D-DIFUSO-LENTO / V-PARADO-SIN-AVANCE. Se corta con causa.
+        if getattr(self, "_caza_ult_pos", None) == origen:
+            if self._falla_restante == 0:
+                self._caza_sin_avance = getattr(self, "_caza_sin_avance", 0) + 1
+        else:
+            self._caza_ult_pos, self._caza_sin_avance = origen, 0
+        if self._caza_sin_avance >= PASOS_CAZA_SIN_AVANCE:
+            m.estado = "FRACASO"
+            self._avisar("Faltan drones por destruir y el rover lleva %d pasos detenido: la caza no avanza" % PASOS_CAZA_SIN_AVANCE)
+            return
+        mascara = np.asarray(self.mundo.tipo == LIBRE)
         vivos = sorted([d for d in self.combate.drones if d.vivo],
                        key=lambda d: max(abs(d.pos[0] - origen[0]), abs(d.pos[1] - origen[1])))
         tramos, largos = {}, {}

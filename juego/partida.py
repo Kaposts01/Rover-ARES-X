@@ -292,8 +292,9 @@ def _ag_con_todos_los_sitios(m, optimizar_original):
 
 
 def _cronometrado(metodo):
-    """ARX-89b: suma al acumulador tiempo_computo_s el tiempo de pared del método. Las llamadas anidadas (avanzar_modo
-    llama a avanzar_ia) no se cuentan dos veces."""
+    """ARX-89b: suma al acumulador tiempo_computo_s el TIEMPO DE PARED (time.perf_counter, reloj de pared, no CPU) del
+    método. Se usa pared porque time.process_time tiene resolución de unos 15 ms en Windows y pierde los pasos cortos.
+    Las llamadas anidadas (avanzar_modo llama a avanzar_ia) no se cuentan dos veces."""
     @functools.wraps(metodo)
     def envuelto(self, *args, **kwargs):
         if self._cronometro_nivel:
@@ -316,7 +317,7 @@ class Partida:
     def __init__(self, semilla: int = 11, bateria: float = None, nivel: int = 1,
                  eventos_activos=EVENTOS_SOPORTADOS, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
                  garantia: bool = True, planeta: str = termico.PLANETA_POR_DEFECTO):
-        _t0_construccion = time.perf_counter()
+        _t0_construccion = time.perf_counter()      # tiempo de pared, igual que _cronometrado
         self.tiempo_computo_s = 0.0
         self._cronometro_nivel = 0
         if isinstance(nivel, bool) or not isinstance(nivel, int) or not 1 <= nivel <= NIVEL_MAX:

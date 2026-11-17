@@ -155,7 +155,7 @@ Parámetros opcionales:
 
 Con 20 semillas sirve el JSON del escenario: `docs/COMPARACION_POLITICAS.json` para `congelado` y `docs/COMPARACION_POLITICAS_exigente.json` para `exigente` (generados por `scripts/comparacion_politicas.py`). Otros valores calculan en la petición y tardan. La caché distingue escenario y número de semillas. La respuesta trae `escenario`.
 
-Variantes publicadas, con su rótulo: `hibrido`; `sin_rna`; `sin_difuso`; `sin_ag_vecino` («sin AG: vecino más cercano»); `ruta_corta` («ruta corta (voraz)»). `ag_puro` no se publica (ev3-d71): no mide el AG. La variante `sin_ag` de las regeneraciones anteriores es `sin_ag_vecino`. Las variantes `sin_ag_mas_corta` («sin AG: permutación más corta») y `sin_ag_2opt` («sin AG: 2-opt») entran con la regeneración definitiva (TODO-CIFRAS).
+Variantes publicadas, con su rótulo: `hibrido`; `sin_rna`; `sin_difuso`; `sin_ag_vecino` («sin AG: vecino más cercano»); `ruta_corta` («ruta corta (voraz)»). `ag_puro`, con el rótulo «el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto» (ev3-d71). La variante `sin_ag` de las regeneraciones anteriores es `sin_ag_vecino`. Las variantes `sin_ag_mas_corta` («sin AG: permutación más corta») y `sin_ag_2opt` («sin AG: 2-opt») entran con la regeneración definitiva (TODO-CIFRAS).
 
 > **Provisional:** los valores de esta sección se regeneran tras ARX-92, y la prueba de `/comparacion` en vivo puede cambiar (`ag_puro`). No es definitiva hasta que el Orquestador decida.
 

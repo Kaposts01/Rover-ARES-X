@@ -18,7 +18,7 @@ Arranque con el script (crea `.venv-ares`, instala `requirements.txt` y arranca 
 
 Para las pruebas y el notebook: `python -m pip install -r requirements-dev.txt`.
 
-- Juego de escritorio: `python juego/main.py`. Requiere `pygame-ce`, que no está en `requirements.txt`: `python -m pip install pygame-ce`.
+- Juego de escritorio: `python juego/main.py`. Necesita `pygame-ce` con versión fija, instalado aparte: `python -m pip install pygame-ce==2.5.8`. Solo lo usa el juego de escritorio; la demo web, con `arrancar`, no lo necesita.
 - Sin ventana: `python -m juego --headless --semilla 11 --pasos 300 --nivel 3`.
 
 ## Técnicas

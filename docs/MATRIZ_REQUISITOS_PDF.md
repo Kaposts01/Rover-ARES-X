@@ -81,7 +81,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | RF-11 | Evolución del fitness y precisión de la RNA con controles por iteración | Parcial | Fitness por generación en `GET /ag` (Cumple en API). Falta la precisión de la RNA por iteración y la vista *(UI)* | 2 h + *(UI)* |
 | RF-12 | Exportar trazas a CSV y configuración/resultados a JSON; guardar semillas y versiones | Parcial | `juego/exportar.py:55-91` (CSV bitácora + JSON configuración). Versión del software no se registra | 1 h |
 | RF-13 | Fallos de sensor, pérdida de enlace y modo seguro sin excepción no controlada | Parcial | Falla de sensor `juego/partida.py` (`_evento_falla_sensor`, 3 pasos); modo seguro `integracion.py:209`; pérdida de enlace no existe | 3 h |
-| RF-14 | Comparar híbrido con ≥ 2 ablaciones (sin RNA, sin difuso o sin AG) | Parcial | `juego/comparacion.py` (`VARIANTES`): sin RNA y sin difuso medidas en el escenario exigente, 20 semillas (`docs/COMPARACION_POLITICAS_exigente.json`). La variante «sin AG» es `sin_ag_vecino` («sin AG: vecino más cercano»): mide la heurística voraz, no el AG. Las variantes `sin_ag_mas_corta` y `sin_ag_2opt` (entrega 2) TODO-CIFRAS, a la espera de la regeneración definitiva; `intervencion.py:22` (`opciones_variantes`) | TODO-CIFRAS |
+| RF-14 | Comparar híbrido con ≥ 2 ablaciones (sin RNA, sin difuso o sin AG) | Cumple | `juego/comparacion.py` (`VARIANTES`), escenario exigente y congelado, 20 semillas (`docs/COMPARACION_POLITICAS_exigente.json`, `docs/COMPARACION_POLITICAS.json`): sin RNA, sin difuso, sin AG en sus tres formas (`sin_ag_vecino`, `sin_ag_mas_corta`, `sin_ag_2opt`) y AG puro (`ag_puro`). `intervencion.py:22` (`opciones_variantes`) | — |
 | RF-15 | ≥ 20 semillas con métricas y dispersión | Cumple | `docs/COMPARACION_POLITICAS.json` y `docs/COMPARACION_POLITICAS_exigente.json` (20 semillas): por variante, `pasos.desviacion` y `pasos.rango_intercuartil`, y lo mismo en `colisiones` y `bateria_final`; `docs/TABLA_MODOS.md` (medias y medianas) | — |
 
 ## 7. Eventos (§6)
@@ -152,7 +152,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | Energía restante, distancia de ruta, ciencia, replanes, tiempo de cómputo | Falta | No están en la tabla | 3 h |
 | Promedio, mediana y dispersión | Parcial | Falta la dispersión | 1 h |
 | Baseline de menor distancia sin riesgos (control) | Falta | No existe como variante. Las ablaciones de ARX-28b quitan una técnica del híbrido; no son un control de ruta sin riesgos | 2 h |
-| AG puro con riesgos fijos | Parcial | Modo `ag` con riesgo estimado, no fijo | 1 h |
+| AG puro con riesgos fijos | Cumple | `ag_puro` en `/comparacion`: el mismo AG de orden con el riesgo congelado y sin RNA ni difuso (ev3-d71) | — |
 | Híbrido completo y dos ablaciones | Cumple | `intervencion.py`, `docs/TABLA_MODOS.md` | — |
 | Separar tiempo offline (entrenamiento RNA) y online (decisión) | Falta | No se mide | 1 h |
 
@@ -180,13 +180,13 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 
 ## 13b. M2 por técnica (ARX-48)
 
-M2 (variar una técnica altera una decisión, velocidad o ruta) no tiene un «cumple» único: se evalúa técnica por técnica. Provisional: cifras de la regeneración de `feat/regen-cifras`; se regeneran tras ARX-92.
+M2 (variar una técnica altera una decisión, velocidad o ruta) no tiene un «cumple» único: se evalúa técnica por técnica. Cifras de la regeneración definitiva (`fcd2835`).
 
 | Técnica | Estado de M2 | Evidencia | Pendiente |
 |---|---|---|---|
 | Difuso | Cumple, con efecto en el resultado | Escenario exigente, 20 semillas: 20 de 20 con difuso y 15 de 20 sin él (`docs/COMPARACION_POLITICAS_exigente.json`). Divergencia directa en 20 de 20 semillas (`docs/TRAZA_DIVERGENCIAS_exigente.csv`) | — |
 | RNA | Parcial: altera decisiones, sin efecto en el resultado | Divergencia directa en 3 de 20 semillas (4, 10 y 18), con 1 a 4 pasos de diferencia; sin cambio de éxito ni de colisiones; redundante con el supervisor. Recall de barrancos 0,70–0,80 con `borde_barranco` y 0,000 sin él (ARX-28f) | No se abre ningún intento más salvo que lo pida el usuario |
-| AG | Parcial: decide el orden de visita en el juego; con 10 sitios no supera a la mejora local | Medido con 10 sitios y 20 semillas (`docs/planes/mediciones/medicion_92c_ex10.json`): el híbrido gana 12 de 20, frente a 14 con el vecino más cercano, 17 con 2-opt y 9 con el AG puro (el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto). Es una falla de búsqueda del AG (INFORME §4.3). Con 3 y 4 sitios: TODO-CIFRAS | Penalización graduada de la inviabilidad y siembra con el vecino más cercano (trabajo futuro) |
+| AG | Parcial: decide el orden de visita en el juego; con 10 sitios no supera a la mejora local | Medido con 10 sitios y 20 semillas (`docs/planes/mediciones/medicion_92c_ex10.json`): el híbrido gana 12 de 20, frente a 14 con el vecino más cercano, 17 con 2-opt y 9 con el AG puro (el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto). Es una falla de búsqueda del AG (INFORME §4.3). Con 3 y 4 sitios, la permutación más corta y 2-opt igualan al híbrido en éxitos y pasos medios (congelado 20/20 y 43,85; exigente 20/20 y 54,3) | Penalización graduada de la inviabilidad y siembra con el vecino más cercano (trabajo futuro) |
 
 ## 14. Decisiones que chocan con fichas aprobadas (no resueltas en silencio)
 

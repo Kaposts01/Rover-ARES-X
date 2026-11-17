@@ -77,7 +77,7 @@ Cuatro variantes con la misma semilla: híbrido, `sin_rna`, `sin_difuso` y `sin_
 - **Cómo leer la traza:** la columna `origen` separa `directa` (la primera divergencia por semilla y variante que cambia
   decisión, velocidad o ruta), `directa_codigo` (solo cambia el código de motivo) y `consecuencia`. Las reglas están en
   `CONTRATOS_GRAFICOS.md` §7.
-- **Resultado actual (20 semillas):** TODO-CIFRAS (regeneración definitiva, con la entrega 2 integrada). Mientras tanto, ver INFORME §4.2 y el contrato §7. Las cifras de la regeneración anterior ya no valen.
+- **Resultado actual (20 semillas, regeneración definitiva `fcd2835`):** en el exigente (4 sitios), el híbrido gana 20/20 con 54,3 pasos de media; sin difuso, 15/20; sin RNA, 20/20 con 54,0. La traza tiene 1403 filas: 35 directas (20 del difuso, 3 de la RNA y 12 del orden de sitios por vecino más cercano, que no mide el AG). Detalle en el contrato §7 y en el INFORME §4.2–§4.3.
 - **Límite de la clasificación:** la directa compara solo la posición y la batería del paso anterior. `paros_seguidos`, la ruta
   y el generador no entran en la comparación. QA lo comprobó en las semillas 4 y 18 con el estado oculto.
 - **Limitación de la RNA sin borde (ARX-28f, control previo):** con `borde_barranco` falso, la RNA no predice barrancos

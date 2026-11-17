@@ -155,18 +155,31 @@ Parámetros opcionales:
 
 Con 20 semillas sirve el JSON del escenario: `docs/COMPARACION_POLITICAS.json` para `congelado` y `docs/COMPARACION_POLITICAS_exigente.json` para `exigente` (generados por `scripts/comparacion_politicas.py`). Otros valores calculan en la petición y tardan. La caché distingue escenario y número de semillas. La respuesta trae `escenario`.
 
-Variantes publicadas, con su rótulo: `hibrido`; `sin_rna`; `sin_difuso`; `sin_ag_vecino` («sin AG: vecino más cercano»); `ruta_corta` («ruta corta (voraz)»). `ag_puro`, con el rótulo «el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto» (ev3-d71). La variante `sin_ag` de las regeneraciones anteriores es `sin_ag_vecino`. Las variantes `sin_ag_mas_corta` («sin AG: permutación más corta») y `sin_ag_2opt` («sin AG: 2-opt») entran con la regeneración definitiva (TODO-CIFRAS).
+Variantes publicadas, con su rótulo:
+- `hibrido`: híbrido completo.
+- `sin_rna`: sin RNA.
+- `sin_difuso`: sin difuso (velocidad fija 0,5).
+- `sin_ag_vecino`: «sin AG: vecino más cercano».
+- `sin_ag_mas_corta`: «sin AG: permutación más corta».
+- `sin_ag_2opt`: «sin AG: 2-opt».
+- `ag_puro`: «el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto» (ev3-d71).
+- `ruta_corta`: «ruta corta (voraz)».
 
-> **Provisional:** los valores de esta sección se regeneran tras ARX-92, y la prueba de `/comparacion` en vivo puede cambiar (`ag_puro`). No es definitiva hasta que el Orquestador decida.
+El bloque de ejemplo de abajo es el real del JSON congelado; las demás variantes siguen la misma forma.
 
 ```json
 {
   "semillas": [1, 2, "…", 20],
+  "escenario": "congelado",
   "variantes": {
-    "hibrido": {"exitos": 19, "n": 20, "tasa_exito": 95.0, "pasos": {"media": 44.5, "mediana": 41.0, "desviacion": 11.019, "rango_intercuartil": 12.75}, "colisiones": {"media": 0.0, "mediana": 0.0, "desviacion": 0.0, "rango_intercuartil": 0.0}, "bateria_final": {"media": 52.05, "mediana": 53.0, "desviacion": 12.15, "rango_intercuartil": 18.5}, "sitios_visitados": {"media": 1.9, "mediana": 2.0, "desviacion": 0.852, "rango_intercuartil": 1.25}},
+    "hibrido": {"exitos": 20, "n": 20, "tasa_exito": 100.0, "pasos": {"media": 43.85, "mediana": 43.0, "desviacion": 6.002, "rango_intercuartil": 10.0}, "colisiones": {"media": 0.0, "mediana": 0.0, "desviacion": 0.0, "rango_intercuartil": 0.0}, "bateria_final": {"media": 52.8, "mediana": 53.5, "desviacion": 8.186, "rango_intercuartil": 7.25}, "sitios_visitados": {"media": 3.0, "mediana": 3.0, "desviacion": 0.0, "rango_intercuartil": 0.0}},
     "sin_rna": {"…": "misma forma"},
     "sin_difuso": {"…": "misma forma"},
-    "sin_ag_vecino": {"…": "misma forma"}
+    "sin_ag_vecino": {"…": "misma forma"},
+    "sin_ag_mas_corta": {"…": "misma forma"},
+    "sin_ag_2opt": {"…": "misma forma"},
+    "ag_puro": {"…": "misma forma"},
+    "ruta_corta": {"…": "misma forma"}
   },
   "filas": [{"semilla": 1, "variante": "hibrido", "estado": "EXITO", "exito": true, "pasos": 46,
              "colisiones": 0, "bateria_final": 36.0, "sitios_visitados": 3}],
@@ -174,26 +187,39 @@ Variantes publicadas, con su rótulo: `hibrido`; `sin_rna`; `sin_difuso`; `sin_a
 }
 ```
 
-Cifras de la ejecución de 20 semillas anterior a la regeneración (**provisionales: se regeneran tras ARX-92**; tasa de éxito, mediana de pasos y colisiones media): híbrido 19/20 (41), sin RNA 19/20 (41), sin difuso 19/20 (41), «sin AG: vecino más cercano» 19/20 (44). Las cuatro tienen 0 colisiones. El bloque «hibrido» de arriba es el real (copiado del archivo); las demás variantes siguen la misma forma y sus valores reales están en el archivo.
+### Escenario «congelado» (3 sitios, nivel 1)
 
-### Escenario «exigente» (ARX-28a y 28b)
-
-Escenario de evaluación de `ESCENARIOS` en `juego/comparacion.py`: nivel 5, sensor más ruidoso (`ruido` 0,6) y detección de peligros más pobre (`p_detectar` 0,4). Los dos valores los fijó la calibración (`docs/planes/ARX-28_calibracion.md`). `prob_fallo` es `None`: en este escenario no hay lecturas NaN, y ninguna fila de la traza tiene `V-SENSOR-NAN`. El escenario «congelado» no cambia.
-
-Resultados de 20 semillas, en `docs/COMPARACION_POLITICAS_exigente.json` (generado con `scripts/comparacion_politicas.py 20 exigente`):
+Evaluación del informe: 20×30, nivel 1, parámetros por defecto. Regeneración definitiva (`fcd2835`), 20 semillas.
 
 | Variante | Éxitos | Media de pasos | Colisiones |
 |---|---|---|---|
-| híbrido | 19/20 | 50,85 | 0 |
-| sin RNA | 19/20 | 50,65 | 0 |
-| sin difuso | 20/20 | 50,85 | 0 |
-| sin AG | 20/20 | 55,2 | 0 |
+| híbrido | 20/20 | 43,85 | 0 |
+| sin RNA | 20/20 | 43,85 | 0 |
+| sin difuso | 20/20 | 43,75 | 0 |
+| sin AG: vecino más cercano | 20/20 | 45,2 | 0 |
+| sin AG: permutación más corta | 20/20 | 43,85 | 0 |
+| sin AG: 2-opt | 20/20 | 43,85 | 0 |
+| AG puro | 20/20 | 43,7 | 0 |
+| ruta corta (voraz) | 20/20 | 47,45 | 0 |
 
-El híbrido y el sin RNA terminan `SIN_RUTA` en la semilla 7 (paso 18); sin difuso (48 pasos) y sin AG (57) la ganan.
+### Escenario «exigente» (4 sitios, nivel 5)
+
+Nivel 5 con sensor más ruidoso (`ruido` 0,6) y detección de peligros más pobre (`p_detectar` 0,4), definidos en `ESCENARIOS` de `juego/comparacion.py`. Los dos valores los fijó la calibración (`docs/planes/ARX-28_calibracion.md`). `prob_fallo` es `None`: no hay lecturas NaN en este escenario, y ninguna fila de la traza tiene `V-SENSOR-NAN`. Regeneración definitiva (`fcd2835`), 20 semillas.
+
+| Variante | Éxitos | Media de pasos | Colisiones |
+|---|---|---|---|
+| híbrido | 20/20 | 54,3 | 0 |
+| sin RNA | 20/20 | 54,0 | 0 |
+| sin difuso | 15/20 | 55,65 | 0,05 |
+| sin AG: vecino más cercano | 19/20 | 58,3 | 0 |
+| sin AG: permutación más corta | 20/20 | 54,3 | 0 |
+| sin AG: 2-opt | 20/20 | 54,3 | 0 |
+| AG puro | 16/20 | 55,2 | 0,05 |
+| ruta corta (voraz) | 15/20 | 59,15 | 0 |
+
+Con 3 y 4 sitios, la permutación más corta y 2-opt dan los mismos éxitos y los mismos pasos medios que el híbrido, tanto en el congelado como en el exigente. Esto no prueba que sean la misma ruta, solo que los pasos medios coinciden.
 
 ### Traza de divergencias (`docs/TRAZA_DIVERGENCIAS_exigente.csv`)
-
-> **Provisional: se regenera tras ARX-92.** Los recuentos de la tabla de abajo son de la traza anterior a la regeneración. La traza regenerada da 3 semillas con divergencia directa de la RNA (4, 10 y 18), 20 del difuso y 12 del AG; ver INFORME §4.2.
 
 Una fila por paso en que una variante difiere del híbrido con la misma semilla. Columnas: `semilla`, `variante`, `tecnica`, `paso`, `celda`, `origen`, `motivo`, `cambio`, `detalle`. Se omiten los pasos en que una de las dos partidas ya terminó (artefacto de fin de partida).
 
@@ -202,18 +228,18 @@ Una fila por paso en que una variante difiere del híbrido con la misma semilla.
 - `directa_codigo`: mismo estado previo, pero solo cambia el código de motivo (`cambio` = `otros_motivos`). No cuenta como directa.
 - `consecuencia`: toda divergencia posterior a la directa o con un estado previo distinto.
 
-Recuentos con 20 semillas:
+Recuentos con 20 semillas (exigente, 4 sitios): 1403 filas, 35 directas y 1368 consecuencias.
 
 | Técnica (variante) | Filas | Directas | Directas en código | Consecuencia |
 |---|---|---|---|---|
-| RNA (`sin_rna`) | 90 | 2 (semillas 4 y 18, paso 2) | 4 | 84 |
-| Difuso (`sin_difuso`) | 803 | 20 (una por semilla) | 0 | 783 |
-| AG (`sin_ag_vecino`, antes `sin_ag`) | 446 | 12 (semillas 3–9, 11–14 y 17; todas en el paso 0) | 0 | 434 |
+| RNA (`sin_rna`) | 110 | 3 (semillas 4, 10 y 18) | 0 | 107 |
+| Difuso (`sin_difuso`) | 781 | 20 (una por semilla) | 0 | 761 |
+| Orden de sitios: vecino más cercano (`sin_ag_vecino`; la columna `tecnica` del CSV dice AG, pero no mide el AG) | 512 | 12 (semillas 3–9, 11–14 y 17; todas en el paso 0) | 0 | 500 |
 
 Lectura, sin atribuir más de lo medido:
-- **Difuso:** altera en 20 de 20 semillas. De sus 20 directas, 16 cambian solo la velocidad; en `sin_difuso` la velocidad es fija (0,5) y no tiene efecto físico. Empeora la semilla 7.
-- **Orden de sitios (`sin_ag_vecino`, antes `sin_ag`):** la variante reemplaza el planificador de orden por el vecino más cercano. Sus cifras son TODO-CIFRAS (regeneración definitiva). La variante mide la heurística voraz, no el AG.
-- **RNA:** cambia una decisión en 2 de 20 semillas (4 y 18, paso 2, `V-RNA-OBSTACULO`): el híbrido tarda +3 pasos en la semilla 4 (51 frente a 48) y +1 en la 18 (42 frente a 41). No cambia el éxito ni las colisiones. Las 4 directas de código y las 84 consecuencias no cambian la decisión. La RNA sigue en evaluación en ARX-28f.
+- **Difuso:** altera en 20 de 20 semillas, y en las 20 la primera divergencia es de velocidad. `sin_difuso` fija la velocidad en 0,5, sin efecto físico. Sin difuso el éxito baja de 20/20 a 15/20.
+- **Orden de sitios (`sin_ag_vecino`):** la variante usa el vecino más cercano y difiere del orden del híbrido en 12 de 20 semillas, siempre en el paso 0. En el exigente, la partida tarda 4,0 pasos más de media (58,3 frente a 54,3). Mide la heurística voraz, no el AG.
+- **RNA:** cambia una decisión en 3 de 20 semillas (4, 10 y 18), con `V-RNA-OBSTACULO`: en las semillas 4 y 18, en el paso 2, y en la 10, en el paso 22. Cuesta +4 pasos en la semilla 4 (53 frente a 49), +1 en la 10 (39 frente a 38) y +1 en la 18 (47 frente a 46). No cambia éxito ni colisiones. Las 107 divergencias de consecuencia son posteriores a la directa.
 
 ---
 

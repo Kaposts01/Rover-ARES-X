@@ -133,3 +133,24 @@ Conclusión: ARX-92 **va en fila** detrás de la rama del motor y de ARX-79b en 
 
 ## Dónde quedé
 - 17/11 · Plan completo (11 secciones). Medición parcial anotada en §3 (exigente sin resultado de partida por el tope; el script `medir_arx92.py` de la carpeta de la sesión lo completa en ~2 min con turno).
+
+## Umbral de empate de 92a (ev3-d74 B) · fijado antes de aplicarlo
+
+Decisión del Maestro (ev3-d74 = B): bajo el umbral de empate gana la permutación más corta (regla de desempate declarada); los pesos no se tocan. Este plan no fijaba el criterio del umbral, así que se usa el percentil 90 del error absoluto de fitness del escenario exigente, como pidió el líder.
+
+**Valor fijado: umbral de empate = 0,0223** (0,022256472696630815 sin redondear; unidades de fitness de `evaluar_ruta`, pesos por defecto).
+
+**Cálculo.** Por cada una de las 20 semillas (1 a 20) del exigente: error de fitness = fitness de la ruta ejecutada (con el mapa de riesgo final) menos fitness de la ruta planificada (con el mapa estimado inicial), ambos con `GeneticPlanner.evaluar_ruta`. Se toma el valor absoluto y el percentil 90 (interpolación lineal de numpy) de las 20 cifras.
+
+**Resultados medidos** (20 semillas por escenario, todas terminan en EXITO, ninguna toca el tope de 500):
+
+| Escenario | Error de pasos real − estimado (media / mediana / máx / p90) | Error de fitness con signo (media / máx) | Error absoluto de fitness (media / mediana / máx / p90) |
+|---|---|---|---|
+| congelado | 1,6 / 1 / 5 / 3,1 | −0,0010 / +0,0022 | 0,0012 / 0 / 0,0105 / 0,0043 |
+| exigente | 8,4 / 8 / 16 / 12 | −0,0112 / 0,0000 | 0,0112 / 0,0099 / 0,0243 / **0,0223** |
+
+Lectura: en el congelado el error es casi nulo (los pasos extra son esperas y recargas; los movimientos efectivos difieren en 0,1 de media). En el exigente la partida es peor que lo estimado en fitness (el error con signo es siempre ≤ 0), por lo que dos permutaciones a menos de 0,0223 de fitness no se distinguen con honestidad: el error de estimación puede invertir su orden. Para el congelado, 0,0223 es unas cinco veces su p90 (0,0043): el umbral único es conservador ahí.
+
+**Datos de origen:** `docs/planes/mediciones/medicion_error_estimacion_92a.json` (filas por semilla y resumen) y `.log`. Script en la carpeta temporal de la sesión (fuera del repositorio). Se midió sobre el worktree `feat/arx-92a` con el código de 92a sin confirmar (`evaluar_ruta`); "pasos real" cuenta las llamadas de `avanzar_ia` hasta estado terminal (incluye esperas y recargas); el JSON trae también los movimientos efectivos (`pasos_mov_real`). Duración: 224,6 s de CPU en un solo proceso.
+
+**El umbral se fijó antes de aplicarlo.** Quedó escrito y con su cálculo antes de tocar el código del desempate; no se ha aplicado. Aplicarlo (con su prueba y el control del congelado contra `d67f96d`) es el paso siguiente y requiere el visto bueno del líder.

@@ -65,6 +65,8 @@ Opciones para el usuario (ficha, sin decidir aquí): (A) aceptar y declarar en e
 
 ## Resultado de 20 semillas
 
+> **Provisional: se regenera tras ARX-92.** Estas cifras son de la regeneración única (ev3-d64), anteriores a ARX-92.
+
 Escenario exigente (nivel 5, ruido 0,6, p_detectar 0,4, `prob_fallo` = None), semillas 1 a 20, cuatro variantes. Archivos: `docs/COMPARACION_POLITICAS_exigente.json` (`python scripts/comparacion_politicas.py 20 exigente`) y `docs/TRAZA_DIVERGENCIAS_exigente.csv` (`python scripts/traza_divergencias.py 20 exigente`). El congelado `docs/COMPARACION_POLITICAS.json` no se tocó.
 
 Medición de éxito, colisiones y pasos (JSON regenerado, ev3-d64 A; `ruta_corta` rotulada como voraz; `ag_puro` no se publica hasta ARX-92):

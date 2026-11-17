@@ -40,7 +40,7 @@ from simulador import MOVIMIENTOS  # noqa: E402
 
 MODOS = {"manual", "rna", "difuso", "ag", "automatico"}
 RUMBOS = {"N", "S", "E", "O", "NE", "NO", "SE", "SO"}
-EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito"}
+EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo"}
 ESTADOS_TERMINALES = {"EXITO", "FRACASO", "SIN_RUTA", "MODO_SEGURO"}
 CARPETA_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 RADIO_EVASION = 3           # drones a esta distancia o menos activan la decisión de combate en automático
@@ -938,6 +938,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         eventos = [{"texto": e} for e in sesion.combate.eventos]
         eventos += [{"nombre": "meteorito", "efecto": "zona_riesgo", "celdas": [_celda(c) for c in m["zona_riesgo"]]}
                     for m in p.meteoritos if m["paso"] == int(p.mision.paso)]
+        eventos += [{"nombre": "sismo", "efecto": "grietas", "celdas": [_celda(c) for c in s["grietas"]]}
+                    for s in p.sismos if s["paso"] == int(p.mision.paso)]
         return {
             "paso": int(p.mision.paso),
             "moviles": drones,

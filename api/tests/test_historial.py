@@ -382,7 +382,8 @@ def test_en_muy_facil_los_drones_no_bloquean_la_victoria(sin_partida):
 
 def test_drones_pendientes_se_cazan_y_no_fracasan_de_inmediato(cliente):
     # N12 (corrección del orquestador): en el refugio con drones pendientes, el objetivo pasa al dron
-    # más cercano; FRACASO solo si no hay forma (aquí, modo rna no dispara)
+    # más cercano; FRACASO solo si no hay forma. Desde ARX-75 la caza por BFS también aplica en modo rna
+    # (ya no «no dispara»): la partida sigue en EXPLORACION con el aviso de drones vivos.
     from juego.partida import Partida
     p = Partida(semilla=11, nivel=3)
     p.modo_ia = "automatico"
@@ -392,7 +393,7 @@ def test_drones_pendientes_se_cazan_y_no_fracasan_de_inmediato(cliente):
     p.mision.visitados = set(p.mundo.sitios)
     p.modo_ia = "rna"
     p._revisar_victoria()
-    assert p.estado == "FRACASO" and any("no dispara" in a for a in p.avisos)
+    assert p.estado == "EXPLORACION" and any("Faltan drones" in a for a in p.avisos)
 
 
 # ---------- ARX-80: fitness del AG y membresías difusas por paso (M3) ----------

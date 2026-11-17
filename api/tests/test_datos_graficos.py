@@ -64,7 +64,7 @@ def test_comparacion_tiene_cuatro_politicas_con_dispersion(cliente):
     # RF-14 y RF-15: híbrido frente a sin RNA, sin difuso y sin AG, con media, mediana y dispersión
     datos = cliente.get("/comparacion?semillas=3").json()
     # ev3-d71: ag_puro no se publica; ruta_corta (voraz) sí, rotulada en la nota
-    assert set(datos["variantes"]) == {"hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "ruta_corta"}
+    assert set(datos["variantes"]) == {"hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_mas_corta", "sin_ag_2opt", "ag_puro", "ruta_corta"}
     for r in datos["variantes"].values():
         assert r["n"] == 3
         assert {"media", "mediana", "desviacion", "rango_intercuartil"} <= set(r["pasos"])

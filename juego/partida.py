@@ -84,8 +84,8 @@ MARGEN_CAZA_DIVISOR = 3   # ARX-79b (plan 79, sec. 3): el margen de caza es max(
 # ARX-79b: factor de seguridad de la garantía = 1 + K_ESCALA·(escala − 1) + K_NIVEL·(nivel − 1), con escala = área / (20·30).
 # El plan 79 (sec. 3) propone K_ESCALA = 0,15 y K_NIVEL = 0,05. Con esos valores NINGUNA variante de 40x60 pasa la garantía
 # (batería 100 − 4·(nivel − 1) frente a rutas de ~65–80 pasos × 1,45 + 15) y en 20x30 Hardcore deja de hallar variante en
-# 3 de 5 semillas (rompe 2 pruebas de api/tests/test_eventos_arx30.py que pasaban). Hasta que el usuario decida (ficha),
-# quedan en 0 (factor 1,0, comportamiento anterior); la fórmula y su prueba están listas.
+# 3 de 5 semillas (rompe 2 pruebas de api/tests/test_eventos_arx30.py que pasaban). El Maestro eligió la batería
+# proporcional al tamaño (ev3-d75 A), así que K queda en 0 por esa decisión (factor 1,0); la fórmula y su prueba están listas.
 FACTOR_SEGURIDAD_K_ESCALA = 0.0
 FACTOR_SEGURIDAD_K_NIVEL = 0.0
 FACTOR_SEGURIDAD_PLAN = (0.15, 0.05)    # valores del plan 79, descartados por la evidencia anterior

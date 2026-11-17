@@ -1396,7 +1396,8 @@ function pintarCalor(datos) {
   barra.style.width = `${Math.min(100, (t / (datos.tolerancia * 1.3)) * 100)}%`;
   barra.style.background = t >= datos.tolerancia ? "#ff5d6c" : t >= datos.tolerancia * 0.66 ? "#ffb454" : "#6ee7a8";
   const sobre = t > datos.tolerancia;
-  if (sobre && !calorSobreTolerancia) avisar(`Calor interno sobre la tolerancia (${datos.tolerancia} °C)`);
+  const nota = datos.aborto_termico_activo === false ? " (aborto térmico desactivado)" : "";
+  if (sobre && !calorSobreTolerancia) avisar(`Calor interno sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
   calorSobreTolerancia = sobre;
 }
 

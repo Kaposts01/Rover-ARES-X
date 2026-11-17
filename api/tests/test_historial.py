@@ -463,7 +463,7 @@ def test_estado_expone_el_ultimo_replanteo_del_ag_tras_un_sismo(cliente):
 
 def test_estado_expone_la_temperatura_interna_segun_el_planeta():
     # ARX-83b: el planeta llega a Partida; T_int sube en Venus y se mantiene en Marte; los campos existen en ambos
-    campos = {"temperatura_interna", "tolerancia", "pasos_sobre_tolerancia"}
+    campos = {"temperatura_interna", "tolerancia", "pasos_sobre_tolerancia", "aborto_termico_activo"}
     series = {}
     for planeta in ("Venus", "Marte"):
         c = TestClient(crear_app())

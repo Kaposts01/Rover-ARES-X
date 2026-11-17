@@ -82,7 +82,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | RF-12 | Exportar trazas a CSV y configuración/resultados a JSON; guardar semillas y versiones | Parcial | `juego/exportar.py:55-91` (CSV bitácora + JSON configuración). Versión del software no se registra | 1 h |
 | RF-13 | Fallos de sensor, pérdida de enlace y modo seguro sin excepción no controlada | Parcial | Falla de sensor `juego/partida.py` (`_evento_falla_sensor`, 3 pasos); modo seguro `integracion.py:209`; pérdida de enlace no existe | 3 h |
 | RF-14 | Comparar híbrido con ≥ 2 ablaciones (sin RNA, sin difuso o sin AG) | Cumple | `juego/comparacion.py` (`VARIANTES`): sin RNA, sin difuso y sin AG en el escenario exigente, 20 semillas (`docs/COMPARACION_POLITICAS_exigente.json`, ARX-28b); `intervencion.py:22` (`opciones_variantes`) | — |
-| RF-15 | ≥ 20 semillas con métricas y dispersión | Parcial | `docs/TABLA_MODOS.md` (20 semillas, medias y medianas). Falta dispersión (desviación o rango intercuartil) | 1 h |
+| RF-15 | ≥ 20 semillas con métricas y dispersión | Cumple | `docs/COMPARACION_POLITICAS.json` y `docs/COMPARACION_POLITICAS_exigente.json` (20 semillas): por variante, `pasos.desviacion` y `pasos.rango_intercuartil`, y lo mismo en `colisiones` y `bateria_final`; `docs/TABLA_MODOS.md` (medias y medianas) | — |
 
 ## 7. Eventos (§6)
 

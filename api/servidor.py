@@ -35,7 +35,7 @@ from genetico import GeneticPlanner, PESOS_POR_DEFECTO  # noqa: E402
 from difuso import BATERIA_MAX, COLUMNAS_MEMBRESIA, DISTANCIA_MAX, INCLINACION_MAX  # noqa: E402
 from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
 from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
-from juego.partida import Partida, METODO_ORDEN  # noqa: E402
+from juego.partida import Partida, METODO_ORDEN, bateria_por_defecto  # noqa: E402
 from juego import termico  # noqa: E402
 from simulador import MOVIMIENTOS  # noqa: E402
 
@@ -57,8 +57,9 @@ class Sesion:
     """Estado de la partida que sirve la API (uno por proceso)."""
 
     def __init__(self, semilla: int = 11, nivel: int = 1, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
-                 planeta: str = "Marte"):
-        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas, planeta=planeta)   # ARX-83b
+                 planeta: str = "Marte", bateria: float = None):
+        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas, planeta=planeta,
+                               bateria=bateria)   # ARX-83b; ARX-87
         # el combate se crea después; se engancha para contar los drones destruidos en la victoria
 
         self.semilla = semilla
@@ -87,6 +88,7 @@ class PartidaIn(BaseModel):
     tamano: Any = "grande"      # ARX-21: pequeno (20x30, el de las evaluaciones), mediano (30x45) o grande (40x60)
     planeta: Any = "Marte"      # ev3-d39 B: planeta del escenario (validación; el terreno es el de Marte hasta el sprint 3)
     modo: Any = "rover"         # "rover" o "sonda"
+    bateria: Any = None          # ARX-87: batería inicial opcional, entre el 50 y el 150 % del valor por defecto
 
 
 SEMILLA_MAX = 2 ** 31 - 1
@@ -120,6 +122,27 @@ def _validar_planeta(planeta, modo) -> None:
         if planeta in PERFILES and modo == "rover":
             sugerencia = "usa modo sonda para este planeta"
         raise ErrorApi(400, str(exc) + (f" Sugerencia: {sugerencia}." if sugerencia else ""))
+
+
+def _bateria_inicial(valor, nivel, filas, columnas):
+    """ARX-87: None si no hay campo; si lo hay, debe ser un número entre el 50 y el 150 % de la batería por defecto del
+    nivel y el tamaño. Fuera de rango o no numérico: 422 con el motivo."""
+    if valor is None:
+        return None
+    if isinstance(valor, bool) or not isinstance(valor, (int, float, str)):
+        raise ErrorApi(422, "batería inicial: escribe un número")
+    try:
+        b = float(valor)
+    except (TypeError, ValueError):
+        raise ErrorApi(422, "batería inicial: escribe un número")
+    if not math.isfinite(b):
+        raise ErrorApi(422, "batería inicial: escribe un número")
+    defecto = bateria_por_defecto(nivel, filas, columnas)
+    bajo, alto = 0.5 * defecto, 1.5 * defecto
+    if not bajo <= b <= alto:
+        raise ErrorApi(422, f"batería inicial fuera del 50–150 % del valor por defecto ({bajo:.0f}–{alto:.0f}) "
+                            f"para el nivel {nivel} y el tamaño {filas}×{columnas}")
+    return b
 
 
 def validar_partida(datos: "PartidaIn") -> tuple:
@@ -762,8 +785,9 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         semilla, nivel = validar_partida(datos)
         try:
             filas, columnas = _tamano(datos.tamano)
+            bateria = _bateria_inicial(datos.bateria, nivel, filas, columnas)   # ARX-87
             app.state.sesion = Sesion(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas,
-                                       planeta=datos.planeta)
+                                       planeta=datos.planeta, bateria=bateria)
             app.state.sesion.planeta = datos.planeta
             app.state.sesion.modo_planeta = datos.modo
         except ValueError as exc:

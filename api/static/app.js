@@ -1679,6 +1679,8 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
   try {
     const cuerpo = { nivel, tamano, planeta: config.planeta, modo: config.vehiculo };
     if (semilla != null) cuerpo.semilla = semilla;
+    const bateriaCampo = document.getElementById("bateria-inicial");   // ARX-87: opcional; vacío = por defecto
+    if (bateriaCampo && bateriaCampo.value.trim() !== "") cuerpo.bateria = Number(bateriaCampo.value);
     for (const clave of Object.keys(cuerpo)) if (cuerpo[clave] == null) delete cuerpo[clave];   // sin planeta, el motor usa Marte y rover
     let datos = await llamar("POST", "/partida", cuerpo);
     if (!datos) return false;

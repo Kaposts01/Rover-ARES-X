@@ -134,7 +134,8 @@ Estado: en `feat/arx-30-bc`, QA vuelta 2 (17/11): aprobado con observaciones. Pe
   ganables en la prueba de QA). En Medio, Difícil y Hardcore la señal se rechaza por batería en 12 de 12 casos, así que casi
   nunca aparece. La causa es previa a la rama: el estimador de `_es_ganable` y `_plan_con_paradas` es optimista en el mapa
   grande (ya ocurre en `main` sin eventos). Lo sigue la tarea ARX-79. La reserva de 5 % está aprobada (ficha ev3-d56, opción A);
-  **la decisión abierta sobre la reserva en el mapa grande es la ficha ev3-d59**. Mientras tanto, no contar con la señal en el mapa grande. En
+  la ficha ev3-d59 está aprobada (opción A, 17/11: «integrar ya y arreglar el mapa grande en ARX-79»). Mientras no se arregle
+  en ARX-79, no contar con la señal en el mapa grande. En
   pequeño, el barrido de QA (12 semillas por nivel) acepta la señal en los 5 niveles y todas las aceptadas terminan en EXITO.
 - **O-b (BAJO):** la fila «Señal biológica» desaparece del panel de objetivos al visitarla, y `/objetivos` no la devuelve.
   Sin resolver.

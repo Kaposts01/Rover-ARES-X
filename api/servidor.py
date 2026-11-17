@@ -199,6 +199,33 @@ def _ultimo_replanteo(p) -> dict:
     return None
 
 
+def _sensores(p) -> dict:
+    """ARX-86: lecturas de los sensores en el rumbo actual y riesgo estimado de la celda de enfrente. Usa copias del
+    sensor (no consume el ruido real de la partida). Durante una falla de sensor las lecturas son None (sin llamar a
+    _observar) y cualquier valor no finito pasa a None (QA: NaN rompía el JSON)."""
+    def finito(x, ndigitos=2):
+        return None if x is None or not math.isfinite(float(x)) else round(float(x), ndigitos)
+
+    rumbo = p.rover.rumbo or "N"
+    df, dc = MOVIMIENTOS[rumbo]
+    f, c = p.rover.posicion[0] + df, p.rover.posicion[1] + dc
+    riesgo = None
+    if 0 <= f < p.mision.riesgo.shape[0] and 0 <= c < p.mision.riesgo.shape[1]:
+        riesgo = finito(p.mision.riesgo[f, c])
+    falla = bool(p._falla_restante > 0)
+    rasgos = None
+    if not falla:
+        obs = conduccion._observar(p)
+        rasgos = (obs.get(rumbo) or next(iter(obs.values())))["rasgos"]
+    return {"rumbo": p.rover.rumbo or "sin rumbo",
+            "proximidad": None if rasgos is None else finito(rasgos[0]),
+            "borde": None if rasgos is None else finito(rasgos[1]),
+            "gradiente": None if rasgos is None else finito(rasgos[2]),
+            "vibracion": None if rasgos is None else finito(rasgos[3]),
+            "riesgo_enfrente": riesgo,
+            "falla": falla}
+
+
 def _estado(sesion: Sesion) -> dict:
     p = sesion.partida
     sug = p.sugerencia()
@@ -237,6 +264,7 @@ def _estado(sesion: Sesion) -> dict:
         "tolerancia": termico.TOLERANCIA,
         "aborto_termico_activo": termico.ABORTO_TERMICO_ACTIVO,    # O2 de QA: la interfaz aclara si el aborto está apagado
         "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
+        "sensores": _sensores(p),                    # ARX-86
     }
 
 
@@ -737,6 +765,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             "refugio": _celda(mundo.refugio),
             "sitios": [{"pos": _celda(p), "valor": int(v)} for p, v in mundo.sitios.items()],
             "estaciones": [[int(f), int(c)] for f, c in activa().partida.estaciones],   # ARX-59 (§14)
+            "riesgo_estimado": np.round(np.asarray(activa().partida.mision.riesgo, dtype=float), 2).tolist(),   # ARX-86
         }
 
     @app.get("/estado")
@@ -1180,7 +1209,9 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
 
     @app.get("/paneles")
     def paneles():
-        return _paneles(activa())
+        datos = _paneles(activa())
+        datos["sensores"] = _sensores(activa().partida)    # ARX-86: lo pinta el panel de supervisión
+        return datos
 
     @app.post("/intervencion")
     def intervencion(datos: IntervencionIn):

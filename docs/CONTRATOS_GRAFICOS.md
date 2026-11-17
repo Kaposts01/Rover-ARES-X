@@ -5,8 +5,10 @@ Errores de entrada: 400 con `motivo` legible. Servidor de desarrollo: `http://12
 
 ## 1. AG: `GET /ag`
 
-Parámetros opcionales: `parada_sin_mejora` (entero ≥ 1; tras n generaciones sin mejora, se detiene).
+Parámetros opcionales: `parada_sin_mejora` (entero ≥ 1; tras n generaciones sin mejora, se detiene) y los pesos del fitness `w_ciencia`, `w_distancia`, `w_energia`, `w_riesgo` y `w_tiempo` (número en [0, 5]; fuera de ese rango responde 400 con el motivo).
 Ejecuta el AG sobre los sitios pendientes con los parámetros por defecto (población 30, 30 generaciones).
+
+Los pesos afectan solo al laboratorio `/ag`. En el juego el orden de visita lo fija la ruta más corta validada, no el AG (ev3-d70 A). `parametros.pesos` devuelve los pesos usados: los pedidos en esa llamada, o los guardados en la sesión, o los de defecto (`genetico.PESOS_POR_DEFECTO`: ciencia 1,0; distancia 0,3; energía 0,2; riesgo 0,8; tiempo 0,1). Los pesos pedidos se guardan en la sesión y siguen en vigor hasta el siguiente pedido con `w_*`.
 
 ```json
 {
@@ -147,8 +149,15 @@ Para la curva de fitness de la ruta vigente en cada paso, `fitness` solo está d
 
 ## 7. Comparación de políticas: `GET /comparacion`
 
-Parámetro opcional: `semillas` (entero de 1 a 40; por defecto 20). Con 20 semillas sirve `docs/COMPARACION_POLITICAS.json`
-(generado por `scripts/comparacion_politicas.py`). Otros valores calculan en la petición y tardan.
+Parámetros opcionales:
+- `semillas` (entero de 1 a 40; por defecto 20; fuera de ese rango responde 400).
+- `escenario` (ARX-28d): `congelado` (por defecto) o `exigente`. Otro valor responde 400 con la lista de escenarios válidos.
+
+Con 20 semillas sirve el JSON del escenario: `docs/COMPARACION_POLITICAS.json` para `congelado` y `docs/COMPARACION_POLITICAS_exigente.json` para `exigente` (generados por `scripts/comparacion_politicas.py`). Otros valores calculan en la petición y tardan. La caché distingue escenario y número de semillas. La respuesta trae `escenario`.
+
+Variantes publicadas: `hibrido`, `sin_rna`, `sin_difuso`, `sin_ag` (rotulada como «sin AG: vecino más cercano») y `ruta_corta` (voraz). `ag_puro` no se publica (ev3-d71): no mide el AG.
+
+> **Provisional:** los valores de esta sección se regeneran tras ARX-92, y la prueba de `/comparacion` en vivo puede cambiar (`ag_puro`). No es definitiva hasta que el Orquestador decida.
 
 ```json
 {

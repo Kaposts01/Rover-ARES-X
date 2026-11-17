@@ -17,13 +17,14 @@ from juego import comparacion  # noqa: E402
 
 CSV = os.path.join(RAIZ, "docs", "TRAZA_DIVERGENCIAS_exigente.csv")
 TECNICAS = ("RNA", "difuso", "AG")
-MIN_SEMILLAS_RNA = 3     # umbral del encargo ARX-28b: la RNA debe divergir en al menos 3 de las 20 semillas
+MIN_SEMILLAS_POR_TECNICA = 1   # criterio del Maestro (QA B2): al menos 1 semilla con divergencia real por técnica
 
 
 def _semillas_con_divergencia_directa(filas):
+    """Divergencia real = directa que altera decisión, velocidad o ruta; cambiar solo el código de motivo no cuenta."""
     por_tecnica = defaultdict(set)
     for f in filas:
-        if f["origen"] == "directa":
+        if f["origen"] == "directa" and f["cambio"] != "otros_motivos":
             por_tecnica[f["tecnica"]].add(int(f["semilla"]))
     return por_tecnica
 
@@ -34,8 +35,8 @@ def test_traza_20_semillas_tiene_divergencias_de_cada_tecnica():
     assert {int(x["semilla"]) for x in filas} <= set(range(1, 21))
     por_tecnica = _semillas_con_divergencia_directa(filas)
     for t in TECNICAS:
-        assert por_tecnica[t], f"ninguna divergencia atribuible a {t} en las 20 semillas"
-    assert len(por_tecnica["RNA"]) >= MIN_SEMILLAS_RNA, f"la RNA diverge solo en {sorted(por_tecnica['RNA'])}"
+        assert len(por_tecnica[t]) >= MIN_SEMILLAS_POR_TECNICA, (
+            f"{t}: ninguna semilla con divergencia real (decisión, velocidad o ruta) en las 20 semillas")
     # la RNA se atribuye por su código de veto; el difuso por sus reglas; el AG por el orden/ruta
     assert any(x["motivo"].startswith("V-RNA-") for x in filas if x["tecnica"] == "RNA" and x["origen"] == "directa")
     assert any(x["motivo"].startswith("regla difusa: R") for x in filas if x["tecnica"] == "difuso" and x["origen"] == "directa")

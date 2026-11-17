@@ -116,9 +116,12 @@ def test_mutacion_con_coordenada_invalida_se_repara():
         assert_viable(plan, d.ruta)
 
 
-@pytest.mark.xfail(strict=True, reason="Documenta límite de genetico.py: la reparación usa el mapa ESTIMADO (ev3-d02); "
-                   "un obstáculo real no detectado (riesgo < 0.5) no se repara ni se penaliza.")
-def test_obstaculo_real_no_detectado_se_repara():
+def test_obstaculo_real_no_detectado_lo_veta_el_supervisor_al_ejecutar():
+    """Comportamiento de diseño (ev3-d02): el AG planifica con el mapa ESTIMADO y no ve un obstáculo real
+    no detectado (riesgo < 0.5); la ruta decodificada lo pisa. La cobertura está en la ejecución: al
+    detectarlo (celda de barranco en la lectura del sensor, o RNA con alta probabilidad), el supervisor veta."""
+    from integracion import SafetySupervisor
+
     m = mundo_vacio()
     m.tipo[:, 6] = OBSTACULO
     m.tipo[4, 6] = LIBRE                       # único paso real
@@ -126,4 +129,14 @@ def test_obstaculo_real_no_detectado_se_repara():
     riesgo[2, 6] = 0.05                        # el rover no detectó el obstáculo en (2, 6)
     plan = GeneticPlanner(m, riesgo, k_puntos=2)
     d = plan.decodificar([(2, 2), (2, 9)])
-    assert all(m.tipo[c] == LIBRE for c in d.ruta)
+    # El AG usa el mapa estimado: planea sobre la celda no detectada y no la repara ni la penaliza.
+    assert (2, 6) in d.ruta and m.tipo[2, 6] == OBSTACULO
+    assert d.reparaciones == 0 and plan.evaluar([(2, 2), (2, 9)]).penalizacion == 0
+    # El veto del supervisor cubre la celda real al pisarla.
+    lectura = {"proximidad_frontal_m": 1.0, "borde_barranco": True, "celdas_barranco": [(2, 6)],
+               "altimetria_m": 0.5}
+    dec = SafetySupervisor().decidir({"libre": 0.9}, 0.8, lectura, 90)
+    assert dec.accion == "replanificar" and "V-BORDE-BARRANCO" in dec.motivos
+    dec = SafetySupervisor().decidir({"obstáculo": 0.9, "libre": 0.1}, 0.8,
+                                     dict(lectura, borde_barranco=False), 90)
+    assert dec.accion == "replanificar" and "V-RNA-OBSTACULO" in dec.motivos

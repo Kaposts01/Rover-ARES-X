@@ -109,10 +109,15 @@ function polvo(escena, centro) {
 }
 
 // Eventos del paso: sismo, meteorito, baja conectividad y señal biológica (siempre con la cautela)
-function aplicarEvento(e, escena, suelo, avisar, alGrietas) {
+// Último paso del motor en que se sacudió la cámara: /moviles repite el evento mientras el paso sea el actual
+let pasoSacudido = null;
+function aplicarEvento(e, escena, suelo, avisar, alGrietas, paso) {
   const nombre = (e.nombre || "").toLowerCase();
   if (nombre.includes("sismo")) {
-    efectos.sacudir(0.12, 1.5);
+    if (paso == null || paso !== pasoSacudido) {
+      pasoSacudido = paso;
+      efectos.sacudir(0.12, 1.5);
+    }
     // Grietas: el llamador las pinta como barrancos del terreno, sin volver a pedir /mapa
     if (e.efecto === "grietas" && Array.isArray(e.celdas) && alGrietas) alGrietas(e.celdas);
   }
@@ -163,7 +168,7 @@ export function aplicarMoviles(datos, escena, suelo, avisar, alGrietas) {
   }
   for (const e of datos.eventos_del_paso || []) {
     try {
-      aplicarEvento(e, escena, suelo, avisar, alGrietas);
+      aplicarEvento(e, escena, suelo, avisar, alGrietas, datos.paso);
     } catch (err) {
       registrarFalloMovil(e, err);   // un evento malo tampoco corta el ciclo (E5)
     }

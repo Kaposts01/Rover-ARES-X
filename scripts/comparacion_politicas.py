@@ -1,6 +1,6 @@
 """Genera docs/COMPARACION_POLITICAS.json: híbrido frente a sin RNA, sin difuso y sin AG (RF-14, RF-15).
 
-Uso (desde ares_x/):  python scripts/comparacion_politicas.py [n_semillas]
+Uso (desde ares_x/):  python scripts/comparacion_politicas.py [n_semillas] [escenario]
 Tarda varios minutos (4 variantes x n semillas). El endpoint GET /comparacion sirve este archivo para 20 semillas.
 """
 import json
@@ -15,8 +15,10 @@ from juego.comparacion import comparar  # noqa: E402
 
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 20
-    datos = comparar(range(1, n + 1))
-    salida = os.path.join(RAIZ, "docs", "COMPARACION_POLITICAS.json")
+    escenario = sys.argv[2] if len(sys.argv) > 2 else "congelado"
+    datos = comparar(range(1, n + 1), escenario)
+    nombre = "COMPARACION_POLITICAS.json" if escenario == "congelado" else f"COMPARACION_POLITICAS_{escenario}.json"
+    salida = os.path.join(RAIZ, "docs", nombre)
     with open(salida, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=2)
     for v, r in datos["variantes"].items():

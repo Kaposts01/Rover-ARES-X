@@ -1,0 +1,50 @@
+[
+  {
+    "code": "ev3-d54",
+    "title": "ARES-X: ¿la velocidad que decide el difuso tiene efecto físico en la simulación?",
+    "what": "Hoy la velocidad que calcula el controlador difuso no cambia nada en el mundo: cada paso cuesta la misma batería y nunca hay resbalones, vaya rápido o lento. Solo se anota en la bitácora y puede detener al rover si es muy baja. Por eso en la comparación de políticas «sin difuso» da exactamente lo mismo que el híbrido, y ningún escenario de evaluación puede cambiarlo sin tocar esta regla. Lo que elijas se aplicaría solo al escenario exigente nuevo de la evaluación (ARX-28); el juego y las cifras actuales del informe no cambian hasta otra ficha.",
+    "impact": "Define si la ablación del difuso puede separarse del híbrido en el informe (RF-14, CA-08). Bloquea la subtarea ARX-28c. Con C no hay trabajo y el informe declara la limitación.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Rápido en pendiente puede resbalar", "detail": "A más velocidad y más pendiente, más probabilidad de perder el paso y gastar batería extra; despacio es seguro. Hace verdad lo que el difuso intenta (lento = seguro). Unas 2 h."},
+      {"key": "B", "label": "La velocidad cambia el gasto de batería", "detail": "Rápido gasta más batería por paso; lento gasta menos pero la misión tarda más pasos. Unas 2 h."},
+      {"key": "C", "label": "Dejar la física como está", "detail": "El informe explica que el difuso modula alertas y estado y que su ablación no se separa del híbrido. Sin trabajo."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3054,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-28"],
+    "evidence": [],
+    "evidenceNote": "Plan docs/planes/ARX-28_ablaciones.md §2 y §8; integracion.py:214 (paso_fisico sin velocidad) y simulador.py:199 (costo fijo 1,0); docs/COMPARACION_POLITICAS.json (sin_difuso idéntico al híbrido)."
+  },
+  {
+    "code": "ev3-d55",
+    "title": "ARES-X: ¿cómo entra el escenario de evaluación «exigente» al informe y a la pantalla?",
+    "what": "Para que apagar la RNA o el AG cambie el resultado, ARX-28 agrega un escenario de evaluación más difícil (sensor ruidoso, mapa poco conocido, nivel alto, mismo tamaño 20×30). Las cifras actuales del informe (TABLA_MODOS y la comparación de 20 semillas) salen del escenario de siempre. Hay que decidir si el nuevo se suma o lo reemplaza.",
+    "impact": "Define el trabajo de API, pantalla y documentación (ARX-28d, 28e y Docs) y si se rehacen las tablas del informe. Bloquea 28d y 28e.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Se agrega junto al actual", "detail": "Dos tablas en el informe y un selector «congelado | exigente» en la pantalla de comparación. Las cifras de hoy no cambian. Unas 2 h entre API y pantalla."},
+      {"key": "B", "label": "Reemplaza al actual", "detail": "El informe y /comparacion pasan al escenario exigente; se rehacen TABLA_MODOS y la comparación de 20 semillas (varios turnos pesados). Alrededor de medio día."},
+      {"key": "C", "label": "Solo en el informe", "detail": "Se genera el JSON y se escribe la tabla en el informe; la API y la pantalla siguen mostrando solo el escenario actual. Sin trabajo de API ni de pantalla."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3055,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-28"],
+    "evidence": [],
+    "evidenceNote": "Plan docs/planes/ARX-28_ablaciones.md §3 y §8; docs/TABLA_MODOS.md y docs/COMPARACION_POLITICAS.json (escenario congelado 20×30, garantia=False)."
+  }
+]

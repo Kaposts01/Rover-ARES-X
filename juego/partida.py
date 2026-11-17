@@ -944,8 +944,9 @@ class Partida:
         bloquear la ruta y agotar las recuperaciones (ARX-90, semilla 7 del escenario exigente). Envuelve, sobre la
         instancia, a Mision._actualizar_mapa_estimado (Mision está congelada). Igual para las cuatro variantes del arnés.
 
-        Riesgo conocido (no corregido en ARX-90): un obstáculo no detectado por un sensor ruidoso puede causar colisión en
-        cualquier trayectoria. Ejemplo: exigente, semilla 20, sin difuso, paso 31 (celda (14,27), obstáculo estimado a 0,05).
+        Riesgo conocido (no corregido en ARX-90): una lectura ruidosa que sitúa el obstáculo una celda más lejos puede causar
+        colisión; la ablación sin difuso no se detiene y no consulta _obstaculo_en_ruta. Ejemplo: exigente, semilla 20,
+        sin difuso, paso 31 (celda (14,27), obstáculo estimado a 0,05).
         """
         m = destino if destino is not None else self.mision
         celda = m._celda_observada(pos, rumbo, distancia)

@@ -1585,6 +1585,8 @@ async function refrescarEstado() {
 function aplicarEnlaceYSenal(datos) {
   if (!datos || typeof datos !== "object") return;
   if (datos.enlace && datos.enlace.activo === false) efectos.activarInterferencia(false);
+  // ARX-30c: tras recargar en mitad de un corte, el enlace caído enciende la interferencia sin esperar al evento de /moviles
+  if (datos.enlace && datos.enlace.activo === true) efectos.activarInterferencia(true);
   if ("senal" in datos && datos.senal === null) efectos.quitarSenalBiologica(scene);
 }
 

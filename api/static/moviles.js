@@ -111,6 +111,10 @@ function polvo(escena, centro) {
 // Eventos del paso: sismo, meteorito, baja conectividad y señal biológica (siempre con la cautela)
 // Último paso del motor en que se sacudió la cámara: /moviles repite el evento mientras el paso sea el actual
 let pasoSacudido = null;
+// Una partida nueva vuelve al paso 0: se olvida el último temblor para que un sismo en ese paso vuelva a sacudir
+export function reiniciarEventos() {
+  pasoSacudido = null;
+}
 function aplicarEvento(e, escena, suelo, avisar, alGrietas, paso) {
   const nombre = (e.nombre || "").toLowerCase();
   if (nombre.includes("sismo")) {

@@ -94,8 +94,8 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | Falla de sensor | Cumple | `juego/partida.py:387` (`_evento_falla_sensor`) | — |
 | Sismo | Falta | No existe (solo se menciona en el texto de Tierra, `simulador.py:37`) | 2 h |
 | Meteorito o impacto próximo | Falta | No existe | 2 h |
-| Señal biológica anómala / objeto alienígena | Falta (opcional narrativo) | No existe. El PDF lo marca como opcional | 2 h |
-| Baja conectividad | Falta | No existe | 2 h |
+| Señal biológica anómala / objeto alienígena | Cumple (opcional en el PDF; con límite en mapa grande, ARX-79) | `juego/partida.py:1290` (`_evento_senal_biologica`, ARX-30c): objetivo obligatorio (ev3-d49 B), «no confirma vida» | — |
+| Baja conectividad | Cumple | `juego/partida.py:1238` (`_evento_baja_conectividad`, ARX-30b): efecto de ev3-d48 A (manual y 409 en la IA) | — |
 | Ráfaga / viento en modo sonda | Falta | No hay modo sonda | depende de RF-01 |
 
 ## 8. Pantalla y laboratorios (§8, §9)

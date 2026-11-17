@@ -224,9 +224,9 @@ Texto original, solo como referencia: estado del modo automático continuo y el 
 
 Controles: `POST /escenarios/iniciar` y `POST /escenarios/detener`. Respuesta: el mismo objeto de estado.
 
-## 10. Móviles y eventos: `GET /moviles` (ARX-29: drones; ARX-30: meteoritos)
+## 10. Móviles y eventos: `GET /moviles` (ARX-29: drones; ARX-30: meteoritos, baja de conectividad y señal biológica)
 
-Ya devuelve drones reales con su trayectoria por turno (últimas 50 posiciones), los eventos del último turno y la ruta planificada frente a la ejecutada. `obstaculos_moviles` va vacía hasta ARX-30; es una clave aparte (no se mezcla con `moviles`), con la misma forma que un elemento de `moviles` y tipo `obstaculo_movil`. Cada dron trae `vida` (puntos de vida, 3 al inicio; un impacto le resta 1). Ejemplo de la forma real:
+Ya devuelve drones reales con su trayectoria por turno (últimas 50 posiciones), los eventos del último turno y la ruta planificada frente a la ejecutada. `obstaculos_moviles` va vacía hasta ARX-29; es una clave aparte (no se mezcla con `moviles`), con la misma forma que un elemento de `moviles` y tipo `obstaculo_movil`. Cada dron trae `vida` (puntos de vida, 3 al inicio; un impacto le resta 1). Ejemplo de la forma real:
 
 ```json
 {"paso": 12, "moviles": [{"id": "dron-1", "tipo": "dron", "pos": [12, 7], "trayectoria": [[11, 7], [12, 7]], "estado": "persecucion", "vida": 3}], "obstaculos_moviles": [], "eventos_del_paso": [{"texto": "dron 1: persecución"}], "ruta": {"planificada": [[19, 0], [18, 0]], "ejecutada": [[19, 0], [18, 0]]}}
@@ -247,7 +247,7 @@ Posiciones y trayectorias de los elementos móviles por paso, para animarlos. In
   ],
   "eventos_del_paso": [
     {"nombre": "meteorito", "efecto": "zona_riesgo", "celdas": [[3, 19], [3, 20]]},
-    {"nombre": "senal_biologica", "efecto": "lectura_anomala", "celda": [5, 12], "afirma_vida": false}
+    {"nombre": "senal_biologica", "efecto": "lectura_anomala", "celdas": [[5, 12]], "afirma_vida": false}
   ],
   "ruta": {"planificada": [[19, 0], [18, 0]], "ejecutada": [[19, 0]]}
 }
@@ -257,7 +257,12 @@ Reglas de los contratos:
 - `afirma_vida` es siempre `false` en la señal biológica: el sistema nunca confirma vida (PDF §3).
 - `impacto` del meteorito indica si ya cayó; si cayó, la celda queda como cráter u obstáculo nuevo.
 - `pos` y `trayectoria` son (fila, columna), como en el resto de la API.
-- Todo evento de `eventos_del_paso` que actúa sobre el terreno trae `celda` (fila, columna), incluida la señal biológica.
+- Todo evento de `eventos_del_paso` que actúa sobre el terreno trae `celdas` (lista de [fila, columna]), incluida la señal biológica. Así lo emite el código (`celdas`, no `celda`).
+- `afirma_vida` es `false` siempre, también en el aviso («anomalía, no confirma vida») y en el detalle del evento.
+- Baja de conectividad (ARX-30b), en el paso del corte: `{"nombre": "baja_conectividad", "efecto": "sin_enlace", "restante": n}`.
+- Señal biológica (ARX-30c), en el paso en que aparece: `{"nombre": "senal_biologica", "efecto": "lectura_anomala", "celdas": [[f, c]], "afirma_vida": false}`.
+- `/estado.enlace` es `{"activo": true|false, "restante": n}`; la interfaz apaga la interferencia cuando `activo` es `false`.
+- `/estado.senal` es la celda de la señal mientras no se visite, y `null` después (o si no hay).
 
 ---
 
@@ -331,6 +336,18 @@ Respuesta de un paso: `{accion, motivos, estado, ultimo, eventos_combate}`.
 - **Meteoritos** (`POST /evento {"nombre": "meteorito"}`, ARX-30): impacto a 2–3 celdas del rover; la celda queda con
   riesgo 1,0 y su entorno con 0,6; el impacto cuesta 5 de batería. La misión evita la zona y puede disparar `V-DISPARO-RIESGO`
   si el rover queda dentro.
+- **Baja de conectividad** (`POST /evento {"nombre": "baja_conectividad"}`, ARX-30b): corte de 4 pasos (`PASOS_SIN_ENLACE`).
+  En manual, cada orden de `/mover` se pierde con probabilidad 0,5 mientras dura el corte; la respuesta es `movido: false`
+  con `motivo: "sin enlace"` y el paso avanza igual. En los modos de IA, `/recomendacion` e `/intervencion` responden 409
+  («sin enlace: faltan N pasos para recuperarlo»). Caída espontánea solo en partidas jugables, con `ENLACE_PROB_POR_NIVEL`
+  (0,2 % a 0,6 % por paso) y su generador propio (`[semilla, 1315]`).
+- **Señal biológica** (`POST /evento {"nombre": "senal_biologica"}`, ARX-30c): una celda libre a distancia Chebyshev 3–6 del
+  rover, que pasa a ser objetivo obligatorio (ev3-d49 B). Respuesta `{ok: true, celda, afirma_vida: false}`. Antes de
+  crearla comprueba que la partida siga ganable con la batería (caza de drones obligatorios, `MARGEN_ENERGIA` 15 % y, si el
+  meteorito está activo, 5 % de reserva). Si no cabe, `ok: false` con «batería insuficiente para la señal» o «sin celda
+  alcanzable que deje la partida ganable». No aparece si queda un solo objetivo pendiente (ev3-d51 A). Sin puntos extra
+  (ev3-d52 A). Caída espontánea en todos los niveles (`SENAL_PROB_POR_NIVEL`, 0,2 % a 0,6 % por paso, `[semilla, 1316]`),
+  con las mismas reglas.
 
 Pendiente de §13: su texto dice que rna, difuso y ag no disparan. Desde ARX-75 disparan a un dron en línea; la caza por BFS
 de los drones obligatorios sigue siendo solo del modo automático.

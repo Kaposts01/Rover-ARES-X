@@ -110,7 +110,7 @@
         "rango_intercuartil": 0.0
       }
     },
-    "sin_ag": {
+    "sin_ag_vecino": {
       "exitos": 19,
       "n": 20,
       "tasa_exito": 95.0,
@@ -772,7 +772,7 @@
     },
     {
       "semilla": 1,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 73,
@@ -782,7 +782,7 @@
     },
     {
       "semilla": 2,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 60,
@@ -792,7 +792,7 @@
     },
     {
       "semilla": 3,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 52,
@@ -802,7 +802,7 @@
     },
     {
       "semilla": 4,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 69,
@@ -812,7 +812,7 @@
     },
     {
       "semilla": 5,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 67,
@@ -822,7 +822,7 @@
     },
     {
       "semilla": 6,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 58,
@@ -832,7 +832,7 @@
     },
     {
       "semilla": 7,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 63,
@@ -842,7 +842,7 @@
     },
     {
       "semilla": 8,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 68,
@@ -852,7 +852,7 @@
     },
     {
       "semilla": 9,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 52,
@@ -862,7 +862,7 @@
     },
     {
       "semilla": 10,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 39,
@@ -872,7 +872,7 @@
     },
     {
       "semilla": 11,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 58,
@@ -882,7 +882,7 @@
     },
     {
       "semilla": 12,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 55,
@@ -892,7 +892,7 @@
     },
     {
       "semilla": 13,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "FRACASO",
       "exito": false,
       "pasos": 78,
@@ -902,7 +902,7 @@
     },
     {
       "semilla": 14,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 54,
@@ -912,7 +912,7 @@
     },
     {
       "semilla": 15,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 42,
@@ -922,7 +922,7 @@
     },
     {
       "semilla": 16,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 69,
@@ -932,7 +932,7 @@
     },
     {
       "semilla": 17,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 65,
@@ -942,7 +942,7 @@
     },
     {
       "semilla": 18,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 47,
@@ -952,7 +952,7 @@
     },
     {
       "semilla": 19,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 48,
@@ -962,7 +962,7 @@
     },
     {
       "semilla": 20,
-      "variante": "sin_ag",
+      "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
       "pasos": 49,

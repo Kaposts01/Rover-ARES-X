@@ -648,7 +648,7 @@ export function iniciarLaboratorios(dependencias) {
 }
 
 // ---------- comparación de políticas (CA del PDF; contrato §7 de CONTRATOS_GRAFICOS.md) ----------
-const VARIANTES_POL = [["hibrido", "híbrido"], ["sin_rna", "sin RNA"], ["sin_difuso", "sin difuso"], ["sin_ag", "sin AG"]];
+const VARIANTES_POL = [["hibrido", "híbrido"], ["sin_rna", "sin RNA"], ["sin_difuso", "sin difuso"], ["sin_ag_vecino", "sin AG: vecino más cercano"]];
 const ETIQUETA_METRICA_POL = { pasos: "pasos", bateria_final: "batería final", sitios_visitados: "sitios visitados", colisiones: "colisiones" };
 let polDatos = null;
 let polBarras = [];   // geometría de las barras para el cursor

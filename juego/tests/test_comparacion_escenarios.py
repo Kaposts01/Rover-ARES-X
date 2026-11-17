@@ -25,8 +25,10 @@ def test_regresion_congelado_filas_identicas():
     with open(ruta, encoding="utf-8") as f:
         publicado = json.load(f)
     d = comparacion.comparar(range(1, 21))
-    obtenidas = [f for f in d["filas"] if f["variante"] in comparacion.VARIANTES_ABLACION]
-    esperadas = [f for f in publicado["filas"] if f["variante"] in comparacion.VARIANTES_ABLACION]
+    # ARX-92d: sin_ag_mas_corta aún no está publicada; el JSON trae sin_ag renombrado a sin_ag_vecino (mismas cifras)
+    vigiladas = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino")
+    obtenidas = [f for f in d["filas"] if f["variante"] in vigiladas]
+    esperadas = [f for f in publicado["filas"] if f["variante"] in vigiladas]
     assert len(obtenidas) == 80
     assert obtenidas == esperadas
     assert d["escenario"] == "congelado"

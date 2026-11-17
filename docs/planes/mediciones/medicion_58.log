@@ -1,0 +1,235 @@
+inicio 18:06:54
+1 1 EXITO 100 EXITO
+1 2 EXITO 72 EXITO
+1 3 EXITO 114 EXITO
+1 4 EXITO 72 EXITO
+1 5 EXITO 82 EXITO
+1 6 EXITO 113 EXITO
+1 7 EXITO 73 EXITO
+1 8 EXITO 101 EXITO
+1 9 EXITO 84 EXITO
+1 10 EXITO 103 EXITO
+1 11 EXITO 73 EXITO
+1 12 EXITO 121 EXITO
+1 13 EXITO 111 EXITO
+1 14 EXITO 81 EXITO
+1 15 EXITO 94 EXITO
+1 16 EXITO 72 EXITO
+1 17 EXITO 81 EXITO
+1 18 EXITO 100 EXITO
+1 19 EXITO 92 EXITO
+1 20 EXITO 86 EXITO
+2 1 EXITO 100 EXITO
+2 2 EXITO 77 EXITO
+2 3 EXITO 93 EXITO
+2 4 EXITO 81 EXITO
+2 5 EXITO 95 EXITO
+2 6 EXITO 77 EXITO
+2 7 EXITO 79 EXITO
+2 8 EXITO 83 EXITO
+2 9 EXITO 88 EXITO
+2 10 EXITO 72 EXITO
+2 11 EXITO 82 EXITO
+2 12 EXITO 80 EXITO
+2 13 EXITO 115 EXITO
+2 14 EXITO 66 EXITO
+2 15 EXITO 110 EXITO
+2 16 EXITO 110 EXITO
+2 17 EXITO 70 EXITO
+2 18 EXITO 69 EXITO
+2 19 EXITO 117 EXITO
+2 20 EXITO 91 EXITO
+3 1 FRACASO 103 caza sin bateria
+3 2 EXITO 99 EXITO
+3 3 EXITO 94 EXITO
+3 4 FRACASO 81 caza sin bateria
+3 5 EXITO 77 EXITO
+3 6 EXITO 91 EXITO
+3 7 FRACASO 125 otra: Meteorito: impacto en una zona de riesgo cercana
+3 8 EXITO 107 EXITO
+3 9 EXITO 97 EXITO
+3 10 EXITO 119 EXITO
+3 11 FRACASO 98 caza sin bateria
+3 12 FRACASO 137 otra: Meteorito: impacto en una zona de riesgo cercana
+3 13 FRACASO 96 caza parada: 12 pasos sin avance (regla 79c)
+3 14 EXITO 127 EXITO
+3 15 FRACASO 87 caza sin bateria
+3 16 FRACASO 107 caza parada: 12 pasos sin avance (regla 79c)
+3 17 FRACASO 131 bateria 0 con sitios pendientes
+3 18 EXITO 87 EXITO
+3 19 EXITO 120 EXITO
+3 20 FRACASO 65 bateria insuficiente para sitios restantes
+4 1 FRACASO 99 caza sin bateria
+4 2 FRACASO 91 caza sin bateria
+4 3 FRACASO 99 caza sin bateria
+4 4 FRACASO 77 caza sin bateria
+4 5 FRACASO 64 caza sin bateria
+4 6 SIN_RUTA 91 SIN_RUTA
+4 7 FRACASO 101 caza sin bateria
+4 8 FRACASO 71 caza sin bateria
+4 9 FRACASO 138 bateria 0 con sitios pendientes
+4 10 EXITO 97 EXITO
+4 11 EXITO 100 EXITO
+4 12 EXITO 120 EXITO
+4 13 EXITO 116 EXITO
+4 14 EXITO 105 EXITO
+4 15 FRACASO 130 bateria 0 con sitios pendientes
+4 16 EXITO 104 EXITO
+4 17 FRACASO 121 bateria 0 con sitios pendientes
+4 18 FRACASO 64 bateria insuficiente para sitios restantes
+4 19 FRACASO 125 otra: Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos
+4 20 FRACASO 68 caza sin bateria
+5 1 FRACASO 99 bateria 0 con sitios pendientes
+5 2 FRACASO 91 caza sin bateria
+5 3 FRACASO 92 caza sin bateria
+5 4 FRACASO 101 bateria 0 con sitios pendientes
+5 5 FRACASO 101 bateria 0 con sitios pendientes
+5 6 FRACASO 64 caza sin bateria
+5 7 FRACASO 66 bateria insuficiente para sitios restantes
+5 8 FRACASO 65 bateria insuficiente para sitios restantes
+5 9 EXITO 103 EXITO
+5 10 FRACASO 93 caza sin bateria
+5 11 FRACASO 116 otra: Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos
+5 12 EXITO 102 EXITO
+5 13 FRACASO 69 caza sin bateria
+5 14 FRACASO 92 caza sin bateria
+5 15 FRACASO 93 caza sin bateria
+5 16 EXITO 82 EXITO
+5 17 FRACASO 89 caza sin bateria
+5 18 FRACASO 88 caza sin bateria
+5 19 EXITO 94 EXITO
+5 20 FRACASO 95 caza sin bateria
+
+## Tamano grande: 100 partidas en 724 s
+| Nivel | Exito | Pasos media | Pasos mediana | Causas de derrota |
+|---|---|---|---|---|
+| 1 | 20/20 | 91.2 | 89.0 | - (semillas []) |
+| 2 | 20/20 | 87.8 | 82.5 | - (semillas []) |
+| 3 | 10/20 | 101.8 | 98.0 | caza sin bateria: 4; otra: Meteorito: impacto en una zona de riesgo cercana: 2; caza parada: 12 pasos sin avance (regla 79c): 2; bateria 0 con sitios pendientes: 1; bateria insuficiente para sitios restantes: 1 (semillas [1, 4, 7, 11, 12, 13, 15, 16, 17, 20]) |
+| 4 | 6/20 | 107.0 | 104.5 | caza sin bateria: 8; SIN_RUTA: 1; bateria 0 con sitios pendientes: 3; bateria insuficiente para sitios restantes: 1; otra: Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos: 1 (semillas [1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 17, 18, 19, 20]) |
+| 5 | 4/20 | 95.2 | 98.0 | bateria 0 con sitios pendientes: 3; caza sin bateria: 10; bateria insuficiente para sitios restantes: 2; otra: Faltan drones: 1 vivo; el refugio queda bloqueado hasta destruirlos: 1 (semillas [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 13, 14, 15, 17, 18, 20]) |
+codigo grande 0 18:19:03
+1 1 EXITO 49 EXITO
+1 2 EXITO 58 EXITO
+1 3 EXITO 48 EXITO
+1 4 EXITO 38 EXITO
+1 5 EXITO 34 EXITO
+1 6 EXITO 47 EXITO
+1 7 EXITO 47 EXITO
+1 8 EXITO 49 EXITO
+1 9 EXITO 57 EXITO
+1 10 EXITO 54 EXITO
+1 11 EXITO 60 EXITO
+1 12 EXITO 54 EXITO
+1 13 EXITO 37 EXITO
+1 14 EXITO 40 EXITO
+1 15 EXITO 46 EXITO
+1 16 EXITO 51 EXITO
+1 17 EXITO 57 EXITO
+1 18 EXITO 48 EXITO
+1 19 EXITO 47 EXITO
+1 20 EXITO 43 EXITO
+2 1 EXITO 51 EXITO
+2 2 EXITO 45 EXITO
+2 3 EXITO 35 EXITO
+2 4 EXITO 40 EXITO
+2 5 EXITO 58 EXITO
+2 6 EXITO 37 EXITO
+2 7 EXITO 46 EXITO
+2 8 EXITO 35 EXITO
+2 9 EXITO 47 EXITO
+2 10 EXITO 54 EXITO
+2 11 EXITO 60 EXITO
+2 12 EXITO 57 EXITO
+2 13 EXITO 62 EXITO
+2 14 EXITO 46 EXITO
+2 15 EXITO 52 EXITO
+2 16 EXITO 47 EXITO
+2 17 EXITO 36 EXITO
+2 18 EXITO 60 EXITO
+2 19 EXITO 61 EXITO
+2 20 EXITO 52 EXITO
+3 1 EXITO 47 EXITO
+3 2 EXITO 62 EXITO
+3 3 EXITO 53 EXITO
+3 4 EXITO 62 EXITO
+3 5 EXITO 64 EXITO
+3 6 EXITO 48 EXITO
+3 7 EXITO 48 EXITO
+3 8 EXITO 55 EXITO
+3 9 EXITO 55 EXITO
+3 10 EXITO 54 EXITO
+3 11 EXITO 41 EXITO
+3 12 EXITO 56 EXITO
+3 13 EXITO 67 EXITO
+3 14 EXITO 68 EXITO
+3 15 EXITO 70 EXITO
+3 16 EXITO 66 EXITO
+3 17 EXITO 56 EXITO
+3 18 EXITO 58 EXITO
+3 19 EXITO 63 EXITO
+3 20 EXITO 49 EXITO
+4 1 EXITO 52 EXITO
+4 2 EXITO 50 EXITO
+4 3 EXITO 47 EXITO
+4 4 EXITO 50 EXITO
+4 5 EXITO 60 EXITO
+4 6 EXITO 61 EXITO
+4 7 EXITO 56 EXITO
+4 8 EXITO 50 EXITO
+4 9 EXITO 45 EXITO
+4 10 EXITO 48 EXITO
+4 11 EXITO 48 EXITO
+4 12 EXITO 56 EXITO
+4 13 EXITO 60 EXITO
+4 14 EXITO 50 EXITO
+4 15 EXITO 52 EXITO
+4 16 EXITO 64 EXITO
+4 17 EXITO 52 EXITO
+4 18 EXITO 48 EXITO
+4 19 EXITO 60 EXITO
+4 20 EXITO 60 EXITO
+5 1 EXITO 55 EXITO
+5 2 EXITO 46 EXITO
+5 3 EXITO 42 EXITO
+5 4 EXITO 57 EXITO
+5 5 EXITO 53 EXITO
+5 6 EXITO 64 EXITO
+5 7 EXITO 54 EXITO
+5 8 EXITO 52 EXITO
+5 9 EXITO 58 EXITO
+5 10 EXITO 47 EXITO
+5 11 EXITO 63 EXITO
+5 12 EXITO 52 EXITO
+5 13 EXITO 52 EXITO
+5 14 EXITO 53 EXITO
+5 15 EXITO 58 EXITO
+5 16 EXITO 58 EXITO
+5 17 EXITO 61 EXITO
+5 18 EXITO 51 EXITO
+5 19 EXITO 59 EXITO
+5 20 EXITO 48 EXITO
+
+## Tamano pequeno: 100 partidas en 128 s
+| Nivel | Exito | Pasos media | Pasos mediana | Causas de derrota |
+|---|---|---|---|---|
+| 1 | 20/20 | 48.2 | 48.0 | - (semillas []) |
+| 2 | 20/20 | 49.0 | 49.0 | - (semillas []) |
+| 3 | 20/20 | 57.1 | 56.0 | - (semillas []) |
+| 4 | 20/20 | 53.5 | 52.0 | - (semillas []) |
+| 5 | 20/20 | 54.1 | 53.5 | - (semillas []) |
+codigo pequeno 0 18:21:15
+tamano pequeno listo 87 s
+tamano grande listo 647 s
+pequeno-1 mapas ganables 20/20
+pequeno-2 mapas ganables 20/20
+pequeno-3 mapas ganables 20/20
+pequeno-4 mapas ganables 20/20
+pequeno-5 mapas ganables 20/20
+grande-1 mapas ganables 20/20
+grande-2 mapas ganables 20/20
+grande-3 mapas ganables 4/20
+grande-4 mapas ganables 0/20
+grande-5 mapas ganables 0/20
+escrito medicion_58_mapas.json
+codigo mapas 0 18:32:04

@@ -489,7 +489,8 @@ class Partida:
         if sombra.riesgo[siguiente] >= 0.5:
             dec = Decision("replanificar", 0.0, ["V-RUTA-CON-RIESGO"])
         distancia = lectura["proximidad_frontal_m"]
-        if dec.accion == "detener" and sombra._obstaculo_en_ruta(pos, rumbo, distancia):
+        # incondicional desde ARX-91 (antes dependía de la parada del difuso, ab46b4a)
+        if sombra._obstaculo_en_ruta(pos, rumbo, distancia):
             dec = Decision("replanificar", 0.0, ["V-OBSTACULO-EN-RUTA"])
         paros = m.paros_seguidos + 1 if dec.accion == "detener" else 0
         if paros >= PASOS_PARADO_MAXIMO:
@@ -990,7 +991,7 @@ class Partida:
         instancia, a Mision._actualizar_mapa_estimado (Mision está congelada). Igual para las cuatro variantes del arnés.
 
         Riesgo conocido (no corregido en ARX-90): una lectura ruidosa que sitúa el obstáculo una celda más lejos puede causar
-        colisión; la ablación sin difuso no se detiene y no consulta _obstaculo_en_ruta. Ejemplo: exigente, semilla 20,
+        colisión; desde ARX-91 la ablación sin difuso también consulta _obstaculo_en_ruta (chequeo incondicional). Ejemplo: exigente, semilla 20,
         sin difuso, paso 31 (celda (14,27), obstáculo estimado a 0,05).
         """
         m = destino if destino is not None else self.mision

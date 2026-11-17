@@ -12,9 +12,9 @@ python -m pip install -r requirements.txt
 
 Arranque con el script (crea `.venv-ares`, instala `requirements.txt` y arranca la API en `http://127.0.0.1:8765/`):
 
-- Windows: `arrancar.bat`. Pruebas: `arrancar.bat pruebas`.
+- Windows: `.\arrancar.bat` (en PowerShell o cmd; también se puede hacer doble clic en arrancar.bat). Pruebas: `.\arrancar.bat pruebas`.
 - bash: `./arrancar.sh`. Pruebas: `./arrancar.sh pruebas`.
-- Otro puerto: `ARES_PUERTO=8790` (en bash: `ARES_PUERTO=8790 ./arrancar.sh`; en Windows, `set ARES_PUERTO=8790` antes de `arrancar.bat`).
+- Otro puerto: `ARES_PUERTO=8790` (en bash: `ARES_PUERTO=8790 ./arrancar.sh`; en Windows, `set ARES_PUERTO=8790` (cmd) o `$env:ARES_PUERTO=8790` (PowerShell) antes de `.\arrancar.bat`).
 
 Para las pruebas y el notebook: `python -m pip install -r requirements-dev.txt`.
 

@@ -68,3 +68,30 @@ def test_exigente_aplica_parametros_y_es_determinista(exigente_fijado):
 def test_exigente_aplica_variante_despues_del_escenario(exigente_fijado):
     p = comparacion.partida_variante(1, "sin_rna", "exigente")
     assert p.mision.usar_rna is False and p.mision.sensor.ruido == R_PRUEBA
+
+
+def test_exigente_prob_fallo_none_no_cambia_el_sensor():
+    assert comparacion.ESCENARIOS["exigente"]["prob_fallo"] is None
+    assert comparacion.ESCENARIOS["congelado"]["prob_fallo"] is None
+    if None in (comparacion.ESCENARIOS["exigente"]["ruido"], comparacion.ESCENARIOS["exigente"]["p_detectar"]):
+        pytest.skip("exigente pendiente de ARX-28a")
+    p = comparacion.partida_variante(1, "hibrido", "exigente")
+    assert p.mision.sensor.prob_fallo == 0.0
+
+
+def test_exigente_prob_fallo_de_prueba_llega_al_sensor(monkeypatch):
+    monkeypatch.setitem(comparacion.ESCENARIOS, "exigente",
+                        {"nivel": 5, "ruido": R_PRUEBA, "p_detectar": P_PRUEBA, "prob_fallo": 0.2})
+    p = comparacion.partida_variante(1, "hibrido", "exigente")
+    assert p.mision.sensor.prob_fallo == 0.2
+    assert p.mision.sensor.ruido == R_PRUEBA
+    # el congelado no se ve afectado
+    assert comparacion.partida_variante(1, "hibrido", "congelado").mision.sensor.prob_fallo == 0.0
+
+
+def test_exigente_prob_fallo_es_determinista(monkeypatch):
+    monkeypatch.setitem(comparacion.ESCENARIOS, "exigente",
+                        {"nivel": 5, "ruido": R_PRUEBA, "p_detectar": P_PRUEBA, "prob_fallo": 0.2})
+    a = comparacion.correr(1, "hibrido", "exigente")
+    b = comparacion.correr(1, "hibrido", "exigente")
+    assert a == b

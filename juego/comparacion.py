@@ -22,8 +22,10 @@ MAX_PASOS = 400
 # "exigente": nivel 5 con sensor más ruidoso y detección de peligros más pobre. ruido y p_detectar los fijó ARX-28a
 # (calibración; ver docs/planes/ARX-28_calibracion.md). Si alguno fuera None el escenario no se podría usar.
 ESCENARIOS = {
-    "congelado": {"nivel": 1, "ruido": None, "p_detectar": None},      # None = no se toca: valores por defecto de Mision
-    "exigente": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4},         # calibrado en ARX-28a (docs/planes/ARX-28_calibracion.md)
+    "congelado": {"nivel": 1, "ruido": None, "p_detectar": None, "prob_fallo": None},      # None = no se toca: valores por defecto de Mision
+    # prob_fallo (ev3-d60 A): probabilidad de lectura NaN del sensor de proximidad, solo en este escenario. None = sin fallo
+    # (comportamiento de 11dae05). La rellena la calibración (medición pedida por el Orquestador); no tiene valor aún.
+    "exigente": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None},         # calibrado en ARX-28a (docs/planes/ARX-28_calibracion.md)
 }
 
 
@@ -67,10 +69,12 @@ def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
     from juego.partida import FILAS_BASE, COLUMNAS_BASE
     p = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False)   # 20x30, sin redibujar el mapa
     m = p.mision
-    if par["ruido"] is not None or par["p_detectar"] is not None:
+    if par["ruido"] is not None or par["p_detectar"] is not None or par.get("prob_fallo") is not None:
         # El escenario se aplica sobre la instancia y se replanifica con el mapa estimado nuevo
         if par["ruido"] is not None:
             m.sensor.ruido = par["ruido"]
+        if par.get("prob_fallo") is not None:
+            m.sensor.prob_fallo = par["prob_fallo"]
         if par["p_detectar"] is not None:
             m.riesgo = mapa_estimado(m.mundo, m.rng, p_detectar=par["p_detectar"])
         m.objetivos = []

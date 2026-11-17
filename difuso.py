@@ -85,6 +85,23 @@ REGLAS = [
      "motivo": "Terreno plano con riesgo a distancia media."},
 ]
 
+# ARX-80: columnas planas de la bitácora con los grados de membresía de cada paso (M3, RF-08)
+COLUMNAS_MEMBRESIA = [f"mu_{var}_{conj}" for var, conjuntos in CONJUNTOS.items() for conj in conjuntos]
+
+
+def aplanar_membresias(membresias) -> dict:
+    """{variable: {conjunto: grado}} -> {"mu_variable_conjunto": grado}.
+
+    Sin datos (None o vacío) o con un grado no finito el valor es None (celda vacía en el CSV): no se inventa 0.0.
+    """
+    plano = {}
+    for col in COLUMNAS_MEMBRESIA:
+        _, var, conj = col.split("_", 2)
+        g = (membresias or {}).get(var, {}).get(conj)
+        plano[col] = round(float(g), 4) if g is not None and np.isfinite(g) else None
+    return plano
+
+
 # Valor de salida cuando ninguna regla se activa (sección 12: fallback documentado)
 SALIDA_FALLBACK = 0.0
 

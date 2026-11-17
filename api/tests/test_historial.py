@@ -394,3 +394,28 @@ def test_drones_pendientes_se_cazan_y_no_fracasan_de_inmediato(cliente):
     p.modo_ia = "rna"
     p._revisar_victoria()
     assert p.estado == "EXPLORACION" and any("Faltan drones" in a for a in p.avisos)
+
+
+# ---------- ARX-80: fitness del AG y membresías difusas por paso (M3) ----------
+
+def test_csv_lleva_fitness_ag_y_membresias_numericos_sin_nan(cliente):
+    from difuso import COLUMNAS_MEMBRESIA
+    cliente.post("/mover", json={"rumbo": "N"})
+    cliente.post("/modo", json={"modo": "rna"})
+    for _ in range(3):
+        cliente.post("/paso")
+    filas = list(csv.DictReader(io.StringIO(cliente.get("/historial.csv").text)))
+    assert len(filas) >= 3
+    for fila in filas:
+        assert float(fila["fitness_ag"]) == float(fila["fitness_ag"])        # numérico y no NaN
+        for col in COLUMNAS_MEMBRESIA:
+            assert col in fila
+            if fila[col] != "":                                  # vacío = el paso no evaluó el difuso
+                assert 0.0 <= float(fila[col]) <= 1.0
+
+
+def test_csv_anterior_sin_columnas_nuevas_sigue_siendo_legible():
+    # Un CSV de antes de ARX-80 (solo columnas viejas) se lee por nombre sin error: ningún consumidor exige las nuevas.
+    viejo = "n,modo,accion,tecnica,motivo,fitness\n1,manual,mover,humano,,\n"
+    filas = list(csv.DictReader(io.StringIO(viejo)))
+    assert filas[0]["accion"] == "mover" and "fitness_ag" not in filas[0]

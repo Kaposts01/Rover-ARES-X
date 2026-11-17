@@ -32,7 +32,7 @@ if RAIZ not in sys.path:
 from integracion import forzar_probabilidad  # noqa: E402
 from juego import conduccion  # noqa: E402
 from genetico import GeneticPlanner  # noqa: E402
-from difuso import BATERIA_MAX, DISTANCIA_MAX, INCLINACION_MAX  # noqa: E402
+from difuso import BATERIA_MAX, COLUMNAS_MEMBRESIA, DISTANCIA_MAX, INCLINACION_MAX  # noqa: E402
 from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
 from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
 from juego.partida import Partida  # noqa: E402
@@ -385,7 +385,7 @@ def _decidir_combate_automatico(sesion: Sesion):
 
 CAMPOS_HISTORIAL = ["n", "modo", "accion", "tecnica", "motivo", "paso_mision", "estado", "posicion", "bateria",
                     "velocidad", "p_libre", "p_obstaculo", "p_barranco", "reglas", "ruta_largo", "fitness",
-                    "evento", "intervencion"]
+                    "evento", "intervencion", "fitness_ag"] + COLUMNAS_MEMBRESIA     # ARX-80: fitness_ag y mu_* son nuevas
 TECNICAS = {"humano", "rna", "difuso", "ag", "supervisor", "combate", "escenario"}
 
 
@@ -398,6 +398,7 @@ def _anotar(sesion: Sesion, accion: str, tecnica: str, motivos=(), ultimo: dict 
         des = p.sugerencia().get("desglose")
         fitness = des.get("fitness") if des else None
     sesion.n += 1
+    nuevas = _columnas_arx80(p)
     sesion.historial.append({
         "n": sesion.n, "modo": sesion.modo, "accion": accion, "tecnica": tecnica,
         "motivo": ";".join(m for m in motivos if m),
@@ -408,7 +409,16 @@ def _anotar(sesion: Sesion, accion: str, tecnica: str, motivos=(), ultimo: dict 
         "ruta_largo": len(p.ruta or []), "fitness": fitness,
         "evento": ";".join(sesion.combate.eventos), "intervencion": (
             f"{sesion.intervencion['tecnica']}:{sesion.intervencion['valor']}" if sesion.intervencion else ""),
+        **nuevas,
     })
+
+
+def _columnas_arx80(p) -> dict:
+    """ARX-80 (M3): fitness del AG y membresías difusas de la última fila de la bitácora (vacío si no hay dato)."""
+    filas = p.mision.log.filas
+    ultima = filas[-1] if filas else {}
+    return {"fitness_ag": float(ultima.get("fitness_ag", 0.0)),
+            **{c: ultima.get(c) for c in COLUMNAS_MEMBRESIA}}
 
 
 def _filtrar_historial(sesion: Sesion, desde: int = 0, modo: str = None, tecnica: str = None,

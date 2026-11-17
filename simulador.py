@@ -188,8 +188,11 @@ class MissionLogger:
 
     def __init__(self):
         self.filas = []
+        self.completar = None     # ARX-80: función opcional que aporta columnas que la fila no trae
 
     def registrar(self, **datos) -> None:
+        if self.completar is not None:
+            datos = {**datos, **{k: v for k, v in self.completar(datos).items() if k not in datos}}
         self.filas.append(datos)
 
     def a_dataframe(self) -> pd.DataFrame:

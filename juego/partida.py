@@ -386,13 +386,16 @@ class Partida:
     def estado_visible(self) -> str:
         """Estado que muestra la interfaz (ARX-33). Los estados terminales se devuelven tal cual.
 
-        Deriva de la misión sin tocar integracion.py: REPLANIFICACION si la última acción fue replanificar;
+        Deriva de la misión sin tocar integracion.py: CONFIGURACION antes del primer paso; REPLANIFICACION si la
+        última acción fue replanificar (también tras un sismo con grieta en la ruta);
         REFUGIO si ya no quedan sitios por visitar (la ruta va al refugio); ALERTA y EXPLORACION como en la misión.
         """
         from integracion import ESTADOS_TERMINALES
         estado = self.mision.estado
         if estado in ESTADOS_TERMINALES:
             return estado
+        if self.mision.paso == 0:
+            return "CONFIGURACION"        # antes del primer paso (ARX-33a)
         filas = self.mision.log.filas
         if filas and filas[-1].get("accion") == "replanificar":
             return "REPLANIFICACION"
@@ -1230,7 +1233,7 @@ class Partida:
         ruta = {tuple(x) for x in (self.mision.ruta or [])}
         if any(g in ruta for g in grietas):
             self.mision._planear()
-            self.mision._registrar("REPLAN", 0.0, ["REPLAN-SISMO"], {}, None)
+            self.mision._registrar("replanificar", 0.0, ["REPLAN-SISMO"], {}, None)
         self.sismos.append({"paso": int(self.mision.paso), "grietas": grietas})
         self._avisar("Sismo: grietas nuevas cerca del rover")
         return {"ok": True, "detalle": f"sismo: {len(grietas)} grieta(s) en {grietas}", "grietas": grietas}

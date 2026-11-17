@@ -225,6 +225,8 @@ def test_estado_visible_emite_replanificacion_refugio_y_alerta(cliente):
     # ARX-33: /estado.estado usa ALERTA, REPLANIFICACION, REFUGIO y MODO_SEGURO además de EXPLORACION
     from juego.partida import Partida
     p = Partida(semilla=11)
+    assert p.estado_visible() == "CONFIGURACION"        # ARX-33a: antes del primer paso
+    p.mision.paso = 1
     assert p.estado_visible() == "EXPLORACION"
     p.mision.estado = "ALERTA"
     assert p.estado_visible() == "ALERTA"

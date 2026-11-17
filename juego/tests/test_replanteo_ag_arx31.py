@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from juego.partida import EVENTOS_GRAVES, Partida  # noqa: E402
-from simulador import LIBRE, MOVIMIENTOS  # noqa: E402
+from simulador import BARRANCO, LIBRE, MOVIMIENTOS  # noqa: E402
 
 
 def _filas_ag(p):
@@ -34,7 +34,7 @@ def _celda_barranco(p):
 
 
 def test_eventos_graves_declarados():
-    assert set(EVENTOS_GRAVES) == {"sismo", "meteorito", "barranco", "senal_biologica", "bateria_baja"}
+    assert set(EVENTOS_GRAVES) == {"sismo", "senal_biologica", "bateria_baja"}
 
 
 def test_sismo_con_grieta_en_la_ruta_replanea_con_ag():
@@ -65,45 +65,45 @@ def test_meteorito_lejos_de_la_ruta_no_replanea_con_ag():
     raise AssertionError("no hubo meteorito fuera de la ruta")
 
 
-def test_meteorito_sobre_la_ruta_replanea_con_ag():
+def test_meteorito_sobre_la_ruta_no_usa_el_ag_sino_bfs():
     p = _partida()
     for _ in range(120):
         ruta, antes = _ruta(p), len(p.meteoritos)
         p.disparar_evento("meteorito")
         if len(p.meteoritos) > antes and any(tuple(z) in ruta for z in p.meteoritos[-1]["zona_riesgo"]):
-            assert [f["motivos"] for f in _filas_ag(p)][-1] == "REPLAN-AG-METEORITO"
+            assert _filas_ag(p) == []          # el replanteo es el BFS del motor, no el AG
             return
         p.avanzar_ia()
     raise AssertionError("no hubo meteorito sobre la ruta")
 
 
-def test_barranco_sobre_la_ruta_replanea_con_ag():
+def test_barranco_sobre_la_ruta_no_usa_el_ag_sino_bfs():
     p = _partida()
     for _ in range(80):
         celda = _celda_barranco(p)
         if celda is not None and celda in _ruta(p):
             p.disparar_evento("barranco")
-            assert p.mision.log.filas[-1]["motivos"] == "REPLAN-AG-BARRANCO"
+            assert _filas_ag(p) == []          # el replanteo es el BFS del motor, no el AG
+            assert p.mundo.tipo[celda] == BARRANCO
             return
         p.avanzar_ia()
     raise AssertionError("no hubo barranco sobre la ruta")
 
 
-def test_dos_eventos_en_el_mismo_paso_comparten_un_replanteo():
+def test_dos_replanteos_en_el_mismo_paso_comparten_uno():
     p = _partida()
-    p.disparar_evento("bateria_baja")
-    p.disparar_evento("senal_biologica")
-    p.disparar_evento("bateria_baja")
+    assert p._replanear_ag("senal") is True
+    assert p._replanear_ag("sismo") is False
     assert len(_filas_ag(p)) == 1
     p.avanzar_ia()
-    p.disparar_evento("bateria_baja")                 # paso nuevo: otro replanteo
+    assert p._replanear_ag("sismo") is True           # paso nuevo: otro replanteo
     assert len(_filas_ag(p)) == 2
 
 
 def test_replanteo_del_ag_reinicia_paros_seguidos():
     p = _partida()
     p.mision.paros_seguidos = 2
-    p.disparar_evento("bateria_baja")
+    p._replanear_ag("senal")
     assert p.mision.paros_seguidos == 0
 
 

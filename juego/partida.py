@@ -25,9 +25,10 @@ from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # 
 
 EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica")
 # ARX-31a: eventos graves ante los que el AG vuelve a planificar el orden de visita (ev3-d07 B: fuera de ellos, solo BFS).
-# Cada uno solo cuenta si toca la ruta vigente: sismo (grieta en la ruta), meteorito (zona de riesgo sobre la ruta),
-# barranco (celda en la ruta); la señal biológica y la batería baja siempre. Como máximo un replanteo del AG por paso.
-EVENTOS_GRAVES = ("sismo", "meteorito", "barranco", "senal_biologica", "bateria_baja")
+# Mitigación de costo (plan §7, M2 de QA: ~3,5 s por replanteo del AG en 40x60): solo sismo (si la grieta toca la ruta)
+# y señal biológica (siempre). Meteorito y barranco replanifican por BFS, como antes de 31a (riesgo y veto del motor).
+# Como máximo un replanteo del AG por paso.
+EVENTOS_GRAVES = ("sismo", "senal_biologica", "bateria_baja")
 SENAL_DIST_MIN, SENAL_DIST_MAX = 3, 6    # distancia Chebyshev de la señal biológica al rover (ARX-30c)
 # ARX-30c (ev3-d50 C): probabilidad por paso de que la señal caiga sola, por nivel (supuesto de simulación)
 SENAL_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}

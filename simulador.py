@@ -90,6 +90,8 @@ class World:
             raise ValueError(f"Celda fuera del mapa: {pos}")
         if pos in (self.inicio, self.refugio):
             raise ValueError("No se puede poner un barranco sobre inicio o refugio.")
+        if FIRMA_BARRANCO_ACTIVA and self.tipo[pos] != BARRANCO:
+            self.elevacion[pos] -= DESNIVEL_BARRANCO_M
         self.tipo[pos] = BARRANCO
 
 

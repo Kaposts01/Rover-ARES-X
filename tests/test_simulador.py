@@ -111,3 +111,15 @@ def test_firma_barranco_encendida_baja_las_celdas_barranco(monkeypatch):
     assert es_b.any()
     assert np.allclose(m.elevacion[es_b], apagado.elevacion[es_b] - 3.0)
     assert np.array_equal(m.elevacion[~es_b], apagado.elevacion[~es_b])
+
+
+def test_marcar_barranco_lleva_la_firma_solo_con_la_bandera(monkeypatch):
+    import simulador
+    for activa, baja in ((False, 0.0), (True, 3.0)):
+        monkeypatch.setattr(simulador, "FIRMA_BARRANCO_ACTIVA", activa)
+        m = generar_mundo(semilla=3, n_barrancos=0)
+        antes = float(m.elevacion[5, 5])
+        m.marcar_barranco((5, 5))
+        m.marcar_barranco((5, 5))  # repetir no baja dos veces
+        assert m.tipo[5, 5] == BARRANCO
+        assert float(m.elevacion[5, 5]) == pytest.approx(antes - baja)

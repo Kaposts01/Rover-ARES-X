@@ -38,7 +38,7 @@ Los estados son EXPLORACION, ALERTA, MODO_SEGURO, EXITO, FRACASO y SIN_RUTA. El 
 
 ## 4. Experimento y ablaciones
 
-> **Provisional: las tablas de esta sección se regeneran tras ARX-92.** Son anteriores a ARX-90, ARX-91 y ARX-28c. Las lecturas de abajo se reescriben con la regeneración. El estado medido hoy está en la sección 4.2.
+> **Nota:** las tablas de esta sección son del notebook de la entrega, anteriores a la regeneración definitiva. Las cifras de ablación vigentes están en las secciones 4.2 y 4.3.
 
 20 semillas por variante, mapas de Marte con 20 obstáculos, 4 barrancos y 3 sitios científicos (`ARES_X_ejecutado.ipynb`):
 
@@ -55,7 +55,7 @@ Los estados son EXPLORACION, ALERTA, MODO_SEGURO, EXITO, FRACASO y SIN_RUTA. El 
 
 ### 4.1 Prueba causal: intervención en la RNA y en el difuso (ARX-10, ev3-d32 A)
 
-> **Provisional:** la tabla de esta sección es de ARX-10, anterior a ARX-91. Se regenera tras ARX-92.
+> **Nota:** la tabla de esta sección es de ARX-10, anterior a ARX-91. No forma parte de la regeneración definitiva.
 
 Se fuerza la salida de una técnica y se mide el primer paso donde cambia la acción o la velocidad, frente a
 la misión base con la misma semilla (20 semillas, mapas de Marte con 20 obstáculos, 4 barrancos y 3 sitios):
@@ -82,22 +82,38 @@ la misión base con la misma semilla (20 semillas, mapas de Marte con 20 obstác
 
 ### 4.2 M2 por técnica (ev3-d62, ev3-d71 A)
 
-Estado medido en el escenario exigente, 20 semillas. **Provisional hasta ARX-92.** La traza es `docs/TRAZA_DIVERGENCIAS_exigente.csv`, con la regla «directa»: la primera divergencia por semilla y variante que cambia decisión, velocidad o ruta.
+Estado medido en el escenario exigente (4 sitios), 20 semillas, con la regeneración definitiva (`fcd2835`). La traza es `docs/TRAZA_DIVERGENCIAS_exigente.csv`, con la regla «directa»: la primera divergencia por semilla y variante que cambia decisión, velocidad o ruta.
 
 | Técnica (variante del arnés) | Semillas con divergencia directa | Rótulo |
 |---|---|---|
 | Difuso (`sin_difuso`) | 20 de 20 | difuso |
 | RNA (`sin_rna`) | 3 de 20 (semillas 4, 10 y 18) | RNA |
-| AG (`sin_ag`) | 12 de 20 (semillas 3–9, 11–14 y 17) | «sin AG: vecino más cercano». No mide el AG |
+| AG (`sin_ag_vecino`) | 12 de 20 (semillas 3–9, 11–14 y 17; todas en el paso 0) | «sin AG: vecino más cercano». No mide el AG |
 
 M2 se evalúa técnica por técnica; no hay un «cumple» único.
 
 - **Difuso: cumple, con efecto en el resultado.** Sin difuso, la velocidad cambia en las 20 semillas. Esa velocidad es fija (0,5) en la variante, así que el efecto en el resultado es el de la comparación de éxitos: 20 de 20 con el difuso, 15 de 20 sin él (`docs/COMPARACION_POLITICAS_exigente.json`).
-- **RNA: parcial, altera decisiones, sin efecto en el resultado.** Con la RNA apagada, la decisión, la velocidad o la ruta cambian en 3 de 20 semillas (4, 10 y 18). En las tres, la RNA veta un obstáculo que está fuera de la ruta y obliga a replanificar. Cuesta entre 1 y 4 pasos (+4 en la semilla 4; +1 en las semillas 10 y 18) y no cambia el éxito ni las colisiones en ninguna semilla. Cuando el obstáculo está en la ruta, la decisión del supervisor prevalece (chequeo incondicional de ARX-91) y la decisión de la RNA queda enmascarada. En este diseño la RNA es redundante con el supervisor: altera decisiones puntuales, sin efecto en el resultado.
-- **AG: pendiente de ARX-92.** En el juego el AG no decide el orden de visita. La variante del arnés que lo sustituye usa vecino más cercano y se rotula así. No hay todavía una medición del aporte del AG, y no se publica ninguna conclusión sobre él hasta ARX-92.
+- **RNA: parcial, altera decisiones, sin efecto en el resultado.** Con la RNA apagada, la decisión, la velocidad o la ruta cambian en 3 de 20 semillas (4, 10 y 18). En las tres, la RNA veta un obstáculo que está fuera de la ruta y obliga a replanificar. Cuesta entre 1 y 4 pasos (+4 en la semilla 4; +1 en las semillas 10 y 18) y no cambia el éxito ni las colisiones en ninguna semilla. Cuando el obstáculo está en la ruta, la decisión del supervisor prevalece (chequeo incondicional de ARX-91) y la decisión de la RNA queda enmascarada. En este diseño la RNA es redundante con el supervisor: altera decisiones puntuales, sin efecto en el resultado. Con 10 sitios (escenario exigente de 10 sitios), sin RNA da 12 de 20 éxitos, igual que el híbrido, pero con 0,15 colisiones de media frente a 0.
+- **AG: decide el orden de visita en el juego (entrega 2, §4.3).** Con 10 sitios, el híbrido gana menos partidas que las líneas base. La causa es una falla de búsqueda del AG, no una peor decisión.
 - **Recall de barrancos de la RNA sin `borde_barranco` (ARX-28f):** 0,70–0,80 con el rasgo y 0,000 sin él (sección 5).
 
 No se abre ningún intento más para la RNA salvo que el usuario lo pida.
+
+### 4.3 Entrega 2: el AG decide el orden de visita (ARX-92c, ev3-d80 A)
+
+En el juego, el AG decide el orden de visita de los sitios, con la misma restricción de energía que la ejecución (`juego/partida.py`, `_ag_con_todos_los_sitios`, línea 290; el método queda en `METODO_AG_ORDEN`, línea 280). La búsqueda exhaustiva de la ruta más corta queda como respaldo, para cuando el AG no encuentra un orden viable (líneas 355 a 374). Con más de seis sitios, el respaldo conserva el orden dado.
+
+**Medición con 10 sitios y 20 semillas** (escenario exigente de 10 sitios, columna con umbral, ev3-d74; `docs/planes/mediciones/medicion_92c_ex10.json`): sin AG, 2-opt 17; sin AG, permutación más corta 16; sin AG, vecino más cercano 14; híbrido 12; sin RNA 12; sin difuso 9; ruta corta (voraz) 7. AG puro 9 (el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto). Sin umbral, el híbrido también gana 12: el umbral no explica la diferencia. Una mejora local simple supera al AG, y el AG supera a la ruta voraz.
+
+**Derrotas del híbrido** (8 de 20): 5 con sitios descartados, 2 sin batería en el camino y 1 de otra causa. El 12 de 20 mide una falla de búsqueda del AG, no una peor decisión: el fitness es plano entre rutas inviables y la población inicial es aleatoria. En 6 de las 8 derrotas (semillas 2, 3, 7, 9, 16 y 19) existía un orden completo y viable que el vecino más cercano y 2-opt encontraron. El juego normal, con seis sitios o menos, no se ve afectado por esta falla. Trabajo futuro, con diseño: penalizar la inviabilidad de forma graduada (M8) y sembrar la población con el vecino más cercano, medido con el mismo protocolo de 20 semillas; y un umbral relativo al largo de la ruta.
+
+**Umbral de empate** (ev3-d79): con 10 sitios, anula la preferencia del fitness en 19 de 40 planificaciones (en 13 de 20 semillas, al menos una). Se derivó del error de estimación con rutas de 3 y 4 sitios; revisarlo queda como trabajo futuro. El fitness no se presenta como decisor en el juego normal. Con el peso de riesgo ×5 como único cambio, la ruta elegida no cambia con el umbral en ninguna semilla (0 de 20 en el pequeño y 0 de 10 en el grande, cifras de QA). Sin umbral, cambia en 15 de 20 y 5 de 10. Las cifras son de la verificación de QA; la receta está en `docs/planes/medicion_92a_pesos_umbral.py`.
+
+**Con 3 y 4 sitios** (congelado y exigente, 20 semillas): la permutación más corta y 2-opt dan los mismos éxitos y los mismos pasos medios que el híbrido (congelado: 20/20 y 43,85; exigente: 20/20 y 54,3). El AG puro da 20/20 y 43,7 en el congelado, y 16/20 y 55,2 en el exigente. Eso no prueba que sean la misma ruta, solo que los pasos medios coinciden.
+
+**Presupuesto de cómputo:** el AG evalúa de 187 a 294 órdenes por planificación (media 239) y su mejor solución aparece, de media, en la generación 17,9 de 30. La búsqueda 2-opt evalúa de 45 a 180 pares (media 108) y hace 2,4 pasadas de media. Optimizan cosas distintas (fitness frente a largo). Aporta a M9 y M11.
+
+Las cifras de 10 sitios son de la medición única de 92c. Las del congelado (3 sitios) y del exigente (4 sitios) son de la regeneración definitiva (`fcd2835`); el contrato §7 las recoge.
 
 ## 5. Resultados de la RNA
 
@@ -106,6 +122,8 @@ Cifra reproducible del informe (modelo del notebook: partición de 60 mapas, 42 
 El modelo que usa la partida del juego se entrena con una partición más pequeña (30 mapas: 21 entrenamiento, 4 validación y 5 prueba, 300 muestras por mapa) para que la carga sea rápida. En sus mapas de prueba 25 a 29 (1 401 muestras) obtiene macro-F1 0.909 y recall de barrancos **0.786** (11 de 14). Es una limitación conocida: la cifra del notebook no describe el modelo del juego, y se muestra en el laboratorio RNA con su configuración (`GET /rna/evaluacion?modelo=juego`).
 
 **Control de la RNA sin el rasgo `borde_barranco` (ARX-28f).** Con la RNA entrenada, el recall de barranco es 0,70–0,80 con sus rasgos normales y 0,000 sin `borde_barranco` (ruido 0,1 y 0,6; 0 de 250 barrancos en la partición de 60 mapas y 0 de 135 en la de 30). Lo medido es que, sin ese rasgo, la RNA no predice barrancos. Que la causa sea la dependencia de ese rasgo es una inferencia. El muestreo es distinto del de la cifra de arriba (unos 3 000 intentos por mapa). Detalle en `docs/planes/ARX-28_calibracion.md`, sección 28f.
+
+**Aporte de la RNA probado fuera del juego (ARX-93, C+).** Se probaron dos cambios detrás de banderas apagadas: una firma física del barranco (`simulador.FIRMA_BARRANCO_ACTIVA`) y una RNA sin el rasgo `borde_barranco` (`integracion.RNA_APORTE_ACTIVA`). Con las dos encendidas, en una corrida única (60 mapas con partición 70/15/15, semilla 42; prueba en 20 mapas no vistos, semillas 100 a 119), el recall de barrancos es 0,863 (63 de 73) y el macro-F1 es 0,933. En el mundo actual, sin la firma, el mismo modelo no reconoce ningún barranco (0 de 250 y 0 de 135). La alerta a dos celdas (93c) se descartó: el sensor de proximidad ya ve el obstáculo en la ruta (ARX-91). La vibración de la celda a dos pasos no se usó: el rover no puede medirla a distancia, y usarla sería una política oculta. Ninguno de los dos cambios está activo en el juego por defecto, y no se hizo el protocolo completo de 20 semillas. Fuente: `docs/planes/RNA_aporte.md`, §10.
 
 ## 6. Limitaciones
 

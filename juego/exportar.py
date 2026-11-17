@@ -42,8 +42,8 @@ def _metricas(partida) -> dict:
     - sitios_visitados_celdas: celdas de los sitios visitados (mision.visitados)
     - puntaje_sitios: valor de esos sitios en mundo.sitios (solo si el mundo guarda un número)
     - replanes: mision.replanes
-    - tiempo_computo_s: el motor no lo guarda; solo se exporta si la partida trae
-      `tiempo_computo_s` (None si no, nunca inventado)
+    - tiempo_computo_s: tiempo de pared acumulado de la partida, que el motor guarda desde ARX-89b
+      (`juego/partida.py`); None si la partida no lo trae, nunca inventado
     """
     mision = getattr(partida, "mision", None)
     rover = getattr(partida, "rover", None)

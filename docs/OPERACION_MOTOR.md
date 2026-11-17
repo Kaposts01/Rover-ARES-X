@@ -11,15 +11,16 @@ Estado al 14/11/2026. Guía para levantar el servidor, no el informe de la entre
 - Medición del Híbrido en mapa pequeño (20 semillas por nivel, semillas 1009·k): Muy fácil 100 %, Fácil 100 %,
   Medio 95 %, Difícil 75 %, Hardcore 95 %. Mapa grande 40×60 en Muy fácil (10 semillas): 80 %.
 - Pendiente: calibrar `MARGEN_CAZA` con el coste real de la caza (hoy 10 pasos por dron es una suposición); revisar
-  los fallos de Muy fácil en 40×60; ARX-75 (disparo en rna, difuso y ag); ARX-30.
+  los fallos de Muy fácil en 40×60; ARX-75 (disparo en rna, difuso y ag); ARX-30b y ARX-30c (baja conectividad y señal
+  biológica, bloqueadas por ev3-d48 y ev3-d49). El sismo y el meteorito ya están (ver «Eventos del motor»).
 - ARX-59 (escala por escalón): propuesta enviada, sin implementar. Espera la decisión del usuario en la ficha ev3-d45
   de la Bandeja (A: estaciones de recarga y más objetivos, recomendada; B: solo más sitios y drones; C: dejar la duración).
   Si elige A y hay 5 o más sitios, usar heurística (vecino más cercano más 2-opt) en vez de enumerar órdenes.
 
 ## Retomar la sesión
 
-- Reabrir desde `C:\Users\Usuario\Downloads` (no desde `ares_x`), con
-  `claude --resume 8fabbd07-ce6f-5b4c-97eb-59ae80452d6d`. La conversación está en `~/.claude/projects/C--Users-Usuario-Downloads/`.
+- La sesión que trabaja en este proyecto es `Lider_Rover`, desde la carpeta `ares_x`. Los ids y cómo reabrirla están en
+  `00-Sistema-Agentico\REANUDAR_SESIONES.md`. La sesión antigua del motor, que se abría desde `Downloads`, ya no es la que trabaja.
 - Antes de tocar nada, leer este documento y `docs/tareas_sprints.json` (tareas de la entrega; ARX-75 sigue asignada).
 
 ## Levantar el servidor 8765
@@ -39,6 +40,26 @@ python -m uvicorn api.servidor:app --host 127.0.0.1 --port 8765
 
 Mientras el usuario prueba la interfaz en 8765, no crear partidas ni lanzar pasos desde otra sesión. Las mediciones van
 en una instancia aparte (puerto distinto, o `TestClient` sin servidor), y se lanzan en segundo plano, de una en una.
+
+## Eventos del motor (ARX-30, 17/11)
+
+- **Disparo manual:** `POST /evento` con `{"nombre": "..."}`. Nombres válidos (`EVENTOS` en `api/servidor.py`): `barranco`,
+  `falla_sensor`, `bateria_baja`, `tormenta`, `noche`, `meteorito`, `sismo`. Un nombre fuera de la lista responde 400.
+  Un evento que no encuentra celda segura responde `ok: false` (por ejemplo, el sismo sin celda que no deje el refugio aislado).
+- **Interfaz:** panel «5 · Eventos» en `api/static/index.html`: selector `#evento-nombre` con los nombres de `EVENTOS` y
+  botón «Disparar» (`#evento-disparar`). Está deshabilitado sin partida o con la partida terminada. Muestra la respuesta
+  como aviso y la registra en el historial de pantalla. La lista del selector está escrita a mano: al añadir un evento hay
+  que editarla también.
+- **Generadores propios:** los eventos espontáneos no comparten el generador de la partida.
+  - Meteorito: `_rng_ambiente`, semilla `[semilla, 1313]` (como antes de ARX-30; su secuencia no cambia).
+  - Sismo: `_rng_sismo`, semilla `[semilla, 1314]`.
+  - Baja conectividad y señal biológica: sin generador todavía (ARX-30b y 30c).
+- **Solo en partidas jugables:** los eventos espontáneos dependen de `meteoritos_activos` (la bandera `garantia`). Las
+  evaluaciones congeladas no tienen eventos espontáneos; no quitar `garantia=False` de la evaluación.
+- **Probabilidades y grietas:** `SISMO_PROB_POR_NIVEL`, `METEORITO_PROB_POR_NIVEL` y `GRIETAS_POR_NIVEL` en `juego/partida.py`.
+  Son supuestos de simulación, no datos del PDF.
+- **Limitación conocida:** el replanteo por sismo (fila `REPLAN-SISMO`) queda en la bitácora del motor (`mision.log`) y no
+  aparece en `/historial`, que solo muestra las filas que anota la API. Se ve `evento:sismo` en el historial.
 
 ## Evaluación congelada
 
@@ -103,7 +124,7 @@ Estado al 14/11 (noche). Sin publicar en 8765.
   - ARX-59 como propuesta: la duración está en 107–171 pasos frente a 300–500; la semilla 2018 queda parada. Lo decide el
     usuario en ev3-d47.
   - Veto del disparo en la interfaz: falta una semilla reproducible.
-- **Cómo retomar:** `claude --resume 8fabbd07-ce6f-5b4c-97eb-59ae80452d6d` desde `C:\Users\Usuario\Downloads`.
+- **Cómo retomar:** ver `00-Sistema-Agentico\REANUDAR_SESIONES.md` (sesión `Lider_Rover`). La sesión de `Downloads` de entonces ya no trabaja aquí.
 
 
 ## Estado al 15/11 (20:3x)

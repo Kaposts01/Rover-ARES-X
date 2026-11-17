@@ -4,7 +4,7 @@ import { OrbitControls } from "/static/vendor/OrbitControls.js";
 import { iniciarLaboratorios } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
-import { aplicarMoviles } from "/static/moviles.js?v=r14";
+import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -533,6 +533,63 @@ function instanciar(geom, material, matrices) {
   im.instanceMatrix.needsUpdate = true;
   im.receiveShadow = true;
   return im;
+}
+
+// Sismo (ARX-30d): las celdas nuevas pasan a barranco sin pedir /mapa. Mismo tratamiento que los barrancos
+// del terreno: hoyo, oscurecido por vértice y piedras de borde con el material `borde`.
+function agregarGrietas(celdas) {
+  if (!mapa || !Array.isArray(celdas)) return;
+  const nuevas = celdas.filter((c) => Array.isArray(c) && c.length === 2
+    && mapa.tipo[c[0]] && mapa.tipo[c[0]][c[1]] !== undefined && mapa.tipo[c[0]][c[1]] !== TIPO_BARRANCO);
+  if (!nuevas.length) return;   // sin celdas válidas o ya aplicadas: no se repite nada
+  const bordes = [];
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const e = new THREE.Vector3();
+  const p = new THREE.Vector3();
+  for (const [f, c] of nuevas) {
+    mapa.tipo[f][c] = TIPO_BARRANCO;
+    pozos.push([c + 0.5, f + 0.5]);
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2 + azar(f, c, 70 + k) * 0.5;
+      const bx = c + 0.5 + Math.cos(a) * 0.5;
+      const bz = f + 0.5 + Math.sin(a) * 0.5;
+      e.setScalar(0.6 + azar(f, c, 80 + k) * 0.8);
+      q.setFromEuler(new THREE.Euler(azar(f, c, 90 + k) * 3, 0, azar(f, c, 100 + k) * 3));
+      bordes.push({ x: bx, z: bz, q: q.clone(), s: e.x });
+    }
+  }
+  const suelo = grupoMapa.children[0];
+  if (suelo && suelo.geometry && suelo.geometry.attributes.color) {
+    const pos = suelo.geometry.attributes.position;
+    const sombra = suelo.geometry.attributes.color;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      pos.setY(i, alturaTerreno(x, z));
+      const k = 1 - 0.8 * influenciaPozos(x, z);
+      sombra.setXYZ(i, k, k, k);
+    }
+    pos.needsUpdate = true;
+    sombra.needsUpdate = true;
+    suelo.geometry.computeVertexNormals();
+  }
+  const piedras = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.1, 0), materiales.borde, bordes.length);
+  bordes.forEach((b, i) => {
+    p.set(b.x, alturaTerreno(b.x, b.z) + 0.02, b.z);
+    e.setScalar(b.s);
+    piedras.setMatrixAt(i, m.compose(p, b.q, e));
+  });
+  piedras.instanceMatrix.needsUpdate = true;
+  piedras.receiveShadow = true;
+  grupoMapa.add(piedras);
+  // La cuadrícula copia la altura del terreno: se rehace en su sitio
+  const rejilla = grupoMapa.children.find((o) => o.isLineSegments);
+  if (rejilla && limitesMapa) {
+    grupoMapa.remove(rejilla);
+    rejilla.geometry.dispose();
+    grupoMapa.add(construirCuadricula(limitesMapa.columnas, limitesMapa.filas));
+  }
 }
 
 function construirMapa(datos) {
@@ -1375,7 +1432,8 @@ async function refrescarMovilesYEscenario() {
   pintarObjetivos(await adaptador.objetivos());
   pintarCalor(adaptador.calorPrueba());
   const datos = await adaptador.moviles();
-  aplicarMoviles(datos, scene, alturaTerreno, (texto) => avisar(texto));
+  aplicarMoviles(datos, scene, alturaTerreno, (texto) => avisar(texto), agregarGrietas);
+  aplicarEnlaceYSenal(estado);
   await refrescarEscenarios();
 }
 
@@ -1518,8 +1576,36 @@ async function refrescarEstado() {
     dibujarRuta(datos.ruta);
     pintarDrones(datos.npcs);
     pintarHud(datos);
+    actualizarControlEvento();
+    aplicarEnlaceYSenal(datos);
   });
 }
+
+// ARX-30d: lectura defensiva de /estado. Solo apaga si el campo existe y lo dice; sin campo (motor sin ARX-30b/30c) no hace nada.
+function aplicarEnlaceYSenal(datos) {
+  if (!datos || typeof datos !== "object") return;
+  if (datos.enlace && datos.enlace.activo === false) efectos.activarInterferencia(false);
+  if ("senal" in datos && datos.senal === null) efectos.quitarSenalBiologica(scene);
+}
+
+// Control de eventos (ARX-30e): mismo orden que EVENTOS de la API; solo con partida en curso
+function actualizarControlEvento() {
+  const boton = document.getElementById("evento-disparar");
+  if (!boton) return;
+  boton.disabled = !mapa || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado);
+}
+async function dispararEvento() {
+  if (!mapa || ocupado() || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado)) return;
+  const nombre = document.getElementById("evento-nombre").value;
+  const r = await llamar("POST", "/evento", { nombre });
+  if (!r) return;
+  const detalle = r.detalle || (r.ok ? "hecho" : "sin efecto");
+  avisar(`Evento ${nombre}: ${detalle}`);
+  registrarEvento(`evento ${nombre}: ${detalle}`);
+  await refrescarEstado();
+  await refrescarPaneles();
+}
+document.getElementById("evento-disparar").addEventListener("click", dispararEvento);
 
 // Encuadre inicial (sprint 4): la cámara mira al rover desde detrás y arriba, con el horizonte visible
 function encuadrarInicio() {
@@ -1569,6 +1655,7 @@ function configuracionVigente() {
 async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente()) {
   detenerReproduccion();
   cerrarAvisos();
+  reiniciarEventos();
   cargando = true;
   try {
     const cuerpo = { nivel, tamano, planeta: config.planeta, modo: config.vehiculo };
@@ -1602,6 +1689,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     registrarRecorrido(datos.posicion);
     pintarDrones(datos.npcs);
     pintarHud(datos);
+    actualizarControlEvento();
     await refrescarPaneles();
     await refrescarEscenarios();
     avisar(`Partida nueva en ${planetaActivo}${modoPlanetaActivo === "sonda" ? " (sonda)" : ""}: semilla ${estado.semilla}, nivel ${NIVELES[nivel - 1]}.`);

@@ -31,6 +31,8 @@ const PRUEBA = {
     eventos_del_paso: [
       { nombre: "meteorito", efecto: "zona_riesgo", celdas: [[3, 19], [3, 20]] },
       { nombre: "senal_biologica", efecto: "lectura_anomala", afirma_vida: false, celdas: [[9, 14]] },
+      { nombre: "baja_conectividad", efecto: "sin_enlace", restante: 4 },
+      { nombre: "sismo", efecto: "grietas", celdas: [[10, 10], [11, 10]] },
     ],
     ruta: { planificada: [[19, 0], [18, 0]], ejecutada: [[19, 0]] },
   },

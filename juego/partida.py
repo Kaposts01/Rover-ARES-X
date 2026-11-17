@@ -22,7 +22,9 @@ from rna import _rasgos_celda  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
 
-EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito")
+EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo")
+GRIETAS_POR_NIVEL = {1: 1, 2: 1, 3: 2, 4: 2, 5: 3}                           # grietas por sismo (supuesto de simulación, ARX-30)
+SISMO_PROB_POR_NIVEL = {1: 0.003, 2: 0.004, 3: 0.006, 4: 0.007, 5: 0.009}   # probabilidad por paso (ARX-30)
 METEORITO_PROB_POR_NIVEL = {1: 0.004, 2: 0.006, 3: 0.008, 4: 0.010, 5: 0.012}   # probabilidad por paso (ARX-30)
 DANO_METEORITO = 5.0                    # % de batería que cuesta el impacto (supuesto de simulación, ARX-30)
 PASOS_FALLA_SENSOR = 3
@@ -319,6 +321,7 @@ class Partida:
         self.recargas_hechas = 0
         self.meteoritos_activos = bool(garantia)   # ARX-30: meteoritos solo en la partida jugable (las evaluaciones no)
         self.meteoritos = []                       # impactos de la partida: paso, impacto y zona de riesgo
+        self.sismos = []                           # sismos de la partida: paso y grietas (ARX-30a)
         self._recargando = 0               # pasos parado que quedan de una recarga
         self._ultima_estacion = None       # estación en la que está el rover (no se recarga dos veces seguidas)
         self._comprometido = None          # estación a la que va a recargar; no se reevalúa hasta llegar (ARX-59)
@@ -341,6 +344,7 @@ class Partida:
         self._ambiente = "normal"          # "normal" | "tormenta" | "noche"
         self._ambiente_restante = 0
         self._rng_ambiente = np.random.default_rng([int(semilla), 1313])  # propio, no comparte el de Mision
+        self._rng_sismo = np.random.default_rng([int(semilla), 1314])     # ARX-30a: propio, no altera los meteoritos
         self._objetivo = None              # celda fijada por el jugador, o None
         # Mision() ya planificó con el AG original: se replanifica con el envoltorio que exige todos los sitios
         self.mision.objetivos = []
@@ -1056,6 +1060,11 @@ class Partida:
                 and self.estado not in ESTADOS_TERMINALES
                 and self._rng_ambiente.random() < METEORITO_PROB_POR_NIVEL[self.nivel]):
             self._evento_meteorito()
+        # ARX-30a: sismo espontáneo con generador propio, después del bloque de meteoritos
+        if (self.meteoritos_activos and "sismo" in self.eventos_activos
+                and self.estado not in ESTADOS_TERMINALES
+                and self._rng_sismo.random() < SISMO_PROB_POR_NIVEL[self.nivel]):
+            self._evento_sismo()
         if self.rover.bateria <= 0 and self.estado not in ESTADOS_TERMINALES:
             self.mision.estado = "FRACASO"
 
@@ -1069,6 +1078,8 @@ class Partida:
             return self._evento_falla_sensor()
         if nombre == "meteorito":
             return self._evento_meteorito()
+        if nombre == "sismo":
+            return self._evento_sismo()
         if nombre in PASOS_AMBIENTE:
             self._iniciar_ambiente(nombre)
             return {"ok": True, "detalle": f"{nombre} durante {PASOS_AMBIENTE[nombre]} pasos"}
@@ -1102,6 +1113,46 @@ class Partida:
         self.meteoritos.append({"paso": int(self.mision.paso), "impacto": impacto, "zona_riesgo": zona})
         self._avisar("Meteorito: impacto en una zona de riesgo cercana")
         return {"ok": True, "detalle": f"meteorito en {impacto}; zona de riesgo alrededor", "impacto": impacto}
+
+    def _evento_sismo(self) -> dict:
+        """ARX-30a: hasta GRIETAS_POR_NIVEL grietas (BARRANCO) en celdas libres a distancia Chebyshev 2–4 del rover.
+        Cada grieta deja el refugio y los sitios pendientes alcanzables por el mapa real, o se descarta. Si una cae
+        en la ruta, la misión replanifica (AG) y se anota REPLAN-SISMO. Sin daño de batería."""
+        f, c = self.rover.posicion
+        excluidas = {tuple(self.rover.posicion), tuple(self.mundo.inicio), tuple(self.mundo.refugio),
+                     *(tuple(s) for s in self.mundo.sitios), *(tuple(e) for e in self.estaciones)}
+        candidatas = []
+        for df in range(-4, 5):
+            for dc in range(-4, 5):
+                celda = (f + df, c + dc)
+                if max(abs(df), abs(dc)) < 2 or not self.mundo.dentro(celda) or celda in excluidas:
+                    continue
+                if self.mundo.tipo[celda] != LIBRE:
+                    continue
+                candidatas.append(celda)
+        pendientes = [tuple(s) for s in self.mundo.sitios if s not in self.mision.visitados]
+        grietas = []
+        orden = [candidatas[i] for i in self._rng_sismo.permutation(len(candidatas))] if candidatas else []
+        for celda in orden:
+            if len(grietas) >= GRIETAS_POR_NIVEL[self.nivel]:
+                break
+            self.mundo.marcar_barranco(celda)
+            alcanzables = _alcanzables(self.mundo, tuple(self.rover.posicion))
+            if tuple(self.mundo.refugio) in alcanzables and all(s in alcanzables for s in pendientes):
+                grietas.append(celda)
+            else:
+                self.mundo.tipo[celda] = LIBRE      # descarta: la grieta aislaría el refugio o un sitio
+        if not grietas:
+            return {"ok": False, "detalle": "sin celda segura para una grieta"}
+        for g in grietas:
+            self.mision.riesgo[g] = 1.0
+        ruta = {tuple(x) for x in (self.mision.ruta or [])}
+        if any(g in ruta for g in grietas):
+            self.mision._planear()
+            self.mision._registrar("REPLAN", 0.0, ["REPLAN-SISMO"], {}, None)
+        self.sismos.append({"paso": int(self.mision.paso), "grietas": grietas})
+        self._avisar("Sismo: grietas nuevas cerca del rover")
+        return {"ok": True, "detalle": f"sismo: {len(grietas)} grieta(s) en {grietas}", "grietas": grietas}
 
     def _evento_barranco(self) -> dict:
         f, c = self.rover.posicion

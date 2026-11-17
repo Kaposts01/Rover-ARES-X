@@ -40,7 +40,7 @@ from simulador import MOVIMIENTOS  # noqa: E402
 
 MODOS = {"manual", "rna", "difuso", "ag", "automatico"}
 RUMBOS = {"N", "S", "E", "O", "NE", "NO", "SE", "SO"}
-EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito"}
+EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo"}
 ESTADOS_TERMINALES = {"EXITO", "FRACASO", "SIN_RUTA", "MODO_SEGURO"}
 CARPETA_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 RADIO_EVASION = 3           # drones a esta distancia o menos activan la decisión de combate en automático
@@ -910,8 +910,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
     @app.get("/moviles")
     def moviles():
         """Elementos móviles por paso (ARX-29): drones con su trayectoria, eventos del último turno y la ruta
-        planificada frente a la ejecutada. Obstáculos móviles, meteoritos y los demás eventos de ev3-d41 llegarán
-        en ARX-30; por ahora la lista de `obstaculos_moviles` va vacía."""
+        planificada frente a la ejecutada. Los obstáculos móviles llegarán en ARX-29; por ahora la lista de
+        `obstaculos_moviles` va vacía."""
         sesion = activa()
         p = sesion.partida
         drones = []
@@ -938,6 +938,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         eventos = [{"texto": e} for e in sesion.combate.eventos]
         eventos += [{"nombre": "meteorito", "efecto": "zona_riesgo", "celdas": [_celda(c) for c in m["zona_riesgo"]]}
                     for m in p.meteoritos if m["paso"] == int(p.mision.paso)]
+        eventos += [{"nombre": "sismo", "efecto": "grietas", "celdas": [_celda(c) for c in s["grietas"]]}
+                    for s in p.sismos if s["paso"] == int(p.mision.paso)]
         return {
             "paso": int(p.mision.paso),
             "moviles": drones,

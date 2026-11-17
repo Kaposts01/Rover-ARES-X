@@ -224,15 +224,15 @@ Texto original, solo como referencia: estado del modo automático continuo y el 
 
 Controles: `POST /escenarios/iniciar` y `POST /escenarios/detener`. Respuesta: el mismo objeto de estado.
 
-## 10. Móviles y eventos: `GET /moviles` (ARX-29: drones; ARX-30: meteoritos)
+## 10. Móviles y eventos: `GET /moviles` (ARX-29: drones y obstáculos móviles; ARX-30: meteoritos y sismo)
 
-Ya devuelve drones reales con su trayectoria por turno (últimas 50 posiciones), los eventos del último turno y la ruta planificada frente a la ejecutada. `obstaculos_moviles` va vacía hasta ARX-30; es una clave aparte (no se mezcla con `moviles`), con la misma forma que un elemento de `moviles` y tipo `obstaculo_movil`. Cada dron trae `vida` (puntos de vida, 3 al inicio; un impacto le resta 1). Ejemplo de la forma real:
+Ya devuelve drones reales con su trayectoria por turno (últimas 50 posiciones), los eventos del último turno y la ruta planificada frente a la ejecutada. `obstaculos_moviles` va vacía hasta ARX-29; es una clave aparte (no se mezcla con `moviles`), con la misma forma que un elemento de `moviles` y tipo `obstaculo_movil`. Cada dron trae `vida` (puntos de vida, 3 al inicio; un impacto le resta 1). Ejemplo de la forma real:
 
 ```json
 {"paso": 12, "moviles": [{"id": "dron-1", "tipo": "dron", "pos": [12, 7], "trayectoria": [[11, 7], [12, 7]], "estado": "persecucion", "vida": 3}], "obstaculos_moviles": [], "eventos_del_paso": [{"texto": "dron 1: persecución"}], "ruta": {"planificada": [[19, 0], [18, 0]], "ejecutada": [[19, 0], [18, 0]]}}
 ```
 
-Borrador original (obstáculos, meteoritos y señales, sin implementar):
+Borrador original (obstáculos, meteoritos y señales). Los meteoritos y el sismo ya existen (ARX-30a); la señal biológica espera ARX-30c y los obstáculos, ARX-29:
 
 Posiciones y trayectorias de los elementos móviles por paso, para animarlos. Incluye los eventos del paso y la ruta planificada frente a la ejecutada.
 
@@ -247,7 +247,7 @@ Posiciones y trayectorias de los elementos móviles por paso, para animarlos. In
   ],
   "eventos_del_paso": [
     {"nombre": "meteorito", "efecto": "zona_riesgo", "celdas": [[3, 19], [3, 20]]},
-    {"nombre": "senal_biologica", "efecto": "lectura_anomala", "celda": [5, 12], "afirma_vida": false}
+    {"nombre": "senal_biologica", "efecto": "lectura_anomala", "celdas": [[5, 12]], "afirma_vida": false}
   ],
   "ruta": {"planificada": [[19, 0], [18, 0]], "ejecutada": [[19, 0]]}
 }
@@ -257,7 +257,8 @@ Reglas de los contratos:
 - `afirma_vida` es siempre `false` en la señal biológica: el sistema nunca confirma vida (PDF §3).
 - `impacto` del meteorito indica si ya cayó; si cayó, la celda queda como cráter u obstáculo nuevo.
 - `pos` y `trayectoria` son (fila, columna), como en el resto de la API.
-- Todo evento de `eventos_del_paso` que actúa sobre el terreno trae `celda` (fila, columna), incluida la señal biológica.
+- Todo evento de `eventos_del_paso` que actúa sobre el terreno trae `celdas` (lista de [fila, columna]), incluida la señal biológica. Así lo emite el código (`celdas`, no `celda`).
+- Sismo (ARX-30a), en el paso del sismo: `{"nombre": "sismo", "efecto": "grietas", "celdas": [[f, c], ...]}`. Las celdas son las grietas nuevas, ya marcadas como BARRANCO en `/mapa`.
 
 ---
 
@@ -315,7 +316,7 @@ encontrar), drones destruidos y llegar al refugio. Las condiciones por escalón 
 
 `obligatorio` (bool): decide si la condición bloquea la victoria. Decisión del usuario (14/11): los sitios científicos y el refugio son siempre obligatorios; los drones destruidos son obligatorios desde el nivel Medio (3) y opcionales en Muy fácil y Fácil. La victoria exige solo las condiciones con `obligatorio: true`. Si en Medio o superior faltan drones al llegar al refugio, el refugio queda bloqueado y el objetivo pasa al dron vivo más cercano con ruta real (el aviso dice «Faltan drones»). La caza por BFS aplica a los modos con IA (automático, rna, difuso y ag): el BFS mueve el rover y el disparo lo decide el supervisor con veto (ARX-75). La partida termina en FRACASO solo si no hay forma de cumplirlo: el manual no caza solo, no queda munición, no hay ruta o la batería no alcanza, o pasan más de 300 pasos sin alcanzarlo.
 
-## 14. Paso: `POST /paso` y el `ultimo` de un disparo (ARX-75, ARX-30)
+## 14. Paso: `POST /paso` y el `ultimo` de un disparo (ARX-75, ARX-30a)
 
 Respuesta de un paso: `{accion, motivos, estado, ultimo, eventos_combate}`.
 
@@ -331,6 +332,15 @@ Respuesta de un paso: `{accion, motivos, estado, ultimo, eventos_combate}`.
 - **Meteoritos** (`POST /evento {"nombre": "meteorito"}`, ARX-30): impacto a 2–3 celdas del rover; la celda queda con
   riesgo 1,0 y su entorno con 0,6; el impacto cuesta 5 de batería. La misión evita la zona y puede disparar `V-DISPARO-RIESGO`
   si el rover queda dentro.
+- **Sismo** (`POST /evento {"nombre": "sismo"}`, ARX-30a): abre grietas (BARRANCO real en el mundo) en celdas libres a
+  distancia Chebyshev 2–4 del rover: 1 grieta en los niveles 1 y 2, 2 en los niveles 3 y 4, 3 en el nivel 5
+  (`GRIETAS_POR_NIVEL`). Antes de marcar, comprueba que el refugio y los sitios pendientes sigan alcanzables; si no, descarta
+  esa celda. La grieta queda con riesgo 1,0 en el mapa estimado. Si cae sobre la ruta, la misión replanifica en el acto
+  (fila `REPLAN-SISMO` en la bitácora del motor). No cuesta batería. La respuesta es `{"ok": true, "grietas": [[f, c], ...]}`
+  y `ok: false` si no hay celda segura.
+- Sismo espontáneo: solo en partidas jugables (garantía encendida), con probabilidad por paso según el nivel (0,3 % en el
+  nivel 1 a 0,9 % en el nivel 5, `SISMO_PROB_POR_NIVEL`) y su propio generador (semilla `[semilla, 1314]`). No altera la
+  secuencia de meteoritos.
 
 Pendiente de §13: su texto dice que rna, difuso y ag no disparan. Desde ARX-75 disparan a un dron en línea; la caza por BFS
 de los drones obligatorios sigue siendo solo del modo automático.

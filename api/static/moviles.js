@@ -109,9 +109,22 @@ function polvo(escena, centro) {
 }
 
 // Eventos del paso: sismo, meteorito, baja conectividad y señal biológica (siempre con la cautela)
-function aplicarEvento(e, escena, suelo, avisar) {
+// Último paso del motor en que se sacudió la cámara: /moviles repite el evento mientras el paso sea el actual
+let pasoSacudido = null;
+// Una partida nueva vuelve al paso 0: se olvida el último temblor para que un sismo en ese paso vuelva a sacudir
+export function reiniciarEventos() {
+  pasoSacudido = null;
+}
+function aplicarEvento(e, escena, suelo, avisar, alGrietas, paso) {
   const nombre = (e.nombre || "").toLowerCase();
-  if (nombre.includes("sismo")) efectos.sacudir(0.12, 1.5);
+  if (nombre.includes("sismo")) {
+    if (paso == null || paso !== pasoSacudido) {
+      pasoSacudido = paso;
+      efectos.sacudir(0.12, 1.5);
+    }
+    // Grietas: el llamador las pinta como barrancos del terreno, sin volver a pedir /mapa
+    if (e.efecto === "grietas" && Array.isArray(e.celdas) && alGrietas) alGrietas(e.celdas);
+  }
   if (nombre.includes("conectividad")) efectos.activarInterferencia(true);
   if (nombre.includes("senal") || nombre.includes("señal")) {
     const celda = (e.celdas && e.celdas[0]) || null;
@@ -133,7 +146,7 @@ function registrarFalloMovil(movil, err) {
   fallosMovil.add(clave);
   console.error(`[movil ${movil && movil.id}]`, err);
 }
-export function aplicarMoviles(datos, escena, suelo, avisar) {
+export function aplicarMoviles(datos, escena, suelo, avisar, alGrietas) {
   if (!escenaRef) {
     escenaRef = escena;
     escena.add(grupoZonas);
@@ -157,7 +170,13 @@ export function aplicarMoviles(datos, escena, suelo, avisar) {
       visuales.delete(id);
     }
   }
-  for (const e of datos.eventos_del_paso || []) aplicarEvento(e, escena, suelo, avisar);
+  for (const e of datos.eventos_del_paso || []) {
+    try {
+      aplicarEvento(e, escena, suelo, avisar, alGrietas, datos.paso);
+    } catch (err) {
+      registrarFalloMovil(e, err);   // un evento malo tampoco corta el ciclo (E5)
+    }
+  }
 }
 
 export const TEXTO_CAUTELA = TEXTO_BIO;

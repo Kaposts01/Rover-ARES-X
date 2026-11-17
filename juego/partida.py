@@ -78,7 +78,29 @@ class _RnaSegura:
         return getattr(self._rna, nombre)
 
 
-MARGEN_CAZA = 10   # pasos extra estimados por cada dron obligatorio (persecución desde su zona de patrulla)
+MARGEN_CAZA = 10   # suelo del margen de caza: pasos extra por dron obligatorio (persecución desde su zona de patrulla)
+MARGEN_CAZA_DIVISOR = 3   # ARX-79b (plan 79, sec. 3): el margen de caza es max(MARGEN_CAZA, lado mayor del mapa / 3)
+# ARX-79b: factor de seguridad de la garantía = 1 + K_ESCALA·(escala − 1) + K_NIVEL·(nivel − 1), con escala = área / (20·30).
+# El plan 79 (sec. 3) propone K_ESCALA = 0,15 y K_NIVEL = 0,05. Con esos valores NINGUNA variante de 40x60 pasa la garantía
+# (batería 100 − 4·(nivel − 1) frente a rutas de ~65–80 pasos × 1,45 + 15) y en 20x30 Hardcore deja de hallar variante en
+# 3 de 5 semillas (rompe 2 pruebas de api/tests/test_eventos_arx30.py que pasaban). Hasta que el usuario decida (ficha),
+# quedan en 0 (factor 1,0, comportamiento anterior); la fórmula y su prueba están listas.
+FACTOR_SEGURIDAD_K_ESCALA = 0.0
+FACTOR_SEGURIDAD_K_NIVEL = 0.0
+FACTOR_SEGURIDAD_PLAN = (0.15, 0.05)    # valores del plan 79, descartados por la evidencia anterior
+AVISO_SIN_GARANTIA = "Mapa sin garantía de victoria para este nivel y tamaño"
+
+
+def margen_caza(filas: int, columnas: int) -> float:
+    """ARX-79b: pasos extra por dron obligatorio, proporcional al mapa. La persecución recorre del orden del lado mayor
+    (en 8 direcciones la «diagonal» en celdas es max(filas, columnas): 60 en 40x60) dividido por 3; en 20x30 vale 10."""
+    return max(float(MARGEN_CAZA), max(int(filas), int(columnas)) / MARGEN_CAZA_DIVISOR)
+
+
+def factor_seguridad_garantia(filas: int, columnas: int, nivel: int) -> float:
+    """ARX-79b: multiplicador del recorrido estimado por la garantía (1,0 en 20x30 nivel 1; ≈1,45 en 40x60 nivel 1)."""
+    escala = (int(filas) * int(columnas)) / (FILAS_BASE * COLUMNAS_BASE)
+    return 1.0 + FACTOR_SEGURIDAD_K_ESCALA * (escala - 1.0) + FACTOR_SEGURIDAD_K_NIVEL * (int(nivel) - 1)
 
 
 def _drones_obligatorios(mundo, semilla: int, nivel: int) -> list:
@@ -177,16 +199,17 @@ def _cadena_a_destino(pos, bat, destino, estaciones, largo, factor, bateria_max)
     return list(reversed(cadena))
 
 
-def _plan_con_paradas(origen, seq, bateria, bateria_max, estaciones, largo, tramo, cazas=(), factor=1.0):
+def _plan_con_paradas(origen, seq, bateria, bateria_max, estaciones, largo, tramo, cazas=(), factor=1.0, margen_caza_pasos=None):
     """Camino por la secuencia seq (sitios, drones, refugio) con paradas en estaciones cuando falta batería.
 
     Un tramo directo cuesta largo × factor. Si no alcanza, se busca una cadena de estaciones (ARX-59).
     Devuelve la lista de celdas, o None si no hay forma de llegar al final con MARGEN_ENERGIA.
-    Cada dron de cazas cuesta MARGEN_CAZA pasos extra. Tras una estación la batería vuelve al máximo.
+    Cada dron de cazas cuesta margen_caza_pasos (por omisión MARGEN_CAZA) pasos extra. Tras una estación la batería vuelve al máximo.
     """
     camino, pos, bat = [origen], origen, float(bateria)
+    mc = MARGEN_CAZA if margen_caza_pasos is None else margen_caza_pasos
     for destino in seq:
-        extra = MARGEN_CAZA if destino in cazas else 0
+        extra = mc if destino in cazas else 0
         d = largo(pos, destino)
         if d is not None and d * factor <= bat:
             bat -= d * factor + extra
@@ -204,7 +227,7 @@ def _plan_con_paradas(origen, seq, bateria, bateria_max, estaciones, largo, tram
     return camino if bat >= MARGEN_ENERGIA else None
 
 
-def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(), factor=1.0) -> bool:
+def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(), factor=1.0, margen_caza_pasos=None) -> bool:
     """ARX-66 / ARX-59: existe un orden de sitios y drones obligatorios, con paradas en estaciones, que llega al
     refugio con la batería disponible. Sin estaciones equivale a comprobar la ruta completa sin recargar."""
     import itertools
@@ -234,7 +257,7 @@ def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(
     for orden_s in itertools.permutations(pts):
         for orden_d in itertools.permutations(cazas):
             seq = list(orden_s) + list(orden_d) + [refugio]
-            if _plan_con_paradas(origen, seq, bateria, tope, est, largo, tramo, cazas, factor) is not None:
+            if _plan_con_paradas(origen, seq, bateria, tope, est, largo, tramo, cazas, factor, margen_caza_pasos) is not None:
                 return True
     return False
 
@@ -312,6 +335,9 @@ class Partida:
                                  n_sitios=3 if nivel <= 2 else 4)
         mundo = _generar(semilla)
         self.semilla_mundo = semilla
+        self.factor_seguridad = factor_seguridad_garantia(self.filas, self.columnas, nivel)   # ARX-79b
+        self.margen_caza = margen_caza(self.filas, self.columnas)                             # ARX-79b
+        self._sin_garantia = False
         if garantia:
             # ARX-66: toda partida generada debe ser ganable (sitios, drones obligatorios y regreso al refugio con la
             # batería inicial). Si no lo es, se prueba una variante determinista del mismo mapa; la semilla no cambia.
@@ -321,13 +347,23 @@ class Partida:
             minimo = 2 if nivel <= 2 else 1          # niveles bajos: al menos 2 estaciones en cualquier tamaño
             n_est = max(minimo, round(ESTACIONES_POR_NIVEL[nivel] * escala_grande)) if con_estaciones else 0
             fac = AMBIENTE_FACTOR_POR_NIVEL[nivel] if con_estaciones else 1.0
+            fac *= self.factor_seguridad               # ARX-79b
+            ganable = False
             for k in range(1, 60):
                 drones = _drones_obligatorios(mundo, semilla, nivel)
                 est = _colocar_estaciones(mundo, self.semilla_mundo, n_est)
-                if _es_ganable(mundo, bat0, drones, bateria_max=bat_max, estaciones=est, factor=fac):
+                if _es_ganable(mundo, bat0, drones, bateria_max=bat_max, estaciones=est, factor=fac,
+                               margen_caza_pasos=self.margen_caza):
+                    ganable = True
                     break
                 self.semilla_mundo = semilla + 10007 * k
                 mundo = _generar(self.semilla_mundo)
+            else:   # la última variante generada no se había comprobado
+                drones = _drones_obligatorios(mundo, semilla, nivel)
+                est = _colocar_estaciones(mundo, self.semilla_mundo, n_est)
+                ganable = _es_ganable(mundo, bat0, drones, bateria_max=bat_max, estaciones=est, factor=fac,
+                                      margen_caza_pasos=self.margen_caza)
+            self._sin_garantia = not ganable
         self.mision = Mision(mundo, semilla=semilla, bateria=bateria)
         # ARX-59: estaciones de recarga y batería máxima (la partida jugable las usa; las evaluaciones congeladas no)
         self.bateria_max = BATERIA_MAX_POR_NIVEL[nivel] if con_estaciones else None
@@ -379,6 +415,8 @@ class Partida:
         self.esperas = 0                   # pasos de espera del modo difuso (ARX-11)
         self._historial = []               # últimas celdas visitadas por los modos sueltos (ARX-11)
         self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4)
+        if self._sin_garantia:             # ARX-79b: ninguna de las 59 variantes pasó la garantía
+            self._avisar(AVISO_SIN_GARANTIA)
         self.combate = None                # Combate de la sesión; lo asigna la API para contar los drones destruidos
         self.modo_ia = "manual"            # modo de la sesión; decide si la IA puede disparar (N12)
 
@@ -1351,7 +1389,8 @@ class Partida:
             for orden_d in itertools.permutations(cazas):
                 seq = [celda, *orden_s, *orden_d, refugio]
                 if _plan_con_paradas(origen, seq, bateria, bat_max, est, largo, tramo, cazas,
-                                     factor=self.mision.factor_ambiente) is not None:
+                                     factor=self.mision.factor_ambiente * self.factor_seguridad,
+                                     margen_caza_pasos=self.margen_caza) is not None:
                     return True
         return False
 

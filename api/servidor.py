@@ -70,6 +70,7 @@ class Sesion:
         self.veto = True              # veto de seguridad en los modos rna/difuso/ag (ARX-11)
         self.historial = []           # una fila por acción del jugador o de la IA (ARX-15)
         self.n = 0                    # contador de filas del historial
+        self.pesos_ag = None          # ARX-47a: pesos del fitness del laboratorio /ag (None = los de defecto); no afecta al juego
 
     def terminada(self) -> bool:
         return self.partida.estado in ESTADOS_TERMINALES
@@ -511,6 +512,28 @@ _cache_comparacion = {}
 ESCENARIOS_COMPARACION = ("congelado", "exigente")   # ARX-28d; si el motor declara ESCENARIOS, manda el motor
 
 
+PESO_MAX = 5.0
+
+
+def _pesos_ag(sesion, pedidos: dict) -> dict:
+    """Pesos del laboratorio /ag: los pedidos (validados en [0, 5]) sobre los de la sesión o los de defecto."""
+    from genetico import PESOS_POR_DEFECTO
+    pesos = dict(getattr(sesion, "pesos_ag", None) or PESOS_POR_DEFECTO)
+    for nombre, crudo in pedidos.items():
+        if crudo is None:
+            continue
+        try:
+            v = float(crudo)
+        except (TypeError, ValueError):
+            raise ErrorApi(400, f"w_{nombre} debe ser un número entre 0 y {PESO_MAX:g}")
+        if not 0.0 <= v <= PESO_MAX:   # también rechaza nan e inf
+            raise ErrorApi(400, f"w_{nombre} debe estar entre 0 y {PESO_MAX:g} (recibido: {crudo!s:.20})")
+        pesos[nombre] = v
+    if any(c is not None for c in pedidos.values()):
+        sesion.pesos_ag = dict(pesos)
+    return pesos
+
+
 def _escenarios_comparacion():
     try:
         from juego.comparacion import ESCENARIOS
@@ -842,16 +865,22 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         return r
 
     @app.get("/ag")
-    def diagnostico_ag(parada_sin_mejora: int = None):
+    def diagnostico_ag(parada_sin_mejora: int = None, w_ciencia: str = None, w_distancia: str = None,
+                       w_energia: str = None, w_riesgo: str = None, w_tiempo: str = None):
         """Diagnóstico del AG sobre los sitios pendientes (CA-04, RF-11): historial por generación con
         cromosomas, fitness y operación; los 3 mejores con su desglose; cruces y mutaciones efectivas.
-        `parada_sin_mejora=n` para tras n generaciones sin mejora (§12). No cambia la partida."""
-        p = activa().partida
+        `parada_sin_mejora=n` para tras n generaciones sin mejora (§12).
+        `w_ciencia, w_distancia, w_energia, w_riesgo, w_tiempo` en [0, 5] cambian los pesos del fitness solo en este
+        laboratorio (ARX-47a): se guardan en la sesión y se reutilizan. No cambia la partida."""
+        sesion = activa()
+        p = sesion.partida
+        pesos = _pesos_ag(sesion, {"ciencia": w_ciencia, "distancia": w_distancia, "energia": w_energia,
+                                   "riesgo": w_riesgo, "tiempo": w_tiempo})
         pendientes = {c: v for c, v in p.mundo.sitios.items() if c not in p.mision.visitados}
         if not pendientes:
             return {"sin_sitios": True, "motivo": "no quedan sitios científicos pendientes"}
         clave = (p.mision.semilla, tuple(sorted(pendientes)), tuple(p.rover.posicion),
-                 p.mision.riesgo.tobytes(), parada_sin_mejora)
+                 p.mision.riesgo.tobytes(), parada_sin_mejora, tuple(sorted(pesos.items())))
         if clave in _cache_ag:
             return _cache_ag[clave]
         if parada_sin_mejora is not None and (isinstance(parada_sin_mejora, bool) or parada_sin_mejora < 1):
@@ -859,7 +888,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         from dataclasses import replace as reemplazar
         gp = GeneticPlanner(reemplazar(p.mundo, inicio=p.rover.posicion, sitios=pendientes), p.mision.riesgo,
                             bateria=max(p.rover.bateria, 1.0), k_puntos=p.mision.k, poblacion=30,
-                            generaciones=30, semilla=p.mision.semilla)
+                            generaciones=30, semilla=p.mision.semilla, pesos=dict(pesos))
         res = gp.optimizar(parada_sin_mejora=parada_sin_mejora)
         salida = {
             "parametros": {"poblacion": gp.poblacion, "generaciones": gp.generaciones, "k_puntos": gp.k,

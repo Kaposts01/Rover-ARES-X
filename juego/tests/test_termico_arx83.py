@@ -95,6 +95,12 @@ def test_determinismo_de_la_serie_t_int():
     assert serie() == serie()
 
 
-def test_planeta_desconocido_se_rechaza():
-    with pytest.raises(ValueError):
-        Partida(semilla=11, planeta="Júpiter")
+@pytest.mark.parametrize("planeta", ["Saturno", "Urano", "Neptuno", "Júpiter"])
+def test_planeta_sin_modelo_termico_deja_termico_inactivo(bandera, planeta):
+    p = Partida(semilla=11, planeta=planeta)                  # no lanza ValueError
+    assert p.termico.activo is False
+    _al_sol(p)
+    for _ in range(40):
+        p.avanzar_ia()
+    assert p.t_int == termico.T_INT_INICIAL and p.pasos_sobre_tolerancia == 0
+    assert "V-TEMPERATURA" not in set(p.bitacora()["motivos"])

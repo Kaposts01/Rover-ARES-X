@@ -373,7 +373,7 @@ class Partida:
         # termico.ABORTO_TERMICO_ACTIVO (apagada por defecto). La evaluación congelada no la usa.
         self.planeta = planeta
         self.termico = termico.Termico(planeta)
-        self._termico_activo = bool(garantia)
+        self._termico_activo = bool(garantia) and self.termico.activo     # planeta sin modelo: inactivo, sin ValueError
         if self._termico_activo:
             _inferir = self.mision.difuso.inferir
 

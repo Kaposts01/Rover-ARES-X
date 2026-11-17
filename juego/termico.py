@@ -40,15 +40,20 @@ def es_sombra(mundo, pos) -> bool:
 
 class Termico:
     def __init__(self, planeta: str = PLANETA_POR_DEFECTO, t_int: float = T_INT_INICIAL):
-        if planeta not in T_AMB_POR_PLANETA:
-            raise ValueError(f"planeta sin modelo térmico: {planeta!r} (válidos: {sorted(T_AMB_POR_PLANETA)})")
         self.planeta = planeta
-        self.t_amb = T_AMB_POR_PLANETA[planeta]
+        self.t_amb = T_AMB_POR_PLANETA.get(planeta)     # None: planeta sin modelo térmico (p. ej. modo sonda) -> inactivo
         self.t_int = float(t_int)
         self.pasos_sobre_tolerancia = 0
 
+    @property
+    def activo(self) -> bool:
+        return self.t_amb is not None
+
     def paso(self, sombra: bool) -> float:
-        """Un paso: actualiza T_int y el contador de pasos seguidos sobre la tolerancia; devuelve T_int."""
+        """Un paso: actualiza T_int y el contador de pasos seguidos sobre la tolerancia; devuelve T_int.
+        Sin modelo para el planeta (inactivo): no cambia nada."""
+        if not self.activo:
+            return self.t_int
         if sombra:
             t_efectiva = min(self.t_amb, T_SOMBRA)
             self.t_int += (K_CALOR * max(0.0, t_efectiva - self.t_int)

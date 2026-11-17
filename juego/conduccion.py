@@ -175,12 +175,12 @@ def _tras_mover(partida, destino, objetivo, ruta_ag: bool):
         m.ruta = [pos] + (tramo[1:] if tramo else [])
 
 
-def _estado_tras_paso(partida, accion: str, motivos: list, obs_dir, velocidad: float):
+def _estado_tras_paso(partida, accion: str, motivos: list, obs_dir, velocidad: float, fz=None):
     m = partida.mision
     partida._tick_ambiente()
     if partida.rover.bateria <= 0 and partida.estado not in ESTADOS_TERMINALES:
         m.estado = "FRACASO"
-    m._registrar(accion, velocidad, motivos, obs_dir or {}, None)
+    m._registrar(accion, velocidad, motivos, obs_dir or {}, fz)   # ARX-80: fz real en el modo difuso
     return {"accion": accion, "motivos": motivos, **partida._posicion_estado()}
 
 
@@ -246,23 +246,23 @@ def avanzar(partida, modo: str, veto: bool = True) -> dict:
             partida.esperas = getattr(partida, "esperas", 0) + 1
             if partida.esperas < PASOS_PARADO_MAXIMO:
                 return _estado_tras_paso(partida, "detener", motivos + ["D-VELOCIDAD-BAJA"],
-                                         obs[rumbo]["probs"], v)
+                                         obs[rumbo]["probs"], v, fz)
             # espera agotada: rodea con la regla de la RNA
             partida.esperas = 0
             elegido = _rodear(partida, obs, veto, objetivo, motivos)
             if elegido is None:
-                return _estado_tras_paso(partida, "replanificar", motivos + ["V-RODEO-SIN-CANDIDATO"], None, v)
+                return _estado_tras_paso(partida, "replanificar", motivos + ["V-RODEO-SIN-CANDIDATO"], None, v, fz)
             ok = _ejecutar(partida, elegido.rumbo, elegido.destino)
             if ok:
                 _tras_mover(partida, elegido.destino, objetivo, ruta_ag=False)
             return _estado_tras_paso(partida, "rodear" if ok else "bloqueado", motivos + ["D-RODEO"],
-                                     obs[elegido.rumbo]["probs"], v)
+                                     obs[elegido.rumbo]["probs"], v, fz)
         partida.esperas = 0
         ok = _ejecutar(partida, rumbo, siguiente)
         if ok:
             _tras_mover(partida, siguiente, objetivo, ruta_ag=False)
         return _estado_tras_paso(partida, "avanzar" if ok else "bloqueado", motivos + ["D-VELOCIDAD-OK"],
-                                 obs[rumbo]["probs"], v)
+                                 obs[rumbo]["probs"], v, fz)
 
     # modo "ag": sigue su ruta; replanifica solo si el siguiente paso queda bloqueado
     salto_invalido = len(m.ruta) >= 2 and max(abs(m.ruta[1][0] - pos[0]), abs(m.ruta[1][1] - pos[1])) > 1

@@ -35,7 +35,9 @@ def _forzar_libre(p, celda):
 def test_nivel_genera_el_mundo_del_contrato(nivel):
     p = Partida(semilla=11, nivel=nivel)
     sitios_esperados = 3 if nivel <= 2 else 4
-    esperado = generar_mundo(11, n_obstaculos=20 + 2 * nivel, n_barrancos=4 + nivel,
+    # ARX-66: la garantía de ganabilidad puede usar una variante del mismo mapa (semilla_mundo != semilla);
+    # el contrato se comprueba contra la semilla con que se generó el mundo realmente.
+    esperado = generar_mundo(p.semilla_mundo, n_obstaculos=20 + 2 * nivel, n_barrancos=4 + nivel,
                              n_sitios=sitios_esperados)
     assert np.array_equal(p.mundo.tipo, esperado.tipo)
     assert p.mundo.sitios == esperado.sitios

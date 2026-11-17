@@ -12,7 +12,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from difuso import FuzzyController, ResultadoDifuso
+from difuso import FuzzyController, ResultadoDifuso, aplanar_membresias
 from genetico import GeneticPlanner, camino_bfs, mapa_estimado
 from rna import NeuralPerception, _rasgos_celda, generar_dataset, particion_por_mapas
 from simulador import (BARRANCO, MOVIMIENTOS, MissionLogger, Rover, SensorSuite, World,
@@ -292,6 +292,7 @@ class Mision:
             p_obstaculo=round(float(probs.get("obstáculo", 0.0)), 3) if probs else None,
             reglas=";".join(r[0] for r in fz.reglas_activadas) if fz else "",
             motivos=";".join(motivos),
+            **aplanar_membresias(fz.membresias if fz else None),     # ARX-80: membresías difusas del paso
         )
 
 

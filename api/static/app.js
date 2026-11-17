@@ -1286,6 +1286,19 @@ function pintarHud(e) {
     const modoVisible = e.modo_planeta === "sonda" ? " · sonda" : (e.modo_planeta === "rover" ? " · rover" : "");
     document.querySelector("#hud h1").textContent = `ARES-X · ${planetaVisible}${modoVisible}`;
   }
+  // ARX-85 (ev3-d61 A): en modo sonda, pantalla de sonda con sus lecturas y sin controles de rodaje
+  const enSonda = e.modo_planeta === "sonda";
+  const panelSonda = document.getElementById("sonda-panel");
+  const controlesManuales = document.getElementById("manual");
+  if (panelSonda) panelSonda.classList.toggle("oculto", !enSonda);
+  if (controlesManuales) controlesManuales.style.display = enSonda ? "none" : "";
+  if (enSonda) {
+    document.getElementById("sonda-planeta").textContent = planetaActivo;
+    document.getElementById("sonda-temp").textContent = `${e.temperatura_interna} °C (tolerancia ${e.tolerancia} °C)`;
+    document.getElementById("sonda-bateria").textContent = `${e.bateria.toFixed(1)} %`;
+    document.getElementById("sonda-sobre").textContent = e.pasos_sobre_tolerancia ?? "-";
+    document.getElementById("sonda-estado").textContent = e.estado;
+  }
   document.getElementById("h-semilla").textContent = e.semilla;
   document.getElementById("h-estado").textContent = e.estado;
   document.getElementById("h-bateria").textContent = `${e.bateria.toFixed(1)} %`;

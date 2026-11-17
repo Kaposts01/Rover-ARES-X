@@ -729,6 +729,15 @@
       <div class="ayuda">Pulsa una leyenda para ocultar o mostrar esa serie.</div>
     </div>
     </div>
+  <!-- ARX-85: pantalla de sonda (solo en modo sonda, sin rodaje) -->
+  <div id="sonda-panel" class="caja oculto" aria-label="Pantalla de sonda">
+    <div class="kicker">Sonda</div>
+    <div class="fila"><span>Planeta</span><span class="valor" id="sonda-planeta">-</span></div>
+    <div class="fila"><span>T interna</span><span class="valor" id="sonda-temp">-</span></div>
+    <div class="fila"><span>Batería</span><span class="valor" id="sonda-bateria">-</span></div>
+    <div class="fila"><span>Pasos sobre tolerancia</span><span class="valor" id="sonda-sobre">-</span></div>
+    <div class="fila"><span>Estado</span><span class="valor" id="sonda-estado">-</span></div>
+  </div>
   <!-- Controles manuales: esquina inferior derecha, compactos y semitransparentes -->
   <div id="manual" class="caja oculto">
     <button id="manual-toggle" class="manual-cabecera" type="button" aria-expanded="true">Controles <span aria-hidden="true">▾</span></button>

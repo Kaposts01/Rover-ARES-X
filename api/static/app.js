@@ -1364,6 +1364,12 @@ function pintarPaneles(p) {
     li.textContent = m;
     motivos.appendChild(li);
   }
+  // ARX-86: lecturas de los sensores en el rumbo actual y riesgo estimado de la celda de enfrente
+  const sen = p.sensores;
+  const indicador = document.getElementById("sup-sensores");
+  if (indicador) indicador.textContent = sen
+    ? `${sen.rumbo}: proximidad ${sen.proximidad} · borde ${sen.borde} · gradiente ${sen.gradiente} · vibración ${sen.vibracion} · riesgo enfrente ${sen.riesgo_enfrente ?? "-"}${sen.falla ? " · FALLA DE SENSOR" : ""}`
+    : "-";
 }
 
 async function refrescarPaneles() {

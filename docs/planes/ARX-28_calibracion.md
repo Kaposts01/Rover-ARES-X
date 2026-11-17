@@ -62,3 +62,35 @@ Con cualquier `prob_fallo` > 0 la primera lectura NaN lleva a `V-SENSOR-NAN` y a
 **No se separa por la RNA.** M2 no queda demostrado para la RNA con `prob_fallo` en este escenario. Ningún valor cumple el criterio (ventaja estable y atribuible a la RNA), así que **`ESCENARIOS["exigente"]["prob_fallo"]` se deja en `None`**. Los valores 0,05 a 0,3 son ya demasiado altos para este diseño: incluso 0,05 aborta las 5 partidas, y un valor menor (p. ej. 0,005 a 0,01) solo cambiaría cuándo cae en modo seguro, sin que la RNA intervenga, porque el veto es previo a ella y se aplica igual a `sin_rna`.
 
 Opciones para el usuario (ficha, sin decidir aquí): (A) aceptar y declarar en el informe que el escenario exigente no separa la RNA ni con fallo de sensor (costo: solo redacción; aporta a M2 como resultado negativo honesto); (B) tarea aparte para que el fallo del sensor degrade en vez de abortar (p. ej. ignorar la lectura NaN y seguir con el mapa estimado) y medir de nuevo (costo: cambia `integracion.py`/supervisor, fuera de ARX-28, requiere pruebas y reabre el límite de seguridad V-SENSOR-NAN); (C) reentrenar la RNA con ruido alto y detección pobre (costo: reentrenar y revalidar métricas ya congeladas).
+
+## Resultado de 20 semillas
+
+Escenario exigente (nivel 5, ruido 0,6, p_detectar 0,4, `prob_fallo` = None), semillas 1 a 20, cuatro variantes. Archivos: `docs/COMPARACION_POLITICAS_exigente.json` (`python scripts/comparacion_politicas.py 20 exigente`) y `docs/TRAZA_DIVERGENCIAS_exigente.csv` (`python scripts/traza_divergencias.py 20 exigente`). El congelado `docs/COMPARACION_POLITICAS.json` no se tocó.
+
+Medición de éxito, colisiones y pasos (JSON):
+
+| variante | éxitos | colisiones (media) | pasos (media) |
+|---|---|---|---|
+| hibrido | 19/20 | 0,0 | 50,85 |
+| sin_rna | 19/20 | 0,0 | 50,65 |
+| sin_difuso | 20/20 | 0,0 | 50,85 |
+| sin_ag | 20/20 | 0,0 | 55,2 |
+
+La semilla 7 termina en `SIN_RUTA` en el híbrido y en `sin_rna`; `sin_difuso` y `sin_ag` la ganan.
+
+Divergencias paso a paso frente al híbrido (misma semilla). «Directa» es una fila en que ambas partidas empezaban el paso en la misma celda y con la misma batería, así que la diferencia sale de la técnica en ese paso; «consecuencia» es una fila posterior a que las trayectorias ya se separaron. Una fila es un paso en que difiere lo registrado (celda, acción, velocidad o motivo).
+
+| técnica (variante) | semillas con divergencia | filas totales | directas | consecuencia |
+|---|---|---|---|---|
+| RNA (sin_rna) | 5 de 20 (2, 4, 12, 13, 18) | 94 | 9 | 85 |
+| difuso (sin_difuso) | 20 de 20 | 863 | 423 | 440 |
+| AG (sin_ag) | 12 de 20 (3-9, 11-14, 17) | 541 | 40 | 501 |
+
+Qué cambia en las filas directas:
+- RNA: 9 filas. 5 cambian decisión, velocidad o ruta (3 en la semilla 4, pasos 2, 11 y 12, y 2 en la 18, pasos 2 y 42); 4 solo cambian el código de motivo: el híbrido veta con `V-RNA-OBSTACULO` o `V-RNA-BARRANCO` y `sin_rna` toma la misma acción `replanificar` con `V-OBSTACULO-EN-RUTA` (semillas 2, 4, 12 y 13). Códigos `V-RNA-*` registrados en el híbrido en las 94 filas: 8.
+- Difuso: 423 filas; 380 cambian solo la velocidad, 42 también decisión y ruta, 1 velocidad y ruta. Motivo: reglas difusas activadas en el híbrido (la más frecuente, R4, en 173 filas directas).
+- AG: 40 filas; 15 cambian la ruta, 12 la velocidad, 9 decisión, velocidad y ruta, 4 velocidad y ruta. Además, el orden de sitios del plan inicial difiere en 12 semillas (fila de paso 0).
+
+Sobre la RNA, lo medido: no altera el éxito (19/20 en híbrido y en `sin_rna`, mismas semillas) ni las colisiones (0 en las cuatro variantes). En 4 de las 9 divergencias directas el veto de la RNA y el veto `V-OBSTACULO-EN-RUTA` producen la misma acción en la misma celda; es decir, en este diseño el supervisor es redundante con la RNA para el resultado. La RNA sí altera pasos en 2 semillas (4 y 18). El criterio de ≥ 3 semillas con divergencia de la RNA se cumple (5), por lo que M2 queda demostrado para la RNA solo en términos de decisión, velocidad o ruta, no de éxito.
+
+Prueba: `juego/tests/test_trazas_divergencia.py` falla si alguna técnica no tiene divergencia directa en las 20 semillas (CSV) o en la semilla 4 recalculada en vivo.

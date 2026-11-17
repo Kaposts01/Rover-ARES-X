@@ -27,3 +27,12 @@ def test_sin_pasos_el_difuso_sigue_al_modo_de_la_sesion():
     c = _cliente()
     assert c.post("/modo", json={"modo": "rna"}).status_code == 200
     assert c.get("/paneles").json()["difuso"]["usado"] is False
+
+
+def test_sin_pasos_en_modo_difuso_usado_es_true_y_hay_velocidad():
+    # QA/Orquestador: antes del primer paso el panel de difuso debe mostrar la sugerencia actual, no un vacío
+    c = _cliente()
+    assert c.post("/modo", json={"modo": "difuso"}).status_code == 200
+    d = c.get("/paneles").json()["difuso"]
+    assert d["usado"] is True
+    assert d["velocidad"] is not None

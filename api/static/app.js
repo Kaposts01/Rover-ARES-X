@@ -1367,9 +1367,11 @@ function pintarPaneles(p) {
   // ARX-86: lecturas de los sensores en el rumbo actual y riesgo estimado de la celda de enfrente
   const sen = p.sensores;
   const indicador = document.getElementById("sup-sensores");
-  if (indicador) indicador.textContent = sen
-    ? `${sen.rumbo}: proximidad ${sen.proximidad} · borde ${sen.borde} · gradiente ${sen.gradiente} · vibración ${sen.vibracion} · riesgo enfrente ${sen.riesgo_enfrente ?? "-"}${sen.falla ? " · FALLA DE SENSOR" : ""}`
-    : "-";
+  // QA ARX-86: sin «null» en pantalla; durante una falla se muestra «falla» en lugar de las lecturas
+  const dato = (x) => (x == null ? "—" : x);
+  if (indicador) indicador.textContent = !sen ? "-"
+    : sen.falla ? `${sen.rumbo}: falla de sensor · riesgo enfrente ${dato(sen.riesgo_enfrente)}`
+    : `${sen.rumbo}: proximidad ${dato(sen.proximidad)} · borde ${dato(sen.borde)} · gradiente ${dato(sen.gradiente)} · vibración ${dato(sen.vibracion)} · riesgo enfrente ${dato(sen.riesgo_enfrente)}`;
 }
 
 async function refrescarPaneles() {

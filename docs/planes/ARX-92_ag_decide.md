@@ -176,3 +176,19 @@ Decisión del Maestro: el escenario exigente pasa a tener 10 sitios (además de 
 - **Qué no es**: la batería no es una garantía de victoria. Las recargas no existen en el arnés; los drones y los eventos pueden alargar la ruta. Las derrotas se publican con su causa, sin ajustar B.
 - **Regla**: B no se ajusta después de ver resultados. Si la tasa sale baja, se publica así.
 - **Líneas base nuevas** (mismo mapa, mismo escenario, sin AG): **vecino más cercano** (`sin_ag_vecino`, ya existe) y **mejora local 2-opt** sobre el orden del vecino más cercano (`sin_ag_2opt`, nueva), con RNA y difuso activos. Sirven para decir si el AG aporta frente a una mejora local sencilla.
+
+## 13. Medición de 92c (20 semillas) y lectura de las preguntas del Orquestador
+
+Datos: `docs/planes/mediciones/medicion_92c.json` y `.log`. Criterios 1 y 4: 20/20 y 0 avisos de respaldo. Exigente de 10 sitios: híbrido 12/20 (8,1 sitios de media), vecino 14/20, 2-opt 17/20 (9,9), más corta 12/20, ag_puro 10/20. Publicado tal como salió; no se han cambiado códigos ni cifras.
+
+**(a) ¿Qué variante es «el AG decide el orden»?** El híbrido: el sistema completo con el AG de orden (pesos por defecto). `ag_puro` usa el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG aparte.
+
+**(b) ¿Por qué el híbrido visita 8,1 de 10?** En las 8 partidas que fallan, el plan inicial sí incluye los 10 sitios en 5 casos; el rover se queda sin batería por el camino (resultado de batería, tipo b). En los otros 3 (semillas 12, 16 y 19) el AG crudo también incluye los 10 sitios, pero `_planear` lo descarta porque `largo + MARGEN_ENERGIA > batería` (p. ej., semilla 12: 87 + 15 = 102 > 95), así que el plan queda solo con el refugio y la partida termina por «batería insuficiente». Esos 3 casos no son omisión del AG ni agotamiento en ruta: son un desajuste de viabilidad entre el envoltorio (que no aplica el margen de 15) y `_planear` (que sí lo aplica). Recuento: **5 de tipo b, 3 de desajuste de margen, 0 de omisión por el AG**.
+
+**(c) ¿Qué hace `sin_ag_mas_corta` con 10 sitios?** No es exhaustiva ni un tope: es el AG de orden con pesos solo de distancia, que con 10 sitios sigue siendo el AG (la enumeración exhaustiva solo se usa en la vía de respaldo, con 6 sitios o menos).
+
+**(d) ¿El umbral de 0,0223 anula los pesos en el exigente de 10 sitios?** Sí, en buena parte: de 40 planificaciones del híbrido, 19 eligen una ruta distinta de la de mayor fitness por el desempate (13 de 20 semillas tienen al menos una). Con esos pesos, el umbral no deja decidir al fitness en casi la mitad de los casos. Es la situación que ev3-d79 pide señalar.
+
+**Presupuesto frente a 2-opt (conteo, sin turno).** AG de orden: población 30 y 30 generaciones como máximo; órdenes distintos evaluados por planificación: 187 a 294 (media 239); mejor solución de media en la generación 17,9. 2-opt: 45 a 180 pares evaluados (media 108) y 2,4 pasadas de media. Con la misma cantidad de evaluaciones (≈240) 2-opt termina su búsqueda local mucho antes, pero optimiza el largo de la ruta, no el fitness, así que no compiten por el mismo objetivo. No se ha medido si converge antes en fitness con el mismo presupuesto: eso requiere una medición nueva.
+
+**Pendiente del Orquestador:** decidir si el caso de 3 semillas (desajuste de margen) se corrige y con qué criterio, antes de cualquier nueva medición. No se ha cambiado código.

@@ -439,3 +439,23 @@ def test_historial_usa_el_estado_visible_tras_un_sismo_con_grieta_en_la_ruta(cli
     estado = cliente.get("/estado").json()["estado"]
     ultima = cliente.get("/historial").json()["filas"][-1]
     assert estado == "REPLANIFICACION" and ultima["estado"] == estado
+
+
+def test_estado_expone_el_ultimo_replanteo_del_ag_tras_un_sismo(cliente):
+    # ARX-31b: ultimo_replanteo en /estado y el evento replanteo_ag en /moviles
+    sesion = cliente.app.state.sesion
+    assert cliente.get("/estado").json()["ultimo_replanteo"] is None
+    cliente.post("/paso")
+    for _ in range(80):
+        ruta = {tuple(c) for c in sesion.partida.mision.ruta}
+        antes = len(sesion.partida.sismos)
+        cliente.post("/evento", json={"nombre": "sismo"})
+        if len(sesion.partida.sismos) > antes and any(tuple(g) in ruta for g in sesion.partida.sismos[-1]["grietas"]):
+            break
+        cliente.post("/paso")
+    else:
+        raise AssertionError("no hubo sismo con grieta en la ruta")
+    ultimo = cliente.get("/estado").json()["ultimo_replanteo"]
+    assert ultimo["motivo"] == "REPLAN-AG-SISMO" and ultimo["paso"] == sesion.partida.mision.paso
+    eventos = cliente.get("/moviles").json()["eventos_del_paso"]
+    assert {"nombre": "replanteo_ag", "motivo": "REPLAN-AG-SISMO"} in eventos

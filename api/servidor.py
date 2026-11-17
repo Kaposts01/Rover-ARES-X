@@ -187,6 +187,15 @@ def _celda(c) -> list:
     return [int(c[0]), int(c[1])]
 
 
+def _ultimo_replanteo(p) -> dict:
+    """ARX-31b: {paso, motivo} del último replanteo del AG por un evento grave (fila REPLAN-AG-* de la bitácora), o None."""
+    for fila in reversed(p.mision.log.filas):
+        motivos = str(fila.get("motivos", ""))
+        if motivos.startswith("REPLAN-AG-"):
+            return {"paso": int(fila["paso"]), "motivo": motivos}
+    return None
+
+
 def _estado(sesion: Sesion) -> dict:
     p = sesion.partida
     sug = p.sugerencia()
@@ -220,6 +229,7 @@ def _estado(sesion: Sesion) -> dict:
         "ruta": [_celda(c) for c in (p.ruta or [])],
         "municion": sesion.combate.municion,
         "cooldown": sesion.combate.cooldown,
+        "ultimo_replanteo": _ultimo_replanteo(p),    # ARX-31b: null si no hubo replanteo del AG
     }
 
 
@@ -962,6 +972,9 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                     for s in p.sismos if s["paso"] == int(p.mision.paso)]
         eventos += [{"nombre": "senal_biologica", "efecto": "lectura_anomala", "celdas": [_celda(s["celda"])],
                      "afirma_vida": False} for s in p.senales if s["paso"] == int(p.mision.paso)]
+        replanteo = _ultimo_replanteo(p)
+        if replanteo is not None and replanteo["paso"] == int(p.mision.paso):      # ARX-31b
+            eventos.append({"nombre": "replanteo_ag", "motivo": replanteo["motivo"]})
         if p._ultimo_corte is not None and p._ultimo_corte == int(p.mision.paso):
             eventos.append({"nombre": "baja_conectividad", "efecto": "sin_enlace", "restante": int(p.enlace_restante)})
         return {

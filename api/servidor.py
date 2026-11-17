@@ -1197,7 +1197,9 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
 
     @app.get("/paneles")
     def paneles():
-        return _paneles(activa())
+        datos = _paneles(activa())
+        datos["sensores"] = _sensores(activa().partida)    # ARX-86: lo pinta el panel de supervisión
+        return datos
 
     @app.post("/intervencion")
     def intervencion(datos: IntervencionIn):

@@ -35,3 +35,8 @@ def test_leer_los_sensores_no_consume_el_ruido_de_la_partida():
     segundo = cliente.get("/estado").json()["sensores"]
     assert primero == segundo
     assert partida.mision.rng.bit_generator.state == antes
+
+
+def test_paneles_trae_los_sensores_que_pinta_el_panel_de_supervision():
+    s = _cliente().get("/paneles").json()["sensores"]
+    assert {"rumbo", "proximidad", "borde", "gradiente", "vibracion", "riesgo_enfrente", "falla"} <= set(s)

@@ -1381,21 +1381,23 @@ async function refrescarPaneles() {
 // Móviles, eventos y automático continuo (adaptador: motor o datos de prueba)
 // Objetivos de misión (ARX-67): bloque en el HUD y resumen en la meta
 let ultimosObjetivos = null;
-// Medidor de calor interno (ARX-51): solo para el rover; datos de prueba hasta ARX-50
-// Interruptor: true cuando /estado publique la temperatura interna del rover (ARX-50). Hasta entonces, solo con ?demo=estados
-const CALOR_MOTOR = false;
+// Medidor de calor interno (ARX-51, ARX-83c): solo para el rover; lee la temperatura interna real de /estado
+let calorSobreTolerancia = false;
 function pintarCalor(datos) {
   const fila = document.getElementById("fila-calor");
   const caja = document.getElementById("barra-calor-caja");
-  const visible = modoPlanetaActivo === "rover" && Boolean(datos) && (CALOR_MOTOR || modoDemoEstados);
+  const visible = modoPlanetaActivo === "rover" && Boolean(datos) && typeof datos.temperatura_interna === "number";
   fila.classList.toggle("oculto", !visible);
   caja.classList.toggle("oculto", !visible);
   if (!visible) return;
-  const t = datos.temperatura_interna;
+  const t = Math.round(datos.temperatura_interna * 10) / 10;
   document.getElementById("h-calor").textContent = `${t} °C`;
   const barra = document.getElementById("h-calor-barra");
   barra.style.width = `${Math.min(100, (t / (datos.tolerancia * 1.3)) * 100)}%`;
   barra.style.background = t >= datos.tolerancia ? "#ff5d6c" : t >= datos.tolerancia * 0.66 ? "#ffb454" : "#6ee7a8";
+  const sobre = t > datos.tolerancia;
+  if (sobre && !calorSobreTolerancia) avisar(`Calor interno sobre la tolerancia (${datos.tolerancia} °C)`);
+  calorSobreTolerancia = sobre;
 }
 
 function pintarObjetivos(o) {
@@ -1442,7 +1444,7 @@ function pintarObjetivos(o) {
 async function refrescarMovilesYEscenario() {
   if (!estado || estado.sin_partida) return;
   pintarObjetivos(await adaptador.objetivos());
-  pintarCalor(adaptador.calorPrueba());
+  pintarCalor(estado);
   const datos = await adaptador.moviles();
   aplicarMoviles(datos, scene, alturaTerreno, (texto) => avisar(texto), agregarGrietas);
   aplicarEnlaceYSenal(estado);

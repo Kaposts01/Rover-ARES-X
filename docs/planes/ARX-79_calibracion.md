@@ -41,9 +41,9 @@ En los niveles 3 a 5 el log no lista las semillas; cada partida está en el JSON
 
 Referencias previas (no son esta medición): QA 17/11 en `ab46b4a`: Muy fácil grande pierde las semillas 8, 9 y 12; Medio grande las 1 a 4 (la tabla de hoy da 6 derrotas en Muy fácil y 8 en Fácil, con otras semillas). ARX-58: Muy fácil grande 80 % con mediana 77 pasos (hoy 70 %, mediana 79,5).
 
-## 79d · Medición final
+## 79d · Medición final · criterio del plan anterior (superado)
 
-Pendiente (tras 79b y 79c). Criterio: Muy fácil y Fácil grande ≥ 95 %; Medio ≥ 85 %; pequeño sin empeorar.
+Este criterio era el de la versión inicial del plan ("Pendiente, tras 79b y 79c": Muy fácil y Fácil grande ≥ 95 %; Medio ≥ 85 %; pequeño sin empeorar). **Lo reemplazó la decisión ev3-d75 A** (batería inicial proporcional al tamaño): la medición 79d se publica tal como sale, sin ajustarla hasta llegar a esos porcentajes. Se conserva aquí para que quede claro qué criterio se abandonó y por qué.
 
 ## Criterio de la batería proporcional al tamaño (ev3-d75 A) · escrito ANTES de medir 79d
 
@@ -98,3 +98,7 @@ Totales de derrotas grande: caza sin batería 22, batería 0 con sitios pendient
 - **Medición**: 2 de 200 partidas de 79d (nivel 3 del grande), 1 %; el umbral de ev3-d76 es 2 %.
 - **Clasificación**: `scripts/medir_garantia.py`, función `causa()`, etiqueta «caza parada: 12 pasos sin avance (regla 79c)». Las filas de `medicion_79d_*.json` se escribieron antes de esta etiqueta y guardan «otra: …» en sus dos casos; el conteo está hecho desde sus avisos.
 - **Alternativa no adoptada**: abandonar la caza, replanificar y no volver a ese dron durante N pasos, con FRACASO solo tras K abandonos. Queda como decisión del Maestro si el conteo sube por encima del 2 %.
+
+## Factor de seguridad (K) · no aplicado por decisión de ev3-d75
+
+El factor de seguridad del plan (K_ESCALA = 0,15, K_NIVEL = 0,05) no se aplicó. El Maestro eligió la batería inicial proporcional al tamaño (ev3-d75 A) en lugar de ese factor, así que `FACTOR_SEGURIDAD_K_ESCALA` y `FACTOR_SEGURIDAD_K_NIVEL` quedan en 0 (factor 1,0) por esa decisión. La fórmula y su prueba (`test_garantia_grande_arx79.py`) siguen listas por si el Maestro vuelve a abrir el asunto. Con los valores del plan ninguna variante de 40×60 pasa la garantía (ver `juego/partida.py`, comentario junto a las constantes).

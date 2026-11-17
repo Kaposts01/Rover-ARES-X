@@ -348,6 +348,8 @@ class Partida:
         self.mision.rna = _RnaSegura(self.mision.rna)
         # El planificador de la misión pasa a respetar el objetivo fijado por el jugador (ev3-d27).
         self.mision._planear = self._planear_con_objetivo
+        # ARX-90: regla de percepción (método ligado: sobrevive a copy y deepcopy de la partida)
+        self.mision._actualizar_mapa_estimado = self._actualizar_mapa_percepcion
         self._falla_restante = 0           # pasos de IA detenida por falla de sensor
         self._prob_fallo_base = None       # probabilidad de fallo del sensor antes de la falla
         self._ambiente = "normal"          # "normal" | "tormenta" | "noche"
@@ -453,6 +455,7 @@ class Partida:
         sombra.sensor = SensorSuite(rng=sombra.rng, ruido=m.sensor.ruido,
                                     prob_fallo=m.sensor.prob_fallo)
         sombra.riesgo = m.riesgo.copy()
+        sombra._actualizar_mapa_estimado = lambda *a: self._actualizar_mapa_percepcion(*a, destino=sombra)
         sombra.ruta = list(m.ruta)
 
         if self._ruta_inconsistente():
@@ -932,6 +935,21 @@ class Partida:
 
     def _posicion_estado(self) -> dict:
         return {"posicion": self.rover.posicion, "bateria": float(self.rover.bateria), "estado": self.estado}
+
+    # ---------- regla de percepción (ARX-90) ----------
+    def _actualizar_mapa_percepcion(self, pos, rumbo, distancia, destino=None):
+        """Regla de percepción (ARX-90): un sensor ruidoso no marca como riesgo un sitio pendiente, el inicio ni el refugio.
+
+        Esas celdas son LIBRE por construcción, así que marcarlas es siempre un falso positivo, y una marca basta para
+        bloquear la ruta y agotar las recuperaciones (ARX-90, semilla 7 del escenario exigente). Envuelve, sobre la
+        instancia, a Mision._actualizar_mapa_estimado (Mision está congelada). Igual para las cuatro variantes del arnés.
+        """
+        m = destino if destino is not None else self.mision
+        celda = m._celda_observada(pos, rumbo, distancia)
+        if celda is not None and (celda in (m.mundo.inicio, m.mundo.refugio)
+                                  or (celda in m.mundo.sitios and celda not in m.visitados)):
+            return
+        Mision._actualizar_mapa_estimado(m, pos, rumbo, distancia)
 
     # ---------- planificación con objetivo fijado (ev3-d27) ----------
     def _planear_con_objetivo(self) -> bool:

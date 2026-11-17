@@ -92,10 +92,10 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | Batería baja | Cumple | `juego/partida.py:399` (`_evento_bateria_baja`) | — |
 | Día/noche (tormenta, noche) | Cumple | `juego/partida.py:25` (`EVENTOS_SOPORTADOS`: tormenta, noche) | — |
 | Falla de sensor | Cumple | `juego/partida.py:387` (`_evento_falla_sensor`) | — |
-| Sismo | Falta | No existe (solo se menciona en el texto de Tierra, `simulador.py:37`) | 2 h |
-| Meteorito o impacto próximo | Falta | No existe | 2 h |
-| Señal biológica anómala / objeto alienígena | Falta (opcional narrativo) | No existe. El PDF lo marca como opcional | 2 h |
-| Baja conectividad | Falta | No existe | 2 h |
+| Sismo | Cumple | `juego/partida.py:1117` (`_evento_sismo`, ARX-30a): grietas BARRANCO con replanteo del AG y veto del supervisor; control en la interfaz (ARX-30e) | — |
+| Meteorito o impacto próximo | Cumple | `juego/partida.py:1088` (`_evento_meteorito`, ARX-30): zona de riesgo 3×3, cuesta batería | — |
+| Señal biológica anómala / objeto alienígena | Falta (opcional narrativo) | No existe en esta rama (ARX-30c, bloqueada por ev3-d49). El PDF lo marca como opcional | 2 h |
+| Baja conectividad | Falta | No existe en esta rama (ARX-30b, bloqueada por ev3-d48) | 2 h |
 | Ráfaga / viento en modo sonda | Falta | No hay modo sonda | depende de RF-01 |
 
 ## 8. Pantalla y laboratorios (§8, §9)
@@ -108,7 +108,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | Panel D: historia filtrable y exportable | Cumple | `/historial` y `/historial.csv` (ARX-15, `api/servidor.py`); la vista *(UI)* | — |
 | Panel E: controles de simulación y eventos | Cumple | `/paso`, `/evento`, `/partida` | — |
 | Laboratorio RNA, Laboratorio Difuso, Laboratorio Genético, Comparación de políticas | Falta | Datos parciales en API (§2, §3, §4); las vistas son *(UI)* | ver §2-§4 |
-| Interacciones mínimas §9: elegir planeta; sonda para gigantes; batería inicial; agregar barranco; sismo; forzar noche; prioridades; un paso; seleccionar iteración del AG; inspeccionar regla; reejecutar con semilla | Parcial | Cumplen: un paso, noche, reejecutar con semilla. Parcial: batería inicial (`juego/partida.py` la acepta, la API no), barranco (evento sin colocación manual), regla (solo lectura). Faltan: planeta, sonda, sismo, prioridades científicas, iteración del AG | 6 h |
+| Interacciones mínimas §9: elegir planeta; sonda para gigantes; batería inicial; agregar barranco; sismo; forzar noche; prioridades; un paso; seleccionar iteración del AG; inspeccionar regla; reejecutar con semilla | Parcial | Cumplen: un paso, noche, reejecutar con semilla, sismo (control «5 · Eventos» con `POST /evento`, ARX-30e). Parcial: batería inicial (`juego/partida.py` la acepta, la API no), barranco (evento sin colocación manual), regla (solo lectura). Faltan: planeta, sonda, prioridades científicas, iteración del AG | 6 h |
 
 ## 9. Condiciones de borde (§12)
 
@@ -174,7 +174,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 - **RNA (15 %):** evidencia de activaciones y entrada→probabilidades (§2); endpoint de laboratorio y CA-06. Esfuerzo: ~7 h.
 - **Difuso (15 %):** temperatura (§3, decisión de alcance); membresías y curvas en la API. Esfuerzo: ~7 h (+4 h si entra la temperatura).
 - **AG (15 %):** exponer candidatos, historial y cromosomas por generación (§4, RF-11, CA-04). Esfuerzo: ~8 h.
-- **Física y seguridad (10 %):** eventos sismo/meteorito/conectividad (§7), batería 1 % (§9). Esfuerzo: ~10 h.
+- **Física y seguridad (10 %):** eventos conectividad y señal biológica (§7; sismo y meteorito ya cumplen), batería 1 % (§9). Esfuerzo: ~10 h.
 - **Interactividad (10 %):** laboratorios y dashboard (§8, *(UI)*), colocación manual de obstáculos (RF-02). Esfuerzo: ~12 h + *(UI)*.
 - **Experimentación (5 %):** métricas de §14 y dispersión. Esfuerzo: ~8 h.
 

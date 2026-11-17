@@ -17,7 +17,7 @@ from genetico import GeneticPlanner, camino_bfs  # noqa: E402
 from integracion import (ESTADOS_TERMINALES, MARGEN_ENERGIA,  # noqa: E402
                          GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO,
                          Decision, Mision, _rumbo, camino_valido)
-from difuso import ResultadoDifuso  # noqa: E402
+from difuso import ResultadoDifuso, aplanar_membresias  # noqa: E402
 from rna import _rasgos_celda  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
@@ -322,6 +322,9 @@ class Partida:
                 self.semilla_mundo = semilla + 10007 * k
                 mundo = _generar(self.semilla_mundo)
         self.mision = Mision(mundo, semilla=semilla, bateria=bateria)
+        self._fitness_paso = None          # ARX-80: fitness del AG ya medido en el paso en curso (avanzar_ia)
+        self._fitness_ultimo = 0.0         # último fitness finito medido; se arrastra si no hay plan del AG
+        self.mision.log.completar = self._completar_fila
         # ARX-59: estaciones de recarga y batería máxima (la partida jugable las usa; las evaluaciones congeladas no)
         self.bateria_max = BATERIA_MAX_POR_NIVEL[nivel] if con_estaciones else None
         self.estaciones = _colocar_estaciones(mundo, self.semilla_mundo, n_est) if con_estaciones else []
@@ -487,6 +490,21 @@ class Partida:
                            float(fz.velocidad) if dec.accion == "avanzar" else float(dec.velocidad),
                            probs, fz.reglas_activadas if fz else [],
                            self._desglose_ruta(), dec.motivos)
+
+    def _completar_fila(self, datos: dict) -> dict:
+        """ARX-80 (M3): toda fila de la bitácora lleva el fitness del AG vigente y las membresías difusas.
+
+        Las membresías las aporta Mision._registrar cuando hubo inferencia; si la fila no la tuvo (recarga,
+        falla, modos sueltos, cierres) queda en 0.0: ese paso no evaluó el difuso.
+        """
+        if self._fitness_paso is not None:
+            fit = self._fitness_paso
+        else:
+            d = self._desglose_ruta()
+            fit = d["fitness"] if d else None
+        if fit is not None and np.isfinite(fit):
+            self._fitness_ultimo = float(fit)
+        return {"fitness_ag": round(self._fitness_ultimo, 4), **aplanar_membresias(None)}
 
     def _desglose_ruta(self):
         """Desglose del fitness del AG para la ruta pendiente desde la posición actual.
@@ -900,21 +918,26 @@ class Partida:
             return {**decision, **self._posicion_estado()}
 
         paso_previo, filas_previas = m.paso, len(m.log.filas)
-        m.paso_mision()
-        self._tras_paso_estacion()
-        self._revisar_victoria()
-        if m.paso > paso_previo:
-            self._revisar_objetivo()
-            self._tick_ambiente()
-            if len(m.log.filas) == filas_previas:
-                # Mision no registra los cierres (EXITO o SIN_RUTA): se anota para tener una fila por paso.
-                # N7: «fin» solo con un estado final; si la partida sigue (p. ej. faltan objetivos), es un replanteo.
-                terminal = m.estado in ESTADOS_TERMINALES
-                m.log.registrar(paso=m.paso, estado=m.estado, posicion=str(self.rover.posicion),
-                                bateria=round(self.rover.bateria, 2),
-                                accion="fin" if terminal else "replanificar",
-                                velocidad=0.0, p_barranco=None, p_obstaculo=None,
-                                reglas="", motivos=m.estado if terminal else "FALTAN-OBJETIVOS")
+        des = decision.get("desglose")
+        self._fitness_paso = des["fitness"] if des else None     # ARX-80: el fitness medido antes de actuar
+        try:
+            m.paso_mision()
+            self._tras_paso_estacion()
+            self._revisar_victoria()
+            if m.paso > paso_previo:
+                self._revisar_objetivo()
+                self._tick_ambiente()
+                if len(m.log.filas) == filas_previas:
+                    # Mision no registra los cierres (EXITO o SIN_RUTA): se anota para tener una fila por paso.
+                    # N7: «fin» solo con un estado final; si la partida sigue (p. ej. faltan objetivos), es un replanteo.
+                    terminal = m.estado in ESTADOS_TERMINALES
+                    m.log.registrar(paso=m.paso, estado=m.estado, posicion=str(self.rover.posicion),
+                                    bateria=round(self.rover.bateria, 2),
+                                    accion="fin" if terminal else "replanificar",
+                                    velocidad=0.0, p_barranco=None, p_obstaculo=None,
+                                    reglas="", motivos=m.estado if terminal else "FALTAN-OBJETIVOS")
+        finally:
+            self._fitness_paso = None
         return {**decision, **self._posicion_estado()}
 
     def _paso_con_falla(self) -> None:

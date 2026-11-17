@@ -191,9 +191,10 @@ class Mision:
         # si la siguiente celda de la ruta ya es peligrosa, el plan está roto: replanificar
         if self.riesgo[siguiente] >= 0.5:
             dec = Decision("replanificar", 0.0, ["V-RUTA-CON-RIESGO"])
-        # un obstáculo cercano en la ruta invalida el plan: se replanifica, no se espera
+        # un obstáculo cercano en la ruta invalida el plan: se replanifica, no se espera.
+        # Antes dependía de la parada del difuso (dec.accion == "detener"); desde ARX-91 (ab46b4a) es incondicional.
         distancia = lectura["proximidad_frontal_m"]
-        if dec.accion == "detener" and self._obstaculo_en_ruta(pos, rumbo, distancia):
+        if self._obstaculo_en_ruta(pos, rumbo, distancia):
             dec = Decision("replanificar", 0.0, ["V-OBSTACULO-EN-RUTA"])
         # vigilante: un rover detenido varios pasos seguidos replanifica en lugar de quedarse parado
         self.paros_seguidos = self.paros_seguidos + 1 if dec.accion == "detener" else 0

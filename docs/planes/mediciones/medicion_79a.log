@@ -1,0 +1,222 @@
+inicio grande 07:31:13
+1 1 EXITO 75 EXITO
+1 2 EXITO 72 EXITO
+1 3 EXITO 81 EXITO
+1 4 EXITO 72 EXITO
+1 5 FRACASO 88 bateria 0 con sitios pendientes
+1 6 EXITO 81 EXITO
+1 7 EXITO 73 EXITO
+1 8 FRACASO 87 bateria 0 con sitios pendientes
+1 9 FRACASO 96 bateria 0 con sitios pendientes
+1 10 EXITO 86 EXITO
+1 11 EXITO 73 EXITO
+1 12 EXITO 90 EXITO
+1 13 EXITO 78 EXITO
+1 14 EXITO 81 EXITO
+1 15 FRACASO 95 bateria 0 con sitios pendientes
+1 16 EXITO 76 EXITO
+1 17 EXITO 81 EXITO
+1 18 FRACASO 95 bateria 0 con sitios pendientes
+1 19 FRACASO 91 bateria 0 con sitios pendientes
+1 20 EXITO 86 EXITO
+2 1 FRACASO 87 bateria 0 con sitios pendientes
+2 2 EXITO 77 EXITO
+2 3 EXITO 89 EXITO
+2 4 FRACASO 77 bateria 0 con sitios pendientes
+2 5 EXITO 70 EXITO
+2 6 FRACASO 85 otra: FRACASO
+2 7 EXITO 79 EXITO
+2 8 FRACASO 81 bateria 0 con sitios pendientes
+2 9 FRACASO 91 bateria 0 con sitios pendientes
+2 10 EXITO 72 EXITO
+2 11 FRACASO 89 bateria 0 con sitios pendientes
+2 12 EXITO 80 EXITO
+2 13 FRACASO 89 caza sin bateria
+2 14 EXITO 66 EXITO
+2 15 EXITO 78 EXITO
+2 16 EXITO 67 EXITO
+2 17 EXITO 70 EXITO
+2 18 EXITO 69 EXITO
+2 19 FRACASO 91 bateria 0 con sitios pendientes
+2 20 EXITO 82 EXITO
+3 1 FRACASO 68 bateria insuficiente para sitios restantes
+3 2 FRACASO 71 bateria insuficiente para sitios restantes
+3 3 FRACASO 64 bateria insuficiente para sitios restantes
+3 4 FRACASO 73 bateria insuficiente para sitios restantes
+3 5 FRACASO 70 bateria insuficiente para sitios restantes
+3 6 FRACASO 67 bateria insuficiente para sitios restantes
+3 7 FRACASO 60 bateria insuficiente para sitios restantes
+3 8 FRACASO 63 bateria insuficiente para sitios restantes
+3 9 FRACASO 85 bateria 0 con sitios pendientes
+3 10 FRACASO 60 caza sin bateria
+3 11 FRACASO 64 bateria insuficiente para sitios restantes
+3 12 FRACASO 67 bateria insuficiente para sitios restantes
+3 13 FRACASO 82 bateria 0 con sitios pendientes
+3 14 FRACASO 66 bateria insuficiente para sitios restantes
+3 15 FRACASO 90 bateria 0 con sitios pendientes
+3 16 FRACASO 65 bateria insuficiente para sitios restantes
+3 17 FRACASO 77 bateria insuficiente para sitios restantes
+3 18 FRACASO 65 caza sin bateria
+3 19 FRACASO 68 bateria insuficiente para sitios restantes
+3 20 FRACASO 65 bateria insuficiente para sitios restantes
+4 1 FRACASO 66 bateria insuficiente para sitios restantes
+4 2 FRACASO 71 bateria insuficiente para sitios restantes
+4 3 FRACASO 70 bateria insuficiente para sitios restantes
+4 4 FRACASO 66 bateria 0 con sitios pendientes
+4 5 FRACASO 78 bateria 0 con sitios pendientes
+4 6 FRACASO 65 bateria insuficiente para sitios restantes
+4 7 FRACASO 60 bateria insuficiente para sitios restantes
+4 8 FRACASO 63 bateria insuficiente para sitios restantes
+4 9 FRACASO 75 bateria insuficiente para sitios restantes
+4 10 FRACASO 63 bateria insuficiente para sitios restantes
+4 11 FRACASO 66 bateria insuficiente para sitios restantes
+4 12 FRACASO 63 bateria insuficiente para sitios restantes
+4 13 FRACASO 62 bateria insuficiente para sitios restantes
+4 14 FRACASO 68 bateria insuficiente para sitios restantes
+4 15 FRACASO 67 bateria insuficiente para sitios restantes
+4 16 FRACASO 65 bateria insuficiente para sitios restantes
+4 17 FRACASO 69 bateria insuficiente para sitios restantes
+4 18 FRACASO 64 bateria insuficiente para sitios restantes
+4 19 FRACASO 67 bateria insuficiente para sitios restantes
+4 20 FRACASO 67 bateria insuficiente para sitios restantes
+5 1 FRACASO 70 bateria insuficiente para sitios restantes
+5 2 FRACASO 64 bateria insuficiente para sitios restantes
+5 3 FRACASO 63 bateria insuficiente para sitios restantes
+5 4 FRACASO 59 bateria 0 con sitios pendientes
+5 5 FRACASO 69 bateria insuficiente para sitios restantes
+5 6 SIN_RUTA 60 SIN_RUTA
+5 7 FRACASO 66 bateria insuficiente para sitios restantes
+5 8 FRACASO 65 bateria insuficiente para sitios restantes
+5 9 FRACASO 61 bateria insuficiente para sitios restantes
+5 10 FRACASO 64 bateria insuficiente para sitios restantes
+5 11 FRACASO 63 bateria insuficiente para sitios restantes
+5 12 FRACASO 60 bateria insuficiente para sitios restantes
+5 13 FRACASO 69 bateria insuficiente para sitios restantes
+5 14 FRACASO 69 bateria insuficiente para sitios restantes
+5 15 FRACASO 64 bateria insuficiente para sitios restantes
+5 16 FRACASO 72 bateria insuficiente para sitios restantes
+5 17 FRACASO 72 bateria insuficiente para sitios restantes
+5 18 FRACASO 64 bateria insuficiente para sitios restantes
+5 19 FRACASO 60 bateria insuficiente para sitios restantes
+5 20 FRACASO 68 bateria insuficiente para sitios restantes
+
+## Tamano grande: 100 partidas en 1077 s
+| Nivel | Exito | Pasos media | Pasos mediana | Causas de derrota |
+|---|---|---|---|---|
+| 1 | 14/20 | 78.9 | 79.5 | bateria 0 con sitios pendientes: 6 (semillas [5, 8, 9, 15, 18, 19]) |
+| 2 | 12/20 | 74.9 | 74.5 | bateria 0 con sitios pendientes: 6; otra: FRACASO: 1; caza sin bateria: 1 (semillas [1, 4, 6, 8, 9, 11, 13, 19]) |
+| 3 | 0/20 | - | - | {'bateria insuficiente para sitios restantes': 15, 'bateria 0 con sitios pendientes': 3, 'caza sin bateria': 2} |
+| 4 | 0/20 | - | - | {'bateria insuficiente para sitios restantes': 18, 'bateria 0 con sitios pendientes': 2} |
+| 5 | 0/20 | - | - | {'bateria insuficiente para sitios restantes': 18, 'bateria 0 con sitios pendientes': 1, 'SIN_RUTA': 1} |
+fin grande 07:49:14 codigo 0
+inicio pequeno 07:49:14
+1 1 EXITO 49 EXITO
+1 2 EXITO 58 EXITO
+1 3 EXITO 48 EXITO
+1 4 EXITO 38 EXITO
+1 5 EXITO 34 EXITO
+1 6 EXITO 47 EXITO
+1 7 EXITO 47 EXITO
+1 8 EXITO 49 EXITO
+1 9 EXITO 57 EXITO
+1 10 EXITO 54 EXITO
+1 11 EXITO 60 EXITO
+1 12 EXITO 54 EXITO
+1 13 EXITO 37 EXITO
+1 14 EXITO 40 EXITO
+1 15 EXITO 46 EXITO
+1 16 EXITO 51 EXITO
+1 17 EXITO 57 EXITO
+1 18 EXITO 48 EXITO
+1 19 EXITO 47 EXITO
+1 20 EXITO 43 EXITO
+2 1 EXITO 51 EXITO
+2 2 EXITO 45 EXITO
+2 3 EXITO 35 EXITO
+2 4 EXITO 40 EXITO
+2 5 EXITO 58 EXITO
+2 6 EXITO 37 EXITO
+2 7 EXITO 46 EXITO
+2 8 EXITO 35 EXITO
+2 9 EXITO 47 EXITO
+2 10 EXITO 54 EXITO
+2 11 EXITO 60 EXITO
+2 12 EXITO 57 EXITO
+2 13 EXITO 62 EXITO
+2 14 EXITO 46 EXITO
+2 15 EXITO 52 EXITO
+2 16 EXITO 47 EXITO
+2 17 EXITO 36 EXITO
+2 18 EXITO 60 EXITO
+2 19 EXITO 61 EXITO
+2 20 EXITO 52 EXITO
+3 1 EXITO 47 EXITO
+3 2 EXITO 62 EXITO
+3 3 EXITO 53 EXITO
+3 4 EXITO 62 EXITO
+3 5 EXITO 64 EXITO
+3 6 EXITO 48 EXITO
+3 7 EXITO 48 EXITO
+3 8 EXITO 55 EXITO
+3 9 EXITO 55 EXITO
+3 10 EXITO 54 EXITO
+3 11 EXITO 41 EXITO
+3 12 EXITO 56 EXITO
+3 13 EXITO 67 EXITO
+3 14 EXITO 68 EXITO
+3 15 EXITO 70 EXITO
+3 16 EXITO 66 EXITO
+3 17 EXITO 56 EXITO
+3 18 EXITO 58 EXITO
+3 19 EXITO 63 EXITO
+3 20 EXITO 49 EXITO
+4 1 EXITO 52 EXITO
+4 2 EXITO 50 EXITO
+4 3 EXITO 47 EXITO
+4 4 EXITO 50 EXITO
+4 5 EXITO 60 EXITO
+4 6 EXITO 61 EXITO
+4 7 EXITO 56 EXITO
+4 8 EXITO 50 EXITO
+4 9 EXITO 45 EXITO
+4 10 EXITO 48 EXITO
+4 11 EXITO 48 EXITO
+4 12 EXITO 56 EXITO
+4 13 EXITO 60 EXITO
+4 14 EXITO 50 EXITO
+4 15 EXITO 52 EXITO
+4 16 EXITO 64 EXITO
+4 17 EXITO 52 EXITO
+4 18 EXITO 48 EXITO
+4 19 EXITO 60 EXITO
+4 20 EXITO 60 EXITO
+5 1 EXITO 55 EXITO
+5 2 EXITO 46 EXITO
+5 3 EXITO 42 EXITO
+5 4 EXITO 57 EXITO
+5 5 EXITO 53 EXITO
+5 6 EXITO 64 EXITO
+5 7 EXITO 54 EXITO
+5 8 EXITO 52 EXITO
+5 9 EXITO 58 EXITO
+5 10 EXITO 47 EXITO
+5 11 EXITO 63 EXITO
+5 12 EXITO 59 EXITO
+5 13 EXITO 52 EXITO
+5 14 EXITO 53 EXITO
+5 15 EXITO 58 EXITO
+5 16 EXITO 58 EXITO
+5 17 EXITO 61 EXITO
+5 18 EXITO 51 EXITO
+5 19 EXITO 59 EXITO
+5 20 EXITO 48 EXITO
+
+## Tamano pequeno: 100 partidas en 188 s
+| Nivel | Exito | Pasos media | Pasos mediana | Causas de derrota |
+|---|---|---|---|---|
+| 1 | 20/20 | 48.2 | 48.0 | - (semillas []) |
+| 2 | 20/20 | 49.0 | 49.0 | - (semillas []) |
+| 3 | 20/20 | 57.1 | 56.0 | - (semillas []) |
+| 4 | 20/20 | 53.5 | 52.0 | - (semillas []) |
+| 5 | 20/20 | 54.5 | 54.5 | - (semillas []) |
+fin pequeno 07:52:25 codigo 0

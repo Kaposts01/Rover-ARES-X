@@ -1,0 +1,945 @@
+{
+  "semillas": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "variantes": {
+    "hibrido": {
+      "exitos": 19,
+      "n": 20,
+      "tasa_exito": 95.0,
+      "pasos": {
+        "media": 44.5,
+        "mediana": 41.0,
+        "desviacion": 11.019,
+        "rango_intercuartil": 12.75
+      },
+      "colisiones": {
+        "media": 0.0,
+        "mediana": 0.0,
+        "desviacion": 0.0,
+        "rango_intercuartil": 0.0
+      },
+      "bateria_final": {
+        "media": 52.05,
+        "mediana": 53.0,
+        "desviacion": 12.15,
+        "rango_intercuartil": 18.5
+      },
+      "sitios_visitados": {
+        "media": 1.9,
+        "mediana": 2.0,
+        "desviacion": 0.852,
+        "rango_intercuartil": 1.25
+      }
+    },
+    "sin_rna": {
+      "exitos": 19,
+      "n": 20,
+      "tasa_exito": 95.0,
+      "pasos": {
+        "media": 44.45,
+        "mediana": 41.0,
+        "desviacion": 10.942,
+        "rango_intercuartil": 12.75
+      },
+      "colisiones": {
+        "media": 0.0,
+        "mediana": 0.0,
+        "desviacion": 0.0,
+        "rango_intercuartil": 0.0
+      },
+      "bateria_final": {
+        "media": 52.05,
+        "mediana": 53.0,
+        "desviacion": 12.15,
+        "rango_intercuartil": 18.5
+      },
+      "sitios_visitados": {
+        "media": 1.9,
+        "mediana": 2.0,
+        "desviacion": 0.852,
+        "rango_intercuartil": 1.25
+      }
+    },
+    "sin_difuso": {
+      "exitos": 19,
+      "n": 20,
+      "tasa_exito": 95.0,
+      "pasos": {
+        "media": 44.55,
+        "mediana": 41.0,
+        "desviacion": 11.1,
+        "rango_intercuartil": 12.75
+      },
+      "colisiones": {
+        "media": 0.0,
+        "mediana": 0.0,
+        "desviacion": 0.0,
+        "rango_intercuartil": 0.0
+      },
+      "bateria_final": {
+        "media": 51.9,
+        "mediana": 53.0,
+        "desviacion": 12.375,
+        "rango_intercuartil": 18.5
+      },
+      "sitios_visitados": {
+        "media": 1.9,
+        "mediana": 2.0,
+        "desviacion": 0.852,
+        "rango_intercuartil": 1.25
+      }
+    },
+    "sin_ag": {
+      "exitos": 19,
+      "n": 20,
+      "tasa_exito": 95.0,
+      "pasos": {
+        "media": 44.9,
+        "mediana": 44.0,
+        "desviacion": 7.152,
+        "rango_intercuartil": 10.25
+      },
+      "colisiones": {
+        "media": 0.0,
+        "mediana": 0.0,
+        "desviacion": 0.0,
+        "rango_intercuartil": 0.0
+      },
+      "bateria_final": {
+        "media": 51.6,
+        "mediana": 52.5,
+        "desviacion": 8.905,
+        "rango_intercuartil": 7.5
+      },
+      "sitios_visitados": {
+        "media": 3.0,
+        "mediana": 3.0,
+        "desviacion": 0.0,
+        "rango_intercuartil": 0.0
+      }
+    }
+  },
+  "filas": [
+    {
+      "semilla": 1,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 46,
+      "colisiones": 0,
+      "bateria_final": 49.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 2,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 39,
+      "colisiones": 0,
+      "bateria_final": 52.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 3,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 41,
+      "colisiones": 0,
+      "bateria_final": 62.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 4,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 38,
+      "colisiones": 0,
+      "bateria_final": 60.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 5,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 34,
+      "colisiones": 0,
+      "bateria_final": 65.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 6,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 66,
+      "colisiones": 0,
+      "bateria_final": 27.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 7,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 30,
+      "colisiones": 0,
+      "bateria_final": 71.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 8,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 47,
+      "colisiones": 0,
+      "bateria_final": 42.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 9,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 39,
+      "colisiones": 0,
+      "bateria_final": 47.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 10,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 32,
+      "colisiones": 0,
+      "bateria_final": 69.0,
+      "sitios_visitados": 0
+    },
+    {
+      "semilla": 11,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 46,
+      "colisiones": 0,
+      "bateria_final": 47.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 12,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 40,
+      "colisiones": 0,
+      "bateria_final": 62.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 13,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 34,
+      "colisiones": 0,
+      "bateria_final": 61.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 14,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 61,
+      "colisiones": 0,
+      "bateria_final": 35.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 15,
+      "variante": "hibrido",
+      "estado": "SIN_RUTA",
+      "exito": false,
+      "pasos": 61,
+      "colisiones": 0,
+      "bateria_final": 36.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 16,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 44,
+      "colisiones": 0,
+      "bateria_final": 54.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 17,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 58,
+      "colisiones": 0,
+      "bateria_final": 43.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 18,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 60,
+      "colisiones": 0,
+      "bateria_final": 41.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 19,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 41,
+      "colisiones": 0,
+      "bateria_final": 57.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 20,
+      "variante": "hibrido",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 33,
+      "colisiones": 0,
+      "bateria_final": 61.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 1,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 46,
+      "colisiones": 0,
+      "bateria_final": 49.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 2,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 39,
+      "colisiones": 0,
+      "bateria_final": 52.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 3,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 41,
+      "colisiones": 0,
+      "bateria_final": 62.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 4,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 38,
+      "colisiones": 0,
+      "bateria_final": 60.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 5,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 34,
+      "colisiones": 0,
+      "bateria_final": 65.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 6,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 66,
+      "colisiones": 0,
+      "bateria_final": 27.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 7,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 30,
+      "colisiones": 0,
+      "bateria_final": 71.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 8,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 47,
+      "colisiones": 0,
+      "bateria_final": 42.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 9,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 39,
+      "colisiones": 0,
+      "bateria_final": 47.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 10,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 32,
+      "colisiones": 0,
+      "bateria_final": 69.0,
+      "sitios_visitados": 0
+    },
+    {
+      "semilla": 11,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 46,
+      "colisiones": 0,
+      "bateria_final": 47.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 12,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 40,
+      "colisiones": 0,
+      "bateria_final": 62.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 13,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 34,
+      "colisiones": 0,
+      "bateria_final": 61.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 14,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 60,
+      "colisiones": 0,
+      "bateria_final": 35.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 15,
+      "variante": "sin_rna",
+      "estado": "SIN_RUTA",
+      "exito": false,
+      "pasos": 61,
+      "colisiones": 0,
+      "bateria_final": 36.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 16,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 44,
+      "colisiones": 0,
+      "bateria_final": 54.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 17,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 58,
+      "colisiones": 0,
+      "bateria_final": 43.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 18,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 60,
+      "colisiones": 0,
+      "bateria_final": 41.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 19,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 41,
+      "colisiones": 0,
+      "bateria_final": 57.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 20,
+      "variante": "sin_rna",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 33,
+      "colisiones": 0,
+      "bateria_final": 61.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 1,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 46,
+      "colisiones": 0,
+      "bateria_final": 49.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 2,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 39,
+      "colisiones": 0,
+      "bateria_final": 52.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 3,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 41,
+      "colisiones": 0,
+      "bateria_final": 62.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 4,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 38,
+      "colisiones": 0,
+      "bateria_final": 60.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 5,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 34,
+      "colisiones": 0,
+      "bateria_final": 65.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 6,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 66,
+      "colisiones": 0,
+      "bateria_final": 27.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 7,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 30,
+      "colisiones": 0,
+      "bateria_final": 71.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 8,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 47,
+      "colisiones": 0,
+      "bateria_final": 42.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 9,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 39,
+      "colisiones": 0,
+      "bateria_final": 47.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 10,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 32,
+      "colisiones": 0,
+      "bateria_final": 69.0,
+      "sitios_visitados": 0
+    },
+    {
+      "semilla": 11,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 46,
+      "colisiones": 0,
+      "bateria_final": 47.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 12,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 40,
+      "colisiones": 0,
+      "bateria_final": 62.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 13,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 34,
+      "colisiones": 0,
+      "bateria_final": 61.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 14,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 61,
+      "colisiones": 0,
+      "bateria_final": 35.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 15,
+      "variante": "sin_difuso",
+      "estado": "SIN_RUTA",
+      "exito": false,
+      "pasos": 62,
+      "colisiones": 0,
+      "bateria_final": 33.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 16,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 44,
+      "colisiones": 0,
+      "bateria_final": 54.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 17,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 58,
+      "colisiones": 0,
+      "bateria_final": 43.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 18,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 60,
+      "colisiones": 0,
+      "bateria_final": 41.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 19,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 41,
+      "colisiones": 0,
+      "bateria_final": 57.0,
+      "sitios_visitados": 2
+    },
+    {
+      "semilla": 20,
+      "variante": "sin_difuso",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 33,
+      "colisiones": 0,
+      "bateria_final": 61.0,
+      "sitios_visitados": 1
+    },
+    {
+      "semilla": 1,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 46,
+      "colisiones": 0,
+      "bateria_final": 49.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 2,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 52,
+      "colisiones": 0,
+      "bateria_final": 39.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 3,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 41,
+      "colisiones": 0,
+      "bateria_final": 62.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 4,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 38,
+      "colisiones": 0,
+      "bateria_final": 60.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 5,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 34,
+      "colisiones": 0,
+      "bateria_final": 65.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 6,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 40,
+      "colisiones": 0,
+      "bateria_final": 57.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 7,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 43,
+      "colisiones": 0,
+      "bateria_final": 52.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 8,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 43,
+      "colisiones": 0,
+      "bateria_final": 50.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 9,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 50,
+      "colisiones": 0,
+      "bateria_final": 35.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 10,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 51,
+      "colisiones": 0,
+      "bateria_final": 51.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 11,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 54,
+      "colisiones": 0,
+      "bateria_final": 36.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 12,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 51,
+      "colisiones": 0,
+      "bateria_final": 54.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 13,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 34,
+      "colisiones": 0,
+      "bateria_final": 61.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 14,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 37,
+      "colisiones": 0,
+      "bateria_final": 58.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 15,
+      "variante": "sin_ag",
+      "estado": "SIN_RUTA",
+      "exito": false,
+      "pasos": 61,
+      "colisiones": 0,
+      "bateria_final": 36.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 16,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 48,
+      "colisiones": 0,
+      "bateria_final": 50.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 17,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 50,
+      "colisiones": 0,
+      "bateria_final": 51.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 18,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 45,
+      "colisiones": 0,
+      "bateria_final": 56.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 19,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 40,
+      "colisiones": 0,
+      "bateria_final": 57.0,
+      "sitios_visitados": 3
+    },
+    {
+      "semilla": 20,
+      "variante": "sin_ag",
+      "estado": "EXITO",
+      "exito": true,
+      "pasos": 40,
+      "colisiones": 0,
+      "bateria_final": 53.0,
+      "sitios_visitados": 3
+    }
+  ],
+  "nota": "Arnés: capa de juego (juego/partida.py), misma semilla por variante. Sin atribución causal fuera de estas condiciones (§14). Los intentos a barranco no se miden en el híbrido."
+}

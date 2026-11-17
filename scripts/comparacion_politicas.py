@@ -1,4 +1,4 @@
-"""Genera docs/COMPARACION_POLITICAS.json: híbrido, sin RNA, sin difuso, sin AG (orden voraz) y la línea base ruta_corta (RF-14, RF-15, ARX-45). ag_puro se calcula pero no se publica (ev3-d71).
+"""Genera docs/COMPARACION_POLITICAS.json: híbrido, sin RNA, sin difuso, sin AG (orden voraz) y la línea base ruta_corta (RF-14, RF-15, ARX-45). ag_puro se publica entre las ablaciones (ev3-d71, corregido en la regeneración de ARX-92).
 
 Uso (desde ares_x/):  python scripts/comparacion_politicas.py [n_semillas] [escenario]
 Tarda varios minutos (6 variantes x n semillas). El endpoint GET /comparacion sirve este archivo para 20 semillas.
@@ -14,9 +14,11 @@ from juego.comparacion import comparar  # noqa: E402
 
 # Publicación (ev3-d71): ag_puro no se publica porque no mide el AG (el envoltorio de Partida elige la permutación más
 # corta; se redefine en ARX-92). ruta_corta se publica con su rótulo real: voraz, vecino más cercano.
-NO_PUBLICAR = ("ag_puro",)   # ev3-d71; ARX-92 (regeneración): sin_ag_mas_corta y sin_ag_2opt se publican
-NOTA_RUTA_CORTA = (" ruta_corta es ruta corta voraz (vecino más cercano), no la ruta óptima; ag_puro no se publica "
-                   "hasta ARX-92 (el envoltorio de Partida elige la permutación más corta).")
+NO_PUBLICAR = ()   # ev3-d71 (ablaciones publicadas, incl. ag_puro); ARX-92 regeneración: todas se publican
+NOTA_RUTA_CORTA = (" ruta_corta es ruta corta voraz (vecino más cercano), no la ruta óptima. "
+                   "sin_ag_mas_corta: AG de orden con pesos solo de distancia; coincide con el híbrido con pesos por "
+                   "defecto en 3 y 4 sitios (B1 de QA). ag_puro: el mismo AG con el riesgo congelado y sin RNA ni difuso. "
+                   "sin_ag_2opt: vecino más cercano mejorado por 2-opt, sin AG.")
 
 
 def para_publicar(datos):

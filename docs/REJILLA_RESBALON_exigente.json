@@ -24,7 +24,7 @@
     "bateria_media": 26.77,
     "pasos_media": 53.6
    },
-   "sin_ag": {
+   "sin_ag_vecino": {
     "exitos": 19,
     "n": 20,
     "colisiones_media": 0.0,
@@ -60,7 +60,7 @@
     "bateria_media": 24.73,
     "pasos_media": 53.6
    },
-   "sin_ag": {
+   "sin_ag_vecino": {
     "exitos": 18,
     "n": 20,
     "colisiones_media": 0.0,
@@ -96,7 +96,7 @@
     "bateria_media": 22.1,
     "pasos_media": 55.65
    },
-   "sin_ag": {
+   "sin_ag_vecino": {
     "exitos": 19,
     "n": 20,
     "colisiones_media": 0.0,
@@ -132,7 +132,7 @@
     "bateria_media": 20.0,
     "pasos_media": 54.35
    },
-   "sin_ag": {
+   "sin_ag_vecino": {
     "exitos": 17,
     "n": 20,
     "colisiones_media": 0.0,
@@ -168,7 +168,7 @@
     "bateria_media": 18.27,
     "pasos_media": 56.85
    },
-   "sin_ag": {
+   "sin_ag_vecino": {
     "exitos": 17,
     "n": 20,
     "colisiones_media": 0.0,
@@ -204,7 +204,7 @@
     "bateria_media": 14.53,
     "pasos_media": 55.3
    },
-   "sin_ag": {
+   "sin_ag_vecino": {
     "exitos": 15,
     "n": 20,
     "colisiones_media": 0.0,

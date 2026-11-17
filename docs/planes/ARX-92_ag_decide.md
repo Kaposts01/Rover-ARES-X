@@ -192,3 +192,17 @@ Datos: `docs/planes/mediciones/medicion_92c.json` y `.log`. Criterios 1 y 4: 20/
 **Presupuesto frente a 2-opt (conteo, sin turno).** AG de orden: población 30 y 30 generaciones como máximo; órdenes distintos evaluados por planificación: 187 a 294 (media 239); mejor solución de media en la generación 17,9. 2-opt: 45 a 180 pares evaluados (media 108) y 2,4 pasadas de media. Con la misma cantidad de evaluaciones (≈240) 2-opt termina su búsqueda local mucho antes, pero optimiza el largo de la ruta, no el fitness, así que no compiten por el mismo objetivo. No se ha medido si converge antes en fitness con el mismo presupuesto: eso requiere una medición nueva.
 
 **Pendiente del Orquestador:** decidir si el caso de 3 semillas (desajuste de margen) se corrige y con qué criterio, antes de cualquier nueva medición. No se ha cambiado código.
+
+## 14. Corrección única de 92c: viabilidad del AG con la reserva de `_planear` (criterio escrito ANTES de codificar)
+
+Aprobada por el Maestro por delegación. Es la única corrección de 92c; **no hay segunda corrección**.
+
+- **Criterio**: la viabilidad del AG usa la misma reserva que `_planear` (largo + `MARGEN_ENERGIA` ≤ batería). Una ruta que no cumple esa reserva queda penalizada por debajo de cualquier ruta completa viable (se trata como no viable y recibe el piso de fitness de `optimizar_orden`).
+- **Motivo**: en la medición de 92c, 3 de las 8 partidas fallidas del híbrido en el exigente de 10 sitios tienen un AG crudo completo que `_planear` descarta por la reserva (§13). El envoltorio no aplicaba esa reserva.
+- **Reglas fijadas antes de medir** (no cambian después de ver resultados):
+  1. La columna oficial es **«con umbral»** (ev3-d74).
+  2. **«Sin umbral»** es diagnóstico y no pasa a oficial hoy, salga como salga.
+  3. **Se publica lo que salga frente a 2-opt**; no se ajusta nada para mejorar cifras.
+  4. **No hay segunda corrección.**
+- **Medición única**: exigente de 10 sitios, las mismas 20 semillas, todas las variantes, y el híbrido en dos columnas (con umbral y sin umbral). Con desglose de derrotas por semilla: batería agotada en el camino, o sitios descartados por `_planear`.
+- **Prueba**: una ruta con `largo + MARGEN_ENERGIA > batería` no puede ganar a una ruta completa viable (M8).

@@ -28,6 +28,8 @@ EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "n
 # Mitigación de costo (plan §7, M2 de QA: ~3,5 s por replanteo del AG en 40x60): solo sismo (si la grieta toca la ruta)
 # y señal biológica (siempre). Meteorito y barranco replanifican por BFS, como antes de 31a (riesgo y veto del motor).
 # Como máximo un replanteo del AG por paso.
+# Costo conocido: el replanteo con AG tarda unos 3,5 s en 40x60, solo con sismo que toca la ruta y con señal biológica
+# (eventos raros). Población y generaciones se mantienen (M9 exige >= 30 y >= 30).
 EVENTOS_GRAVES = ("sismo", "senal_biologica")
 SENAL_DIST_MIN, SENAL_DIST_MAX = 3, 6    # distancia Chebyshev de la señal biológica al rover (ARX-30c)
 # ARX-30c (ev3-d50 C): probabilidad por paso de que la señal caiga sola, por nivel (supuesto de simulación)

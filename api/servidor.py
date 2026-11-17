@@ -1126,7 +1126,11 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                 raise ErrorApi(400, f"el escenario {escenario} aún no está disponible en el motor de comparación")
             else:
                 datos = motor.comparar(range(1, semillas + 1), escenario=escenario)
-        datos = {**datos, "escenario": escenario}
+        # ev3-d71: ag_puro no se publica (no mide el AG); mismo criterio que scripts/comparacion_politicas.py
+        no_publicar = ("ag_puro",)
+        datos = {**datos, "escenario": escenario,
+                 "variantes": {v: r for v, r in datos["variantes"].items() if v not in no_publicar},
+                 "filas": [f for f in datos["filas"] if f["variante"] not in no_publicar]}
         _cache_comparacion[clave] = datos
         return datos
 

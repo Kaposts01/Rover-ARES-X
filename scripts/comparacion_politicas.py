@@ -1,7 +1,7 @@
-"""Genera docs/COMPARACION_POLITICAS.json: híbrido frente a sin RNA, sin difuso y sin AG (RF-14, RF-15).
+"""Genera docs/COMPARACION_POLITICAS.json: híbrido, sin RNA, sin difuso, sin AG y las líneas base ruta_corta y ag_puro (RF-14, RF-15, ARX-45).
 
 Uso (desde ares_x/):  python scripts/comparacion_politicas.py [n_semillas] [escenario]
-Tarda varios minutos (4 variantes x n semillas). El endpoint GET /comparacion sirve este archivo para 20 semillas.
+Tarda varios minutos (6 variantes x n semillas). El endpoint GET /comparacion sirve este archivo para 20 semillas.
 """
 import json
 import os
@@ -22,7 +22,7 @@ def main():
     with open(salida, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=2)
     for v, r in datos["variantes"].items():
-        print(f"{v:11s} exito {r['exitos']}/{r['n']}  pasos mediana {r['pasos']['mediana']}  colisiones media {r['colisiones']['media']}")
+        print(f"{v:12s} exito {r['exitos']}/{r['n']}  pasos mediana {r['pasos']['mediana']}  colisiones media {r['colisiones']['media']}")
     print("escrito", salida)
 
 

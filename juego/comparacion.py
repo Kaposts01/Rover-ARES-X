@@ -7,6 +7,14 @@ desactivada (o el AG reemplazado):
 - sin_difuso: velocidad fija de 0,5, sin controlador difuso.
 - sin_ag:     el orden de visita de los sitios se elige por vecino más cercano, en vez del AG; la ruta sigue siendo BFS.
 
+- ruta_corta:  línea base (ARX-45, M19): mapa de riesgo en ceros (no conoce peligros), sin RNA ni difuso, sitios por
+               vecino más cercano y ruta BFS (la más corta). El sensor sigue marcando lo que ve y el supervisor veta.
+
+- ag_puro:     línea base (ARX-45, M19): AG intacto con el mapa de riesgo FIJO (el inicial del escenario), sin RNA ni
+               difuso. Decisión del Orquestador (opción C): el mapa se congela desde este módulo, sobre la instancia,
+               restaurando el snapshot inicial tras cada paso_mision; lo que el sensor marque en un paso solo vale
+               dentro de ese paso (el supervisor sigue activo). No se toca integracion.py.
+
 Métricas por variante: éxito, pasos, colisiones y energía final; media, mediana, desviación típica y rango
 intercuartílico (dispersión). La comparación no atribuye causalidad fuera de estas condiciones (§14).
 """
@@ -15,7 +23,9 @@ import numpy as np
 from genetico import camino_bfs, mapa_estimado
 from integracion import ESTADOS_TERMINALES, Mision
 
-VARIANTES = ("hibrido", "sin_rna", "sin_difuso", "sin_ag")
+VARIANTES_ABLACION = ("hibrido", "sin_rna", "sin_difuso", "sin_ag")     # ARX-28: sus cifras no cambian
+VARIANTES_BASE = ("ruta_corta", "ag_puro")                              # ARX-45 (M19)
+VARIANTES = VARIANTES_ABLACION + VARIANTES_BASE
 MAX_PASOS = 400
 
 # Escenarios de evaluación (ARX-28b). "congelado" es la evaluación del informe: 20x30, nivel 1, parámetros por defecto.
@@ -88,7 +98,31 @@ def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
         m._optimizar_ag = _orden_voraz(m)
         m.objetivos = []
         m._planear()
+    elif variante == "ruta_corta":
+        m.usar_rna = False
+        m.usar_difuso = False
+        m.riesgo = np.zeros_like(m.riesgo)          # sin riesgos: el plan solo busca la ruta más corta
+        m._optimizar_ag = _orden_voraz(m)
+        m.objetivos = []
+        m._planear()
+    elif variante == "ag_puro":
+        m.usar_rna = False
+        m.usar_difuso = False
+        _congelar_riesgo(m)
     return p
+
+
+def _congelar_riesgo(m: Mision):
+    """Mapa de riesgo fijo: tras cada paso_mision se restaura el snapshot tomado al empezar (ver docstring, ag_puro)."""
+    snapshot = m.riesgo.copy()
+    paso_original = m.paso_mision
+
+    def paso_con_riesgo_fijo():
+        try:
+            return paso_original()
+        finally:
+            m.riesgo[...] = snapshot
+    m.paso_mision = paso_con_riesgo_fijo
 
 
 def correr(semilla: int, variante: str, escenario: str = "congelado") -> dict:

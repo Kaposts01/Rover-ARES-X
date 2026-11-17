@@ -11,6 +11,8 @@ from juego.partida import Partida  # noqa: E402
 
 # Hash de comparar(range(1, 4)) del congelado medido en la base 3a6c5a9, antes de tocar el código.
 HASH_CONGELADO_BASE = "d6fb907994a30420652391e32b514bf5a4bb31c05f0d15f2f5aea9d1657cdfef"
+# Hash de la nota de texto de la salida (la misma de la base; el hash anterior ya la cubría dentro del total, B2 de QA).
+HASH_NOTA_BASE = "f0696978dedf462892e6348ae4fac3c215c8a19c1dc0d2ec4184b34d31f863d8"
 
 
 def _motivos(p):
@@ -69,3 +71,4 @@ def test_congelado_no_cambia():
     d = comparacion.comparar(range(1, 4))
     h = hashlib.sha256(json.dumps(d, sort_keys=True, default=str).encode()).hexdigest()
     assert h == HASH_CONGELADO_BASE
+    assert hashlib.sha256(d["nota"].encode("utf-8")).hexdigest() == HASH_NOTA_BASE

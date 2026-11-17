@@ -1518,8 +1518,28 @@ async function refrescarEstado() {
     dibujarRuta(datos.ruta);
     pintarDrones(datos.npcs);
     pintarHud(datos);
+    actualizarControlEvento();
   });
 }
+
+// Control de eventos (ARX-30e): mismo orden que EVENTOS de la API; solo con partida en curso
+function actualizarControlEvento() {
+  const boton = document.getElementById("evento-disparar");
+  if (!boton) return;
+  boton.disabled = !mapa || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado);
+}
+async function dispararEvento() {
+  if (!mapa || ocupado() || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado)) return;
+  const nombre = document.getElementById("evento-nombre").value;
+  const r = await llamar("POST", "/evento", { nombre });
+  if (!r) return;
+  const detalle = r.detalle || (r.ok ? "hecho" : "sin efecto");
+  avisar(`Evento ${nombre}: ${detalle}`);
+  registrarEvento(`evento ${nombre}: ${detalle}`);
+  await refrescarEstado();
+  await refrescarPaneles();
+}
+document.getElementById("evento-disparar").addEventListener("click", dispararEvento);
 
 // Encuadre inicial (sprint 4): la cámara mira al rover desde detrás y arriba, con el horizonte visible
 function encuadrarInicio() {
@@ -1602,6 +1622,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     registrarRecorrido(datos.posicion);
     pintarDrones(datos.npcs);
     pintarHud(datos);
+    actualizarControlEvento();
     await refrescarPaneles();
     await refrescarEscenarios();
     avisar(`Partida nueva en ${planetaActivo}${modoPlanetaActivo === "sonda" ? " (sonda)" : ""}: semilla ${estado.semilla}, nivel ${NIVELES[nivel - 1]}.`);

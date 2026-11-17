@@ -120,6 +120,9 @@ AMBIENTE_FACTOR_POR_NIVEL = {1: 1.3, 2: 1.3, 3: 1.2, 4: 1.1, 5: 1.0}   # margen 
 FACTOR_DESVIO = 2.0                                              # ARX-59: desvío con el peor caso de tormenta
 RESERVA_DESVIO = 5.0                                          # batería de reserva para el desvío a estación
 RECARGA_PASOS = 3                                             # pasos parado para recargar en una estación
+# ARX-79 (ev3-d75 A): batería inicial del mapa más grande que el pequeño = batería por nivel × RAZON_BATERIA_GRANDE.
+# R = mediana de pasos de las victorias del grande (77,5) / mediana del pequeño (52,0) = 1,49 (ver ARX-79_calibracion.md).
+RAZON_BATERIA_GRANDE = 1.49
 BATERIA_MAX_POR_NIVEL = {1: 60.0, 2: 56.0, 3: 52.0, 4: 48.0, 5: 44.0}   # calibrar: la ruta completa no llega sin recargar
 
 
@@ -321,6 +324,8 @@ class Partida:
         con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
         if bateria is None:
             bateria = BATERIA_MAX_POR_NIVEL[nivel] if con_estaciones else 100.0 - 4.0 * (nivel - 1)
+            if int(filas) * int(columnas) > FILAS_BASE * COLUMNAS_BASE and not con_estaciones:
+                bateria *= RAZON_BATERIA_GRANDE          # ARX-79 (ev3-d75 A): el grande tiene batería proporcional
         self.nivel = nivel
         self.semilla = semilla
         self.eventos_activos = tuple(eventos_activos)

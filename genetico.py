@@ -101,6 +101,9 @@ class ResultadoAG:
     candidatos: list = field(default_factory=list)   # top 3 distintos (cromosoma, desglose)
 
 
+_CACHE_DISTANCIAS = {}     # ARX-92b: (forma, mapa transitable, origen) -> (distancias, padres)
+
+
 class GeneticPlanner:
     def __init__(self, mundo: World, riesgo: np.ndarray, bateria: float = 100.0,
                  k_puntos: int = 4, poblacion: int = 30, generaciones: int = 30,
@@ -130,13 +133,17 @@ class GeneticPlanner:
 
     # ---------- decodificación ----------
     def _camino(self, origen, destino):
-        """camino_bfs con caché por par de celdas: el mapa transitable no cambia dentro de un planificador (N3, rendimiento)."""
-        cache = self.__dict__.setdefault("_cache_bfs", {})
-        clave = (origen, destino)
-        if clave not in cache:
-            cache[clave] = camino_bfs(origen, destino, self.transitable)
-        tramo = cache[clave]
-        return None if tramo is None else list(tramo)
+        """Mismo resultado que camino_bfs(origen, destino, transitable), sacado del árbol BFS del origen
+        (ARX-92b, rendimiento: una BFS por origen en vez de una por par)."""
+        if origen == destino:
+            return [origen]
+        dist, previo = self._distancias_desde(origen)
+        if destino not in dist:
+            return None
+        camino = [destino]
+        while previo[camino[-1]] is not None:
+            camino.append(previo[camino[-1]])
+        return camino[::-1]
 
     def _unir(self, paradas):
         """Une las paradas consecutivas con BFS; None si algún tramo no tiene camino."""
@@ -150,11 +157,41 @@ class GeneticPlanner:
             ruta.extend(tramo[1:])
         return ruta
 
+    def _distancias_desde(self, origen):
+        """ARX-92b (rendimiento, QA): BFS una vez por origen; devuelve ({celda: pasos}, {celda: padre}) de todo lo
+        alcanzable. Mismas reglas que camino_bfs (8 direcciones, solo se entra en celdas transitables, el origen se
+        expande siempre). La caché es compartida entre planificadores y se indexa por el mapa transitable exacto, así
+        que un planificador nuevo sobre el mismo mapa no repite la BFS (el desglose por paso crea uno por paso)."""
+        clave = (self.transitable.shape, self.transitable.tobytes(), tuple(origen))
+        cache = _CACHE_DISTANCIAS
+        if clave not in cache:
+            if len(cache) >= 4096:
+                cache.clear()
+            filas, columnas = self.transitable.shape
+            tr = self.transitable.tolist()
+            deltas = list(MOVIMIENTOS.values())
+            dist = {origen: 0}
+            previo = {origen: None}     # padre en el árbol BFS: da la ruta igual que camino_bfs (mismo orden de descubrimiento)
+            cola = deque([origen])
+            while cola:
+                ar, ac = cola.popleft()
+                for df, dc in deltas:
+                    vr, vc = ar + df, ac + dc
+                    if not (0 <= vr < filas and 0 <= vc < columnas):
+                        continue
+                    vecino = (vr, vc)
+                    if vecino in dist or not tr[vr][vc]:
+                        continue
+                    dist[vecino] = dist[(ar, ac)] + 1
+                    previo[vecino] = (ar, ac)
+                    cola.append(vecino)
+            cache[clave] = (dist, previo)
+        return cache[clave]
+
     def _largo(self, a, b):
         if a == b:
             return 0
-        tramo = self._camino(a, b)
-        return None if tramo is None else len(tramo) - 1
+        return self._distancias_desde(a)[0].get(b)
 
     def decodificar(self, cromosoma) -> Decodificacion:
         """Cromosoma → ruta contigua inicio → … → refugio que visita TODOS los sitios o es inviable (ARX-92b, M8).

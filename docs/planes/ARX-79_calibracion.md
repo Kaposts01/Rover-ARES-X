@@ -88,3 +88,13 @@ Totales de derrotas grande: caza sin batería 22, batería 0 con sitios pendient
 - R (1,49) sale de victorias de niveles 1 y 2; puede subestimar lo que hace falta en niveles 3 a 5.
 - La regla de 79c es un límite de tiempo de la caza: 12 pasos seguidos con el rover en la misma celda, sin contar fallos de sensor. Corta un bucle, no resuelve la caza. Un arreglo de fondo (rodear o forzar el avance) cambia el juego y queda como decisión del Maestro.
 - El aviso «sin garantía» se queda, como pidió el Maestro.
+
+## Regla 79c documentada como límite de tiempo de la caza (ev3-d76)
+
+- **Qué hace**: si quedan drones por destruir y el rover pasa **12 pasos seguidos** en la misma celda, la partida termina en FRACASO con el aviso «Faltan drones por destruir y el rover lleva 12 pasos detenido: la caza no avanza».
+- **Qué no hace**: no arregla la caza. El rover sigue sin cazar y la partida se pierde con causa, en vez de repetir D-DIFUSO-LENTO / V-PARADO-SIN-AVANCE hasta que se acaba la batería.
+- **Cuándo cuenta un paso**: solo los pasos con el rover en la misma celda, sin contar fallos de sensor (`_falla_restante`).
+- **Por qué 12**: cuatro ciclos de parada (3 paradas seguidas de V-PARADO-SIN-AVANCE más un replanteo). Es un límite elegido, no medido; se ajusta en `PASOS_CAZA_SIN_AVANCE` (`juego/partida.py`).
+- **Medición**: 2 de 200 partidas de 79d (nivel 3 del grande), 1 %; el umbral de ev3-d76 es 2 %.
+- **Clasificación**: `scripts/medir_garantia.py`, función `causa()`, etiqueta «caza parada: 12 pasos sin avance (regla 79c)». Las filas de `medicion_79d_*.json` se escribieron antes de esta etiqueta y guardan «otra: …» en sus dos casos; el conteo está hecho desde sus avisos.
+- **Alternativa no adoptada**: abandonar la caza, replanificar y no volver a ese dron durante N pasos, con FRACASO solo tras K abandonos. Queda como decisión del Maestro si el conteo sube por encima del 2 %.

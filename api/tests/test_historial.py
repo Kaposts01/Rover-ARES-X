@@ -421,3 +421,21 @@ def test_csv_anterior_sin_columnas_nuevas_sigue_siendo_legible():
     viejo = "n,modo,accion,tecnica,motivo,fitness\n1,manual,mover,humano,,\n"
     filas = list(csv.DictReader(io.StringIO(viejo)))
     assert filas[0]["accion"] == "mover" and "fitness_ag" not in filas[0]
+
+
+def test_historial_usa_el_estado_visible_tras_un_sismo_con_grieta_en_la_ruta(cliente):
+    # ARX-33b: la fila del historial y /estado muestran el mismo estado en el mismo paso
+    sesion = cliente.app.state.sesion
+    cliente.post("/paso")
+    for _ in range(80):
+        ruta = {tuple(c) for c in sesion.partida.mision.ruta}
+        antes = len(sesion.partida.sismos)
+        cliente.post("/evento", json={"nombre": "sismo"})
+        if len(sesion.partida.sismos) > antes and any(tuple(g) in ruta for g in sesion.partida.sismos[-1]["grietas"]):
+            break
+        cliente.post("/paso")
+    else:
+        raise AssertionError("no hubo sismo con grieta en la ruta")
+    estado = cliente.get("/estado").json()["estado"]
+    ultima = cliente.get("/historial").json()["filas"][-1]
+    assert estado == "REPLANIFICACION" and ultima["estado"] == estado

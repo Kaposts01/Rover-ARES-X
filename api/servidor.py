@@ -402,7 +402,7 @@ def _anotar(sesion: Sesion, accion: str, tecnica: str, motivos=(), ultimo: dict 
     sesion.historial.append({
         "n": sesion.n, "modo": sesion.modo, "accion": accion, "tecnica": tecnica,
         "motivo": ";".join(m for m in motivos if m),
-        "paso_mision": int(p.mision.paso), "estado": p.estado,
+        "paso_mision": int(p.mision.paso), "estado": p.estado_visible(),   # ARX-33b: el mismo estado que /estado
         "posicion": _celda(p.rover.posicion), "bateria": round(float(p.rover.bateria), 2),
         "velocidad": u.get("velocidad"), "p_libre": u.get("p_libre"), "p_obstaculo": u.get("p_obstaculo"),
         "p_barranco": u.get("p_barranco"), "reglas": ";".join(u.get("reglas") or []),

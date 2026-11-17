@@ -4,7 +4,7 @@ import { OrbitControls } from "/static/vendor/OrbitControls.js";
 import { iniciarLaboratorios } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
-import { aplicarMoviles } from "/static/moviles.js?v=r14";
+import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -1655,6 +1655,7 @@ function configuracionVigente() {
 async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente()) {
   detenerReproduccion();
   cerrarAvisos();
+  reiniciarEventos();
   cargando = true;
   try {
     const cuerpo = { nivel, tamano, planeta: config.planeta, modo: config.vehiculo };

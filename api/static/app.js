@@ -1205,6 +1205,7 @@ if (matchMedia("(max-width: 760px)").matches) {
 
 // Estados del rover (ARX-36): etiqueta, icono y color. El motor manda el código en /estado.estado
 const ESTADOS_VISUAL = {
+  CONFIGURACION: { etiqueta: "CONFIGURACIÓN", icono: "⚙", color: "#c8d2e4", pulso: false },
   EXPLORACION: { etiqueta: "EXPLORACIÓN", icono: "◎", color: "#5fd3ff", pulso: false },
   ALERTA: { etiqueta: "ALERTA", icono: "▲", color: "#ffb454", pulso: true },
   REPLANIFICACION: { etiqueta: "REPLANIFICACIÓN", icono: "↻", color: "#c39bff", pulso: true },
@@ -1215,7 +1216,7 @@ const ESTADOS_VISUAL = {
   SIN_RUTA: { etiqueta: "SIN RUTA", icono: "⊘", color: "#ffb454", pulso: true },
 };
 // Datos de prueba para los estados que el motor aún no emite (solo con ?demo=estados en la URL)
-const ESTADOS_DEMO = ["EXPLORACION", "ALERTA", "REPLANIFICACION", "REFUGIO", "MODO_SEGURO", "SIN_RUTA", "EXITO", "FRACASO"];
+const ESTADOS_DEMO = ["CONFIGURACION", "EXPLORACION", "ALERTA", "REPLANIFICACION", "REFUGIO", "MODO_SEGURO", "SIN_RUTA", "EXITO", "FRACASO"];
 const modoDemoEstados = new URLSearchParams(location.search).get("demo") === "estados";
 
 function pintarEstadoBadge(codigo) {

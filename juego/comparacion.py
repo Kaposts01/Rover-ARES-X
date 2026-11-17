@@ -185,9 +185,12 @@ def trazar_divergencias(semillas, escenario: str = "exigente") -> list:
     """Comparación paso a paso del híbrido contra cada variante con la misma semilla.
 
     Una fila por paso en que difiere lo registrado (posición, acción, velocidad o motivos). `origen`:
-    - "directa": la PRIMERA divergencia de cada (semilla, variante), con el mismo estado previo (misma posición y
-      batería al empezar el paso), por lo que la causa la técnica en ese paso (o, en el AG, el orden de sitios del plan);
-    - "consecuencia": toda divergencia posterior a la primera.
+    - "directa": la PRIMERA divergencia de cada (semilla, variante) que altera decisión, velocidad o ruta, con el
+      mismo estado previo (misma posición y batería al empezar el paso), por lo que la causa la técnica en ese paso
+      (o, en el AG, el orden de sitios del plan);
+    - "directa_codigo": divergencia con el mismo estado previo que solo cambia el código de motivo y aparece antes de
+      la directa (o si no hay directa); se cuenta aparte y no cuenta como directa;
+    - "consecuencia": el resto (toda divergencia posterior a la directa o con estado previo distinto).
     Se omiten los pasos en que una de las dos partidas ya terminó y no tiene fila (artefacto de fin de partida).
     Con sin_ag se añade, en paso 0, la fila de orden de sitios si el plan inicial difiere.
     """
@@ -210,12 +213,16 @@ def trazar_divergencias(semillas, escenario: str = "exigente") -> list:
                 if a and b and _firma(a) != _firma(b):
                     motivo, cambio = _motivo_y_cambio(var, a, b)
                     celda = (a or b)[-1]["posicion"]
+                    if igual_previo and not hubo_directa:
+                        origen = "directa_codigo" if cambio == "otros_motivos" else "directa"
+                    else:
+                        origen = "consecuencia"
                     filas.append({"semilla": s, "variante": var, "tecnica": TECNICA[var], "paso": paso, "celda": celda,
-                                  "origen": "directa" if (igual_previo and not hubo_directa) else "consecuencia",
+                                  "origen": origen,
                                   "motivo": motivo,
                                   "cambio": cambio,
                                   "detalle": f"hibrido {_firma(a)} / {var} {_firma(b)}"})
-                    hubo_directa = hubo_directa or igual_previo
+                    hubo_directa = hubo_directa or origen == "directa"
                 previa_h = (a[-1]["posicion"], a[-1]["bateria"]) if a else previa_h
                 previa_v = (b[-1]["posicion"], b[-1]["bateria"]) if b else previa_v
     return filas

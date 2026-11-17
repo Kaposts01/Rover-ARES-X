@@ -77,9 +77,7 @@ Cuatro variantes con la misma semilla: híbrido, `sin_rna`, `sin_difuso` y `sin_
 - **Cómo leer la traza:** la columna `origen` separa `directa` (la primera divergencia por semilla y variante que cambia
   decisión, velocidad o ruta), `directa_codigo` (solo cambia el código de motivo) y `consecuencia`. Las reglas están en
   `CONTRATOS_GRAFICOS.md` §7.
-- **Resultado actual (20 semillas):** el difuso altera en 20 de 20 semillas, sobre todo la velocidad (16 de 20 directas).
-  La variante `sin_ag` reemplaza el planificador de orden (hoy, permutación más corta por búsqueda exhaustiva) por el vecino más cercano: el orden difiere en 12 de 20 semillas y tarda 4,35 pasos más de media. No atribuye efecto al AG (ver ARX-92). La RNA cambia una decisión en 2 de 20
-  (semillas 4 y 18), sin cambiar éxito ni colisiones. Nada de esto es una medición de la RNA fuera del escenario exigente.
+- **Resultado actual (20 semillas):** TODO-CIFRAS (regeneración definitiva, con la entrega 2 integrada). Mientras tanto, ver INFORME §4.2 y el contrato §7. Las cifras de la regeneración anterior ya no valen.
 - **Límite de la clasificación:** la directa compara solo la posición y la batería del paso anterior. `paros_seguidos`, la ruta
   y el generador no entran en la comparación. QA lo comprobó en las semillas 4 y 18 con el estado oculto.
 - **Limitación de la RNA sin borde (ARX-28f, control previo):** con `borde_barranco` falso, la RNA no predice barrancos

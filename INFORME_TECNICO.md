@@ -88,13 +88,13 @@ Estado medido en el escenario exigente, 20 semillas. **Provisional hasta ARX-92.
 |---|---|---|
 | Difuso (`sin_difuso`) | 20 de 20 | difuso |
 | RNA (`sin_rna`) | 3 de 20 (semillas 4, 10 y 18) | RNA |
-| AG (`sin_ag`) | 12 de 20 (semillas 3–9, 11–14 y 17) | «sin AG: vecino más cercano». No mide el AG |
+| AG (`sin_ag_vecino`; `sin_ag` en la regeneración anterior) | 12 de 20 (semillas 3–9, 11–14 y 17) | «sin AG: vecino más cercano». No mide el AG |
 
 M2 se evalúa técnica por técnica; no hay un «cumple» único.
 
 - **Difuso: cumple, con efecto en el resultado.** Sin difuso, la velocidad cambia en las 20 semillas. Esa velocidad es fija (0,5) en la variante, así que el efecto en el resultado es el de la comparación de éxitos: 20 de 20 con el difuso, 15 de 20 sin él (`docs/COMPARACION_POLITICAS_exigente.json`).
 - **RNA: parcial, altera decisiones, sin efecto en el resultado.** Con la RNA apagada, la decisión, la velocidad o la ruta cambian en 3 de 20 semillas (4, 10 y 18). En las tres, la RNA veta un obstáculo que está fuera de la ruta y obliga a replanificar. Cuesta entre 1 y 4 pasos (+4 en la semilla 4; +1 en las semillas 10 y 18) y no cambia el éxito ni las colisiones en ninguna semilla. Cuando el obstáculo está en la ruta, la decisión del supervisor prevalece (chequeo incondicional de ARX-91) y la decisión de la RNA queda enmascarada. En este diseño la RNA es redundante con el supervisor: altera decisiones puntuales, sin efecto en el resultado.
-- **AG: pendiente de ARX-92.** En el juego el AG no decide el orden de visita. La variante del arnés que lo sustituye usa vecino más cercano y se rotula así. No hay todavía una medición del aporte del AG, y no se publica ninguna conclusión sobre él hasta ARX-92.
+- **AG: TODO-ENTREGA2.** Se escribe con la regeneración definitiva, con la entrega 2 (ARX-92c) integrada.
 - **Recall de barrancos de la RNA sin `borde_barranco` (ARX-28f):** 0,70–0,80 con el rasgo y 0,000 sin él (sección 5).
 
 No se abre ningún intento más para la RNA salvo que el usuario lo pida.
@@ -106,6 +106,8 @@ Cifra reproducible del informe (modelo del notebook: partición de 60 mapas, 42 
 El modelo que usa la partida del juego se entrena con una partición más pequeña (30 mapas: 21 entrenamiento, 4 validación y 5 prueba, 300 muestras por mapa) para que la carga sea rápida. En sus mapas de prueba 25 a 29 (1 401 muestras) obtiene macro-F1 0.909 y recall de barrancos **0.786** (11 de 14). Es una limitación conocida: la cifra del notebook no describe el modelo del juego, y se muestra en el laboratorio RNA con su configuración (`GET /rna/evaluacion?modelo=juego`).
 
 **Control de la RNA sin el rasgo `borde_barranco` (ARX-28f).** Con la RNA entrenada, el recall de barranco es 0,70–0,80 con sus rasgos normales y 0,000 sin `borde_barranco` (ruido 0,1 y 0,6; 0 de 250 barrancos en la partición de 60 mapas y 0 de 135 en la de 30). Lo medido es que, sin ese rasgo, la RNA no predice barrancos. Que la causa sea la dependencia de ese rasgo es una inferencia. El muestreo es distinto del de la cifra de arriba (unos 3 000 intentos por mapa). Detalle en `docs/planes/ARX-28_calibracion.md`, sección 28f.
+
+**Aporte de la RNA probado fuera del juego (ARX-93, C+).** Se probaron dos cambios detrás de banderas apagadas: una firma física del barranco (`simulador.FIRMA_BARRANCO_ACTIVA`) y una RNA sin el rasgo `borde_barranco` (`integracion.RNA_APORTE_ACTIVA`). Con las dos encendidas, en una corrida única (60 mapas con partición 70/15/15, semilla 42; prueba en 20 mapas no vistos, semillas 100 a 119), el recall de barrancos es 0,863 (63 de 73) y el macro-F1 es 0,933. En el mundo actual, sin la firma, el mismo modelo no reconoce ningún barranco (0 de 250 y 0 de 135). La alerta a dos celdas (93c) se descartó: el sensor de proximidad ya ve el obstáculo en la ruta (ARX-91). La vibración de la celda a dos pasos no se usó: el rover no puede medirla a distancia, y usarla sería una política oculta. Ninguno de los dos cambios está activo en el juego por defecto, y no se hizo el protocolo completo de 20 semillas. Fuente: `docs/planes/RNA_aporte.md`, §10.
 
 ## 6. Limitaciones
 

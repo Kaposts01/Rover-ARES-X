@@ -1,4 +1,5 @@
 """ARX-28b: escenarios de evaluación del arnés de comparación (congelado y exigente)."""
+import json
 import os
 import sys
 
@@ -7,14 +8,6 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from juego import comparacion  # noqa: E402
-
-# Filas del escenario congelado con semillas 1-3, obtenidas ANTES de tocar el código (main, e71d0dd).
-_COMUN = {1: (46, 49.0), 2: (52, 39.0), 3: (41, 62.0)}
-FILAS_CONGELADO = [
-    {"semilla": s, "variante": v, "estado": "EXITO", "exito": True, "pasos": _COMUN[s][0], "colisiones": 0,
-     "bateria_final": _COMUN[s][1], "sitios_visitados": 3}
-    for v in comparacion.VARIANTES_ABLACION for s in (1, 2, 3)
-]
 
 R_PRUEBA, P_PRUEBA = 0.3, 0.6   # valores de prueba (no son los de ARX-28a)
 
@@ -25,8 +18,17 @@ def exigente_fijado(monkeypatch):
 
 
 def test_regresion_congelado_filas_identicas():
-    d = comparacion.comparar(range(1, 4))
-    assert [f for f in d["filas"] if f["variante"] in comparacion.VARIANTES_ABLACION] == FILAS_CONGELADO
+    # ARX-45/ev3-d64 (B2 de QA): vigila el JSON publicado. Las 4 variantes originales con 20 semillas deben dar las
+    # mismas filas que docs/COMPARACION_POLITICAS.json. Si cambia el código, este test avisa antes que el informe.
+    ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "docs",
+                        "COMPARACION_POLITICAS.json")
+    with open(ruta, encoding="utf-8") as f:
+        publicado = json.load(f)
+    d = comparacion.comparar(range(1, 21))
+    obtenidas = [f for f in d["filas"] if f["variante"] in comparacion.VARIANTES_ABLACION]
+    esperadas = [f for f in publicado["filas"] if f["variante"] in comparacion.VARIANTES_ABLACION]
+    assert len(obtenidas) == 80
+    assert obtenidas == esperadas
     assert d["escenario"] == "congelado"
 
 

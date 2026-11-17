@@ -1364,6 +1364,33 @@ function pintarPaneles(p) {
     li.textContent = m;
     motivos.appendChild(li);
   }
+  // ARX-88: el porqué del paso con datos reales (M17): RNA, difuso, planificador y supervisor
+  const porque = document.getElementById("sup-porque");
+  if (porque) {
+    const lineas = [];
+    const r = p.rna || {};
+    const probs = [["libre", r.p_libre], ["obstáculo", r.p_obstaculo], ["barranco", r.p_barranco]].filter(([, v]) => v != null);
+    if (probs.length) {
+      const [clase, valor] = probs.reduce((x, y) => (y[1] > x[1] ? y : x));
+      lineas.push(`RNA: predijo ${clase} (${pct(valor)})`);
+    } else lineas.push("RNA: sin dato");
+    const d = p.difuso || {};
+    if (d.usado === false) lineas.push("Difuso: no usado");
+    else if (d.velocidad == null && !(d.reglas && d.reglas.length)) lineas.push("Difuso: sin dato");
+    else {
+      const reglas = (d.reglas || []).map(x => (Array.isArray(x)
+        ? `${x[0]} (fuerza ${Number(x[1]).toFixed(2).replace(".", ",")})`
+        : String(x))).join(", ") || "sin regla";
+      const vel = d.velocidad == null ? "sin dato" : Number(d.velocidad).toFixed(3).replace(".", ",");
+      lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
+    }
+    const ruta = (p.ag || {}).ruta_planeada || [];
+    lineas.push(ruta.length ? `Planificador: ruta de ${ruta.length} celdas` : "Planificador: sin ruta");
+    const supv = p.supervisor || {};
+    const vetos = (supv.motivos || []).filter(m => String(m).startsWith("V-"));
+    lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto ${vetos.join(", ")}` : ""}`);
+    porque.replaceChildren(...lineas.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  }
 }
 
 async function refrescarPaneles() {

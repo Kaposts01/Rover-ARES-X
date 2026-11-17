@@ -100,3 +100,36 @@ Título: «ARES-X (RNA): sin el rasgo de borde la RNA no ve ningún barranco; co
 
 - 17/11 08:3x · Evidencia (§2) y esbozo. Pausado por consumo (84 %).
 - 17/11 12:45 · Medición hecha (§3, 17 s de CPU), plan completo (§4–§9), ficha ev3-d78 en `RNA_aporte_fichas.json`. Informe enviado al Orquestador. Falta solo lo que decida la ficha.
+
+## 10. Cierre de ARX-93 (C+, decisión del Maestro, sin 93d)
+
+Rama `feat/arx-93-rna`. Solo código detrás de banderas apagadas y esta sección; no se mide 93d.
+
+**Qué queda y qué no**
+
+- 93a (firma física −3 m) y 93b (RNA sin `borde_barranco`): se quedan, detrás de `simulador.FIRMA_BARRANCO_ACTIVA` e `integracion.RNA_APORTE_ACTIVA`, ambas apagadas. `aporte_rna(True)` las enciende juntas.
+- 93c (alerta a dos celdas): **descartada**. Queda el código con `ALERTA_RNA_2_ACTIVA = False`, comentado como no usado; no se enciende ni con el aporte activo.
+- Pendiente no hecho: `/rna` y el panel (`laboratorio.js`) con la lista de rasgos del modelo activo, que iba al final y depende de que cierre 92c.
+
+**Métricas del modelo terreno (aparte del actual; M5/M6 siguen con el modelo actual)**
+
+Una sola corrida, no el protocolo de 93d: firma física encendida, 60 mapas (partición 70/15/15, 400 muestras por mapa), semilla 42, prueba en 20 mapas no vistos (semillas 100–119). Matriz de confusión, filas = real y columnas = predicho (libre, obstáculo, barranco):
+
+| Real \ Predicho | libre | obstáculo | barranco |
+|---|---|---|---|
+| libre | 6890 | 0 | 2 |
+| obstáculo | 4 | 416 | 14 |
+| barranco | 2 | 8 | 63 |
+
+macro-F1 0,933; recall de barrancos 0,863 (63 de 73); umbral previo ≥ 0,7. En el mundo actual (sin firma) este mismo modelo no ve ningún barranco (0 de 250 y 0 de 135, §3). Estas cifras valen solo con la bandera encendida.
+
+**Hallazgos que descartan 93c**
+
+1. **El sensor de proximidad ya lo ve.** `SensorSuite.leer` devuelve la primera celda no libre en línea hasta 20 celdas y `_actualizar_mapa_estimado` la marca; con ARX-91, `V-OBSTACULO-EN-RUTA` replanifica sin la RNA. Con la bandera apagada, un barranco real a 2 celdas sobre la ruta queda en riesgo 1,0 y el paso registra `V-OBSTACULO-EN-RUTA`. La premisa de §4(c), «antes de que el LIDAR la vea», no vale: el LIDAR de borde son los cuatro vecinos, pero el de proximidad llega a 20.
+2. **El recall de 0,667 dependía de la vibración de la celda a 2.** El rover no puede medirla a distancia; el simulador la genera según la clase. Reproducido (60 mapas de entrenamiento, 20 de prueba): con vibración, recall 0,727; sin ella 0,000, y la vibración sola también 0,000; el desnivel a 2 solo no lo aprende el MLP (barrancos 0,9 % de las muestras). Usarla sería una política oculta.
+
+**Para QA liviano**
+
+- Con las dos banderas apagadas: 20 semillas del escenario por defecto (bitácora completa más resumen), SHA-256 abreviado `6e49858a300c58e6` en la rama base `ac22f5f` y en esta rama.
+- `python -m pytest -q tests/test_integracion.py tests/test_rna.py tests/test_simulador.py`: 37 de 37. Suite completa, congelado y exigente: no corridos.
+- La limitación para el informe es el texto de §9.

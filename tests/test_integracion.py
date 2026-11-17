@@ -79,11 +79,12 @@ def test_aporte_apagado_no_marca_alerta_ni_entrena_el_modelo_nuevo():
     assert integracion.RNA_APORTE_ACTIVA is False
     mision = Mision(generar_mundo(semilla=7), semilla=7)
     mision.ejecutar(max_pasos=60)
-    assert mision.aporte_rna is False and mision._rna_alerta2 is None
+    assert mision.aporte_rna is False and mision.alerta_rna_2 is False and mision._rna_alerta2 is None
     assert not any("RNA-RIESGO-2" in m for m in mision.log.a_dataframe()["motivos"])
 
 
-def test_alerta_a_dos_celdas_marca_riesgo_sin_veto_y_la_ruta_lo_evita():
+def test_alerta_a_dos_celdas_marca_riesgo_sin_veto_y_la_ruta_lo_evita(monkeypatch):
+    monkeypatch.setattr(integracion, "ALERTA_RNA_2_ACTIVA", True)
     # La RNA falsa ve un barranco a dos celdas que el mapa estimado no conoce y que el sensor de proximidad
     # no marca (la celda real es libre): lo que se prueba es el mecanismo de marca y replanificación.
     with aporte_rna(True):
@@ -103,7 +104,8 @@ def test_alerta_a_dos_celdas_marca_riesgo_sin_veto_y_la_ruta_lo_evita():
     assert mision.colisiones == 0 and mision.vetos == 0
 
 
-def test_alerta_no_marca_donde_el_mapa_ya_conocia_el_riesgo():
+def test_alerta_no_marca_donde_el_mapa_ya_conocia_el_riesgo(monkeypatch):
+    monkeypatch.setattr(integracion, "ALERTA_RNA_2_ACTIVA", True)
     with aporte_rna(True):
         mundo = generar_mundo(semilla=5, filas=5, columnas=12, n_obstaculos=0, n_barrancos=0, n_sitios=0)
         mundo.tipo[:] = LIBRE
@@ -127,3 +129,12 @@ def test_con_el_borde_encendido_los_vetos_no_cambian():
     mision.ruta = [mundo.inicio, (fila, col + 1), (fila, col + 2)]
     mision.paso_mision()
     assert "V-RUTA-CON-RIESGO" in mision.log.a_dataframe()["motivos"].iloc[-1] or         mision.log.a_dataframe()["accion"].iloc[-1] == "replanificar"
+
+
+def test_aporte_encendido_deja_la_alerta_a_dos_celdas_apagada():
+    with aporte_rna(True):
+        mundo = generar_mundo(semilla=5, filas=5, columnas=12, n_obstaculos=0, n_barrancos=0, n_sitios=0)
+        mision = Mision(mundo, semilla=5, rna=_RnaFalsa(0.0), rna_alerta2=_RnaFalsa(0.9))
+    assert mision.aporte_rna is True and mision.alerta_rna_2 is False
+    mision.paso_mision()
+    assert not any("RNA-RIESGO-2" in str(m) for m in mision.log.a_dataframe()["motivos"])

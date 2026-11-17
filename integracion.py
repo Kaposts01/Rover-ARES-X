@@ -32,6 +32,12 @@ PASOS_PARADO_MAXIMO = 3          # pasos detenido seguidos antes de replanificar
 # RNA sin borde_barranco y la alerta a dos celdas, sobre un mundo con la firma física del barranco.
 # Apagada, la misión es idéntica a la entregable.
 RNA_APORTE_ACTIVA = False
+# ARX-93c DESCARTADA (cierre C+, decisión del Maestro): la alerta a dos celdas queda apagada y NO SE USA.
+# Motivos medidos: (1) el sensor de proximidad ya ve el primer obstáculo o barranco en línea hasta 20 celdas
+# y, con ARX-91, V-OBSTACULO-EN-RUTA replanifica sin la RNA, así que la alerta es redundante; (2) el recall
+# de 0,667 a dos celdas dependía de la vibración de la celda lejana, que el rover no puede medir a distancia
+# (sin ella el recall es 0,000): sería una política oculta. Se conserva el código solo como evidencia.
+ALERTA_RNA_2_ACTIVA = False
 DISTANCIA_ALERTA_RNA = 2          # celdas por delante que mira la alerta temprana
 
 
@@ -121,6 +127,7 @@ class Mision:
                  rna_alerta2: NeuralPerception = None):
         self.mundo = mundo
         self.aporte_rna = RNA_APORTE_ACTIVA         # ARX-93: se fija al crear la misión
+        self.alerta_rna_2 = RNA_APORTE_ACTIVA and ALERTA_RNA_2_ACTIVA   # descartada (ver ALERTA_RNA_2_ACTIVA)
         self.usar_rna = usar_rna
         self.usar_difuso = usar_difuso
         # Intervención causal (ARX-10, ev3-d32 A). Apagada por defecto: None no cambia nada.
@@ -230,7 +237,7 @@ class Mision:
         self._actualizar_mapa_estimado(pos, rumbo, lectura["proximidad_frontal_m"])
         for celda in lectura["celdas_barranco"]:
             self.riesgo[celda] = 1.0
-        alerta = self._marcar_riesgo_rna(pos, rumbo, siguiente) if self.aporte_rna and self.usar_rna else None
+        alerta = self._marcar_riesgo_rna(pos, rumbo, siguiente) if self.alerta_rna_2 and self.usar_rna else None
         # el borde de barranco solo veta si el precipicio está en la siguiente celda de la ruta
         lectura = dict(lectura, borde_barranco=siguiente in lectura["celdas_barranco"])
         # inferir velocidad
@@ -326,7 +333,7 @@ class Mision:
             self.riesgo[celda] = 1.0
 
     def _marcar_riesgo_rna(self, pos, rumbo, siguiente):
-        """Alerta temprana (ARX-93c): marca en el mapa estimado la celda a dos pasos si la RNA la ve peligrosa.
+        """Alerta temprana (ARX-93c, DESCARTADA: apagada y sin uso; ver ALERTA_RNA_2_ACTIVA). Marca en el mapa estimado la celda a dos pasos si la RNA la ve peligrosa.
 
         Solo con la celda de enfrente estimada libre y la de dos pasos aún no conocida como riesgo. Devuelve el
         motivo de bitácora `RNA-RIESGO-2:(fila, col):p` si marcó algo, o None.

@@ -12,11 +12,19 @@ intercuartílico (dispersión). La comparación no atribuye causalidad fuera de 
 """
 import numpy as np
 
-from genetico import camino_bfs
+from genetico import camino_bfs, mapa_estimado
 from integracion import ESTADOS_TERMINALES, Mision
 
 VARIANTES = ("hibrido", "sin_rna", "sin_difuso", "sin_ag")
 MAX_PASOS = 400
+
+# Escenarios de evaluación (ARX-28b). "congelado" es la evaluación del informe: 20x30, nivel 1, parámetros por defecto.
+# "exigente": nivel 5 con sensor más ruidoso y detección de peligros más pobre. RUIDO y P_DETECTAR los fija ARX-28a
+# (calibración); mientras sean None el escenario exigente no se puede usar. Los rellena 28a, no se inventan aquí.
+ESCENARIOS = {
+    "congelado": {"nivel": 1, "ruido": None, "p_detectar": None},      # None = no se toca: valores por defecto de Mision
+    "exigente": {"nivel": 5, "ruido": None, "p_detectar": None},       # ruido y p_detectar: pendientes de ARX-28a
+}
 
 
 def _orden_voraz(m: Mision):
@@ -41,14 +49,32 @@ def _orden_voraz(m: Mision):
     return planear
 
 
-def partida_variante(semilla: int, variante: str):
-    """Partida de la capa de juego con la variante aplicada antes de empezar."""
+def _parametros_escenario(escenario: str) -> dict:
+    if escenario not in ESCENARIOS:
+        raise ValueError(f"escenario desconocido: {escenario!r}")
+    par = ESCENARIOS[escenario]
+    if escenario != "congelado" and (par["ruido"] is None or par["p_detectar"] is None):
+        raise ValueError(f"escenario {escenario} pendiente de ARX-28a (ruido y p_detectar sin fijar)")
+    return par
+
+
+def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
+    """Partida de la capa de juego con el escenario y, después, la variante aplicados antes de empezar."""
     from juego.partida import Partida
     if variante not in VARIANTES:
         raise ValueError(f"variante desconocida: {variante!r}")
+    par = _parametros_escenario(escenario)
     from juego.partida import FILAS_BASE, COLUMNAS_BASE
-    p = Partida(semilla=semilla, filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False)   # evaluación congelada: 20x30, sin redibujar el mapa
+    p = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False)   # 20x30, sin redibujar el mapa
     m = p.mision
+    if par["ruido"] is not None or par["p_detectar"] is not None:
+        # El escenario se aplica sobre la instancia y se replanifica con el mapa estimado nuevo
+        if par["ruido"] is not None:
+            m.sensor.ruido = par["ruido"]
+        if par["p_detectar"] is not None:
+            m.riesgo = mapa_estimado(m.mundo, m.rng, p_detectar=par["p_detectar"])
+        m.objetivos = []
+        m._planear()
     if variante == "sin_rna":
         m.usar_rna = False
     elif variante == "sin_difuso":
@@ -61,9 +87,9 @@ def partida_variante(semilla: int, variante: str):
     return p
 
 
-def correr(semilla: int, variante: str) -> dict:
+def correr(semilla: int, variante: str, escenario: str = "congelado") -> dict:
     """Una partida completa de una variante con una semilla."""
-    p = partida_variante(semilla, variante)
+    p = partida_variante(semilla, variante, escenario)
     pasos = 0
     while p.estado not in ESTADOS_TERMINALES and pasos < MAX_PASOS:
         p.avanzar_ia()
@@ -82,10 +108,11 @@ def _resumen(valores) -> dict:
             "rango_intercuartil": round(float(q3 - q1), 3)}
 
 
-def comparar(semillas) -> dict:
+def comparar(semillas, escenario: str = "congelado") -> dict:
     """Ejecuta todas las variantes con las mismas semillas y resume cada una."""
+    _parametros_escenario(escenario)          # falla pronto si el escenario no existe o está pendiente
     semillas = [int(s) for s in semillas]
-    filas = [correr(s, v) for v in VARIANTES for s in semillas]
+    filas = [correr(s, v, escenario) for v in VARIANTES for s in semillas]
     politicas = {}
     for v in VARIANTES:
         grupo = [f for f in filas if f["variante"] == v]
@@ -98,6 +125,6 @@ def comparar(semillas) -> dict:
             "bateria_final": _resumen([f["bateria_final"] for f in grupo]),
             "sitios_visitados": _resumen([f["sitios_visitados"] for f in grupo]),
         }
-    return {"semillas": semillas, "variantes": politicas, "filas": filas,
+    return {"escenario": escenario, "semillas": semillas, "variantes": politicas, "filas": filas,
             "nota": "Arnés: capa de juego (juego/partida.py), misma semilla por variante. Sin atribución causal fuera "
                     "de estas condiciones (§14). Los intentos a barranco no se miden en el híbrido."}

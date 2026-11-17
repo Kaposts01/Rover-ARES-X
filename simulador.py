@@ -11,6 +11,12 @@ import pandas as pd
 # Tipos de celda del mundo real
 LIBRE, OBSTACULO, BARRANCO = 0, 1, 2
 
+# ARX-93 (ev3-d78 A): pista aparte, apagada por defecto. Encendida, las celdas BARRANCO quedan
+# DESNIVEL_BARRANCO_M metros bajo la elevación suave (firma física que la RNA puede aprender).
+# Apagada, el mundo es idéntico al de siempre. Solo se enciende en pruebas y mediciones.
+FIRMA_BARRANCO_ACTIVA = False
+DESNIVEL_BARRANCO_M = 3.0
+
 # Movimientos cardinales (fila, columna)
 # Ocho direcciones (ev3-d29 B). Una diagonal se permite si la celda de destino es transitable.
 MOVIMIENTOS = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "O": (0, -1),
@@ -84,6 +90,8 @@ class World:
             raise ValueError(f"Celda fuera del mapa: {pos}")
         if pos in (self.inicio, self.refugio):
             raise ValueError("No se puede poner un barranco sobre inicio o refugio.")
+        if FIRMA_BARRANCO_ACTIVA and self.tipo[pos] != BARRANCO:
+            self.elevacion[pos] -= DESNIVEL_BARRANCO_M
         self.tipo[pos] = BARRANCO
 
 
@@ -110,6 +118,8 @@ def generar_mundo(semilla: int, filas: int = 20, columnas: int = 30,
 
     # Elevación suavizada: base de altimetría (supuesto de simulación)
     elevacion = np.cumsum(rng.normal(0, 0.2, size=(filas, columnas)), axis=1)
+    if FIRMA_BARRANCO_ACTIVA:
+        elevacion[tipo == BARRANCO] -= DESNIVEL_BARRANCO_M
 
     sitios = {}
     intentos = 0
@@ -155,6 +165,18 @@ class SensorSuite:
             "celdas_barranco": celdas_barranco,
             "altimetria_m": self._ruidoso(altura_actual, 0.5),
         }
+
+    def leer_desnivel(self, mundo: World, pos, rumbo: str = "N", distancia: int = 2,
+                      sigma: float = 0.05) -> float:
+        """Altímetro frontal (ARX-93c): elevación de la celda a `distancia` menos la actual.
+
+        Ruido gaussiano absoluto `sigma` (m). NaN si la celda queda fuera del mapa.
+        """
+        df, dc = MOVIMIENTOS[rumbo]
+        destino = (pos[0] + df * distancia, pos[1] + dc * distancia)
+        if not mundo.dentro(destino):
+            return float("nan")
+        return float(mundo.elevacion[destino] - mundo.elevacion[pos] + self.rng.normal(0, sigma))
 
     @staticmethod
     def _barrancos_vecinos(mundo: World, pos) -> list:

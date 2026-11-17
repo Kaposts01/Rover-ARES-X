@@ -7,6 +7,7 @@ replanificar (AG) si corresponde → actuar → registrar.
 El supervisor evalúa primero las prohibiciones físicas y después combina las recomendaciones.
 Cada veto lleva un código de motivo reproducible.
 """
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from functools import lru_cache
 
@@ -14,7 +15,9 @@ import numpy as np
 
 from difuso import FuzzyController, ResultadoDifuso, aplanar_membresias
 from genetico import GeneticPlanner, camino_bfs, mapa_estimado
-from rna import NeuralPerception, _rasgos_celda, generar_dataset, particion_por_mapas
+import simulador
+from rna import (COLUMNAS_TERRENO, NOMBRES_RASGOS_ALERTA2, NOMBRES_RASGOS_TERRENO, NeuralPerception,
+                 _rasgos_alerta2, _rasgos_celda, generar_dataset, particion_por_mapas)
 from simulador import (BARRANCO, MOVIMIENTOS, MissionLogger, Rover, SensorSuite, World,
                        paso_fisico)
 
@@ -25,6 +28,17 @@ GRADOS_POR_GRADIENTE = 20.0       # conversión supuesta de gradiente de altura 
 DISTANCIA_BLOQUEO_RUTA = 6       # celdas de ruta adelante que se revisan por un obstáculo visto
 MARGEN_ENERGIA = 15              # % de batería de reserva sobre el camino al refugio
 PASOS_PARADO_MAXIMO = 3          # pasos detenido seguidos antes de replanificar
+# ARX-93 (ev3-d78 A): pista aparte, apagada por defecto. Encendida (con activar_aporte_rna) la misión usa la
+# RNA sin borde_barranco y la alerta a dos celdas, sobre un mundo con la firma física del barranco.
+# Apagada, la misión es idéntica a la entregable.
+RNA_APORTE_ACTIVA = False
+# ARX-93c DESCARTADA (cierre C+, decisión del Maestro): la alerta a dos celdas queda apagada y NO SE USA.
+# Motivos medidos: (1) el sensor de proximidad ya ve el primer obstáculo o barranco en línea hasta 20 celdas
+# y, con ARX-91, V-OBSTACULO-EN-RUTA replanifica sin la RNA, así que la alerta es redundante; (2) el recall
+# de 0,667 a dos celdas dependía de la vibración de la celda lejana, que el rover no puede medir a distancia
+# (sin ella el recall es 0,000): sería una política oculta. Se conserva el código solo como evidencia.
+ALERTA_RNA_2_ACTIVA = False
+DISTANCIA_ALERTA_RNA = 2          # celdas por delante que mira la alerta temprana
 
 
 @dataclass
@@ -61,18 +75,67 @@ def rna_entrenada(semilla: int = 42) -> NeuralPerception:
     return NeuralPerception(semilla=semilla).entrenar(X, y)
 
 
+@lru_cache(maxsize=1)
+def rna_terreno_entrenada(semilla: int = 42) -> NeuralPerception:
+    """RNA sin borde_barranco (ARX-93b): mismo tamaño que `rna_entrenada`, entrenada con la firma física."""
+    with _firma_fisica():
+        tr, _, _ = particion_por_mapas(total_mapas=30)
+        X, y = generar_dataset(tr, muestras_por_mapa=300, perfil="terreno")
+    return NeuralPerception(semilla=semilla, nombres=NOMBRES_RASGOS_TERRENO,
+                            columnas=COLUMNAS_TERRENO).entrenar(X, y)
+
+
+@lru_cache(maxsize=1)
+def rna_alerta2_entrenada(semilla: int = 42) -> NeuralPerception:
+    """RNA que predice la celda a dos pasos (ARX-93c), entrenada con la firma física."""
+    with _firma_fisica():
+        tr, _, _ = particion_por_mapas(total_mapas=30)
+        X, y = generar_dataset(tr, muestras_por_mapa=300, perfil="alerta2")
+    return NeuralPerception(semilla=semilla, nombres=NOMBRES_RASGOS_ALERTA2).entrenar(X, y)
+
+
+@contextmanager
+def _firma_fisica():
+    anterior = simulador.FIRMA_BARRANCO_ACTIVA
+    simulador.FIRMA_BARRANCO_ACTIVA = True
+    try:
+        yield
+    finally:
+        simulador.FIRMA_BARRANCO_ACTIVA = anterior
+
+
+@contextmanager
+def aporte_rna(activo: bool = True):
+    """Enciende (o apaga) la pista de ARX-93: firma física del mundo + RNA sin borde + alerta a dos celdas.
+
+    Las banderas se leen al crear el mundo y la misión: úsese alrededor de `generar_mundo` y `Mision`.
+    """
+    global RNA_APORTE_ACTIVA
+    anterior = (RNA_APORTE_ACTIVA, simulador.FIRMA_BARRANCO_ACTIVA)
+    RNA_APORTE_ACTIVA = simulador.FIRMA_BARRANCO_ACTIVA = bool(activo)
+    try:
+        yield
+    finally:
+        RNA_APORTE_ACTIVA, simulador.FIRMA_BARRANCO_ACTIVA = anterior
+
+
 class Mision:
     def __init__(self, mundo: World, rna: NeuralPerception = None, semilla: int = 0,
                  bateria: float = 100.0, k_puntos: int = 3, ruido: float = 0.1,
                  eventos: dict = None, usar_rna: bool = True, usar_difuso: bool = True,
-                 intervencion_rna=None, intervencion_difuso: float = None):
+                 intervencion_rna=None, intervencion_difuso: float = None,
+                 rna_alerta2: NeuralPerception = None):
         self.mundo = mundo
+        self.aporte_rna = RNA_APORTE_ACTIVA         # ARX-93: se fija al crear la misión
+        self.alerta_rna_2 = RNA_APORTE_ACTIVA and ALERTA_RNA_2_ACTIVA   # descartada (ver ALERTA_RNA_2_ACTIVA)
         self.usar_rna = usar_rna
         self.usar_difuso = usar_difuso
         # Intervención causal (ARX-10, ev3-d32 A). Apagada por defecto: None no cambia nada.
         self.intervencion_rna = intervencion_rna          # función(probs) -> probs
         self.intervencion_difuso = intervencion_difuso    # velocidad fija en [0, 1]
-        self.rna = rna or rna_entrenada()
+        self.rna = rna or (rna_terreno_entrenada() if self.aporte_rna else rna_entrenada())
+        self._celda_alerta = None
+        self._rna_alerta2 = rna_alerta2               # se entrena al primer uso, solo con el aporte encendido
         self.rng = np.random.default_rng(semilla)
         self.semilla = semilla
         self.sensor = SensorSuite(rng=self.rng, ruido=ruido)
@@ -174,6 +237,7 @@ class Mision:
         self._actualizar_mapa_estimado(pos, rumbo, lectura["proximidad_frontal_m"])
         for celda in lectura["celdas_barranco"]:
             self.riesgo[celda] = 1.0
+        alerta = self._marcar_riesgo_rna(pos, rumbo, siguiente) if self.alerta_rna_2 and self.usar_rna else None
         # el borde de barranco solo veta si el precipicio está en la siguiente celda de la ruta
         lectura = dict(lectura, borde_barranco=siguiente in lectura["celdas_barranco"])
         # inferir velocidad
@@ -188,6 +252,12 @@ class Mision:
                                  agregado=None, universo=None, fallback=True)
         # supervisar
         dec = self.supervisor.decidir(probs, fz.velocidad, lectura, self.rover.bateria)
+        if alerta is not None:
+            # alerta temprana (ARX-93c): no es un veto (sin prefijo V-); si la celda marcada cae sobre la ruta
+            # próxima, se replanifica ya, antes de que V-RUTA-CON-RIESGO lo exija con el rover encima
+            dec.motivos.append(alerta)
+            if any(c == self._celda_alerta for c in self.ruta[1:DISTANCIA_ALERTA_RNA + 1]):
+                dec = Decision("replanificar", 0.0, dec.motivos)
         # si la siguiente celda de la ruta ya es peligrosa, el plan está roto: replanificar
         if self.riesgo[siguiente] >= 0.5:
             dec = Decision("replanificar", 0.0, ["V-RUTA-CON-RIESGO"])
@@ -261,6 +331,29 @@ class Mision:
         celda = self._celda_observada(pos, rumbo, distancia)
         if celda is not None:
             self.riesgo[celda] = 1.0
+
+    def _marcar_riesgo_rna(self, pos, rumbo, siguiente):
+        """Alerta temprana (ARX-93c, DESCARTADA: apagada y sin uso; ver ALERTA_RNA_2_ACTIVA). Marca en el mapa estimado la celda a dos pasos si la RNA la ve peligrosa.
+
+        Solo con la celda de enfrente estimada libre y la de dos pasos aún no conocida como riesgo. Devuelve el
+        motivo de bitácora `RNA-RIESGO-2:(fila, col):p` si marcó algo, o None.
+        """
+        df, dc = MOVIMIENTOS[rumbo]
+        celda = (pos[0] + df * DISTANCIA_ALERTA_RNA, pos[1] + dc * DISTANCIA_ALERTA_RNA)
+        if not self.mundo.dentro(celda) or self.riesgo[siguiente] >= UMBRAL_RIESGO_RNA                 or self.riesgo[celda] >= UMBRAL_RIESGO_RNA:
+            return None
+        resultado = _rasgos_alerta2(self.mundo, pos, rumbo, self.sensor, self.rng)
+        if resultado is None:
+            return None
+        if self._rna_alerta2 is None:
+            self._rna_alerta2 = rna_alerta2_entrenada()
+        probs = self._rna_alerta2.explicar(resultado[0])["probabilidades"]
+        p = max(probs.get("barranco", 0.0), probs.get("obstáculo", 0.0))
+        if p <= UMBRAL_RIESGO_RNA:
+            return None
+        self.riesgo[celda] = max(self.riesgo[celda], p)
+        self._celda_alerta = celda
+        return f"RNA-RIESGO-2:{celda}:{p:.2f}"
 
     def _distancia_a_riesgo_en_ruta(self) -> float:
         """Pasos hasta el primer peligro conocido sobre la ruta (20 si la ruta está libre)."""

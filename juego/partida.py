@@ -937,6 +937,8 @@ class Partida:
         """ARX-28c: tras un avance, si la celda alcanzada es empinada, resbala con probabilidad P_RESBALON * velocidad.
 
         El rover vuelve a la celda anterior, gasta COSTO_RESBALON y la bitácora anota D-RESBALON. Despacio no resbala.
+
+        La inclinación se mide con la elevación REAL del mundo (mundo.elevacion), no con la estimada que ve el difuso.
         """
         m = self.mision
         if len(m.log.filas) != filas_previas + 1:

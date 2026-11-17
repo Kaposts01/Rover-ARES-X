@@ -61,6 +61,30 @@ en una instancia aparte (puerto distinto, o `TestClient` sin servidor), y se lan
 - **Limitación conocida:** el replanteo por sismo (fila `REPLAN-SISMO`) queda en la bitácora del motor (`mision.log`) y no
   aparece en `/historial`, que solo muestra las filas que anota la API. Se ve `evento:sismo` en el historial.
 
+## Ablaciones y traza de divergencias (ARX-28b)
+
+Escenario exigente: nivel 5, ruido 0,6, `p_detectar` 0,4, `prob_fallo` None (`ESCENARIOS` en `juego/comparacion.py`).
+Cuatro variantes con la misma semilla: híbrido, `sin_rna`, `sin_difuso` y `sin_ag`.
+
+- **Regenerar el JSON de 20 semillas:** desde `ares_x/`, `python scripts/comparacion_politicas.py 20 exigente`. Escribe
+  `docs/COMPARACION_POLITICAS_exigente.json`. Con el escenario `congelado` (sin el segundo argumento) escribe
+  `docs/COMPARACION_POLITICAS.json`, que sirve `GET /comparacion`.
+- **Regenerar la traza:** desde `ares_x/`, `python scripts/traza_divergencias.py 20 exigente`. Escribe
+  `docs/TRAZA_DIVERGENCIAS_exigente.csv`.
+- Los dos tardan varios minutos (cuatro partidas por semilla). Son trabajo pesado: uno a la vez en el equipo y con turno del
+  orquestador.
+- **Cómo leer la traza:** la columna `origen` separa `directa` (la primera divergencia por semilla y variante que cambia
+  decisión, velocidad o ruta), `directa_codigo` (solo cambia el código de motivo) y `consecuencia`. Las reglas están en
+  `CONTRATOS_GRAFICOS.md` §7.
+- **Resultado actual (20 semillas):** el difuso altera en 20 de 20 semillas, sobre todo la velocidad (16 de 20 directas).
+  El AG altera el orden de sitios en 12 de 20 y sin AG tarda 4,35 pasos más de media. La RNA cambia una decisión en 2 de 20
+  (semillas 4 y 18), sin cambiar éxito ni colisiones. Nada de esto es una medición de la RNA fuera del escenario exigente.
+- **Límite de la clasificación:** la directa compara solo la posición y la batería del paso anterior. `paros_seguidos`, la ruta
+  y el generador no entran en la comparación. QA lo comprobó en las semillas 4 y 18 con el estado oculto.
+- **Limitación de la RNA sin borde (ARX-28f, control previo):** con `borde_barranco` falso, la RNA no predice barrancos
+  (recall 0,000). Con los rasgos normales, 0,70–0,80. Detalle en `docs/planes/ARX-28_calibracion.md`, sección «28f». Escrito
+  como medición; la causa (dependencia del rasgo de borde) es inferencia.
+
 ## Evaluación congelada
 
 `juego/comparacion.py` (`partida_variante`) y `juego/conduccion.py` (`correr`) crean la partida con

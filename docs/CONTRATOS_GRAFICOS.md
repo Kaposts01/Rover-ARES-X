@@ -167,6 +167,43 @@ Parámetro opcional: `semillas` (entero de 1 a 40; por defecto 20). Con 20 semil
 
 Cifras reales de la ejecución de 20 semillas (tasa de éxito, mediana de pasos y colisiones media): híbrido 19/20 (41), sin RNA 19/20 (41), sin difuso 19/20 (41), sin AG 19/20 (44). Las cuatro tienen 0 colisiones. El bloque «hibrido» de arriba es el real (copiado del archivo); las demás variantes siguen la misma forma y sus valores reales están en el archivo.
 
+### Escenario «exigente» (ARX-28a y 28b)
+
+Escenario de evaluación de `ESCENARIOS` en `juego/comparacion.py`: nivel 5, sensor más ruidoso (`ruido` 0,6) y detección de peligros más pobre (`p_detectar` 0,4). Los dos valores los fijó la calibración (`docs/planes/ARX-28_calibracion.md`). `prob_fallo` es `None`: en este escenario no hay lecturas NaN, y ninguna fila de la traza tiene `V-SENSOR-NAN`. El escenario «congelado» no cambia.
+
+Resultados de 20 semillas, en `docs/COMPARACION_POLITICAS_exigente.json` (generado con `scripts/comparacion_politicas.py 20 exigente`):
+
+| Variante | Éxitos | Media de pasos | Colisiones |
+|---|---|---|---|
+| híbrido | 19/20 | 50,85 | 0 |
+| sin RNA | 19/20 | 50,65 | 0 |
+| sin difuso | 20/20 | 50,85 | 0 |
+| sin AG | 20/20 | 55,2 | 0 |
+
+El híbrido y el sin RNA terminan `SIN_RUTA` en la semilla 7 (paso 18); sin difuso (48 pasos) y sin AG (57) la ganan.
+
+### Traza de divergencias (`docs/TRAZA_DIVERGENCIAS_exigente.csv`)
+
+Una fila por paso en que una variante difiere del híbrido con la misma semilla. Columnas: `semilla`, `variante`, `tecnica`, `paso`, `celda`, `origen`, `motivo`, `cambio`, `detalle`. Se omiten los pasos en que una de las dos partidas ya terminó (artefacto de fin de partida).
+
+`origen`:
+- `directa`: la primera divergencia de cada (semilla, variante) que cambia decisión, velocidad o ruta, con el mismo estado previo (posición y batería al empezar el paso). Es la causa de la técnica en ese paso. En el AG, la fila es el orden de sitios del plan en el paso 0.
+- `directa_codigo`: mismo estado previo, pero solo cambia el código de motivo (`cambio` = `otros_motivos`). No cuenta como directa.
+- `consecuencia`: toda divergencia posterior a la directa o con un estado previo distinto.
+
+Recuentos con 20 semillas:
+
+| Técnica (variante) | Filas | Directas | Directas en código | Consecuencia |
+|---|---|---|---|---|
+| RNA (`sin_rna`) | 90 | 2 (semillas 4 y 18, paso 2) | 4 | 84 |
+| Difuso (`sin_difuso`) | 803 | 20 (una por semilla) | 0 | 783 |
+| AG (`sin_ag`) | 446 | 12 (semillas 3–9, 11–14 y 17; todas en el paso 0) | 0 | 434 |
+
+Lectura, sin atribuir más de lo medido:
+- **Difuso:** altera en 20 de 20 semillas. De sus 20 directas, 16 cambian solo la velocidad; en `sin_difuso` la velocidad es fija (0,5) y no tiene efecto físico. Empeora la semilla 7.
+- **AG:** altera el orden de sitios en 12 de 20 semillas. Sin AG la partida tarda 4,35 pasos más de media (55,2 frente a 50,85).
+- **RNA:** cambia una decisión en 2 de 20 semillas (4 y 18, paso 2, `V-RNA-OBSTACULO`): el híbrido tarda +3 pasos en la semilla 4 (51 frente a 48) y +1 en la 18 (42 frente a 41). No cambia el éxito ni las colisiones. Las 4 directas de código y las 84 consecuencias no cambian la decisión. La RNA sigue en evaluación en ARX-28f.
+
 ---
 
 # BORRADORES (sprint 2 y 3): datos de prueba para Diseño

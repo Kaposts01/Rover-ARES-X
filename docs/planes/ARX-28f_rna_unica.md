@@ -2,6 +2,8 @@
 
 Planner: `Esp_Planner`, 2026-11-17. Rama: `feat/arx-28-ablaciones` (mismo frente que ARX-28b; worktree `ares_x-wt-28`). Decisión ev3-d63 A del Maestro por delegación. Aporta a **M2** (variar la RNA altera una decisión o ruta) y **M19** (ablaciones comparables); de paso a **M7** (vínculo observable RNA → seguridad).
 
+**Estado: cerrado en negativo en el control previo (28f-a, 17/11/2026).** Recall de barranco sin `borde_barranco` = 0,000 en las dos particiones y con los dos ruidos, frente a 0,70–0,80 con los rasgos normales. Resultados en `docs/planes/ARX-28_calibracion.md`, sección «28f: recall sin borde». Por el umbral de 0,5, no se corren 28f-b ni 28f-c, y el escenario `exigente_rna` no se crea. Solo queda 28f-d (cierre de docs).
+
 ## 1. Contexto
 
 Medido en `docs/planes/ARX-28_calibracion.md` y `docs/TRAZA_DIVERGENCIAS_exigente.csv` (rama `feat/arx-28-ablaciones`): en el escenario exigente apagar la RNA cambia decisión, velocidad o ruta en 2 de 20 semillas (4 y 18); apagar el difuso en 20 de 20 y el AG en 12. Ninguna rejilla de `ruido` × `p_detectar` separa a la RNA, y `prob_fallo > 0` derrumba a las cuatro variantes por igual (`V-SENSOR-NAN` → `MODO_SEGURO`). Se pide una variante **declarada** del escenario donde parte del peligro no esté en el mapa estimado ni lo vea el sensor de proximidad, y la RNA sea la única alerta temprana, con criterio de éxito fijado antes de medir.

@@ -166,6 +166,18 @@ class SensorSuite:
             "altimetria_m": self._ruidoso(altura_actual, 0.5),
         }
 
+    def leer_desnivel(self, mundo: World, pos, rumbo: str = "N", distancia: int = 2,
+                      sigma: float = 0.05) -> float:
+        """Altímetro frontal (ARX-93c): elevación de la celda a `distancia` menos la actual.
+
+        Ruido gaussiano absoluto `sigma` (m). NaN si la celda queda fuera del mapa.
+        """
+        df, dc = MOVIMIENTOS[rumbo]
+        destino = (pos[0] + df * distancia, pos[1] + dc * distancia)
+        if not mundo.dentro(destino):
+            return float("nan")
+        return float(mundo.elevacion[destino] - mundo.elevacion[pos] + self.rng.normal(0, sigma))
+
     @staticmethod
     def _barrancos_vecinos(mundo: World, pos) -> list:
         """LIDAR de borde: celdas de precipicio en los cuatro vecinos."""

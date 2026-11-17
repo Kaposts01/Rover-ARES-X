@@ -489,7 +489,7 @@ class Partida:
         if sombra.riesgo[siguiente] >= 0.5:
             dec = Decision("replanificar", 0.0, ["V-RUTA-CON-RIESGO"])
         distancia = lectura["proximidad_frontal_m"]
-        # incondicional desde ARX-91 (antes dependía de la parada del difuso, ab46b4a)
+        # incondicional desde ARX-91 (ab46b4a es donde nació la versión que dependía de la parada del difuso)
         if sombra._obstaculo_en_ruta(pos, rumbo, distancia):
             dec = Decision("replanificar", 0.0, ["V-OBSTACULO-EN-RUTA"])
         paros = m.paros_seguidos + 1 if dec.accion == "detener" else 0

@@ -40,7 +40,7 @@ from simulador import MOVIMIENTOS  # noqa: E402
 
 MODOS = {"manual", "rna", "difuso", "ag", "automatico"}
 RUMBOS = {"N", "S", "E", "O", "NE", "NO", "SE", "SO"}
-EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo"}
+EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica"}
 ESTADOS_TERMINALES = {"EXITO", "FRACASO", "SIN_RUTA", "MODO_SEGURO"}
 CARPETA_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 RADIO_EVASION = 3           # drones a esta distancia o menos activan la decisión de combate en automático
@@ -206,6 +206,8 @@ def _estado(sesion: Sesion) -> dict:
         "modo": sesion.modo,
         "ambiente": p.ambiente,
         "ambiente_restante": p.ambiente_restante,
+        "senal": _celda(p.senal_activa) if p.senal_activa is not None else None,   # ARX-30c: null si no hay o ya se visitó
+        "enlace": {"activo": p.enlace_restante > 0, "restante": int(p.enlace_restante)},   # ARX-30b
         "objetivo": _celda(p.objetivo) if p.objetivo else None,
         "rumbo_sugerido": sug.get("rumbo"),
         "colisiones": res.get("colisiones", 0),
@@ -288,6 +290,12 @@ def _turno(sesion: Sesion, previos: list = ()):
     sesion.combate.eventos = list(previos) + sesion.combate.eventos
     if sesion.partida.rover.bateria <= 0 and not sesion.terminada():
         sesion.partida.mision.estado = "FRACASO"
+
+
+def _exigir_enlace(sesion: Sesion) -> None:
+    """ARX-30b (ev3-d48 A): con el enlace cortado no hay recomendaciones ni intervenciones (409)."""
+    if sesion.partida.enlace_restante > 0:
+        raise ErrorApi(409, f"sin enlace: faltan {sesion.partida.enlace_restante} pasos para recuperarlo")
 
 
 def _disparo_en_linea(sesion: Sesion):
@@ -709,9 +717,11 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         _validar_rumbo(datos.rumbo)
         sesion.exigir_activa()
         r = sesion.partida.mover_jugador(datos.rumbo)
-        if r.get("movido"):
+        sin_enlace = r.get("motivo") == "sin enlace"      # ARX-30b: la orden se perdió, pero el tiempo pasó
+        if r.get("movido") or sin_enlace:
             _turno(sesion)
-        _anotar(sesion, "mover" if r.get("movido") else "bloqueado", "humano", [r.get("motivo")])
+        _anotar(sesion, "mover" if r.get("movido") else ("sin_enlace" if sin_enlace else "bloqueado"),
+                "humano", [r.get("motivo")])
         return {"movido": bool(r.get("movido")), "motivo": r.get("motivo"),
                 "estado": sesion.partida.estado_visible(), "eventos_combate": list(sesion.combate.eventos)}
 
@@ -940,6 +950,10 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                     for m in p.meteoritos if m["paso"] == int(p.mision.paso)]
         eventos += [{"nombre": "sismo", "efecto": "grietas", "celdas": [_celda(c) for c in s["grietas"]]}
                     for s in p.sismos if s["paso"] == int(p.mision.paso)]
+        eventos += [{"nombre": "senal_biologica", "efecto": "lectura_anomala", "celdas": [_celda(s["celda"])],
+                     "afirma_vida": False} for s in p.senales if s["paso"] == int(p.mision.paso)]
+        if p._ultimo_corte is not None and p._ultimo_corte == int(p.mision.paso):
+            eventos.append({"nombre": "baja_conectividad", "efecto": "sin_enlace", "restante": int(p.enlace_restante)})
         return {
             "paso": int(p.mision.paso),
             "moviles": drones,
@@ -960,6 +974,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         p = sesion.partida
         if p.estado in ESTADOS_TERMINALES:
             raise ErrorApi(409, f"la partida ya terminó con estado {p.estado}")
+        _exigir_enlace(sesion)
         pos0 = tuple(int(x) for x in p.rover.posicion)
         propuestas = []
         for modelo in ("hibrido", "rna", "difuso", "ag"):
@@ -1070,6 +1085,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
     @app.post("/intervencion")
     def intervencion(datos: IntervencionIn):
         """Prueba causal (ARX-10): fuerza la salida de la RNA o del difuso en la misión de la partida."""
+        _exigir_enlace(activa())
         mision = activa().partida.mision
         if datos.tecnica == "apagar":
             mision.intervencion_rna = None

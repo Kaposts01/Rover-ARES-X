@@ -173,3 +173,14 @@ Se usó Gemini (Google) para generar la imagen de fondo del menú de inicio de l
 Las decisiones de diseño se tomaron con el estudiante y quedaron registradas en la Bandeja. Cada resultado se verificó ejecutando las 45 pruebas y el notebook. Los valores de simulación son supuestos, no especificaciones de misión.
 
 [Completar por el estudiante: qué partes revisó y modificó a mano, y qué entiende de cada módulo, porque la defensa oral exige explicarlo.]
+
+## 9. Trabajo futuro (diseño del juego)
+
+Una línea por tarea. No forman parte de la entrega.
+
+- **ARX-29 · obstáculos móviles.** `/moviles` devuelve hoy la lista `obstaculos_moviles` vacía. Cambiaría las rutas, el riesgo del mapa y el AG, que tendría que replanear cuando un obstáculo se mueve.
+- **ARX-34b · animaciones de los obstáculos móviles.** Depende de ARX-29: sin obstáculos que se muevan no hay nada que animar.
+- **ARX-50 · escenario de terreno por planeta.** Ya existen el selector de planeta (parámetro `planeta` de `POST /partida`) y el modelo térmico (`juego/termico.py`). Falta el terreno propio de cada planeta.
+- **ARX-51 y ARX-57 · terrenos y peligros por familia de planeta.** El concepto de familia de planeta no existe en el código; hay que definirlo antes de implementar los terrenos y los peligros de cada familia.
+- **ARX-59 · dificultad por escalón.** Hoy hay cinco niveles con batería y obstáculos crecientes. Hay una primera versión detrás de la bandera `ESTACIONES_ACTIVAS`, apagada por defecto (`juego/partida.py`); cambiaría la escala del mapa y la duración de cada escalón.
+- **ARX-43 · design-review.** La revisión de diseño quedó en B (≈2,96 sobre 4, sin verificar en el repo) y el objetivo era B+. Falta una pasada completa sobre la interfaz actual. El rendimiento ya se midió: 120 FPS con GPU (RTX 4060 a 1080p, `docs/capturas/S6_verificacion_visual.md`).

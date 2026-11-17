@@ -156,3 +156,10 @@ Lectura: en el congelado el error es casi nulo (los pasos extra son esperas y re
 **Umbral ÚNICO (decisión del Maestro, ev3-d74 condición 3).** La regla del juego es una sola: el umbral de 0,0223 se aplica igual en el congelado y en el exigente. El exigente es el caso más ruidoso. Lo esperado y aceptado: en el congelado, con este umbral, casi siempre gana la permutación más corta, porque sus errores de fitness son unas cinco veces menores que el umbral. Ese resultado no es un fallo de 92a, es el efecto de la regla de desempate.
 
 **El umbral se fijó antes de aplicarlo.** Quedó escrito y con su cálculo antes de tocar el código del desempate; no se ha aplicado. Aplicarlo (con su prueba y el control del congelado contra `d67f96d`) es el paso siguiente y requiere el visto bueno del líder.
+
+## Control de 92a con el umbral único aplicado (75e5dcc) · 20 semillas, contra d67f96d
+
+- **Congelado**: 120 filas (6 variantes × 20 semillas) comparadas con d67f96d: **0 cambian**. Decide el desempate solo en la semilla 1 (la ruta elegida coincide con la más corta de antes); en las semillas 2 a 20 decide el fitness.
+- **Exigente**: 120 filas comparadas con d67f96d: **0 cambian**. Decide el desempate en las semillas 9 y 16; en las semillas 1 a 8, 10 a 15 y 17 a 20 decide el fitness.
+- Definición: por planificación, «decide el desempate» si la ruta elegida no es la de mayor fitness (otra más corta queda dentro de 0,0223). «Decide el fitness» si la elegida es la de mayor fitness.
+- Lectura: el umbral solo se nota en unas pocas planificaciones, y en las medidas no cambió ninguna fila publicada.

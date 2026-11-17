@@ -36,9 +36,9 @@ Si al generar la partida ninguna de las 59 variantes del mapa pasa la comprobaci
 
 El mapa es ganable si hay una ruta por el terreno real que visita todos los sitios, cumple con los drones obligatorios y llega al refugio con la batería inicial. Se demuestra con cualquier semilla: no hay mapa especial.
 
-Resultados con 20 semillas por nivel (partidas ganables de 20):
+Partidas ganadas por el piloto automático (de 20 semillas por nivel):
 
-| Nivel | Pequeño (20×30) | Grande (40×60) | Batería inicial, grande |
+| Nivel | Pequeño (20×30), ganadas de 20 | Grande (40×60), ganadas de 20 | Batería inicial, grande |
 |---|---|---|---|
 | Muy fácil | 20/20 | 20/20 | 149 |
 | Fácil | 20/20 | 20/20 | 143 |
@@ -46,7 +46,7 @@ Resultados con 20 semillas por nivel (partidas ganables de 20):
 | Difícil | 20/20 | 6/20 | 131 |
 | Hardcore | 20/20 | 4/20 | 125 |
 
-El mapa grande arranca con 1,49 veces la batería del pequeño, porque su ruta es más larga. En el grande, de Medio a Hardcore, algunas semillas no tienen variante ganable y muestran el aviso de arriba.
+El mapa grande arranca con 1,49 veces la batería del pequeño, porque su ruta es más larga. En el grande, de Medio a Hardcore, la mayoría de las semillas no tienen una variante ganable comprobada y nacen con el aviso «Mapa sin garantía» (16, 20 y 20 de 20 semillas, respectivamente). El estimador de garantía es conservador: aun así, el piloto automático gana algunas de esas partidas, que son las que aparecen en la tabla.
 
 ## Límites
 

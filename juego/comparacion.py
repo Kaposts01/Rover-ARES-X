@@ -107,6 +107,7 @@ def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
         m.objetivos = []
         m._planear()
     elif variante == "ag_puro":
+        # No mide el AG: el envoltorio de Partida elige la permutación más corta; se redefine en ARX-92 (ev3-d71).
         m.usar_rna = False
         m.usar_difuso = False
         _congelar_riesgo(m)

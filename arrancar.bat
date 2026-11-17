@@ -8,11 +8,12 @@ cd /d "%~dp0"
 if not exist ".venv-ares\Scripts\python.exe" (
     python -m venv .venv-ares || goto :error
 )
-".venv-ares\Scripts\python.exe" -m pip install -q -r requirements.txt || goto :error
 if "%1"=="pruebas" (
+    ".venv-ares\Scripts\python.exe" -m pip install -q -r requirements-dev.txt || goto :error
     ".venv-ares\Scripts\python.exe" -m pytest -q api/tests || goto :error
     goto :eof
 )
+".venv-ares\Scripts\python.exe" -m pip install -q -r requirements.txt || goto :error
 if "%ARES_PUERTO%"=="" set ARES_PUERTO=8765
 echo Servidor en http://127.0.0.1:%ARES_PUERTO%/  (Ctrl+C para parar)
 ".venv-ares\Scripts\python.exe" -m uvicorn api.servidor:app --host 127.0.0.1 --port %ARES_PUERTO%

@@ -38,11 +38,11 @@ ENLACE_PROB_POR_NIVEL = {1: 0.002, 2: 0.003, 3: 0.004, 4: 0.005, 5: 0.006}   # c
 BATERIA_BAJA = 15.0
 
 # ARX-28c (ev3-d54 A): resbalón por velocidad en pendiente, solo con la bandera fisica_velocidad (escenario exigente).
-# PENDIENTE de ficha: el plan fija el mecanismo, no estos valores. Provisionales, sin calibrar.
-INCLINACION_RESBALON = 20.0     # grados desde los que una celda alcanzada puede hacer resbalar (plan: «p. ej. 20°»; PENDIENTE)
-P_RESBALON = 0.5                # probabilidad = P_RESBALON * velocidad (PENDIENTE)
-COSTO_RESBALON = 1.0            # % de batería extra por resbalón (PENDIENTE)
-VELOCIDAD_SIN_RESBALON = 0.3    # por debajo de esta velocidad no resbala (plan: v < 0,3)
+# Constantes CONGELADAS por ev3-d69 A: no se ajustan tras ver cifras; la sensibilidad se publica aparte (rejilla 3x2).
+INCLINACION_RESBALON = 20.0     # grados: sobre esta pendiente la tracción de las ruedas deja de ser segura (plan: «p. ej. 20°»)
+P_RESBALON = 0.5                # probabilidad = P_RESBALON * velocidad: el riesgo de perder agarre crece con la velocidad
+COSTO_RESBALON = 1.0            # % de batería: esfuerzo extra de las ruedas al patinar y reanudar el avance (supuesto)
+VELOCIDAD_SIN_RESBALON = 0.3    # por debajo de esta velocidad el avance es lento y no resbala (plan: v < 0,3)
 
 NIVEL_MAX = 5
 # ARX-21: tamaño del mapa. 20x30 es el de las evaluaciones congeladas (informe y /comparacion).

@@ -20,3 +20,9 @@ Decisión: ev3-d61 A (Maestro, por delegación). Base: b84e640. Rama feat/arx-85
 
 ## Repliegue C (si no cabe)
 Si la pantalla completa no cabe en la ventana, se entrega solo el panel de lecturas (punto 1), sin la sonda 3D animada. **Duda abierta**: el texto de «repliegue C» está en la Bandeja y no lo tengo; esta lectura se confirma con el Orquestador antes de cerrar.
+
+## Cierre: repliegue C declarado (ev3-d61, decisión del Orquestador)
+
+- **Entregado (mejora parcial de la interfaz)**: panel «Sonda» en modo sonda con planeta, temperatura interna y tolerancia, batería, pasos sobre tolerancia y estado; controles manuales ocultos. Commit b613690.
+- **Fuera de alcance, declarado (C)**: el descenso por capas, la ráfaga de viento como evento y el modo sonda del motor. Evidencia en b84e640: el descenso por capas no existe (las «capas» son solo de la red neuronal, api/servidor.py:548–579); la ráfaga no está en EVENTOS (api/servidor.py:44); el motor no tiene lógica de sonda (el modo sonda es solo de interfaz). A completo es un modo nuevo del motor y no se hace hoy.
+- **Hash del juego**: sin cambios (solo interfaz).

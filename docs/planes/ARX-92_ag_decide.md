@@ -206,3 +206,20 @@ Aprobada por el Maestro por delegación. Es la única corrección de 92c; **no h
   4. **No hay segunda corrección.**
 - **Medición única**: exigente de 10 sitios, las mismas 20 semillas, todas las variantes, y el híbrido en dos columnas (con umbral y sin umbral). Con desglose de derrotas por semilla: batería agotada en el camino, o sitios descartados por `_planear`.
 - **Prueba**: una ruta con `largo + MARGEN_ENERGIA > batería` no puede ganar a una ruta completa viable (M8).
+
+## 15. Medición única de 92c tras la corrección de reserva (exigente de 10 sitios, 20 semillas)
+
+Datos: `docs/planes/mediciones/medicion_92c_ex10.json` y `.log`. Publicado tal como salió; no hay segunda corrección (§14). Corrección en 94cd918 (código) y 23f61b6 (script).
+
+**Éxitos (20 semillas, columna oficial «con umbral»):** híbrido 12/20; vecino más cercano 14/20; 2-opt 17/20; más corta (AG de orden, pesos de distancia) 16/20; sin RNA 12/20; sin difuso 9/20; ag_puro 9/20; ruta corta 7/20.
+
+**Híbrido, dos columnas:** con umbral 12/20; sin umbral (diagnóstico, no oficial) 12/20.
+
+**Desglose de derrotas del híbrido con umbral (8 fallos):**
+- Sitios descartados (el plan inicial no tiene sitios porque `_planear` rechaza la ruta del AG o el respaldo): semillas 2, 3, 7, 16, 19 (5).
+- Sin batería en el camino (plan con sitios, batería agotada): semillas 6 y 9 (2).
+- Otra causa: semilla 5 (9 de 10 sitios, plan completo).
+
+**Efecto de la corrección frente a la medición anterior (§13), mismas semillas:** recuperadas las semillas 1 y 12; perdidas las semillas 2 y 7, que antes tenían plan completo y ahora tienen plan sin sitios. Balance neto del híbrido: 0. Causa probable: con la reserva, el AG de orden no encuentra un orden viable en su búsqueda (en las semillas 1 a 3 y 7 se usó el respaldo). El respaldo con 10 sitios solo prueba un orden (el ordenado por número), y si no cabe, devuelve la ruta original, que `_planear` descarta. **No se corrige ahora** (no hay segunda corrección).
+
+**Lectura para el informe:** la corrección hace que el criterio de reserva sea coherente con el juego, pero en el exigente de 10 sitios no mejora el híbrido. Con el umbral y sin él, el híbrido da el mismo número de éxitos.

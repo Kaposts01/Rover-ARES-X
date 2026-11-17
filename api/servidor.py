@@ -508,6 +508,15 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
 _cache_evaluacion_rna = {}
 _cache_ag = {}
 _cache_comparacion = {}
+ESCENARIOS_COMPARACION = ("congelado", "exigente")   # ARX-28d; si el motor declara ESCENARIOS, manda el motor
+
+
+def _escenarios_comparacion():
+    try:
+        from juego.comparacion import ESCENARIOS
+        return tuple(ESCENARIOS)
+    except ImportError:
+        return ESCENARIOS_COMPARACION
 COMPARACION_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                 "docs", "COMPARACION_POLITICAS.json")
 
@@ -1061,21 +1070,35 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         return {"planetas": lista, "modos": ["rover", "sonda"], "activo": activo}
 
     @app.get("/comparacion")
-    def comparacion(semillas: int = 20):
+    def comparacion(semillas: int = 20, escenario: str = "congelado"):
         """Comparación de políticas (RF-14, RF-15): híbrido frente a sin RNA, sin difuso y sin AG.
-        Con 20 semillas sirve docs/COMPARACION_POLITICAS.json (scripts/comparacion_politicas.py).
-        Otros valores calculan en la petición y tardan (1 a 40 semillas)."""
+        `escenario=congelado` (por defecto) o `exigente` (ARX-28d). Con 20 semillas sirve el JSON del escenario
+        (docs/COMPARACION_POLITICAS.json o docs/COMPARACION_POLITICAS_<escenario>.json); otros valores calculan
+        en la petición y tardan (1 a 40 semillas). La caché distingue escenario y número de semillas."""
         if isinstance(semillas, bool) or not 1 <= semillas <= 40:
             raise ErrorApi(400, "semillas debe ser un entero entre 1 y 40")
-        if semillas in _cache_comparacion:
-            return _cache_comparacion[semillas]
-        if semillas == 20 and os.path.exists(COMPARACION_JSON):
-            with open(COMPARACION_JSON, encoding="utf-8") as f:
+        validos = _escenarios_comparacion()
+        if escenario not in validos:
+            raise ErrorApi(400, "escenario debe ser uno de: " + ", ".join(validos)
+                           + f" (recibido: {str(escenario)[:40]!r})")
+        clave = (escenario, semillas)
+        if clave in _cache_comparacion:
+            return _cache_comparacion[clave]
+        ruta = COMPARACION_JSON if escenario == "congelado" else COMPARACION_JSON.replace(
+            ".json", f"_{escenario}.json")
+        if semillas == 20 and os.path.exists(ruta):
+            with open(ruta, encoding="utf-8") as f:
                 datos = json.load(f)
         else:
-            from juego.comparacion import comparar
-            datos = comparar(range(1, semillas + 1))
-        _cache_comparacion[semillas] = datos
+            from juego import comparacion as motor
+            if escenario == "congelado":
+                datos = motor.comparar(range(1, semillas + 1))
+            elif not hasattr(motor, "ESCENARIOS"):
+                raise ErrorApi(400, f"el escenario {escenario} aún no está disponible en el motor de comparación")
+            else:
+                datos = motor.comparar(range(1, semillas + 1), escenario=escenario)
+        datos = {**datos, "escenario": escenario}
+        _cache_comparacion[clave] = datos
         return datos
 
     @app.get("/serie")

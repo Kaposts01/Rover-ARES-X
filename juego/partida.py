@@ -397,6 +397,15 @@ def _cronometrado(metodo):
     return envuelto
 
 
+def bateria_por_defecto(nivel: int, filas: int, columnas: int, garantia: bool = True) -> float:
+    """ARX-87: batería inicial por defecto del nivel y el tamaño (la misma fórmula que usa Partida si no hay campo)."""
+    con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
+    bateria = BATERIA_MAX_POR_NIVEL[nivel] if con_estaciones else 100.0 - 4.0 * (nivel - 1)
+    if int(filas) * int(columnas) > FILAS_BASE * COLUMNAS_BASE and not con_estaciones:
+        bateria *= RAZON_BATERIA_GRANDE          # ARX-79 (ev3-d75 A): el grande tiene batería proporcional
+    return float(bateria)
+
+
 class Partida:
     # ARX-89b: tiempo de cómputo acumulado de la partida (construcción con el AG inicial, pasos, movimientos y eventos)
     tiempo_computo_s = 0.0
@@ -412,9 +421,7 @@ class Partida:
             raise ValueError(f"nivel inválido: {nivel!r} (debe estar entre 1 y {NIVEL_MAX})")
         con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
         if bateria is None:
-            bateria = BATERIA_MAX_POR_NIVEL[nivel] if con_estaciones else 100.0 - 4.0 * (nivel - 1)
-            if int(filas) * int(columnas) > FILAS_BASE * COLUMNAS_BASE and not con_estaciones:
-                bateria *= RAZON_BATERIA_GRANDE          # ARX-79 (ev3-d75 A): el grande tiene batería proporcional
+            bateria = bateria_por_defecto(nivel, filas, columnas, garantia)   # ARX-87: misma fórmula, en una función
         self.nivel = nivel
         self.semilla = semilla
         self.eventos_activos = tuple(eventos_activos)

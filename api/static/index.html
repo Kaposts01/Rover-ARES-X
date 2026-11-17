@@ -568,6 +568,8 @@
           <summary>Supervisor · <span id="res-sup">-</span></summary>
           <div>acción <span id="sup-accion">-</span></div>
           <ul class="lista" id="sup-motivos"><li>-</li></ul>
+          <ul class="lista" id="sup-porque"><li>-</li></ul>   <!-- ARX-88: el porqué del paso -->
+          <div>sensores <span id="sup-sensores">-</span></div>   <!-- ARX-86 -->
         </details>
         <details class="det" id="det-rec">
           <summary>Recomendaciones · manual</summary>
@@ -607,6 +609,10 @@
             <option value="grande" selected>Grande (40×60)</option>
         </select>
       </label>
+      <label>Batería inicial (opcional)
+        <input id="bateria-inicial" type="number" min="0" max="300" step="1" placeholder="por defecto">
+      </label>
+      <div class="ayuda">Entre el 50 y el 150 % de la batería por defecto del nivel y el tamaño; vacío = por defecto.</div>
     </section>
 
     <section class="paso">
@@ -723,6 +729,15 @@
       <div class="ayuda">Pulsa una leyenda para ocultar o mostrar esa serie.</div>
     </div>
     </div>
+  <!-- ARX-85: pantalla de sonda (solo en modo sonda, sin rodaje) -->
+  <div id="sonda-panel" class="caja oculto" aria-label="Pantalla de sonda">
+    <div class="kicker">Sonda</div>
+    <div class="fila"><span>Planeta</span><span class="valor" id="sonda-planeta">-</span></div>
+    <div class="fila"><span>T interna</span><span class="valor" id="sonda-temp">-</span></div>
+    <div class="fila"><span>Batería</span><span class="valor" id="sonda-bateria">-</span></div>
+    <div class="fila"><span>Pasos sobre tolerancia</span><span class="valor" id="sonda-sobre">-</span></div>
+    <div class="fila"><span>Estado</span><span class="valor" id="sonda-estado">-</span></div>
+  </div>
   <!-- Controles manuales: esquina inferior derecha, compactos y semitransparentes -->
   <div id="manual" class="caja oculto">
     <button id="manual-toggle" class="manual-cabecera" type="button" aria-expanded="true">Controles <span aria-hidden="true">▾</span></button>

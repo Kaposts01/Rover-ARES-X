@@ -35,7 +35,7 @@ from genetico import GeneticPlanner, PESOS_POR_DEFECTO  # noqa: E402
 from difuso import BATERIA_MAX, COLUMNAS_MEMBRESIA, DISTANCIA_MAX, INCLINACION_MAX  # noqa: E402
 from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
 from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
-from juego.partida import Partida, METODO_ORDEN  # noqa: E402
+from juego.partida import Partida, METODO_ORDEN, bateria_por_defecto  # noqa: E402
 from juego import termico  # noqa: E402
 from simulador import MOVIMIENTOS  # noqa: E402
 
@@ -57,8 +57,9 @@ class Sesion:
     """Estado de la partida que sirve la API (uno por proceso)."""
 
     def __init__(self, semilla: int = 11, nivel: int = 1, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
-                 planeta: str = "Marte"):
-        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas, planeta=planeta)   # ARX-83b
+                 planeta: str = "Marte", bateria: float = None):
+        self.partida = Partida(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas, planeta=planeta,
+                               bateria=bateria)   # ARX-83b; ARX-87
         # el combate se crea después; se engancha para contar los drones destruidos en la victoria
 
         self.semilla = semilla
@@ -87,6 +88,7 @@ class PartidaIn(BaseModel):
     tamano: Any = "grande"      # ARX-21: pequeno (20x30, el de las evaluaciones), mediano (30x45) o grande (40x60)
     planeta: Any = "Marte"      # ev3-d39 B: planeta del escenario (validación; el terreno es el de Marte hasta el sprint 3)
     modo: Any = "rover"         # "rover" o "sonda"
+    bateria: Any = None          # ARX-87: batería inicial opcional, entre el 50 y el 150 % del valor por defecto
 
 
 SEMILLA_MAX = 2 ** 31 - 1
@@ -120,6 +122,27 @@ def _validar_planeta(planeta, modo) -> None:
         if planeta in PERFILES and modo == "rover":
             sugerencia = "usa modo sonda para este planeta"
         raise ErrorApi(400, str(exc) + (f" Sugerencia: {sugerencia}." if sugerencia else ""))
+
+
+def _bateria_inicial(valor, nivel, filas, columnas):
+    """ARX-87: None si no hay campo; si lo hay, debe ser un número entre el 50 y el 150 % de la batería por defecto del
+    nivel y el tamaño. Fuera de rango o no numérico: 422 con el motivo."""
+    if valor is None:
+        return None
+    if isinstance(valor, bool) or not isinstance(valor, (int, float, str)):
+        raise ErrorApi(422, "batería inicial: escribe un número")
+    try:
+        b = float(valor)
+    except (TypeError, ValueError):
+        raise ErrorApi(422, "batería inicial: escribe un número")
+    if not math.isfinite(b):
+        raise ErrorApi(422, "batería inicial: escribe un número")
+    defecto = bateria_por_defecto(nivel, filas, columnas)
+    bajo, alto = 0.5 * defecto, 1.5 * defecto
+    if not bajo <= b <= alto:
+        raise ErrorApi(422, f"batería inicial fuera del 50–150 % del valor por defecto ({bajo:.0f}–{alto:.0f}) "
+                            f"para el nivel {nivel} y el tamaño {filas}×{columnas}")
+    return b
 
 
 def validar_partida(datos: "PartidaIn") -> tuple:
@@ -199,6 +222,33 @@ def _ultimo_replanteo(p) -> dict:
     return None
 
 
+def _sensores(p) -> dict:
+    """ARX-86: lecturas de los sensores en el rumbo actual y riesgo estimado de la celda de enfrente. Usa copias del
+    sensor (no consume el ruido real de la partida). Durante una falla de sensor las lecturas son None (sin llamar a
+    _observar) y cualquier valor no finito pasa a None (QA: NaN rompía el JSON)."""
+    def finito(x, ndigitos=2):
+        return None if x is None or not math.isfinite(float(x)) else round(float(x), ndigitos)
+
+    rumbo = p.rover.rumbo or "N"
+    df, dc = MOVIMIENTOS[rumbo]
+    f, c = p.rover.posicion[0] + df, p.rover.posicion[1] + dc
+    riesgo = None
+    if 0 <= f < p.mision.riesgo.shape[0] and 0 <= c < p.mision.riesgo.shape[1]:
+        riesgo = finito(p.mision.riesgo[f, c])
+    falla = bool(p._falla_restante > 0)
+    rasgos = None
+    if not falla:
+        obs = conduccion._observar(p)
+        rasgos = (obs.get(rumbo) or next(iter(obs.values())))["rasgos"]
+    return {"rumbo": p.rover.rumbo or "sin rumbo",
+            "proximidad": None if rasgos is None else finito(rasgos[0]),
+            "borde": None if rasgos is None else finito(rasgos[1]),
+            "gradiente": None if rasgos is None else finito(rasgos[2]),
+            "vibracion": None if rasgos is None else finito(rasgos[3]),
+            "riesgo_enfrente": riesgo,
+            "falla": falla}
+
+
 def _estado(sesion: Sesion) -> dict:
     p = sesion.partida
     sug = p.sugerencia()
@@ -237,6 +287,7 @@ def _estado(sesion: Sesion) -> dict:
         "tolerancia": termico.TOLERANCIA,
         "aborto_termico_activo": termico.ABORTO_TERMICO_ACTIVO,    # O2 de QA: la interfaz aclara si el aborto está apagado
         "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
+        "sensores": _sensores(p),                    # ARX-86
     }
 
 
@@ -274,6 +325,19 @@ def _ultimo_paso(sesion: Sesion) -> dict:
     }
 
 
+def _difuso_del_paso(ultimo, sesion, base) -> dict:
+    """QA ARX-88: el difuso se considera usado si el paso mostrado activó reglas del difuso. Sin pasos, se usa el modo
+    de la sesión (rna y ag no mueven con el difuso)."""
+    fuente = ultimo or base          # sin pasos, la sugerencia actual (base) es la fuente de velocidad y reglas
+    if ultimo:
+        usado = bool(ultimo.get("reglas"))
+    else:
+        usado = sesion.modo not in ("rna", "ag")
+    if not usado:
+        return {"usado": False, "velocidad": None, "reglas": None}
+    return {"usado": True, "velocidad": fuente.get("velocidad"), "reglas": fuente.get("reglas")}
+
+
 def _paneles(sesion: Sesion) -> dict:
     """Entradas y salidas de cada técnica en el último paso; si no hay pasos, la sugerencia actual."""
     sug = sesion.partida.sugerencia()
@@ -287,8 +351,8 @@ def _paneles(sesion: Sesion) -> dict:
         "rna": {"p_libre": base.get("p_libre"), "p_obstaculo": base.get("p_obstaculo"),
                 "p_barranco": base.get("p_barranco")},
         # rna y ag no usan el difuso para moverse: se muestra «no usado», no una velocidad 0 (ARX-18.3)
-        "difuso": ({"usado": False, "velocidad": None, "reglas": None} if sesion.modo in ("rna", "ag")
-                   else {"usado": True, "velocidad": base.get("velocidad"), "reglas": base.get("reglas")}),
+        # QA ARX-88: «usado» sale del paso mostrado (hubo reglas del difuso en ese paso), no del modo actual de la sesión
+        "difuso": _difuso_del_paso(ultimo, sesion, base),
         "ag": {"ruta_planeada": [_celda(c) for c in (sesion.partida.ruta or [])],
                "desglose": sug.get("desglose")},
         "supervisor": {"accion": base.get("accion"), "motivos": base.get("motivos")},
@@ -737,6 +801,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             "refugio": _celda(mundo.refugio),
             "sitios": [{"pos": _celda(p), "valor": int(v)} for p, v in mundo.sitios.items()],
             "estaciones": [[int(f), int(c)] for f, c in activa().partida.estaciones],   # ARX-59 (§14)
+            "riesgo_estimado": np.round(np.asarray(activa().partida.mision.riesgo, dtype=float), 2).tolist(),   # ARX-86
         }
 
     @app.get("/estado")
@@ -762,8 +827,9 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         semilla, nivel = validar_partida(datos)
         try:
             filas, columnas = _tamano(datos.tamano)
+            bateria = _bateria_inicial(datos.bateria, nivel, filas, columnas)   # ARX-87
             app.state.sesion = Sesion(semilla=semilla, nivel=nivel, filas=filas, columnas=columnas,
-                                       planeta=datos.planeta)
+                                       planeta=datos.planeta, bateria=bateria)
             app.state.sesion.planeta = datos.planeta
             app.state.sesion.modo_planeta = datos.modo
         except ValueError as exc:
@@ -1180,7 +1246,9 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
 
     @app.get("/paneles")
     def paneles():
-        return _paneles(activa())
+        datos = _paneles(activa())
+        datos["sensores"] = _sensores(activa().partida)    # ARX-86: lo pinta el panel de supervisión
+        return datos
 
     @app.post("/intervencion")
     def intervencion(datos: IntervencionIn):

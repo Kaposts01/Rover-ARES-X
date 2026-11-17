@@ -1286,6 +1286,19 @@ function pintarHud(e) {
     const modoVisible = e.modo_planeta === "sonda" ? " · sonda" : (e.modo_planeta === "rover" ? " · rover" : "");
     document.querySelector("#hud h1").textContent = `ARES-X · ${planetaVisible}${modoVisible}`;
   }
+  // ARX-85 (ev3-d61 A): en modo sonda, pantalla de sonda con sus lecturas y sin controles de rodaje
+  const enSonda = e.modo_planeta === "sonda";
+  const panelSonda = document.getElementById("sonda-panel");
+  const controlesManuales = document.getElementById("manual");
+  if (panelSonda) panelSonda.classList.toggle("oculto", !enSonda);
+  if (controlesManuales) controlesManuales.style.display = enSonda ? "none" : "";
+  if (enSonda) {
+    document.getElementById("sonda-planeta").textContent = planetaActivo;
+    document.getElementById("sonda-temp").textContent = `${e.temperatura_interna} °C (tolerancia ${e.tolerancia} °C)`;
+    document.getElementById("sonda-bateria").textContent = `${e.bateria.toFixed(1)} %`;
+    document.getElementById("sonda-sobre").textContent = e.pasos_sobre_tolerancia ?? "-";
+    document.getElementById("sonda-estado").textContent = e.estado;
+  }
   document.getElementById("h-semilla").textContent = e.semilla;
   document.getElementById("h-estado").textContent = e.estado;
   document.getElementById("h-bateria").textContent = `${e.bateria.toFixed(1)} %`;
@@ -1364,6 +1377,41 @@ function pintarPaneles(p) {
     li.textContent = m;
     motivos.appendChild(li);
   }
+  // ARX-88: el porqué del paso con datos reales (M17): RNA, difuso, planificador y supervisor
+  const porque = document.getElementById("sup-porque");
+  if (porque) {
+    const lineas = [];
+    const r = p.rna || {};
+    const probs = [["libre", r.p_libre], ["obstáculo", r.p_obstaculo], ["barranco", r.p_barranco]].filter(([, v]) => v != null);
+    if (probs.length) {
+      const [clase, valor] = probs.reduce((x, y) => (y[1] > x[1] ? y : x));
+      lineas.push(`RNA: predijo ${clase} (${pct(valor)})`);
+    } else lineas.push("RNA: sin dato");
+    const d = p.difuso || {};
+    if (d.usado === false) lineas.push("Difuso: no usado");
+    else if (d.velocidad == null && !(d.reglas && d.reglas.length)) lineas.push("Difuso: sin dato");
+    else {
+      const reglas = (d.reglas || []).map(x => (Array.isArray(x)
+        ? `${x[0]} (fuerza ${Number(x[1]).toFixed(2).replace(".", ",")})`
+        : String(x))).join(", ") || "sin regla";
+      const vel = d.velocidad == null ? "sin dato" : Number(d.velocidad).toFixed(3).replace(".", ",");
+      lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
+    }
+    const ruta = (p.ag || {}).ruta_planeada || [];
+    lineas.push(ruta.length ? `Planificador: ruta de ${ruta.length} celdas` : "Planificador: sin ruta");
+    const supv = p.supervisor || {};
+    const vetos = (supv.motivos || []).filter(m => String(m).startsWith("V-"));
+    lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto ${vetos.join(", ")}` : ""}`);
+    porque.replaceChildren(...lineas.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  }
+  // ARX-86: lecturas de los sensores en el rumbo actual y riesgo estimado de la celda de enfrente
+  const sen = p.sensores;
+  const indicador = document.getElementById("sup-sensores");
+  // QA ARX-86: sin «null» en pantalla; durante una falla se muestra «falla» en lugar de las lecturas
+  const dato = (x) => (x == null ? "—" : x);
+  if (indicador) indicador.textContent = !sen ? "-"
+    : sen.falla ? `${sen.rumbo}: falla de sensor · riesgo enfrente ${dato(sen.riesgo_enfrente)}`
+    : `${sen.rumbo}: proximidad ${dato(sen.proximidad)} · borde ${dato(sen.borde)} · gradiente ${dato(sen.gradiente)} · vibración ${dato(sen.vibracion)} · riesgo enfrente ${dato(sen.riesgo_enfrente)}`;
 }
 
 async function refrescarPaneles() {
@@ -1671,7 +1719,7 @@ function configuracionVigente() {
   };
 }
 // Tamaño del mapa (ARX-21): pequeno 20×30, mediano 30×45, grande 40×60 (por defecto: grande)
-async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente()) {
+async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente(), bateria = null) {
   detenerReproduccion();
   cerrarAvisos();
   reiniciarEventos();
@@ -1679,6 +1727,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
   try {
     const cuerpo = { nivel, tamano, planeta: config.planeta, modo: config.vehiculo };
     if (semilla != null) cuerpo.semilla = semilla;
+    if (bateria != null) cuerpo.bateria = bateria;   // ARX-87: solo llega desde el botón «Nueva» del panel
     for (const clave of Object.keys(cuerpo)) if (cuerpo[clave] == null) delete cuerpo[clave];   // sin planeta, el motor usa Marte y rover
     let datos = await llamar("POST", "/partida", cuerpo);
     if (!datos) return false;
@@ -2536,10 +2585,29 @@ window.addEventListener("keydown", (ev) => {
 document.querySelectorAll("#pad button[data-r]").forEach((b) => {
   b.addEventListener("click", () => mover(b.dataset.r));
 });
+// ARX-87: batería inicial opcional del panel (vacío = por defecto); se pasa solo desde «Nueva»
+function bateriaDelCampo() {
+  const campo = document.getElementById("bateria-inicial");
+  return campo && campo.value.trim() !== "" ? Number(campo.value) : null;
+}
+// ARX-87 (QA): el rango visible del campo sigue la misma fórmula que el servidor (50–150 % del valor por defecto)
+function actualizarRangoBateria() {
+  const campo = document.getElementById("bateria-inicial");
+  if (!campo) return;
+  const nivel = Number(document.getElementById("nivel").value);
+  const tamanoSel = document.getElementById("tamano").value;
+  const [filas, columnas] = { pequeno: [20, 30], mediano: [30, 45], grande: [40, 60] }[tamanoSel] || [40, 60];
+  const defecto = (100 - 4 * (nivel - 1)) * (filas * columnas > 600 ? 1.49 : 1);
+  campo.min = String(Math.round(0.5 * defecto));
+  campo.max = String(Math.round(1.5 * defecto));
+}
+document.getElementById("nivel").addEventListener("change", actualizarRangoBateria);
+document.getElementById("tamano").addEventListener("change", actualizarRangoBateria);
+actualizarRangoBateria();
 document.getElementById("nueva").addEventListener("click", async () => {
   const semilla = semillaDesdeCampo("semilla");
   const nivel = Number(document.getElementById("nivel").value);
-  const ok = await conCarga(() => cargarPartida(semilla, nivel), { transicion: true });
+  const ok = await conCarga(() => cargarPartida(semilla, nivel, undefined, configuracionVigente(), bateriaDelCampo()), { transicion: true });
   if (!ok) return;
   cadenaAutomatica = document.getElementById("modo").value === "automatico" && Number(document.getElementById("menu-misiones").value) > 1 ? nuevaCadena(nivel, Number(document.getElementById("menu-misiones").value), document.getElementById("veto").checked) : null;
   await refrescarEscenarios();

@@ -78,20 +78,20 @@ Medición de éxito, colisiones y pasos (JSON):
 
 La semilla 7 termina en `SIN_RUTA` en el híbrido y en `sin_rna`; `sin_difuso` y `sin_ag` la ganan.
 
-Divergencias paso a paso frente al híbrido (misma semilla). «Directa» es una fila en que ambas partidas empezaban el paso en la misma celda y con la misma batería, así que la diferencia sale de la técnica en ese paso; «consecuencia» es una fila posterior a que las trayectorias ya se separaron. Una fila es un paso en que difiere lo registrado (celda, acción, velocidad o motivo).
+Divergencias paso a paso frente al híbrido (misma semilla), con la regla de clasificación técnica: «directa» es la PRIMERA divergencia por (semilla, variante) que altera decisión, velocidad o ruta, con ambas partidas empezando el paso en la misma celda y con la misma batería; «directa_codigo» son las divergencias que solo cambian el código de motivo (se cuentan aparte y no cuentan como directa); «consecuencia» es el resto. Se omiten las filas de fin de partida. Una fila es un paso en que difiere lo registrado (celda, acción, velocidad o motivo).
 
-| técnica (variante) | semillas con divergencia | filas totales | directas | consecuencia |
-|---|---|---|---|---|
-| RNA (sin_rna) | 5 de 20 (2, 4, 12, 13, 18) | 94 | 9 | 85 |
-| difuso (sin_difuso) | 20 de 20 | 863 | 423 | 440 |
-| AG (sin_ag) | 12 de 20 (3-9, 11-14, 17) | 541 | 40 | 501 |
+| técnica (variante) | semillas con directa real | filas totales | directas | directa_codigo | consecuencia |
+|---|---|---|---|---|---|
+| RNA (sin_rna) | 2 de 20 (4 y 18) | 90 | 2 | 4 | 84 |
+| difuso (sin_difuso) | 20 de 20 | 803 | 20 | 0 | 783 |
+| AG (sin_ag) | 12 de 20 (3-9, 11-14, 17) | 446 | 12 | 0 | 434 |
 
 Qué cambia en las filas directas:
-- RNA: 9 filas marcadas «directas», pero solo 2 son divergencias directas reales: semilla 4, paso 2, y semilla 18, paso 2 (el híbrido veta por la RNA al salir y `sin_rna` avanza). Cuestan +3 pasos (semilla 4) y +1 paso (semilla 18); no tocan el éxito ni las colisiones. Las filas de los pasos 11 y 12 de la semilla 4 son consecuencia del desfase de un paso (distinto `paros_seguidos` y lecturas del sensor), y la del paso 42 de la semilla 18 es un artefacto de fin de partida. En las semillas 2, 12 y 13 (y en el paso 1 de la 4) el veto de la RNA es redundante con `V-OBSTACULO-EN-RUTA`: misma acción `replanificar` en la misma celda, solo cambia el código de motivo (`V-RNA-OBSTACULO` o `V-RNA-BARRANCO` frente a `V-OBSTACULO-EN-RUTA`). Códigos `V-RNA-*` registrados en el híbrido en las 94 filas: 8.
-- Difuso: 423 filas; 380 cambian solo la velocidad, 42 también decisión y ruta, 1 velocidad y ruta. Motivo: reglas difusas activadas en el híbrido (la más frecuente, R4, en 173 filas directas donde es la única regla activada; 259 si se cuentan las que la incluyen junto a otras).
-- AG: 40 filas; 15 cambian la ruta, 12 la velocidad, 9 decisión, velocidad y ruta, 4 velocidad y ruta. Además, el orden de sitios del plan inicial difiere en 12 semillas (fila de paso 0).
+- RNA: 2 directas, semilla 4 paso 2 y semilla 18 paso 2 (el híbrido veta por la RNA con `V-RNA-OBSTACULO` al salir y `sin_rna` avanza; cambian decisión, velocidad y ruta). Cuestan +3 pasos (semilla 4) y +1 paso (semilla 18); no tocan el éxito ni las colisiones. Las 4 filas `directa_codigo` (semilla 2 paso 2, semilla 4 paso 1, semilla 12 paso 46, semilla 13 paso 43) son vetos de la RNA redundantes con `V-OBSTACULO-EN-RUTA`: misma acción `replanificar` en la misma celda, solo cambia el código de motivo (`V-RNA-OBSTACULO` o `V-RNA-BARRANCO`). Las otras 84 filas son consecuencia. Códigos `V-RNA-*` registrados en el híbrido en las 90 filas: 8.
+- Difuso: 20 directas (una por semilla); 16 cambian solo la velocidad y 4 decisión, velocidad y ruta. Motivo: reglas difusas activadas en el híbrido (R4 en 14, R1 en 4, R1;R7;R9 en 2).
+- AG: 12 directas, todas la fila de paso 0 por el orden de sitios del plan inicial, que difiere en 12 semillas; todas cambian la ruta.
 
-Sobre la RNA, lo medido: no altera el éxito (19/20 en híbrido y en `sin_rna`, misma semilla fallida) ni las colisiones (0 en las cuatro variantes). Cambia una decisión en 2 semillas de 20 (la 4 y la 18), una vez en cada una, con un veto `V-RNA-OBSTACULO` en el paso 2 que cuesta pasos y no éxito. En las demás divergencias el veto de la RNA es redundante con el del supervisor para el resultado. Si M2 queda demostrado para la RNA en estos términos lo decide el Maestro; la cifra de «5 semillas» cuenta divergencias que solo cambian el código de motivo y no se usa como criterio.
+Sobre la RNA, lo medido: no altera el éxito (19/20 en híbrido y en `sin_rna`, misma semilla fallida) ni las colisiones (0 en las cuatro variantes). Cambia una decisión en 2 semillas de 20 (la 4 y la 18), una vez en cada una, con un veto `V-RNA-OBSTACULO` en el paso 2 que cuesta pasos y no éxito. En las demás divergencias el veto de la RNA es redundante con el del supervisor para el resultado. Si M2 queda demostrado para la RNA en estos términos lo decide el Maestro; las divergencias que solo cambian el código de motivo (semillas 2, 4, 12 y 13) se cuentan aparte como `directa_codigo` y no se usan como criterio.
 
 Hallazgo de QA (17/11/2026), sin suavizar: en la semilla 7 el híbrido PIERDE (`SIN_RUTA` en el paso 18, tras paradas por `D-DIFUSO-LENTO`) y `sin_difuso` la gana. En este escenario el difuso empeora el resultado en esa semilla; `sin_rna` también la pierde y `sin_ag` también la gana.
 

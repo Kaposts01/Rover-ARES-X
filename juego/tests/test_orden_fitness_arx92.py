@@ -91,7 +91,8 @@ def test_umbral_unico_fijado():
     assert pm.UMBRAL_EMPATE == 0.0223
 
 
-def test_con_umbral_enorme_gana_siempre_la_mas_corta(monkeypatch):
+def test_caso_sin_umbral_gana_la_mas_corta(monkeypatch):
+    """Mide el caso sin umbral (umbral enorme): la más corta siempre. No es el umbral de 0,0223 (ev3-d79 A)."""
     import juego.partida as pm
     monkeypatch.setattr(pm, "UMBRAL_EMPATE", 1e9)
     for semilla in (1, 9, 16):

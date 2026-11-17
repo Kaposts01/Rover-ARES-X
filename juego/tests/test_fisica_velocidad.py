@@ -67,8 +67,32 @@ def test_congelado_sin_resbalon_aunque_vaya_rapido():
     assert "D-RESBALON" not in _motivos(p)
 
 
+# ARX-92d: el hash cubre el diccionario completo de comparar(), con las variantes nuevas (sin_ag_mas_corta) quitadas
+# y el renombre sin_ag_vecino → sin_ag deshecho. Así las cifras publicadas (y la nota) son las mismas que dieron d6fb9079…
+_VARIANTES_NUEVAS = {"sin_ag_mas_corta", "sin_ag_2opt"}
+
+
+def _hash_congelado(d):
+    base = json.loads(json.dumps(d, default=str))
+    base["variantes"] = {k: v for k, v in base["variantes"].items() if k not in _VARIANTES_NUEVAS}
+    base["filas"] = [f for f in base["filas"] if f["variante"] not in _VARIANTES_NUEVAS]
+    for f in base["filas"]:
+        if f["variante"] == "sin_ag_vecino":
+            f["variante"] = "sin_ag"
+    base["variantes"] = {("sin_ag" if k == "sin_ag_vecino" else k): v for k, v in base["variantes"].items()}
+    return hashlib.sha256(json.dumps(base, sort_keys=True, default=str).encode()).hexdigest()
+
+
 def test_congelado_no_cambia():
     d = comparacion.comparar(range(1, 4))
-    h = hashlib.sha256(json.dumps(d, sort_keys=True, default=str).encode()).hexdigest()
+    h = _hash_congelado(d)
     assert h == HASH_CONGELADO_BASE
     assert hashlib.sha256(d["nota"].encode("utf-8")).hexdigest() == HASH_NOTA_BASE
+
+
+def test_una_cifra_cambiada_rompe_el_hash_congelado():
+    d = comparacion.comparar(range(1, 2))
+    cambiada = json.loads(json.dumps(d, default=str))
+    fila = next(f for f in cambiada["filas"] if f["variante"] == "hibrido")
+    fila["pasos"] = fila["pasos"] + 1
+    assert _hash_congelado(cambiada) != _hash_congelado(d)

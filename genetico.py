@@ -99,6 +99,10 @@ class ResultadoAG:
     mejor_ruta: list
     historial: list             # por generación: mejor y media de fitness
     candidatos: list = field(default_factory=list)   # top 3 distintos (cromosoma, desglose)
+    modo: str = "puntos"        # "puntos" (K puntos de paso) u "orden" (permutación de sitios, ARX-92c)
+    viable: bool = True         # modo orden: el mejor orden cumple la restricción dura (batería y garantía)
+    desempate_cambio: bool = False   # modo orden: el desempate por umbral eligió otra ruta que la de mayor fitness
+    evaluados: int = 0          # modo orden: órdenes distintos evaluados
 
 
 _CACHE_DISTANCIAS = {}     # ARX-92b: (forma, mapa transitable, origen) -> (distancias, padres)
@@ -382,3 +386,156 @@ class GeneticPlanner:
         candidatos = [(list(k), v) for k, v in ordenados[:3]]
         return ResultadoAG(mejor=list(mejor_clave), mejor_desglose=mejor_des,
                            mejor_ruta=mejor_ruta, historial=historial, candidatos=candidatos)
+
+    # ---------- modo «orden» (ARX-92c, ev3-d71 A vía c) ----------
+    def optimizar_orden(self, construir=None, con_paso: bool = False, umbral_empate: float = 0.0,
+                        parada_sin_mejora: int = None) -> ResultadoAG:
+        """AG sobre el ORDEN de visita. Cromosoma = (orden, pasos): `orden` es una permutación de TODOS los sitios
+        pendientes y `pasos` tiene una celda opcional (o None) antes de cada sitio y otra antes del refugio.
+
+        Operadores: selección por torneo, cruce OX sobre la permutación (y cruce uniforme de los puntos de paso),
+        mutación por intercambio y, con `con_paso`, por desplazar o quitar un punto de paso; elitismo. Todo sale de
+        `self.rng` (determinista por semilla). Sin sitios omitidos por construcción (M8).
+
+        Restricción dura: `construir(seq)` devuelve la ruta viable que recorre la secuencia (sitios, puntos de paso y
+        refugio) o None si no cabe (batería con factor de garantía, paradas en estaciones...). Sin `construir`, la ruta
+        es la unión por BFS y viable si no supera la batería. Un orden inviable recibe fitness muy bajo y no puede ganar
+        a uno viable. Si ninguno lo es, `viable=False` y el llamador decide (en la partida: vía b, AG-FALLBACK-GARANTIA).
+
+        Desempate: entre los viables a `umbral_empate` o menos del mejor fitness gana la ruta más corta y, a igual
+        largo, el orden que iría primero en `itertools.permutations(sitios)`."""
+        sitios = list(self.mundo.sitios)
+        n = len(sitios)
+        rango = {s: i for i, s in enumerate(sitios)}
+        refugio = tuple(int(v) for v in self.mundo.refugio)
+        inicio = tuple(int(v) for v in self.mundo.inicio)
+        libres = [tuple(int(v) for v in p) for p in np.argwhere(self.transitable)]
+        piso = -10.0 * PENALIZACION_INVIABLE
+        if construir is None:
+            def construir(seq):
+                ruta = self._unir([inicio] + list(seq))
+                if ruta is None or (len(ruta) - 1) * COSTO_BATERIA_PASO > self.bateria:
+                    return None
+                return ruta
+        cache = {}
+
+        def evaluar(crom):
+            if crom not in cache:
+                orden, pasos = crom
+                seq = []
+                for i, s in enumerate(orden):
+                    if pasos[i] is not None:
+                        seq.append(pasos[i])
+                    seq.append(s)
+                if pasos[n] is not None:
+                    seq.append(pasos[n])
+                seq.append(refugio)
+                ruta = construir(seq)
+                if ruta is None:
+                    cache[crom] = (Desglose(piso, 0.0, 1.0, 1.0, 1.0, 1.0, -piso, 0, 0), None)
+                else:
+                    cache[crom] = (self._desglosar([tuple(int(v) for v in c) for c in ruta],
+                                                   self._sitios_en(ruta), 0.0, 0, 0, 0, self.bateria), ruta)
+            return cache[crom]
+
+        def paso_nuevo():
+            return libres[int(self.rng.integers(len(libres)))] if libres else None
+
+        def individuo():
+            orden = tuple(sitios[i] for i in self.rng.permutation(n))
+            pasos = tuple(paso_nuevo() if con_paso and self.rng.random() < 0.3 else None for _ in range(n + 1))
+            return (orden, pasos)
+
+        def ox(a, b):
+            if n < 2:
+                return a
+            i, j = sorted(int(x) for x in self.rng.choice(n + 1, size=2, replace=False))
+            medio = a[i:j]
+            resto = [g for g in b if g not in medio]
+            return tuple(resto[:i]) + tuple(medio) + tuple(resto[i:])
+
+        def cruzar(p1, p2):
+            if self.rng.random() > self.prob_cruce:
+                return p1, p2
+            self.cruces += 1
+            pa = tuple(p1[1][k] if self.rng.random() < 0.5 else p2[1][k] for k in range(n + 1))
+            pb = tuple(p2[1][k] if self.rng.random() < 0.5 else p1[1][k] for k in range(n + 1))
+            return (ox(p1[0], p2[0]), pa), (ox(p2[0], p1[0]), pb)
+
+        def mutar(ind):
+            orden, pasos = list(ind[0]), list(ind[1])
+            if n >= 2 and self.rng.random() < self.prob_mutacion:
+                self.mutaciones += 1
+                i, j = (int(x) for x in self.rng.choice(n, size=2, replace=False))
+                orden[i], orden[j] = orden[j], orden[i]
+            if con_paso and self.rng.random() < self.prob_mutacion:
+                self.mutaciones += 1
+                k = int(self.rng.integers(n + 1))
+                pasos[k] = None if (pasos[k] is not None and self.rng.random() < 0.3) else paso_nuevo()
+            return (tuple(orden), tuple(pasos))
+
+        def fmt(c):
+            """Cromosoma en la forma de la API: la lista de sitios en orden (igual que el modo puntos)."""
+            return [list(map(int, s)) for s in c[0]]
+
+        def pas(c):
+            return [None if q is None else list(map(int, q)) for q in c[1]]
+
+        poblacion = [individuo() for _ in range(self.poblacion)]
+        operaciones = ["inicial"] * len(poblacion)
+        historial = []
+        mejor_visto, gen_mejora = -np.inf, 0
+        for gen in range(self.generaciones):
+            fitness = np.array([evaluar(c)[0].fitness for c in poblacion])
+            orden_i = np.argsort(-fitness, kind="stable")
+            historial.append({"generacion": gen, "mejor": float(fitness.max()), "media": float(fitness.mean()),
+                              "peor": float(fitness.min()),
+                              "top": [{"cromosoma": fmt(poblacion[i]), "pasos": pas(poblacion[i]), "fitness": float(fitness[i])}
+                                      for i in orden_i[:3]],
+                              "poblacion": [{"cromosoma": fmt(poblacion[i]), "pasos": pas(poblacion[i]), "fitness": float(fitness[i]),
+                                             "operacion": operaciones[i]} for i in range(len(poblacion))],
+                              "cruces": 0, "mutaciones": 0})
+            if fitness.max() > mejor_visto:
+                mejor_visto, gen_mejora = float(fitness.max()), gen
+            if parada_sin_mejora is not None and gen - gen_mejora >= parada_sin_mejora:
+                break
+            c0, m0 = self.cruces, self.mutaciones
+            nueva = [poblacion[i] for i in orden_i[:self.elite]]
+            operaciones_nuevas = ["elite"] * len(nueva)
+            while len(nueva) < self.poblacion:
+                padres = []
+                for _ in range(2):
+                    idx = self.rng.choice(len(poblacion), size=min(self.torneo, len(poblacion)), replace=False)
+                    padres.append(poblacion[max(idx, key=lambda i: fitness[i])])
+                c_antes = self.cruces
+                for h in cruzar(*padres):
+                    if len(nueva) < self.poblacion:
+                        m_antes = self.mutaciones
+                        nueva.append(mutar(h))
+                        operaciones_nuevas.append(("cruce" if self.cruces > c_antes else "copia")
+                                                  + ("+mutacion" if self.mutaciones > m_antes else ""))
+            historial[-1]["cruces"] = self.cruces - c0
+            historial[-1]["mutaciones"] = self.mutaciones - m0
+            poblacion, operaciones = nueva, operaciones_nuevas
+        for c in poblacion:
+            evaluar(c)
+
+        viables = [(c, d, r) for c, (d, r) in cache.items() if r is not None]
+        if not viables:
+            c0, (d0, _) = next(iter(cache.items()))
+            return ResultadoAG(mejor=fmt(c0), mejor_desglose=d0, mejor_ruta=[], historial=historial,
+                               candidatos=[], modo="orden", viable=False, evaluados=len(cache))
+        fmax = max(d.fitness for _, d, _ in viables)
+        primero = next(v for v in viables if v[1].fitness == fmax)
+        empate = [v for v in viables if v[1].fitness >= fmax - umbral_empate]
+        elegido = min(empate, key=lambda v: (len(v[2]), tuple(rango[s] for s in v[0][0])))
+        # candidatos: el elegido y los mejores de órdenes distintos; todos son órdenes completos
+        mejores = {}
+        for c, d, r in sorted(viables, key=lambda v: (-v[1].fitness, tuple(rango[s] for s in v[0][0]))):
+            mejores.setdefault(c[0], (c, d))
+        resto = [v for v in mejores.values() if v[0][0] != elegido[0][0]][:2]
+        candidatos = [(elegido[0], elegido[1])] + resto
+        return ResultadoAG(mejor=fmt(elegido[0]), mejor_desglose=elegido[1],
+                           mejor_ruta=[tuple(int(v) for v in c) for c in elegido[2]], historial=historial,
+                           candidatos=candidatos, modo="orden", viable=True,
+                           desempate_cambio=elegido[2] is not primero[2], evaluados=len(cache))

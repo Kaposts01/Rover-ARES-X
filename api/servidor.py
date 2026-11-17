@@ -885,26 +885,38 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             return _cache_ag[clave]
         if parada_sin_mejora is not None and (isinstance(parada_sin_mejora, bool) or parada_sin_mejora < 1):
             raise ErrorApi(400, "parada_sin_mejora debe ser un entero mayor que 0")
-        from dataclasses import replace as reemplazar
-        gp = GeneticPlanner(reemplazar(p.mundo, inicio=p.rover.posicion, sitios=pendientes), p.mision.riesgo,
-                            bateria=max(p.rover.bateria, 1.0), k_puntos=p.mision.k, poblacion=30,
-                            generaciones=30, semilla=p.mision.semilla, pesos=dict(pesos))
-        res = gp.optimizar(parada_sin_mejora=parada_sin_mejora)
+        # ARX-92c: el laboratorio corre el MISMO AG sobre el orden que decide la partida (mismo envoltorio, pesos del lab)
+        from juego.partida import (AG_ORDEN_CON_PASO, AVISO_FALLBACK, METODO_AG_ORDEN, UMBRAL_EMPATE,
+                                   _ag_con_todos_los_sitios)
+        envoltorio = _ag_con_todos_los_sitios(p.mision, lambda o, pe: [], pesos=dict(pesos),
+                                              parada_sin_mejora=parada_sin_mejora)
+        ruta_jugada = envoltorio(tuple(p.rover.posicion), pendientes)
+        res = envoltorio.ultimo
+        cae = bool(envoltorio.fallbacks)
+        gp = envoltorio.gp
+        candidatos = [{"cromosoma": [list(map(int, c)) for c in cr[0]],
+                       "orden": [list(map(int, c)) for c in cr[0]],
+                       "pasos": [None if q is None else list(map(int, q)) for q in cr[1]],
+                       "fitness": float(d.fitness), "desglose": _desglose_fitness(d)}
+                      for cr, d in res.candidatos]
         salida = {
+            "modo": "orden",
             "parametros": {"poblacion": gp.poblacion, "generaciones": gp.generaciones, "k_puntos": gp.k,
                            "prob_cruce": gp.prob_cruce, "prob_mutacion": gp.prob_mutacion, "elite": gp.elite,
                            "torneo": gp.torneo, "semilla": p.mision.semilla, "pesos": gp.pesos,
-                           "parada_sin_mejora": parada_sin_mejora},
+                           "parada_sin_mejora": parada_sin_mejora, "umbral_empate": UMBRAL_EMPATE,
+                           "punto_de_paso": AG_ORDEN_CON_PASO},
             "generaciones": res.historial,
-            "candidatos": [{"cromosoma": [list(map(int, c)) for c in cr],
-                            "fitness": float(d.fitness), "desglose": _desglose_fitness(d)}
-                           for cr, d in res.candidatos],
-            "mejor_ruta": [_celda(c) for c in res.mejor_ruta],
+            "candidatos": candidatos,
+            "mejor_ruta": [_celda(c) for c in ruta_jugada],
             "mejor_desglose": _desglose_fitness(res.mejor_desglose),
             "cruces": gp.cruces, "mutaciones": gp.mutaciones,
             "generaciones_ejecutadas": len(res.historial),
-            # ARX-92a: el orden que juega la partida lo elige el envoltorio, no este AG; se declara cómo
-            "orden_en_juego": {"metodo": METODO_ORDEN, "pesos": dict(getattr(p.mision, "pesos_ag", None) or PESOS_POR_DEFECTO)},
+            "viable": bool(res.viable), "ordenes_evaluados": res.evaluados,
+            "fallback": AVISO_FALLBACK if cae else None,
+            # El orden que juega la partida es el de este AG (92c); la vía b de 92a queda de respaldo declarado
+            "orden_en_juego": {"metodo": METODO_AG_ORDEN, "respaldo": METODO_ORDEN,
+                               "pesos": dict(getattr(p.mision, "pesos_ag", None) or PESOS_POR_DEFECTO)},
         }
         if len(_cache_ag) >= 16:
             _cache_ag.pop(next(iter(_cache_ag)))
@@ -1129,7 +1141,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             else:
                 datos = motor.comparar(range(1, semillas + 1), escenario=escenario)
         # ev3-d71: ag_puro no se publica (no mide el AG); mismo criterio que scripts/comparacion_politicas.py
-        no_publicar = ("ag_puro", "sin_ag_mas_corta")   # ARX-92d: sin_ag_mas_corta no se publica hasta regenerar
+        no_publicar = ("ag_puro", "sin_ag_mas_corta", "sin_ag_2opt")   # ARX-92d: sin_ag_mas_corta no se publica hasta regenerar
         datos = {**datos, "escenario": escenario,
                  "variantes": {v: r for v, r in datos["variantes"].items() if v not in no_publicar},
                  "filas": [f for f in datos["filas"] if f["variante"] not in no_publicar]}

@@ -1,4 +1,5 @@
-"""ARX-79a: medición de la garantía de partida ganable (garantia=True), sin eventos, modo automático.
+"""ARX-79a: medición de la garantía de partida ganable (garantia=True), modo automático, CON eventos espontáneos por
+defecto (ev3-d66). Opción --sin-eventos: desactiva los eventos (eventos_activos=()), para comparar.
 
 Corre las partidas por la API en proceso (TestClient: sin servidores, sin red), una a la vez, con semillas 1..N por
 nivel y tope de 500 pasos. Clasifica la causa de cada derrota y escribe todas las filas en JSON.
@@ -18,6 +19,8 @@ from collections import Counter
 from pathlib import Path
 
 repo = Path(__file__).resolve().parent.parent
+SIN_EVENTOS = "--sin-eventos" in sys.argv
+sys.argv = [a for a in sys.argv if a != "--sin-eventos"]
 tam = sys.argv[1]
 n_sem = int(sys.argv[2]) if len(sys.argv) > 2 else 20
 niveles = [int(x) for x in sys.argv[3].split(",")] if len(sys.argv) > 3 else [1, 2, 3, 4, 5]
@@ -73,6 +76,8 @@ for nivel in niveles:
         cli.post("/modo", json={"modo": "automatico"})
         s = app.state.sesion
         p, c = s.partida, s.combate
+        if SIN_EVENTOS:
+            p.eventos_activos = ()          # sin eventos espontáneos ni disparables (medición de comparación)
         pasos = 0
         while pasos < MAX_PASOS and p.estado not in ESTADOS_TERMINALES:
             rr = cli.post("/paso")
@@ -86,7 +91,8 @@ for nivel in niveles:
                       "t_generacion_s": round(t_gen, 2), "causa": causa(p, c, pasos),
                       "avisos": p.avisos[-3:]})
         print(nivel, sem, filas[-1]["estado"], pasos, filas[-1]["causa"], flush=True)
-        json.dump(filas, open(salida, "w"), ensure_ascii=False, indent=1)
+        with open(salida, "w", encoding="utf-8") as f:
+            json.dump(filas, f, ensure_ascii=False, indent=1)
 
 print(f"\n## Tamano {tam}: {len(filas)} partidas en {time.time()-t0:.0f} s")
 print("| Nivel | Exito | Pasos media | Pasos mediana | Causas de derrota |\n|---|---|---|---|---|")

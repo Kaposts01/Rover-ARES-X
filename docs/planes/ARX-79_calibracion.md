@@ -6,7 +6,7 @@ Plan: `docs/planes/ARX-79_garantia_grande.md` (worktree de interfaz). Rama `feat
 
 Estado: **medida** (script `scripts/medir_garantia.py`, rama `feat/arx-79-garantia` en `fb7d3f2`/`c418073`, código de `22dc129`, sin cambios en `juego/partida.py`). Log: `docs/planes/mediciones/medicion_79a.log`. Datos por partida: `docs/planes/mediciones/medicion_garantia_grande.json` y `..._pequeno.json` (100 partidas cada uno).
 
-Condiciones: sin eventos, modo automático por la API en proceso (`TestClient`, sin servidores), semillas 1 a 20 por nivel, tope de 500 pasos, la misma semilla en ambos tamaños. Tiempos: grande 1077 s, pequeño 188 s, un proceso.
+Condiciones: **con eventos espontáneos por defecto** (ev3-d66; la partida del juego tal cual; `--sin-eventos` los desactiva, para comparar), modo automático por la API en proceso (`TestClient`, sin servidores), semillas 1 a 20 por nivel, tope de 500 pasos, la misma semilla en ambos tamaños. Tiempos: grande 1077 s, pequeño 188 s, un proceso.
 
 Columnas: **Éxito** = victorias/20; **Pasos** = media y mediana solo de las victorias; **Causa de la derrota** = la que asigna `causa()` en el script (ver nota de método).
 

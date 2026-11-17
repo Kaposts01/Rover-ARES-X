@@ -40,7 +40,7 @@ from simulador import MOVIMIENTOS  # noqa: E402
 
 MODOS = {"manual", "rna", "difuso", "ag", "automatico"}
 RUMBOS = {"N", "S", "E", "O", "NE", "NO", "SE", "SO"}
-EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad"}
+EVENTOS = {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica"}
 ESTADOS_TERMINALES = {"EXITO", "FRACASO", "SIN_RUTA", "MODO_SEGURO"}
 CARPETA_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 RADIO_EVASION = 3           # drones a esta distancia o menos activan la decisión de combate en automático
@@ -206,6 +206,7 @@ def _estado(sesion: Sesion) -> dict:
         "modo": sesion.modo,
         "ambiente": p.ambiente,
         "ambiente_restante": p.ambiente_restante,
+        "senal": _celda(p.senal_activa) if p.senal_activa is not None else None,   # ARX-30c: null si no hay o ya se visitó
         "enlace": {"activo": p.enlace_restante > 0, "restante": int(p.enlace_restante)},   # ARX-30b
         "objetivo": _celda(p.objetivo) if p.objetivo else None,
         "rumbo_sugerido": sug.get("rumbo"),
@@ -949,6 +950,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                     for m in p.meteoritos if m["paso"] == int(p.mision.paso)]
         eventos += [{"nombre": "sismo", "efecto": "grietas", "celdas": [_celda(c) for c in s["grietas"]]}
                     for s in p.sismos if s["paso"] == int(p.mision.paso)]
+        eventos += [{"nombre": "senal_biologica", "efecto": "lectura_anomala", "celdas": [_celda(s["celda"])],
+                     "afirma_vida": False} for s in p.senales if s["paso"] == int(p.mision.paso)]
         if p._ultimo_corte is not None and p._ultimo_corte == int(p.mision.paso):
             eventos.append({"nombre": "baja_conectividad", "efecto": "sin_enlace", "restante": int(p.enlace_restante)})
         return {

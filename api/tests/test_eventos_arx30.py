@@ -2,7 +2,8 @@
 from fastapi.testclient import TestClient
 
 from api.servidor import Sesion, crear_app
-from juego.partida import PASOS_SIN_ENLACE, RUMBOS_JUGADOR, Partida, _alcanzables
+from integracion import ESTADOS_TERMINALES
+from juego.partida import PASOS_SIN_ENLACE, RUMBOS_JUGADOR, Partida, _alcanzables, _es_ganable
 from simulador import BARRANCO, LIBRE
 
 # Línea base medida en main antes de ARX-30a (Partida(semilla=11, nivel=5, 40x60), 3000 llamadas a _tick_ambiente)
@@ -142,3 +143,94 @@ def test_partida_jugable_tiene_cortes_espontaneos_con_generador_propio():
             p._tick_ambiente()
             vistos += p.enlace_restante == PASOS_SIN_ENLACE and antes == 0
     assert vistos > 0
+
+
+# ---------- ARX-30c: señal biológica (ev3-d49 B: sitio obligatorio para ganar) ----------
+def test_post_evento_acepta_senal_biologica():
+    cliente = TestClient(crear_app(Sesion(semilla=11)))
+    r = cliente.post("/evento", json={"nombre": "senal_biologica"})
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+    estado = cliente.get("/estado").json()
+    assert estado["senal"] == r.json()["celda"]
+
+
+def test_la_senal_es_sitio_obligatorio_y_la_victoria_exige_visitarla():
+    p = Partida(semilla=11, nivel=1)
+    assert p.disparar_evento("senal_biologica")["ok"] is True
+    celda = p.senales[0]["celda"]
+    assert celda in p.mision.objetivos
+    assert 3 <= max(abs(celda[0] - p.rover.posicion[0]), abs(celda[1] - p.rover.posicion[1])) <= 6
+    # todos los sitios visitados y el rover en el refugio, pero la señal sin visitar: no hay EXITO
+    p.mision.visitados = set(p.mundo.sitios)
+    p.rover.posicion = tuple(p.mundo.refugio)
+    p._actualizar_estado_tras_movimiento()
+    assert p.estado != "EXITO"
+    assert "señal 0/1" in p.objetivos_pendientes()
+    # al pisar la celda queda visitada y deja de ser objetivo
+    p.rover.posicion = tuple(celda)
+    p._tick_ambiente()
+    assert p.senales[0]["visitada"] is True and p.senal_activa is None
+    assert celda not in p.mision.objetivos
+    p.rover.posicion = tuple(p.mundo.refugio)
+    p._actualizar_estado_tras_movimiento()
+    assert p.estado == "EXITO"
+
+
+def test_la_ia_pasa_por_la_senal_antes_de_ganar():
+    p = Partida(semilla=11, nivel=1)
+    for _ in range(3):
+        p.avanzar_ia()
+    assert p.disparar_evento("senal_biologica")["ok"] is True
+    pasos = 0
+    while p.estado not in ESTADOS_TERMINALES and pasos < 600:
+        p.avanzar_ia()
+        pasos += 1
+    assert p.estado == "EXITO"
+    assert p.senales[0]["visitada"] is True
+
+
+def test_la_senal_no_afirma_vida_y_el_aviso_dice_no_confirma_vida():
+    sesion = Sesion(semilla=11)
+    cliente = TestClient(crear_app(sesion))
+    cliente.post("/evento", json={"nombre": "senal_biologica"})
+    ev = [e for e in cliente.get("/moviles").json()["eventos_del_paso"] if e.get("nombre") == "senal_biologica"]
+    assert len(ev) == 1 and ev[0]["afirma_vida"] is False and ev[0]["efecto"] == "lectura_anomala"
+    assert len(ev[0]["celdas"]) == 1
+    aviso = [a for a in cliente.get("/estado").json()["avisos"] if "ñal" in a][-1]
+    assert "no confirma vida" in aviso
+    for texto in sesion.partida.avisos:
+        assert "vida" not in texto or "no confirma vida" in texto
+
+
+def test_partida_congelada_no_tiene_senales_espontaneas():
+    p = Partida(semilla=11, nivel=5, filas=20, columnas=30, garantia=False)
+    for _ in range(3000):
+        p._tick_ambiente()
+    assert p.senales == []
+    # tampoco en la partida jugable: la caída espontánea de la señal queda pendiente de ficha
+    q = Partida(semilla=11, nivel=5)
+    for _ in range(3000):
+        q._tick_ambiente()
+    assert q.senales == []
+
+
+def test_arx66_con_la_senal_la_celda_es_alcanzable_y_la_partida_sigue_ganable():
+    for semilla in (11, 5, 7):
+        p = Partida(semilla=semilla, nivel=2)
+        assert p.disparar_evento("senal_biologica")["ok"] is True
+        celda = p.senales[0]["celda"]
+        alcanzables = _alcanzables(p.mundo, tuple(p.rover.posicion))
+        assert celda in alcanzables and tuple(p.mundo.refugio) in alcanzables
+        assert all(tuple(s) in alcanzables for s in p.mundo.sitios)
+        assert p._ganable_con_senal(celda)
+        # la partida sigue siendo ganable en el origen (la misma comprobación de la garantía ARX-66)
+        assert _es_ganable(p.mundo, p.rover.bateria, bateria_max=p.bateria_max, estaciones=p.estaciones,
+                           factor=p.mision.factor_ambiente)
+
+
+def test_senal_en_estado_terminal_responde_ok_false():
+    p = Partida(semilla=11, nivel=1)
+    p.mision.estado = "FRACASO"
+    r = p.disparar_evento("senal_biologica")
+    assert r["ok"] is False and p.senales == []

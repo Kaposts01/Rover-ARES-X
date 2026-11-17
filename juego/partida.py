@@ -22,7 +22,9 @@ from rna import _rasgos_celda  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
 
-EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad")
+EVENTOS_SOPORTADOS = ("barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica")
+SENAL_DIST_MIN, SENAL_DIST_MAX = 3, 6    # distancia Chebyshev de la señal biológica al rover (ARX-30c)
+TEXTO_SENAL = "Señal biológica anómala: lectura anómala, no confirma vida"   # ningún texto afirma vida
 GRIETAS_POR_NIVEL = {1: 1, 2: 1, 3: 2, 4: 2, 5: 3}                           # grietas por sismo (supuesto de simulación, ARX-30)
 SISMO_PROB_POR_NIVEL = {1: 0.003, 2: 0.004, 3: 0.006, 4: 0.007, 5: 0.009}   # probabilidad por paso (ARX-30)
 METEORITO_PROB_POR_NIVEL = {1: 0.004, 2: 0.006, 3: 0.008, 4: 0.010, 5: 0.012}   # probabilidad por paso (ARX-30)
@@ -338,7 +340,9 @@ class Partida:
         # ARX-66 / N12: mientras se cazan drones obligatorios, el refugio no es destino (Mision.paso_mision fijaría EXITO
         # al llegar sin moverse, y la caza nunca se ejecutaría).
         _quedan_sitios_original = self.mision._quedan_sitios
-        self.mision._quedan_sitios = lambda: _quedan_sitios_original() or self._caza_con_bfs()
+        # ARX-30c (ev3-d49 B): una señal biológica sin visitar también impide ganar
+        self.mision._quedan_sitios = lambda: (_quedan_sitios_original() or self._caza_con_bfs()
+                                              or self.senal_activa is not None)
         self.mision.rna = _RnaSegura(self.mision.rna)
         # El planificador de la misión pasa a respetar el objetivo fijado por el jugador (ev3-d27).
         self.mision._planear = self._planear_con_objetivo
@@ -349,6 +353,8 @@ class Partida:
         self._rng_ambiente = np.random.default_rng([int(semilla), 1313])  # propio, no comparte el de Mision
         self._rng_sismo = np.random.default_rng([int(semilla), 1314])     # ARX-30a: propio, no altera los meteoritos
         self._rng_enlace = np.random.default_rng([int(semilla), 1315])    # ARX-30b: propio, no altera meteoritos ni sismos
+        self._rng_senal = np.random.default_rng([int(semilla), 1316])     # ARX-30c: propio
+        self.senales = []                  # señales biológicas: [{"paso", "celda", "visitada"}] (ARX-30c)
         self._ultimo_corte = None          # paso del último corte de enlace (para /moviles)
         self.enlace_restante = 0           # pasos que quedan de corte de enlace (ARX-30b)
         self._objetivo = None              # celda fijada por el jugador, o None
@@ -403,6 +409,14 @@ class Partida:
     @property
     def ambiente_restante(self) -> int:
         return self._ambiente_restante
+
+    @property
+    def senal_activa(self):
+        """Celda de la señal biológica sin visitar, o None (ARX-30c)."""
+        for s in self.senales:
+            if not s["visitada"]:
+                return s["celda"]
+        return None
 
     @property
     def falla_restante(self) -> int:
@@ -506,6 +520,8 @@ class Partida:
             n = len(self.combate.drones)
             if int(self.combate.bajas) < n:
                 falta.append(f"drones {int(self.combate.bajas)}/{n}")
+        if self.senal_activa is not None:
+            falta.append("señal 0/1")
         return falta
 
     def _revisar_victoria(self) -> None:
@@ -866,9 +882,11 @@ class Partida:
             return self._paso_recarga()
         if self._caza_con_bfs():
             self._seguir_caza()        # la caza va por BFS hacia el dron vivo más cercano, sin replanificar el AG
-        elif m.objetivos and any(o not in self.mundo.sitios and o != self.mundo.refugio for o in m.objetivos):
+        elif m.objetivos and any(o not in self.mundo.sitios and o != self.mundo.refugio and o != self.senal_activa
+                                 for o in m.objetivos):
             # la caza terminó: el objetivo vuelve al refugio (y a los sitios que queden) por el AG, una vez
-            m.objetivos = [o for o in m.objetivos if o in self.mundo.sitios and o not in m.visitados] + [self.mundo.refugio]
+            m.objetivos = [o for o in m.objetivos if (o in self.mundo.sitios and o not in m.visitados)
+                           or o == self.senal_activa] + [self.mundo.refugio]
             m._planear()
         self._ir_a_estacion_si_falta_bateria()
         if self._ruta_inconsistente():
@@ -919,8 +937,10 @@ class Partida:
         m = self.mision
         if self._objetivo is None:
             if getattr(m, "estaciones_activas", False):
-                return self._planear_con_estaciones()
-            return Mision._planear(m)
+                r = self._planear_con_estaciones()
+            else:
+                r = Mision._planear(m)
+            return self._planear_con_senal(r)
         m.replanes += 1
         ruta = camino_bfs(self.rover.posicion, self._objetivo, m.riesgo < 0.5) or []
         if len(ruta) < 2 or not camino_valido(ruta, m.riesgo):
@@ -929,6 +949,32 @@ class Partida:
             return Mision._planear(m)
         m.ruta = ruta
         return True
+
+    def _planear_con_senal(self, resultado: bool) -> bool:
+        """ARX-30c: el plan del AG no conoce la señal biológica; si está pendiente se vuelve a poner en mision.objetivos
+        y la ruta pasa a ser la cadena BFS de Mision por los objetivos pendientes (misma vía que ya usa Mision)."""
+        m = self.mision
+        celda = self.senal_activa
+        if celda is None:
+            return resultado
+        if celda not in m.objetivos:
+            m.objetivos = [celda] + list(m.objetivos)
+        ruta = m._ruta_bfs(self.rover.posicion)
+        if ruta and camino_valido(ruta, m.riesgo):
+            m.ruta = ruta
+            return ruta[-1] == self.mundo.refugio
+        return resultado
+
+    def _marcar_senal(self) -> None:
+        """Marca la señal como visitada cuando el rover pisa su celda y la quita de mision.objetivos."""
+        celda = self.senal_activa
+        if celda is None or tuple(self.rover.posicion) != tuple(celda):
+            return
+        for s in self.senales:
+            if tuple(s["celda"]) == tuple(celda):
+                s["visitada"] = True
+        self.mision.objetivos = [o for o in self.mision.objetivos if tuple(o) != tuple(celda)]
+        self._avisar("Lectura anómala registrada en la celda de la señal; no confirma vida")
 
     def _planear_con_estaciones(self) -> bool:
         """ARX-59: el plan de sitios y refugio ya incluye paradas en estaciones (lo valida la garantía). Mision._planear
@@ -1061,6 +1107,7 @@ class Partida:
 
     def _tick_ambiente(self) -> None:
         """Un paso de ambiente: consume batería extra si hay tormenta o noche, o tira el dado de inicio."""
+        self._marcar_senal()
         if self._ambiente_restante > 0:
             self.rover.consumir(COSTO_AMBIENTE[self._ambiente])
             self._ambiente_restante -= 1
@@ -1086,6 +1133,7 @@ class Partida:
                 and self.estado not in ESTADOS_TERMINALES
                 and self._rng_enlace.random() < ENLACE_PROB_POR_NIVEL[self.nivel]):
             self._evento_baja_conectividad()
+        # pendiente de ficha: nivel de aplicación de la señal espontánea (la señal biológica solo cae por POST /evento)
         if self.rover.bateria <= 0 and self.estado not in ESTADOS_TERMINALES:
             self.mision.estado = "FRACASO"
 
@@ -1103,6 +1151,8 @@ class Partida:
             return self._evento_sismo()
         if nombre == "baja_conectividad":
             return self._evento_baja_conectividad()
+        if nombre == "senal_biologica":
+            return self._evento_senal_biologica()
         if nombre in PASOS_AMBIENTE:
             self._iniciar_ambiente(nombre)
             return {"ok": True, "detalle": f"{nombre} durante {PASOS_AMBIENTE[nombre]} pasos"}
@@ -1187,6 +1237,74 @@ class Partida:
         self._avisar("Baja conectividad: sin enlace con la base")
         return {"ok": True, "detalle": f"baja conectividad: sin enlace {PASOS_SIN_ENLACE} pasos",
                 "restante": int(self.enlace_restante)}
+
+    def _ganable_con_senal(self, celda) -> bool:
+        """ARX-66 con la señal: desde la posición actual hay un orden señal, sitios pendientes y refugio que cabe en la
+        batería (con paradas en estaciones, como _es_ganable). No considera los drones obligatorios."""
+        import itertools
+        mascara = np.asarray(self.mundo.tipo == LIBRE)
+        origen = tuple(int(x) for x in self.rover.posicion)
+        pendientes = [tuple(int(v) for v in s) for s in self.mundo.sitios if s not in self.mision.visitados]
+        refugio = tuple(int(v) for v in self.mundo.refugio)
+        tramos, largos = {}, {}
+
+        def tramo(a, b):
+            if (a, b) not in tramos:
+                t = camino_bfs(a, b, mascara)
+                tramos[(a, b)] = None if t is None else [tuple(int(v) for v in x) for x in t]
+            return tramos[(a, b)]
+
+        def largo(a, b):
+            if (a, b) not in largos:
+                t = tramo(a, b)
+                largos[(a, b)] = None if t is None else len(t) - 1
+            return largos[(a, b)]
+
+        bat_max = self.bateria_max if self.bateria_max is not None else self.rover.bateria
+        est = [tuple(int(v) for v in e) for e in self.estaciones]
+        for orden in itertools.permutations(pendientes):
+            if _plan_con_paradas(origen, [celda, *orden, refugio], self.rover.bateria, bat_max, est, largo, tramo,
+                                 factor=self.mision.factor_ambiente) is not None:
+                return True
+        return False
+
+    def _evento_senal_biologica(self) -> dict:
+        """ARX-30c (ev3-d49 B): señal anómala en una celda libre a distancia 3–6 del rover. La celda entra en
+        mision.objetivos como sitio obligatorio para ganar. Siempre «no confirma vida». Si no se puede llegar a ella
+        sin dejar la partida sin ganar (ARX-66), responde ok False y no cambia nada."""
+        if self.estado in ESTADOS_TERMINALES:
+            return {"ok": False, "detalle": "partida terminada"}
+        if self.senal_activa is not None:
+            return {"ok": False, "detalle": "ya hay una señal biológica sin visitar"}
+        f, c = self.rover.posicion
+        excluidas = {tuple(self.rover.posicion), tuple(self.mundo.inicio), tuple(self.mundo.refugio),
+                     *(tuple(s) for s in self.mundo.sitios), *(tuple(e) for e in self.estaciones)}
+        candidatas = []
+        for df in range(-SENAL_DIST_MAX, SENAL_DIST_MAX + 1):
+            for dc in range(-SENAL_DIST_MAX, SENAL_DIST_MAX + 1):
+                celda = (f + df, c + dc)
+                if max(abs(df), abs(dc)) < SENAL_DIST_MIN or not self.mundo.dentro(celda) or celda in excluidas:
+                    continue
+                if self.mundo.tipo[celda] != LIBRE or self.mision.riesgo[celda] >= 0.5:
+                    continue
+                candidatas.append(celda)
+        alcanzables = _alcanzables(self.mundo, tuple(self.rover.posicion))
+        pendientes = [tuple(s) for s in self.mundo.sitios if s not in self.mision.visitados]
+        orden = [candidatas[i] for i in self._rng_senal.permutation(len(candidatas))] if candidatas else []
+        celda = None
+        for cand in orden:
+            cand = (int(cand[0]), int(cand[1]))
+            if (cand in alcanzables and tuple(self.mundo.refugio) in alcanzables
+                    and all(s in alcanzables for s in pendientes) and self._ganable_con_senal(cand)):
+                celda = cand
+                break
+        if celda is None:
+            return {"ok": False, "detalle": "sin celda alcanzable que deje la partida ganable"}
+        self.senales.append({"paso": int(self.mision.paso), "celda": celda, "visitada": False})
+        self._planear_con_senal(True)
+        self._avisar(TEXTO_SENAL)
+        return {"ok": True, "detalle": f"señal anómala en {celda}; no confirma vida", "celda": celda,
+                "afirma_vida": False}
 
     def _evento_barranco(self) -> dict:
         f, c = self.rover.posicion

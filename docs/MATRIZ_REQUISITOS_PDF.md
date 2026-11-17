@@ -81,8 +81,8 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | RF-11 | Evolución del fitness y precisión de la RNA con controles por iteración | Parcial | Fitness por generación en `GET /ag` (Cumple en API). Falta la precisión de la RNA por iteración y la vista *(UI)* | 2 h + *(UI)* |
 | RF-12 | Exportar trazas a CSV y configuración/resultados a JSON; guardar semillas y versiones | Parcial | `juego/exportar.py:55-91` (CSV bitácora + JSON configuración). Versión del software no se registra | 1 h |
 | RF-13 | Fallos de sensor, pérdida de enlace y modo seguro sin excepción no controlada | Parcial | Falla de sensor `juego/partida.py` (`_evento_falla_sensor`, 3 pasos); modo seguro `integracion.py:209`; pérdida de enlace no existe | 3 h |
-| RF-14 | Comparar híbrido con ≥ 2 ablaciones (sin RNA, sin difuso o sin AG) | Parcial | `intervencion.py:22` (`opciones_variantes`: rna, difuso); `tests`/`tabla_modos` comparan modos sueltos. Falta «sin AG» como variante del híbrido | 2 h |
-| RF-15 | ≥ 20 semillas con métricas y dispersión | Parcial | `docs/TABLA_MODOS.md` (20 semillas, medias y medianas). Falta dispersión (desviación o rango intercuartil) | 1 h |
+| RF-14 | Comparar híbrido con ≥ 2 ablaciones (sin RNA, sin difuso o sin AG) | Cumple | `juego/comparacion.py` (`VARIANTES`): sin RNA, sin difuso y sin AG en el escenario exigente, 20 semillas (`docs/COMPARACION_POLITICAS_exigente.json`, ARX-28b); `intervencion.py:22` (`opciones_variantes`) | — |
+| RF-15 | ≥ 20 semillas con métricas y dispersión | Cumple | `docs/COMPARACION_POLITICAS.json` y `docs/COMPARACION_POLITICAS_exigente.json` (20 semillas): por variante, `pasos.desviacion` y `pasos.rango_intercuartil`, y lo mismo en `colisiones` y `bateria_final`; `docs/TABLA_MODOS.md` (medias y medianas) | — |
 
 ## 7. Eventos (§6)
 
@@ -94,8 +94,8 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | Falla de sensor | Cumple | `juego/partida.py:387` (`_evento_falla_sensor`) | — |
 | Sismo | Cumple | `juego/partida.py:1117` (`_evento_sismo`, ARX-30a): grietas BARRANCO con replanteo del AG y veto del supervisor; control en la interfaz (ARX-30e) | — |
 | Meteorito o impacto próximo | Cumple | `juego/partida.py:1088` (`_evento_meteorito`, ARX-30): zona de riesgo 3×3, cuesta batería | — |
-| Señal biológica anómala / objeto alienígena | Falta (opcional narrativo) | No existe en esta rama (ARX-30c, bloqueada por ev3-d49). El PDF lo marca como opcional | 2 h |
-| Baja conectividad | Falta | No existe en esta rama (ARX-30b, bloqueada por ev3-d48) | 2 h |
+| Señal biológica anómala / objeto alienígena | Cumple (opcional en el PDF; con límite en mapa grande, ARX-79) | `juego/partida.py:1290` (`_evento_senal_biologica`, ARX-30c): objetivo obligatorio (ev3-d49 B), «no confirma vida» | — |
+| Baja conectividad | Cumple | `juego/partida.py:1238` (`_evento_baja_conectividad`, ARX-30b): efecto de ev3-d48 A (manual y 409 en la IA) | — |
 | Ráfaga / viento en modo sonda | Falta | No hay modo sonda | depende de RF-01 |
 
 ## 8. Pantalla y laboratorios (§8, §9)
@@ -142,7 +142,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | CA-05 Difuso con distancia 10 m → 1 m | Parcial | Entradas y reglas existen; falta el barrido y la vista *(UI)* |
 | CA-06 RNA: cambiar rasgos actualiza probabilidades; recall de barrancos | Parcial | Probabilidades en `/paneles`; recall en INFORME §5; falta el endpoint de entrada |
 | CA-07 Júpiter + ruedas bloquea y propone sonda | Falta | Depende de RF-01 |
-| CA-08 Experimento controlado con técnica desactivada | Cumple | `docs/TABLA_MODOS.md`; `intervencion.py` |
+| CA-08 Experimento controlado con técnica desactivada | Cumple | `docs/COMPARACION_POLITICAS_exigente.json` y `docs/TRAZA_DIVERGENCIAS_exigente.csv` (ARX-28b): una técnica desactivada por variante, 20 semillas, misma semilla; `docs/TABLA_MODOS.md` (escenario congelado); `intervencion.py` |
 
 ## 11. Evaluación experimental (§14)
 
@@ -151,7 +151,7 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 | Éxito, colisiones, barrancos, pasos por escenario y ≥ 20 semillas | Cumple | `docs/TABLA_MODOS.md` | — |
 | Energía restante, distancia de ruta, ciencia, replanes, tiempo de cómputo | Falta | No están en la tabla | 3 h |
 | Promedio, mediana y dispersión | Parcial | Falta la dispersión | 1 h |
-| Baseline de menor distancia sin riesgos (control) | Falta | No existe como variante | 2 h |
+| Baseline de menor distancia sin riesgos (control) | Falta | No existe como variante. Las ablaciones de ARX-28b quitan una técnica del híbrido; no son un control de ruta sin riesgos | 2 h |
 | AG puro con riesgos fijos | Parcial | Modo `ag` con riesgo estimado, no fijo | 1 h |
 | Híbrido completo y dos ablaciones | Cumple | `intervencion.py`, `docs/TABLA_MODOS.md` | — |
 | Separar tiempo offline (entrenamiento RNA) y online (decisión) | Falta | No se mide | 1 h |

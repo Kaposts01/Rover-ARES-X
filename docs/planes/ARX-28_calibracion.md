@@ -96,3 +96,22 @@ Sobre la RNA, lo medido: no altera el éxito (19/20 en híbrido y en `sin_rna`, 
 Hallazgo de QA (17/11/2026), sin suavizar: en la semilla 7 el híbrido PIERDE (`SIN_RUTA` en el paso 18, tras paradas por `D-DIFUSO-LENTO`) y `sin_difuso` la gana. En este escenario el difuso empeora el resultado en esa semilla; `sin_rna` también la pierde y `sin_ag` también la gana.
 
 Prueba: `juego/tests/test_trazas_divergencia.py` falla si alguna técnica no tiene divergencia directa en las 20 semillas (CSV) o en la semilla 4 recalculada en vivo.
+
+## 28f: recall sin borde (ev3-d63 A, control previo 28f-a)
+
+Pregunta: con `borde_barranco` = falso y la proximidad sin desniveles, ¿la RNA reconoce barrancos? Es un control fuera de línea, sin correr las 20 semillas: recall de barranco de la RNA entrenada (`rna_entrenada()`) sobre muestras de los mapas de test de `particion_por_mapas`, con ruido 0,1 y 0,6. Umbral del plan: 0,5. El script es temporal y está fuera del repo (sesión de Lider_Rover).
+
+| Partición (test) | Ruido | Rasgos normales (recall / precisión) | Sin `borde_barranco` (recall / precisión) |
+|---|---|---|---|
+| 60 mapas (test: semillas 51–59; 250 barrancos) | 0,1 | 0,780 / 0,687 | 0,000 / 0,000 (0 de 250) |
+| 60 mapas (test: semillas 51–59; 250 barrancos) | 0,6 | 0,704 / 0,633 | 0,000 / 0,000 (0 de 250) |
+| 30 mapas (test: semillas 25–29, no vistos; 135 barrancos) | 0,1 | 0,800 / 0,692 | 0,000 / 0,000 (0 de 135) |
+| 30 mapas (test: semillas 25–29, no vistos; 135 barrancos) | 0,6 | 0,719 / 0,693 | 0,000 / 0,000 (0 de 135) |
+
+Veredicto: sin el rasgo `borde_barranco` la RNA no predice ningún barranco (0 predicciones de barranco en todas las medidas). El recall queda en 0,000, por debajo de 0,5, así que el control se cierra en negativo según ev3-d63 A. **No se corren las 20 semillas del escenario `exigente_rna`** (28f-b y 28f-c no se hacen). El escenario no se crea.
+
+Lo medido: la RNA reconoce barrancos con sus rasgos normales (recall 0,70–0,80), y sin `borde_barranco` no reconoce ninguno.
+
+Inferencia (no medida): la RNA depende casi por completo del rasgo `borde_barranco` para distinguir barranco de libre. Con la vibración sola, la separación es pequeña (ver `docs/planes/ARX-28f_rna_unica.md`, sección 1), y el control confirma que no alcanza.
+
+Para el informe (M2): la RNA queda con el resultado negativo de 28f. Con el escenario exigente, la RNA cambia una decisión en 2 de 20 semillas, sin cambiar éxito ni colisiones. La explicación probable es la redundancia: la RNA casi no aporta información que el supervisor no tenga por el sensor de borde.

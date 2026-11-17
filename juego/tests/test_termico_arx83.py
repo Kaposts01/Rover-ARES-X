@@ -71,13 +71,16 @@ def test_en_sombra_t_int_baja(bandera):
     assert p.t_int < alta
 
 
-def test_garantia_falsa_no_usa_temperatura_y_r10_aparece_con_garantia(bandera):
+def test_garantia_falsa_no_usa_temperatura(bandera):
     sin = Partida(semilla=11, planeta="Venus", garantia=False)
     assert "inferir" not in vars(sin.mision.difuso)            # el difuso sigue recibiendo 0,0
     _al_sol(sin)
     for _ in range(30):
         sin._tick_ambiente()
     assert sin.t_int == termico.T_INT_INICIAL and sin.estado != "MODO_SEGURO"
+
+
+def test_r10_aparece_con_garantia_y_bandera(bandera):
     con = Partida(semilla=11, planeta="Marte", eventos_activos=())
     for _ in range(3):
         con.avanzar_ia()

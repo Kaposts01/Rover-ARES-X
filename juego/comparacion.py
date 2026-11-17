@@ -5,7 +5,8 @@ desactivada (o el AG reemplazado):
 - hibrido:    el controlador completo (avanzar_ia).
 - sin_rna:    la RNA no interviene (probabilidades neutras); el supervisor sigue activo.
 - sin_difuso: velocidad fija de 0,5, sin controlador difuso.
-- sin_ag:     el orden de visita de los sitios se elige por vecino más cercano, en vez del AG; la ruta sigue siendo BFS.
+- sin_ag_vecino:      (ARX-92d, antes «sin_ag») el orden de visita lo elige el vecino más cercano, no el AG; ruta BFS.
+- sin_ag_mas_corta:  (ARX-92d) el orden lo elige el envoltorio con pesos solo de distancia: la permutación más corta.
 
 - ruta_corta:  línea base (ARX-45, M19): mapa de riesgo en ceros (no conoce peligros), sin RNA ni difuso, sitios por
                vecino más cercano y ruta BFS (la más corta). El sensor sigue marcando lo que ve y el supervisor veta.
@@ -23,7 +24,7 @@ import numpy as np
 from genetico import camino_bfs, mapa_estimado
 from integracion import ESTADOS_TERMINALES, Mision
 
-VARIANTES_ABLACION = ("hibrido", "sin_rna", "sin_difuso", "sin_ag")     # ARX-28: sus cifras no cambian
+VARIANTES_ABLACION = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_mas_corta")   # ARX-28 y ARX-92d
 VARIANTES_BASE = ("ruta_corta", "ag_puro")                              # ARX-45 (M19)
 VARIANTES = VARIANTES_ABLACION + VARIANTES_BASE
 MAX_PASOS = 400
@@ -94,9 +95,15 @@ def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
         m.usar_rna = False
     elif variante == "sin_difuso":
         m.usar_difuso = False
-    elif variante == "sin_ag":
+    elif variante == "sin_ag_vecino":
         # Partida() ya planificó con el AG al construirse: se sustituye el optimizador y se replanifica
         m._optimizar_ag = _orden_voraz(m)
+        m.objetivos = []
+        m._planear()
+    elif variante == "sin_ag_mas_corta":
+        # ARX-92d: el envoltorio de orden con pesos solo de distancia elige la permutación de menor largo
+        from juego.partida import _ag_con_todos_los_sitios
+        m._optimizar_ag = _ag_con_todos_los_sitios(m, _orden_voraz(m), pesos={"ciencia": 0, "distancia": 5, "energia": 0, "riesgo": 0, "tiempo": 0})
         m.objetivos = []
         m._planear()
     elif variante == "ruta_corta":
@@ -171,7 +178,7 @@ def comparar(semillas, escenario: str = "congelado") -> dict:
 
 
 # ---------- traza de divergencias por técnica (ARX-28b) ----------
-TECNICA = {"sin_rna": "RNA", "sin_difuso": "difuso", "sin_ag": "AG"}
+TECNICA = {"sin_rna": "RNA", "sin_difuso": "difuso", "sin_ag_vecino": "AG", "sin_ag_mas_corta": "AG"}
 
 
 def _filas_por_paso(p) -> dict:
@@ -228,16 +235,16 @@ def trazar_divergencias(semillas, escenario: str = "exigente") -> list:
       la directa (o si no hay directa); se cuenta aparte y no cuenta como directa;
     - "consecuencia": el resto (toda divergencia posterior a la directa o con estado previo distinto).
     Se omiten los pasos en que una de las dos partidas ya terminó y no tiene fila (artefacto de fin de partida).
-    Con sin_ag se añade, en paso 0, la fila de orden de sitios si el plan inicial difiere.
+    Con sin_ag_vecino o sin_ag_mas_corta se añade, en paso 0, la fila de orden de sitios si el plan inicial difiere.
     """
     filas = []
     for s in semillas:
         ph, orden_h = _correr_traza(s, "hibrido", escenario)
         fh = _filas_por_paso(ph)
-        for var in ("sin_rna", "sin_difuso", "sin_ag"):
+        for var in ("sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_mas_corta"):
             pv, orden_v = _correr_traza(s, var, escenario)
             fv = _filas_por_paso(pv)
-            if var == "sin_ag" and orden_h != orden_v:
+            if var.startswith("sin_ag") and orden_h != orden_v:
                 filas.append({"semilla": s, "variante": var, "tecnica": "AG", "paso": 0, "celda": str(ph.mundo.inicio),
                               "origen": "directa", "motivo": "ruta del AG frente a vecino más cercano",
                               "cambio": "ruta", "detalle": f"orden AG {orden_h} / orden voraz {orden_v}"})

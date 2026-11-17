@@ -1,6 +1,6 @@
 """Rejilla de sensibilidad del resbalón (ARX-28c, ev3-d69 A; M20): P_RESBALON x COSTO_RESBALON.
 
-Escenario exigente, 20 semillas, 4 variantes (hibrido, sin_rna, sin_difuso, sin_ag); 6 celdas, 480 partidas.
+Escenario exigente, 20 semillas, 4 variantes (hibrido, sin_rna, sin_difuso, sin_ag_vecino); 6 celdas, 480 partidas.
 Vuelca TODAS las celdas, sin filtrar (también donde la ventaja del difuso sea menor, nula o negativa).
 No modifica el repositorio salvo los dos archivos de salida; cambia las constantes solo en memoria.
 
@@ -20,7 +20,7 @@ sys.path.insert(0, str(raiz))
 from juego import comparacion, partida  # noqa: E402
 
 PROBS, COSTOS, SEMILLAS = (0.25, 0.5, 0.75), (1.0, 2.0), list(range(1, 21))
-VARS = ("hibrido", "sin_rna", "sin_difuso", "sin_ag")
+VARS = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino")
 orig = (partida.P_RESBALON, partida.COSTO_RESBALON)
 celdas = []
 try:

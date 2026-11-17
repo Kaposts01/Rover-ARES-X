@@ -14,7 +14,7 @@ from juego.comparacion import comparar  # noqa: E402
 
 # Publicación (ev3-d71): ag_puro no se publica porque no mide el AG (el envoltorio de Partida elige la permutación más
 # corta; se redefine en ARX-92). ruta_corta se publica con su rótulo real: voraz, vecino más cercano.
-NO_PUBLICAR = ("ag_puro",)
+NO_PUBLICAR = ("ag_puro", "sin_ag_mas_corta")   # ARX-92d: hasta la regeneración definitiva
 NOTA_RUTA_CORTA = (" ruta_corta es ruta corta voraz (vecino más cercano), no la ruta óptima; ag_puro no se publica "
                    "hasta ARX-92 (el envoltorio de Partida elige la permutación más corta).")
 

@@ -27,7 +27,7 @@ def _exigente(semilla, variante):
         m.usar_rna = False
     elif variante == "sin_difuso":
         m.usar_difuso = False
-    elif variante == "sin_ag":
+    elif variante == "sin_ag_vecino":
         m._optimizar_ag = comparacion._orden_voraz(m)
         m.objetivos = []
         m._planear()

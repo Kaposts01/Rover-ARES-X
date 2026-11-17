@@ -19,8 +19,8 @@ Estado al 14/11/2026. Guía para levantar el servidor, no el informe de la entre
 
 ## Retomar la sesión
 
-- Reabrir desde `C:\Users\Usuario\Downloads` (no desde `ares_x`), con
-  `claude --resume 8fabbd07-ce6f-5b4c-97eb-59ae80452d6d`. La conversación está en `~/.claude/projects/C--Users-Usuario-Downloads/`.
+- La sesión que trabaja en este proyecto es `Lider_Rover`, desde la carpeta `ares_x`. Los ids y cómo reabrirla están en
+  `00-Sistema-Agentico\REANUDAR_SESIONES.md`. La sesión antigua del motor, que se abría desde `Downloads`, ya no es la que trabaja.
 - Antes de tocar nada, leer este documento y `docs/tareas_sprints.json` (tareas de la entrega; ARX-75 sigue asignada).
 
 ## Levantar el servidor 8765
@@ -124,7 +124,7 @@ Estado al 14/11 (noche). Sin publicar en 8765.
   - ARX-59 como propuesta: la duración está en 107–171 pasos frente a 300–500; la semilla 2018 queda parada. Lo decide el
     usuario en ev3-d47.
   - Veto del disparo en la interfaz: falta una semilla reproducible.
-- **Cómo retomar:** `claude --resume 8fabbd07-ce6f-5b4c-97eb-59ae80452d6d` desde `C:\Users\Usuario\Downloads`.
+- **Cómo retomar:** ver `00-Sistema-Agentico\REANUDAR_SESIONES.md` (sesión `Lider_Rover`). La sesión de `Downloads` de entonces ya no trabaja aquí.
 
 
 ## Estado al 15/11 (20:3x)

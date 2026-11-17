@@ -609,15 +609,25 @@ const ETIQUETA_METRICA_POL = { pasos: "pasos", bateria_final: "batería final", 
 let polDatos = null;
 let polBarras = [];   // geometría de las barras para el cursor
 
+// Escenarios (ARX-28e, ev3-d55 A). El parámetro ?escenario= lo recibe el servidor en ARX-28d;
+// el congelado no envía parámetro (respuesta idéntica a la de siempre).
 async function cargarPoliticas() {
-  $("pol-estado").textContent = "Consultando /comparacion…";
-  const datos = await deps.llamar("GET", "/comparacion");
+  const escenario = $("pol-escenario").value;
+  $("pol-estado").textContent = `Consultando /comparacion (${escenario})…`;
+  const datos = await deps.llamar("GET", "/comparacion" + (escenario === "congelado" ? "" : `?escenario=${encodeURIComponent(escenario)}`));
   if (!datos || !datos.variantes) {
-    $("pol-estado").textContent = "La comparación no respondió con el contrato esperado.";
+    $("pol-estado").textContent = datos && (datos.motivo || datos.aviso)
+      ? `Sin datos del escenario ${escenario}: ${datos.motivo || datos.aviso}`
+      : "La comparación no respondió con el contrato esperado.";
     return;
   }
   polDatos = datos;
-  $("pol-estado").textContent = `${datos.semillas.length} semillas por variante`;
+  const servido = datos.escenario || "congelado";
+  let estado = `escenario ${servido} · ${datos.semillas.length} semillas por variante`;
+  if (escenario !== "congelado" && !datos.escenario) {
+    estado += " · AVISO: el servidor aún no distingue escenarios (llega con ARX-28d); estas cifras son las del congelado";
+  }
+  $("pol-estado").textContent = estado;
   $("pol-nota").textContent = datos.nota || "";
   pintarPoliticas();
 }
@@ -709,6 +719,7 @@ function pintarTablaPol() {
 function iniciarPoliticas() {
   $("pol-barras-tip").textContent = "Pasa el ratón sobre una barra para ver su valor exacto.";
   $("pol-cargar").addEventListener("click", cargarPoliticas);
+  $("pol-escenario").addEventListener("change", cargarPoliticas);
   $("pol-metrica").addEventListener("change", pintarPoliticas);
   const canvas = $("pol-barras");
   canvas.addEventListener("mousemove", (ev) => {

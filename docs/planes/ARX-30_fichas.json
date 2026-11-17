@@ -1,0 +1,50 @@
+[
+  {
+    "code": "ev3-d48",
+    "title": "ARES-X: ¿qué efecto real tiene la baja conectividad?",
+    "what": "La ficha ev3-d41 (opción B) pide que la baja conectividad tenga efecto real en el juego, pero no dice cuál. Hoy la interfaz ya muestra interferencia en pantalla cuando llega el evento; falta que el motor haga algo. El corte duraría unos 4 pasos y caería solo, con probabilidad por nivel, igual que los meteoritos.",
+    "impact": "Define cómo se juega el corte de enlace en manual y en los modos de IA. Bloquea la tarea ARX-30b. No cambia las reglas de victoria ni la obligación de los drones (solo desde Medio).",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Se pierden órdenes y se cortan las ayudas", "detail": "En manual, cada orden de movimiento se pierde con un 50 % mientras dura el corte y hay que insistir. En los modos de IA el rover sigue solo, pero las recomendaciones y las intervenciones quedan sin enlace hasta que vuelve. Unas 2 h."},
+      {"key": "B", "label": "El rover se detiene esperando enlace", "detail": "Igual que en la falla de sensor: el rover no se mueve durante el corte, en todos los modos. Unas 1,5 h."},
+      {"key": "C", "label": "Nada se bloquea, pero gasta batería", "detail": "El rover sigue y responde a todo; la radio buscando enlace consume batería extra por paso durante el corte. Unas 1,5 h."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3048,
+    "creada": "2026-11-16",
+    "tareas": ["ARX-30"],
+    "evidence": [],
+    "evidenceNote": "Plan docs/planes/ARX-30_eventos.md (sección 7); ficha ev3-d41 B; api/static/efectos.js:159 (interferencia ya existente)."
+  },
+  {
+    "code": "ev3-d49",
+    "title": "ARES-X: ¿qué efecto real tiene la señal biológica anómala?",
+    "what": "La ficha ev3-d41 (opción B) pide que la señal biológica tenga efecto real, pero no dice cuál. El PDF la marca como opcional y exige que el sistema nunca afirme que hay vida: en todas las opciones el texto será siempre «anomalía, no confirma vida». Hoy la interfaz ya dibuja un anillo y esa etiqueta; falta que el motor haga algo con la señal.",
+    "impact": "Define si la señal toca el puntaje (fórmula de ev3-d24), la victoria (garantía de ARX-66) o solo la ruta. Bloquea la tarea ARX-30c.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Punto de interés opcional que suma puntos", "detail": "Aparece una celda con la señal a pocas casillas. Si el rover la pisa, el puntaje suma +20 y se anota «lectura anómala, no confirma vida». Si no la visita, no pasa nada; la victoria no cambia. Unas 2 h."},
+      {"key": "B", "label": "Sitio obligatorio más para ganar", "detail": "La celda de la señal se agrega a los objetivos de la misión como un sitio científico más. Cambia la condición de victoria y la garantía de que la partida sea ganable. Unas 3 h."},
+      {"key": "C", "label": "Lectura anómala que la misión rodea", "detail": "La celda queda marcada como riesgo medio durante unos pasos y la misión la evita, sin puntaje. Unas 1,5 h."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3049,
+    "creada": "2026-11-16",
+    "tareas": ["ARX-30"],
+    "evidence": [],
+    "evidenceNote": "Plan docs/planes/ARX-30_eventos.md (sección 7); ficha ev3-d41 B; docs/CONTRATOS_GRAFICOS.md §10 (afirma_vida siempre false); api/static/efectos.js:178."
+  }
+]

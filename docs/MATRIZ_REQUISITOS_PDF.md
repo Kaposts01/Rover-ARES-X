@@ -170,13 +170,36 @@ Las celdas marcadas *(UI)* dependen de la interfaz de Diseño (`api/static/**`) 
 
 ## 13. Resumen de brechas por peso de rúbrica
 
-- **Integración (25 %):** replanteo del AG en el automático ante evento grave (§1); estados que faltan (§5); «sin AG» como ablación del AG (RF-14; la entrega 2 la deja medible con `sin_ag_mas_corta` y `sin_ag_2opt`). Esfuerzo: ~8 h.
-- **RNA (15 %):** evidencia de activaciones y entrada→probabilidades (§2); endpoint de laboratorio y CA-06. Esfuerzo: ~7 h.
-- **Difuso (15 %):** temperatura (§3, decisión de alcance); membresías y curvas en la API. Esfuerzo: ~7 h (+4 h si entra la temperatura).
-- **AG (15 %):** exponer candidatos, historial y cromosomas por generación (§4, RF-11, CA-04). Esfuerzo: ~8 h.
-- **Física y seguridad (10 %):** eventos conectividad y señal biológica (§7; sismo y meteorito ya cumplen), batería 1 % (§9). Esfuerzo: ~10 h.
-- **Interactividad (10 %):** laboratorios y dashboard (§8, *(UI)*), colocación manual de obstáculos (RF-02). Esfuerzo: ~12 h + *(UI)*.
-- **Experimentación (5 %):** métricas de §14 y dispersión. Esfuerzo: ~8 h.
+Estado al commit de la regeneración definitiva (`fcd2835`). Cada fila se verificó en el código o en los JSON; lo que no se pudo verificar va «sin verificar».
+
+- **Integración (25 %):**
+  - Hecho: replanteo del AG ante evento grave en automático (§1), ARX-31a y 31b (`juego/partida.py`, `EVENTOS_GRAVES`; `/estado.ultimo_replanteo`).
+  - Hecho: estados CONFIGURACION, REPLANIFICACION y REFUGIO visibles en `/estado` (§5), ARX-33a y 33b (`juego/partida.py`, `estado_visible`).
+  - Hecho: «sin AG» como ablación del AG (RF-14), con sus tres formas y el AG puro (contrato §7).
+  - Pendiente: ninguno de los tres puntos listados en la versión anterior de esta sección.
+- **RNA (15 %):**
+  - Hecho: activaciones y entrada→probabilidades en `/rna` (`_rna_entrada`, `api/servidor.py`), y `/rna/evaluacion` (CA-06).
+  - Sin verificar: la vista completa del laboratorio RNA (`api/static/laboratorio.js`).
+  - Descartado: alerta a dos celdas (ARX-93c). Queda como aporte fuera del juego, detrás de banderas apagadas (ARX-93 C+; INFORME §5).
+- **Difuso (15 %):**
+  - Hecho: temperatura como cuarta entrada, ev3-d40 A (`difuso.py`, regla R10).
+  - Hecho: membresías por entrada en la API (`punto_entrada` en `_difuso_datos`, `api/servidor.py`).
+  - Sin verificar: curvas de las membresías en la API.
+  - Pendiente: aborto térmico (ARX-83). El código está en `juego/termico.py` con `ABORTO_TERMICO_ACTIVO = False`; activarlo requiere la medición de QA y una decisión.
+- **AG (15 %):**
+  - Hecho: `/ag` devuelve `candidatos`, `generaciones` (historial por generación con cromosoma, fitness y operación) y `parametros` (ARX-47a, `api/servidor.py`).
+  - Hecho: el AG decide el orden de visita en el juego (entrega 2, ARX-92c).
+  - Trabajo futuro declarado: penalización graduada de la inviabilidad (M8) y siembra con el vecino más cercano, medidas con el mismo protocolo de 20 semillas; umbral de empate relativo al largo.
+- **Física y seguridad (10 %):**
+  - Hecho: sismo, meteorito, baja de conectividad y señal biológica (ARX-30a–c).
+  - Sin verificar: batería inicial al 1 % (§9).
+- **Interactividad (10 %):**
+  - Pendiente: colocación manual de obstáculos (RF-02). No hay endpoint para ello.
+  - Sin verificar: laboratorios y dashboard completos (`api/static/laboratorio.js`; la vista de cada laboratorio no se revisó en esta versión).
+- **Experimentación (5 %):**
+  - Hecho: dispersión (desviación y rango intercuartil) en los JSON de 20 semillas.
+  - Hecho: energía final y tiempo de cómputo de pared por partida (ARX-89b, `juego/partida.py`).
+  - Sin verificar: distancia de la ruta y número de replanes en las métricas de §14 (el contador `replanes` existe en `integracion.py`, pero no se verificó que llegue a la exportación).
 
 ## 13b. M2 por técnica (ARX-48)
 
@@ -186,7 +209,7 @@ M2 (variar una técnica altera una decisión, velocidad o ruta) no tiene un «cu
 |---|---|---|---|
 | Difuso | Cumple, con efecto en el resultado | Escenario exigente, 20 semillas: 20 de 20 con difuso y 15 de 20 sin él (`docs/COMPARACION_POLITICAS_exigente.json`). Divergencia directa en 20 de 20 semillas (`docs/TRAZA_DIVERGENCIAS_exigente.csv`) | — |
 | RNA | Parcial: altera decisiones, sin efecto en el resultado | Divergencia directa en 3 de 20 semillas (4, 10 y 18), con 1 a 4 pasos de diferencia; sin cambio de éxito ni de colisiones; redundante con el supervisor. Recall de barrancos 0,70–0,80 con `borde_barranco` y 0,000 sin él (ARX-28f) | No se abre ningún intento más salvo que lo pida el usuario |
-| AG | Parcial: decide el orden de visita en el juego; con 10 sitios no supera a la mejora local | Medido con 10 sitios y 20 semillas (`docs/planes/mediciones/medicion_92c_ex10.json`): el híbrido gana 12 de 20, frente a 14 con el vecino más cercano, 17 con 2-opt y 9 con el AG puro (el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto). Es una falla de búsqueda del AG (INFORME §4.3). Con 3 y 4 sitios, la permutación más corta y 2-opt igualan al híbrido en éxitos y pasos medios (congelado 20/20 y 43,85; exigente 20/20 y 54,3) | Penalización graduada de la inviabilidad y siembra con el vecino más cercano (trabajo futuro) |
+| AG | Medido: decide el orden de visita en el juego; con 10 sitios no supera a la mejora local | Medido con 10 sitios y 20 semillas (`docs/planes/mediciones/medicion_92c_ex10.json`): el híbrido gana 12 de 20, frente a 14 con el vecino más cercano, 17 con 2-opt y 9 con el AG puro (el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto). Es una falla de búsqueda del AG (INFORME §4.3). Con 3 y 4 sitios, la permutación más corta y 2-opt igualan al híbrido en éxitos y pasos medios (congelado 20/20 y 43,85; exigente 20/20 y 54,3) | Penalización graduada de la inviabilidad y siembra con el vecino más cercano (trabajo futuro) |
 
 ## 14. Decisiones que chocan con fichas aprobadas (no resueltas en silencio)
 

@@ -220,18 +220,32 @@ class GeneticPlanner:
             penal += PENALIZACION_INVIABLE
         if pasos * COSTO_BATERIA_PASO > self.bateria:
             penal += PENALIZACION_INVIABLE    # batería insuficiente para llegar a zona segura
-        ciencia = sum(self.mundo.sitios[s] for s in d.orden_sitios) / self.valor_total
+        return self._desglosar(d.ruta, d.orden_sitios, penal, d.reparaciones, d.descartes, d.insertados)
+
+    def evaluar_ruta(self, ruta, bateria_total=None) -> Desglose:
+        """ARX-92a: puntúa con el mismo fitness una ruta ya construida (con paradas de recarga incluidas) y viable.
+
+        No hay reparaciones ni penalización: la viabilidad (batería con margen y factor) ya la validó quien la
+        construyó. `bateria_total` es la capacidad con la que se normaliza la energía (por defecto, la del planificador).
+        """
+        ruta = [tuple(int(v) for v in c) for c in ruta]
+        return self._desglosar(ruta, self._sitios_en(ruta), 0.0, 0, 0, 0, bateria_total)
+
+    def _desglosar(self, ruta, orden_sitios, penal, reparaciones, descartes, insertados, bateria=None) -> Desglose:
+        bateria = self.bateria if bateria is None else bateria
+        pasos = len(ruta) - 1
+        ciencia = sum(self.mundo.sitios[s] for s in orden_sitios) / self.valor_total
         dist = pasos / self.pasos_maximos
-        energia = min(1.0, pasos * COSTO_BATERIA_PASO / self.bateria)
-        riesgo = float(np.mean([self.riesgo[c] for c in d.ruta])) if d.ruta else 1.0
-        giros = sum(1 for a, b, c in zip(d.ruta, d.ruta[1:], d.ruta[2:])
+        energia = min(1.0, pasos * COSTO_BATERIA_PASO / bateria)
+        riesgo = float(np.mean([self.riesgo[c] for c in ruta])) if ruta else 1.0
+        giros = sum(1 for a, b, c in zip(ruta, ruta[1:], ruta[2:])
                     if (b[0] - a[0], b[1] - a[1]) != (c[0] - b[0], c[1] - b[1]))
         tiempo = giros / max(pasos, 1)
         w = self.pesos
         fitness = (w["ciencia"] * ciencia - w["distancia"] * dist - w["energia"] * energia
                    - w["riesgo"] * riesgo - w["tiempo"] * tiempo - penal)
         return Desglose(fitness, ciencia, dist, energia, riesgo, tiempo, penal,
-                        d.reparaciones, pasos, d.descartes, d.insertados)
+                        reparaciones, pasos, descartes, insertados)
 
     # ---------- operadores ----------
     def _individuo_aleatorio(self):

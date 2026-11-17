@@ -249,11 +249,21 @@ def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(
     return False
 
 
-def _ag_con_todos_los_sitios(m, optimizar_original):
-    """ARX-66 / ARX-59: la ruta visita todos los sitios pendientes, en el orden más corto por el mapa real, con
-    paradas en estaciones cuando falta batería. El AG no decide qué sitios se visitan (la victoria los exige todos).
-    Con pocos sitios se prueban todos los órdenes; la ruta que usa la misión es la que validó la garantía."""
+METODO_ORDEN = "exhaustiva puntuada por el fitness"     # ARX-92a: cómo decide el envoltorio el orden de los sitios
+# ARX-92a (ev3-d74 B, umbral único): permutaciones viables a este fitness o menos del mejor se consideran empatadas y gana
+# la más corta. Fijado en docs/planes/ARX-92_ag_decide.md (p90 del error de fitness del exigente, 20 semillas).
+UMBRAL_EMPATE = 0.0223
+
+
+def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None):
+    """ARX-66 / ARX-59 / ARX-92a: la ruta visita todos los sitios pendientes. El orden es el de la permutación VIABLE
+    de mayor fitness (exhaustiva puntuada por el fitness del AG, con los pesos dados o los de defecto), no el de la
+    permutación más corta. El AG no decide qué sitios se visitan (la victoria los exige todos).
+    Viable = llega al refugio con la batería y el factor de la garantía (con paradas en estaciones si las hay). Con
+    más de 6 sitios no se enumeran las permutaciones y se conserva el orden dado. A igual fitness gana la más corta y,
+    después, la primera en el orden de enumeración (determinista). El método queda en `optimizar.metodo`."""
     import itertools
+    from genetico import GeneticPlanner as _GP
 
     def optimizar(origen, pendientes):
         ruta_ag = optimizar_original(origen, pendientes)
@@ -277,7 +287,12 @@ def _ag_con_todos_los_sitios(m, optimizar_original):
             return largos[(a, b)]
 
         con_estaciones = getattr(m, "estaciones_activas", False)
-        mejor = None
+        elegido_pesos = pesos if pesos is not None else getattr(m, "pesos_ag", None)
+        desde = replace(m.mundo, inicio=origen, sitios={p: m.mundo.sitios.get(p, 1) for p in pts})
+        capacidad = max(float(getattr(m, "bateria_max", None) or m.rover.bateria), 1.0)
+        gp = _GP(desde, m.riesgo, bateria=capacidad, k_puntos=m.k, poblacion=30, generaciones=30,
+                 pesos=dict(elegido_pesos) if elegido_pesos else None, semilla=m.semilla)
+        validas = []            # (fitness, largo de la ruta, ruta) de cada permutación viable
         candidatos = itertools.permutations(pts) if len(pts) <= 6 else [tuple(pts)]
         for orden in candidatos:
             seq = list(orden) + [tuple(int(v) for v in m.mundo.refugio)]
@@ -292,9 +307,20 @@ def _ag_con_todos_los_sitios(m, optimizar_original):
                         c = None
                         break
                     c.extend(t[1:])
-            if c is not None and (mejor is None or len(c) < len(mejor)):
-                mejor = c
-        return mejor if mejor is not None else ruta_ag
+            if c is None:
+                continue
+            validas.append((gp.evaluar_ruta(c, capacidad).fitness, len(c), c))
+        if not validas:
+            optimizar.decisiones.append(False)
+            return ruta_ag
+        fmax = max(v[0] for v in validas)
+        mejor_fitness = next(v for v in validas if v[0] == fmax)        # la que decidiría solo el fitness
+        empate = [v for v in validas if v[0] >= fmax - UMBRAL_EMPATE]
+        elegido = min(empate, key=lambda v: v[1])                       # la más corta del empate (primera si hay igual)
+        optimizar.decisiones.append(elegido[2] is not mejor_fitness[2])  # True: el desempate cambió la ruta
+        return elegido[2]
+    optimizar.metodo = METODO_ORDEN
+    optimizar.decisiones = []       # ARX-92a: por cada planificación, True si decidió el desempate y no el fitness
     return optimizar
 
 

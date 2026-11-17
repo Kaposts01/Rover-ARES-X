@@ -29,7 +29,8 @@ def test_version_y_metricas_en_partida_real():
     assert r["distancia_recorrida"] == p.rover.distancia_recorrida
     assert r["replanes"] == p.mision.replanes
     assert isinstance(r["sitios_visitados_celdas"], list)
-    assert r["tiempo_computo_s"] is None          # el motor no lo guarda
+    # ARX-89b (en el piso) sí guarda el tiempo de pared de cada paso: es un float no negativo, no None
+    assert isinstance(r["tiempo_computo_s"], float) and r["tiempo_computo_s"] >= 0
     assert "estado" in r and "puntaje" in r       # claves existentes intactas
 
 

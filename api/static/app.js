@@ -1671,7 +1671,7 @@ function configuracionVigente() {
   };
 }
 // Tamaño del mapa (ARX-21): pequeno 20×30, mediano 30×45, grande 40×60 (por defecto: grande)
-async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente()) {
+async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente(), bateria = null) {
   detenerReproduccion();
   cerrarAvisos();
   reiniciarEventos();
@@ -1679,8 +1679,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
   try {
     const cuerpo = { nivel, tamano, planeta: config.planeta, modo: config.vehiculo };
     if (semilla != null) cuerpo.semilla = semilla;
-    const bateriaCampo = document.getElementById("bateria-inicial");   // ARX-87: opcional; vacío = por defecto
-    if (bateriaCampo && bateriaCampo.value.trim() !== "") cuerpo.bateria = Number(bateriaCampo.value);
+    if (bateria != null) cuerpo.bateria = bateria;   // ARX-87: solo llega desde el botón «Nueva» del panel
     for (const clave of Object.keys(cuerpo)) if (cuerpo[clave] == null) delete cuerpo[clave];   // sin planeta, el motor usa Marte y rover
     let datos = await llamar("POST", "/partida", cuerpo);
     if (!datos) return false;
@@ -2538,10 +2537,29 @@ window.addEventListener("keydown", (ev) => {
 document.querySelectorAll("#pad button[data-r]").forEach((b) => {
   b.addEventListener("click", () => mover(b.dataset.r));
 });
+// ARX-87: batería inicial opcional del panel (vacío = por defecto); se pasa solo desde «Nueva»
+function bateriaDelCampo() {
+  const campo = document.getElementById("bateria-inicial");
+  return campo && campo.value.trim() !== "" ? Number(campo.value) : null;
+}
+// ARX-87 (QA): el rango visible del campo sigue la misma fórmula que el servidor (50–150 % del valor por defecto)
+function actualizarRangoBateria() {
+  const campo = document.getElementById("bateria-inicial");
+  if (!campo) return;
+  const nivel = Number(document.getElementById("nivel").value);
+  const tamanoSel = document.getElementById("tamano").value;
+  const [filas, columnas] = { pequeno: [20, 30], mediano: [30, 45], grande: [40, 60] }[tamanoSel] || [40, 60];
+  const defecto = (100 - 4 * (nivel - 1)) * (filas * columnas > 600 ? 1.49 : 1);
+  campo.min = String(Math.round(0.5 * defecto));
+  campo.max = String(Math.round(1.5 * defecto));
+}
+document.getElementById("nivel").addEventListener("change", actualizarRangoBateria);
+document.getElementById("tamano").addEventListener("change", actualizarRangoBateria);
+actualizarRangoBateria();
 document.getElementById("nueva").addEventListener("click", async () => {
   const semilla = semillaDesdeCampo("semilla");
   const nivel = Number(document.getElementById("nivel").value);
-  const ok = await conCarga(() => cargarPartida(semilla, nivel), { transicion: true });
+  const ok = await conCarga(() => cargarPartida(semilla, nivel, undefined, configuracionVigente(), bateriaDelCampo()), { transicion: true });
   if (!ok) return;
   cadenaAutomatica = document.getElementById("modo").value === "automatico" && Number(document.getElementById("menu-misiones").value) > 1 ? nuevaCadena(nivel, Number(document.getElementById("menu-misiones").value), document.getElementById("veto").checked) : null;
   await refrescarEscenarios();

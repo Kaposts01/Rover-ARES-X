@@ -414,11 +414,11 @@ def _anotar(sesion: Sesion, accion: str, tecnica: str, motivos=(), ultimo: dict 
 
 
 def _columnas_arx80(p) -> dict:
-    """ARX-80 (M3): fitness del AG y membresías difusas de la última fila de la bitácora (0.0 si aún no hay)."""
+    """ARX-80 (M3): fitness del AG y membresías difusas de la última fila de la bitácora (vacío si no hay dato)."""
     filas = p.mision.log.filas
     ultima = filas[-1] if filas else {}
     return {"fitness_ag": float(ultima.get("fitness_ag", 0.0)),
-            **{c: float(ultima.get(c, 0.0)) for c in COLUMNAS_MEMBRESIA}}
+            **{c: ultima.get(c) for c in COLUMNAS_MEMBRESIA}}
 
 
 def _filtrar_historial(sesion: Sesion, desde: int = 0, modo: str = None, tecnica: str = None,

@@ -495,7 +495,10 @@ class Partida:
         """ARX-80 (M3): toda fila de la bitácora lleva el fitness del AG vigente y las membresías difusas.
 
         Las membresías las aporta Mision._registrar cuando hubo inferencia; si la fila no la tuvo (recarga,
-        falla, modos sueltos, cierres) queda en 0.0: ese paso no evaluó el difuso.
+        falla, cierres, modos rna y ag) queda vacía (None): ese paso no evaluó el difuso.
+
+        fitness_ag: en avanzar_ia es el medido antes de actuar; en las filas de fuera de avanzar_ia es el de la
+        ruta tras actuar, no el de antes.
         """
         if self._fitness_paso is not None:
             fit = self._fitness_paso

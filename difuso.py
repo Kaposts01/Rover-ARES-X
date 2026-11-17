@@ -90,12 +90,15 @@ COLUMNAS_MEMBRESIA = [f"mu_{var}_{conj}" for var, conjuntos in CONJUNTOS.items()
 
 
 def aplanar_membresias(membresias) -> dict:
-    """{variable: {conjunto: grado}} -> {"mu_variable_conjunto": grado}; sin datos o NaN, 0.0 (nunca NaN)."""
+    """{variable: {conjunto: grado}} -> {"mu_variable_conjunto": grado}.
+
+    Sin datos (None o vacío) o con un grado no finito el valor es None (celda vacía en el CSV): no se inventa 0.0.
+    """
     plano = {}
     for col in COLUMNAS_MEMBRESIA:
         _, var, conj = col.split("_", 2)
-        g = float((membresias or {}).get(var, {}).get(conj, 0.0))
-        plano[col] = round(g, 4) if np.isfinite(g) else 0.0
+        g = (membresias or {}).get(var, {}).get(conj)
+        plano[col] = round(float(g), 4) if g is not None and np.isfinite(g) else None
     return plano
 
 

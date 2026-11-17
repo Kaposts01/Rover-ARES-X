@@ -406,8 +406,11 @@ def test_csv_lleva_fitness_ag_y_membresias_numericos_sin_nan(cliente):
     filas = list(csv.DictReader(io.StringIO(cliente.get("/historial.csv").text)))
     assert len(filas) >= 3
     for fila in filas:
-        for col in ["fitness_ag"] + COLUMNAS_MEMBRESIA:
-            assert float(fila[col]) == float(fila[col])        # numérico y no NaN
+        assert float(fila["fitness_ag"]) == float(fila["fitness_ag"])        # numérico y no NaN
+        for col in COLUMNAS_MEMBRESIA:
+            assert col in fila
+            if fila[col] != "":                                  # vacío = el paso no evaluó el difuso
+                assert 0.0 <= float(fila[col]) <= 1.0
 
 
 def test_csv_anterior_sin_columnas_nuevas_sigue_siendo_legible():

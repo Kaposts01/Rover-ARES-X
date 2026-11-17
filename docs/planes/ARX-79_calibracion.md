@@ -44,3 +44,16 @@ Referencias previas (no son esta medición): QA 17/11 en `ab46b4a`: Muy fácil g
 ## 79d · Medición final
 
 Pendiente (tras 79b y 79c). Criterio: Muy fácil y Fácil grande ≥ 95 %; Medio ≥ 85 %; pequeño sin empeorar.
+
+## Criterio de la batería proporcional al tamaño (ev3-d75 A) · escrito ANTES de medir 79d
+
+Decisión del Maestro: la batería inicial del mapa grande pasa a ser proporcional al tamaño del mapa. Este criterio se fija antes de cualquier medición nueva.
+
+- **Razón de longitud de ruta R** = mediana de pasos de las victorias del grande (todos los niveles con victorias: 1 y 2) ÷ mediana de pasos de las victorias del pequeño (todos los niveles). Datos: `docs/planes/mediciones/medicion_garantia_grande.json` y `..._pequeno.json` (79a).
+  - Grande: 26 victorias, mediana 77,5 pasos. Pequeño: 100 victorias, mediana 52,0 pasos.
+  - **R = 77,5 ÷ 52,0 = 1,49** (la media da 1,47; se usa la mediana, como en 79a).
+- **Batería inicial del grande** = batería del nivel (100 − 4·(nivel − 1), como hoy) × R. Por nivel: 149 (1), 146 (2), 142 (3), 138 (4), 125 (5), aprox.
+- **Pequeño y congelado no cambian**: R solo se aplica al tamaño grande (40×60); el pequeño (20×30) y el congelado (garantia=False, 20×30) quedan con su batería actual. Se verifica por hash.
+- **Aviso «Mapa sin garantía de victoria»**: se queda.
+- **Límite conocido de R**: sale de victorias, y las del grande son solo de niveles 1 y 2 (lo fácil). Por eso R puede subestimar lo que hace falta en niveles 3 a 5; no se ajusta hasta llegar al 100 %.
+- **Regla de medición (79d)**: 20 semillas por nivel en el grande, tasa publicada tal como salga. No se ajusta R hasta llegar al 100 %. Si a las 15:00 no está aprobada por QA, se aplica el repliegue D (mapa pequeño por defecto).

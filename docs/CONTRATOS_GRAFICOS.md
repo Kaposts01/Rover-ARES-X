@@ -201,7 +201,7 @@ Recuentos con 20 semillas:
 
 Lectura, sin atribuir más de lo medido:
 - **Difuso:** altera en 20 de 20 semillas. De sus 20 directas, 16 cambian solo la velocidad; en `sin_difuso` la velocidad es fija (0,5) y no tiene efecto físico. Empeora la semilla 7.
-- **AG:** altera el orden de sitios en 12 de 20 semillas. Sin AG la partida tarda 4,35 pasos más de media (55,2 frente a 50,85).
+- **Orden de sitios (`sin_ag`):** la variante reemplaza el planificador de orden (hoy, permutación más corta por búsqueda exhaustiva) por el vecino más cercano. El orden difiere de la variante híbrida en 12 de 20 semillas, y la partida tarda 4,35 pasos más de media (55,2 frente a 50,85). No atribuye ningún efecto al AG (ver ARX-92).
 - **RNA:** cambia una decisión en 2 de 20 semillas (4 y 18, paso 2, `V-RNA-OBSTACULO`): el híbrido tarda +3 pasos en la semilla 4 (51 frente a 48) y +1 en la 18 (42 frente a 41). No cambia el éxito ni las colisiones. Las 4 directas de código y las 84 consecuencias no cambian la decisión. La RNA sigue en evaluación en ARX-28f.
 
 ---

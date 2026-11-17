@@ -84,12 +84,12 @@ Divergencias paso a paso frente al híbrido (misma semilla), con la regla de cla
 |---|---|---|---|---|---|
 | RNA (sin_rna) | 2 de 20 (4 y 18) | 90 | 2 | 4 | 84 |
 | difuso (sin_difuso) | 20 de 20 | 803 | 20 | 0 | 783 |
-| AG (sin_ag) | 12 de 20 (3-9, 11-14, 17) | 446 | 12 | 0 | 434 |
+| Orden de sitios: vecino más cercano (sin_ag) | 12 de 20 (3-9, 11-14, 17) | 446 | 12 | 0 | 434 |
 
 Qué cambia en las filas directas:
 - RNA: 2 directas, semilla 4 paso 2 y semilla 18 paso 2 (el híbrido veta por la RNA con `V-RNA-OBSTACULO` al salir y `sin_rna` avanza; cambian decisión, velocidad y ruta). Cuestan +3 pasos (semilla 4) y +1 paso (semilla 18); no tocan el éxito ni las colisiones. Las 4 filas `directa_codigo` (semilla 2 paso 2, semilla 4 paso 1, semilla 12 paso 46, semilla 13 paso 43) son vetos de la RNA redundantes con `V-OBSTACULO-EN-RUTA`: misma acción `replanificar` en la misma celda, solo cambia el código de motivo (`V-RNA-OBSTACULO` o `V-RNA-BARRANCO`). Las otras 84 filas son consecuencia. Códigos `V-RNA-*` registrados en el híbrido en las 90 filas: 8.
 - Difuso: 20 directas (una por semilla); 16 cambian solo la velocidad y 4 decisión, velocidad y ruta. Motivo: reglas difusas activadas en el híbrido (R4 en 14, R1 en 4, R1;R7;R9 en 2).
-- AG: 12 directas, todas la fila de paso 0 por el orden de sitios del plan inicial, que difiere en 12 semillas; todas cambian la ruta.
+- Orden de sitios (sin_ag, vecino más cercano en lugar de la permutación más corta): 12 directas, todas en la fila de paso 0 por el orden de sitios del plan inicial, que difiere en 12 semillas; todas cambian la ruta. No mide el aporte del AG.
 
 Sobre la RNA, lo medido: no altera el éxito (19/20 en híbrido y en `sin_rna`, misma semilla fallida) ni las colisiones (0 en las cuatro variantes). Cambia una decisión en 2 semillas de 20 (la 4 y la 18), una vez en cada una, con un veto `V-RNA-OBSTACULO` en el paso 2 que cuesta pasos y no éxito. En las demás divergencias el veto de la RNA es redundante con el del supervisor para el resultado. Si M2 queda demostrado para la RNA en estos términos lo decide el Maestro; las divergencias que solo cambian el código de motivo (semillas 2, 4, 12 y 13) se cuentan aparte como `directa_codigo` y no se usan como criterio.
 

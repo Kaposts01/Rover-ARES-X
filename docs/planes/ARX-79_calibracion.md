@@ -52,7 +52,7 @@ Decisión del Maestro: la batería inicial del mapa grande pasa a ser proporcion
 - **Razón de longitud de ruta R** = mediana de pasos de las victorias del grande (todos los niveles con victorias: 1 y 2) ÷ mediana de pasos de las victorias del pequeño (todos los niveles). Datos: `docs/planes/mediciones/medicion_garantia_grande.json` y `..._pequeno.json` (79a).
   - Grande: 26 victorias, mediana 77,5 pasos. Pequeño: 100 victorias, mediana 52,0 pasos.
   - **R = 77,5 ÷ 52,0 = 1,49** (la media da 1,47; se usa la mediana, como en 79a).
-- **Batería inicial del grande** = batería del nivel (100 − 4·(nivel − 1), como hoy) × R. Por nivel: 149 (1), 146 (2), 142 (3), 138 (4), 125 (5), aprox.
+- **Batería inicial del grande** = batería del nivel (100 − 4·(nivel − 1), como hoy) × R. Por nivel (100, 96, 92, 88, 84 × 1,49): 149 (nivel 1), 143 (2), 137 (3), 131 (4), 125 (5).
 - **Pequeño y congelado no cambian**: R solo se aplica al tamaño grande (40×60); el pequeño (20×30) y el congelado (garantia=False, 20×30) quedan con su batería actual. Se verifica por hash.
 - **Aviso «Mapa sin garantía de victoria»**: se queda.
 - **Límite conocido de R**: sale de victorias, y las del grande son solo de niveles 1 y 2 (lo fácil). Por eso R puede subestimar lo que hace falta en niveles 3 a 5; no se ajusta hasta llegar al 100 %.

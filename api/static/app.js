@@ -1397,7 +1397,8 @@ function pintarCalor(datos) {
   barra.style.background = t >= datos.tolerancia ? "#ff5d6c" : t >= datos.tolerancia * 0.66 ? "#ffb454" : "#6ee7a8";
   const sobre = t > datos.tolerancia;
   const nota = datos.aborto_termico_activo === false ? " (aborto térmico desactivado)" : "";
-  if (sobre && !calorSobreTolerancia) avisar(`Calor interno sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
+  // registro lateral y no avisar(): el aviso del paso lo taparía en el mismo ciclo (C1 de QA)
+  if (sobre && !calorSobreTolerancia) registrarEvento(`aviso: Calor interno sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
   calorSobreTolerancia = sobre;
 }
 

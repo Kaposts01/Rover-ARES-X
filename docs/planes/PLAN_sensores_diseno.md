@@ -175,9 +175,47 @@ Costos: 29a–b ~6 h + QA 1 h; 50a–c ~10 h; 57a ~4 h; 51a ~3 h; 59a 0–4 h se
 
 ## Parte 3 · Paralelismo y plan de regeneración
 
-*(pendiente)*
+### 3.1 Lo que corre ahora (ramas vivas sobre `a0bf109`, archivos por `git diff --name-only main <rama>`)
+
+| Frente (Lider_Rover) | Rama | Archivos que toca |
+|---|---|---|
+| Opción B del AG (búsqueda, ev3-d80) | `feat/arx-92-busqueda-ag` | `genetico.py`, `juego/partida.py`, `juego/tests/test_busqueda_ag_arx92b.py`, `docs/planes/ARX-92_ag_decide.md`, mediciones |
+| ARX-36a (tira de decisiones) | `feat/arx-36a-tira` | `api/static/app.js`, `api/static/index.html`, su plan |
+| Capa de riesgo en la escena (M15) | `feat/m15-capa-riesgo` | `api/static/app.js`, `api/static/index.html`, su plan |
+| Barrido térmico (M13) | `feat/m13-barrido-termico` | `scripts/barrido_termico_m13.py`, su plan |
+| ARX-79e (otra semilla; espera prueba del usuario) | `feat/arx-79-otra-semilla` | `api/servidor.py`, `api/static/app.js`, `index.html`, `README.md`, `INFORME_TECNICO.md`, pruebas |
+
+Aviso: **36a y la capa de riesgo editan los mismos dos archivos** (`app.js`, `index.html`): no son dos frentes compatibles por la regla de archivos; conviene que una absorba a la otra (rebase) antes de abrir el PR. ARX-79e también toca `app.js`.
+
+### 3.2 Compatibilidad de las tareas de este plan con lo que corre
+
+| Tarea nueva | Archivos | Contra opción B del AG | Contra 36a / capa de riesgo | Contra barrido térmico | Veredicto |
+|---|---|---|---|---|---|
+| **ARX-94** (sensores) | `simulador.py`, `rna.py`, `integracion.py`, `genetico.py` (solo `mapa_estimado`), `api/servidor.py` (`/rna`), `api/static/laboratorio.js`, pruebas | **Choca en `genetico.py`** (B toca el fitness y la búsqueda; 94c toca `mapa_estimado`, funciones distintas, conflicto mecánico) | Sin archivos comunes (`laboratorio.js` ≠ `app.js`) | Sin archivos comunes | Puede abrirse **ya** como segundo frente si 94c espera a que B cierre, o se abre tras B (recomendado: B está midiendo y cierra antes) |
+| **ARX-29** (móviles) | `juego/moviles.py` (nuevo), `juego/partida.py`, `api/servidor.py`, pruebas, contrato §10 | **Choca en `juego/partida.py`** | Sin archivos comunes | Sin archivos comunes | **Después de B** |
+| **ARX-50/51/57** | `simulador.py`, `integracion.py`, `juego/escenario.py` (nuevo), `juego/partida.py`, `juego/termico.py`, `api/static/app.js`, `efectos.js`, `index.html` | Choca en `partida.py` | **Choca en `app.js`/`index.html`** (51a) | Comparte el objeto del barrido (térmico), no archivos | **Después de ARX-94 y de B**; 51a después de que 36a y la capa cierren |
+| **ARX-59** | `juego/partida.py` | Choca | — | — | Al final, antes de la regeneración del bloque 2 |
+| Regeneración | `docs/*.json`, `*.csv`, `*.md` de cifras | Las cifras de B (exigente de 10 sitios) se regeneran con las demás | — | El barrido térmico produce su propia tabla; no entra en `regenerar_todo.py` | Una por bloque |
+
+### 3.3 Orden propuesto (un frente de código a la vez salvo donde la tabla lo permite)
+
+1. **Ahora:** cierran lo que corre: opción B del AG (medición y QA), 36a + capa de riesgo (una rama, QA en Chrome), barrido térmico (script y tabla). PR con el usuario. ARX-79e según decida el usuario.
+2. **Bloque 1 · ARX-94** (sensores), desde el `main` que resulte: 94a → 94b → 94c → 94d, QA, 94e (medición de 20 semillas con turno). Mientras 94a–94b avanzan, **ARX-29a** puede correr como segundo frente si B ya cerró (archivos distintos: `moviles.py`, `partida.py` frente a `simulador.py`, `rna.py`).
+3. **Regeneración 1** (si ev3-d84 = A): una sola tanda `scripts/regenerar_todo.py` sobre la rama integrada de 94 (+ 29 si ya entró), con turno; tabla «antes → después» por métrica con la causa; hash nuevo del congelado. Docs (INFORME §RNA v1/v2, M2 por técnica, contratos).
+4. **Bloque 2 · diseño:** 50a → 50b → 50c → 57a (motor, un frente) y, en paralelo, 51a (escena) cuando 36a y la capa hayan cerrado; después 59a según ev3-d87.
+5. **Regeneración 2:** la misma tanda más la **medición por planeta** (4 planetas × 20 semillas × nivel 3, publicada tal como salga) y la tabla por nivel y tamaño de ARX-58/59. Tabla «antes → después» con la causa «diseño: móviles, suelos, escalón».
+6. Docs e informe al cierre de cada bloque; PR por bloque con el usuario.
+
+### 3.4 Plan de regeneración (regla)
+
+- **Una regeneración por bloque, nunca parcial**: `scripts/regenerar_todo.py` entero (congelado, exigente, exigente de 10 sitios, traza, tabla de modos, rejilla), con turno del Orquestador y CPU/RAM < 80 %; duración del orden de una hora (la del 17/11; se confirma con su log).
+- **Atribución**: antes de lanzar, se anota el hash del congelado vigente y las cifras «antes»; después, una tabla por métrica (éxito, pasos, batería, colisiones, replanificaciones; por variante) con la columna «causa» = bloque. Si una cifra cambia por algo que el bloque no explica, se investiga antes de publicar.
+- **Conjunto de evaluación fijo** (ev3-d43 A): mismos niveles, semillas y tamaños; lo nuevo (planetas, escalón) se publica como tablas aparte, no reemplaza al congelado.
+- **Modelo v1 de la RNA**: sus métricas publicadas se conservan tal cual (mundo v1 reproducible con `MUNDO_V1`); el v2 se agrega.
+- **QA** verifica el hash, la tabla de atribución y que las divergencias de M2 vengan de los motivos declarados.
 
 ## Dónde quedé
 
 - 17/11 22:05 · Parte 1 escrita y medida (scripts junto al plan); commit 338d4ad.
-- 17/11 22:3x · Parte 2 escrita (ARX-29, 50/51/57, 59; fichas ev3-d85 a d87). Falta la parte 3.
+- 17/11 22:10 · Parte 2 escrita (ARX-29, 50/51/57, 59; fichas ev3-d85 a d87); commit b52978a.
+- 17/11 22:2x · Parte 3 escrita (paralelismo y regeneración). Plan completo; a la espera de las fichas ev3-d83 a d87.

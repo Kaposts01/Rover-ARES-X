@@ -27,3 +27,22 @@ Con la bandera encendida, el difuso también recibe T_int (`_inferir_con_tempera
 - Se publica tal como sale; no se ajusta nada para mejorar cifras.
 - Una medición, con turno, en segundo plano y en un proceso.
 - El congelado (`d6fb9079…`) no se toca: el script no altera la evaluación congelada.
+
+## Resultados (medidos 22:08–22:36, bandera encendida solo dentro del script)
+
+Datos: `mediciones/barrido_m13.json` y `mediciones/barrido_m13.log`. Tamaño grande (40×60), 20 semillas por nivel, control automático.
+
+| Planeta · nivel | Se gana hoy (apagada) | Abortadas (encendida) | Siguen ganando (encendida) | Paso medio del aborto | T interna media (°C) | T interna máxima (°C) |
+|---|---|---|---|---|---|---|
+| Mercurio · 1 | 20/20 | 20 | 0 | 7,5 | 152,3 | 192,7 |
+| Mercurio · 2 | 20/20 | 20 | 0 | 7,5 | 158,5 | 191,1 |
+| Mercurio · 3 | 19/20 | 19 | 0 | 8,6 | 161,5 | 193,4 |
+| Mercurio · 4 | 17/20 | 17 | 0 | 8,4 | 151,9 | 193,4 |
+| Mercurio · 5 | 15/20 | 15 | 0 | 9,8 | 155,4 | 191,1 |
+| Venus · 1 | 20/20 | 20 | 0 | 7,5 | 163,9 | 207,7 |
+| Venus · 2 | 20/20 | 20 | 0 | 7,5 | 170,7 | 206,2 |
+| Venus · 3 | 19/20 | 19 | 0 | 8,6 | 173,9 | 208,4 |
+| Venus · 4 | 17/20 | 17 | 0 | 8,4 | 163,4 | 208,4 |
+| Venus · 5 | 15/20 | 15 | 0 | 9,8 | 167,1 | 206,2 |
+
+**Lectura.** Con la bandera encendida, toda partida que se gana hoy termina en `MODO_SEGURO` a los 7–10 pasos; ninguna sigue ganando ni termina en otro estado. La temperatura interna sube por encima de la tolerancia de 60 °C muy pronto y el aborto llega cinco pasos después. Las cifras son de la regla del aborto tal como está en `termico.py`: no se ajustó nada.

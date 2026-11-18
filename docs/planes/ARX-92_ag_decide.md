@@ -234,3 +234,22 @@ Rama `feat/arx-92-busqueda-ag` desde a0bf109. Se codifica solo tras la confirmac
 - **Medición (una sola vez, con turno).** Las mismas 20 semillas del exigente de 10 sitios, todas las variantes. Se publican las dos mediciones: la de a62a1f6 y la nueva, tal como salgan. No se ajusta nada después de medir.
 - **Hashes.** El congelado (`d6fb9079…`) y el exigente de 4 sitios deben quedar iguales. Si cambian, se informa aquí por qué. La graduación solo afecta a rutas inviables, y el congelado puede tenerlas por la reserva de §14: si cambia, se explica con las filas.
 - **Verificación.** Pruebas acotadas de genetico, orden AG, reserva y rendimiento. Suite y hashes antes de cualquier integración.
+
+### 16 (precisiones del Orquestador, antes de codificar)
+
+**Cota del fitness de una ruta viable (demostrada con la fórmula de `_desglosar`).** El fitness es `w_c·ciencia − w_d·dist − w_e·energia − w_r·riesgo − w_t·tiempo − penal`, con pesos `w_* ∈ [0, 5]` (la interfaz los limita a ese rango) y, para una ruta viable (`penal = 0`):
+- `ciencia ∈ [0, 1]` (suma de valores de sitios / valor total): término ≥ 0.
+- `dist = pasos / (filas·columnas)`. Una ruta viable cumple `pasos + MARGEN_ENERGIA ≤ batería ≤ B_MAX`, con `B_MAX = 225` (150 % de 149, la batería por defecto más alta). Así `pasos ≤ 225` y, con el tablero más pequeño (20×30 = 600 celdas), `dist ≤ 225/600 = 0,375`.
+- `energia = min(1, pasos·COSTO/batería) ∈ [0, 1]`; `riesgo` es media de celdas ∈ [0, 1]; `tiempo = giros/max(pasos,1) ∈ [0, 1]`.
+
+Por tanto, para toda ruta viable y todos los pesos del rango:
+
+`fitness ≥ L = −( w_d·0,375 + w_e + w_r + w_t )`.
+
+Con pesos por defecto, `L = −1,2125`. Con los pesos del laboratorio en su máximo, `L = −5·(0,375 + 3) = −16,875`.
+
+**Piso de la inviabilidad, derivado de L (no fijo).** `P = L − 1`, calculado por planificador con sus pesos. Para una ruta inviable: `fitness = P − K·exceso`, con `exceso = largo + MARGEN_ENERGIA − batería > 0` y `K = 0,01`. Entonces `fitness_inviable < P < L ≤ fitness_viable`: queda siempre por debajo de cualquier ruta viable, con cualquier peso del rango. Esto sustituye al −10 fijo de hoy, que no estaba demostrado para pesos altos.
+
+**Siembra sin mover el generador.** La población inicial se genera EXACTAMENTE como hoy (mismas llamadas a `self.rng`, mismo orden). Solo después se REEMPLAZA el último individuo por el orden del vecino más cercano por longitud de camino (`_largo`, desde el inicio, sin 2-opt), sin pasos de paso. Así lo único que cambia es ese individuo.
+
+**Efecto esperado en los hashes.** El congelado y el exigente de 4 sitios cambian solo si alguna ruta del AG es inviable o si el individuo sembrado llega a ser el mejor. Si cambian, se explica fila por fila; no se ajusta nada para que vuelvan.

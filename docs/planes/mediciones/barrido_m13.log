@@ -1,0 +1,23 @@
+inicio 22:08:39
+Mercurio nivel 1 listo 108 s
+Mercurio nivel 2 listo 211 s
+Mercurio nivel 3 listo 419 s
+Mercurio nivel 4 listo 636 s
+Mercurio nivel 5 listo 852 s
+Venus nivel 1 listo 953 s
+Venus nivel 2 listo 1055 s
+Venus nivel 3 listo 1257 s
+Venus nivel 4 listo 1462 s
+Venus nivel 5 listo 1655 s
+Mercurio-1 {'se_gana_hoy': 20, 'de': 20, 'abortadas': 20, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 7.5, 'tmax_media': 152.3, 'tmax_maxima': 192.7}
+Mercurio-2 {'se_gana_hoy': 20, 'de': 20, 'abortadas': 20, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 7.5, 'tmax_media': 158.5, 'tmax_maxima': 191.1}
+Mercurio-3 {'se_gana_hoy': 19, 'de': 20, 'abortadas': 19, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 8.6, 'tmax_media': 161.5, 'tmax_maxima': 193.4}
+Mercurio-4 {'se_gana_hoy': 17, 'de': 20, 'abortadas': 17, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 8.4, 'tmax_media': 151.9, 'tmax_maxima': 193.4}
+Mercurio-5 {'se_gana_hoy': 15, 'de': 20, 'abortadas': 15, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 9.8, 'tmax_media': 155.4, 'tmax_maxima': 191.1}
+Venus-1 {'se_gana_hoy': 20, 'de': 20, 'abortadas': 20, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 7.5, 'tmax_media': 163.9, 'tmax_maxima': 207.7}
+Venus-2 {'se_gana_hoy': 20, 'de': 20, 'abortadas': 20, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 7.5, 'tmax_media': 170.7, 'tmax_maxima': 206.2}
+Venus-3 {'se_gana_hoy': 19, 'de': 20, 'abortadas': 19, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 8.6, 'tmax_media': 173.9, 'tmax_maxima': 208.4}
+Venus-4 {'se_gana_hoy': 17, 'de': 20, 'abortadas': 17, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 8.4, 'tmax_media': 163.4, 'tmax_maxima': 208.4}
+Venus-5 {'se_gana_hoy': 15, 'de': 20, 'abortadas': 15, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 9.8, 'tmax_media': 167.1, 'tmax_maxima': 206.2}
+escrito barrido_m13.json
+codigo 0 fin 22:36:16

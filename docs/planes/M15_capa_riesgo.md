@@ -26,3 +26,14 @@ Base: a0bf109. Solo `api/static/` (index.html, app.js). La API no cambia.
 - Reinicio de partida con la capa encendida: la capa se rehace.
 - Mapa pequeño (20×30): la capa usa las dimensiones correctas.
 - Declarado como NO comprobado: mapa mediano, otros planetas, clic con ratón real sobre el interruptor.
+
+## Resultado en Chrome (8766, mapa grande 40×60 salvo donde se indica)
+- Peticiones a `/mapa` con la capa encendida: 1 por paso (5 de 5 pasos). Apagada: 0 por paso.
+- FPS (requestAnimationFrame, 3 a 4 s): primera medición con la capa apagada 74,6; con la capa encendida 60,0. Alternando apagada/encendida en las mismas condiciones: 60,0 / 60,0 / 60,1 / 60,2. La diferencia de la primera medición no viene de la capa (el valor base de la pestaña cambió a 60); con la capa no se aprecia caída. Durante 3 pasos seguidos con la capa: 60.
+- Malla con celdas ≥ 0,3: vértices = 9 × celdas (738 = 82 × 9), coincide con `/mapa`.
+- Reinicio de partida con la capa encendida: la malla se rehace (uuid nuevo, semilla nueva) con la casilla aún marcada, sin peticiones extra a `/mapa`. Un primer intento no reconstruyó la malla (mismo uuid); el repetido sí. No se investigó la causa (posible clic con la partida ocupada).
+- Mapa pequeño 20×30: malla con extremos x=30, z=19, 25 celdas ≥ 0,3 = 225 vértices, coincide con `/mapa`.
+- Consola sin errores en todo el recorrido.
+
+## No comprobado
+Mapa mediano (30×45), otros planetas distintos de Marte, clic con ratón real sobre el interruptor (se usó `change` por script), aspecto visual (una captura quedó tapada por el diálogo de inicio).

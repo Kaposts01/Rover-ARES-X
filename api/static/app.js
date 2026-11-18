@@ -414,14 +414,14 @@ function obtenerTexturaSolar() {
 }
 
 // ---------- capa de riesgo estimado (M15) ----------
-const RIESGO_MIN_VISIBLE = 0.05;   // por debajo no se pinta la celda
+const UMBRAL_CAPA_RIESGO = 0.3;    // por debajo no se pinta la celda: la capa muestra peligro, no tiñe el mapa entero
 const RIESGO_OPACIDAD = 0.45;
 let capaRiesgoActiva = false;      // apagada por defecto
 
-// Verde (0) -> amarillo (0,5) -> rojo (1)
+// Amarillo (en el umbral) -> rojo (1)
 function colorRiesgo(r) {
-  const t = Math.min(1, Math.max(0, r));
-  return t < 0.5 ? [2 * t, 1, 0.15] : [1, 2 * (1 - t), 0.15];
+  const t = Math.min(1, Math.max(0, (r - UMBRAL_CAPA_RIESGO) / (1 - UMBRAL_CAPA_RIESGO)));
+  return [1, 0.9 * (1 - t), 0.1];
 }
 
 function limpiarCapaRiesgo() {
@@ -446,7 +446,7 @@ function construirCapaRiesgo(datos) {
   for (let f = 0; f < datos.filas; f++) {
     for (let c = 0; c < datos.columnas; c++) {
       const r = rz[f][c];
-      if (!(r >= RIESGO_MIN_VISIBLE)) continue;
+      if (!(r >= UMBRAL_CAPA_RIESGO)) continue;
       const [cr, cg, cb] = colorRiesgo(r);
       const base = pos.length / 3;
       for (let j = 0; j <= SUB; j++) {
@@ -499,6 +499,19 @@ async function actualizarCapaRiesgo() {
     const caja = document.getElementById("riesgo-capa");
     if (caja) caja.checked = false;
     avisoRiesgo(mapa ? "sin datos de riesgo" : "sin partida: no hay riesgo que mostrar");
+  }
+}
+
+// Refresco por avance del rover con la capa encendida: una sola lectura de /mapa por paso, sin solapar y sin parpadeo
+let refrescoRiesgoEnVuelo = false;
+async function refrescarCapaRiesgoPorPaso() {
+  if (!capaRiesgoActiva || !mapa || refrescoRiesgoEnVuelo) return;
+  refrescoRiesgoEnVuelo = true;
+  try {
+    const mp = await llamar("GET", "/mapa");
+    if (capaRiesgoActiva && mp) construirCapaRiesgo(mp);
+  } finally {
+    refrescoRiesgoEnVuelo = false;
   }
 }
 
@@ -1744,6 +1757,7 @@ async function refrescarEstado() {
     actualizarControlEvento();
     aplicarEnlaceYSenal(datos);
   });
+  refrescarCapaRiesgoPorPaso();   // M15: apagada no pide nada
 }
 
 // ARX-30d: lectura defensiva de /estado. Solo apaga si el campo existe y lo dice; sin campo (motor sin ARX-30b/30c) no hace nada.

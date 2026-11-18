@@ -29,13 +29,31 @@ def _quieta(planeta, **kw):
     return Partida(semilla=11, planeta=planeta, eventos_activos=(), **kw)
 
 
-def test_bandera_apagada_por_defecto_y_sin_efecto():
+def test_bandera_apagada_por_defecto_sin_aborto_y_con_aviso():
+    # ev3-d88 B, repliegue a A: sin aborto; el exceso sostenido solo avisa, una vez, con código y en la bitácora
     assert termico.ABORTO_TERMICO_ACTIVO is False
     p = _quieta("Venus")
     _al_sol(p)
     for _ in range(40):
         p._tick_ambiente()
-    assert p.t_int > termico.TOLERANCIA and p.estado not in ("MODO_SEGURO",)   # T_int se calcula, nada aborta
+    assert p.t_int > termico.TOLERANCIA and p.estado not in ("MODO_SEGURO",)
+    assert sum(a.startswith("T-SOBRE-TOLERANCIA") for a in p.avisos) == 1
+    assert sum("T-SOBRE-TOLERANCIA" in str(m) for m in p.bitacora()["motivos"]) == 1
+
+
+def test_aviso_se_repite_si_la_temperatura_baja_y_vuelve_a_subir():
+    # ev3-d88 B (QA): un nuevo episodio de exceso sostenido vuelve a avisar, con una fila nueva en la bitácora
+    p = _quieta("Venus")
+    _al_sol(p)
+    for _ in range(40):
+        p._tick_ambiente()
+    assert sum(a.startswith("T-SOBRE-TOLERANCIA") for a in p.avisos) == 1
+    p.termico.t_int = 30.0                  # enfriamiento forzado: el exceso se corta
+    p.termico.pasos_sobre_tolerancia = 0
+    for _ in range(40):
+        p._tick_ambiente()
+    assert sum(a.startswith("T-SOBRE-TOLERANCIA") for a in p.avisos) == 2
+    assert sum("T-SOBRE-TOLERANCIA" in str(m) for m in p.bitacora()["motivos"]) == 2
 
 
 def test_marte_se_mantiene_bajo_la_tolerancia_en_400_pasos(bandera):

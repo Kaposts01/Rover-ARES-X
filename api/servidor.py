@@ -284,7 +284,7 @@ def _estado(sesion: Sesion) -> dict:
         "cooldown": sesion.combate.cooldown,
         "ultimo_replanteo": _ultimo_replanteo(p),    # ARX-31b: null si no hubo replanteo del AG
         "temperatura_interna": round(p.t_int, 2),    # ARX-83b: T_int en °C (modelo de PLAN_PLANETAS)
-        "tolerancia": termico.TOLERANCIA,
+        "tolerancia": p.termico.tolerancia,    # ev3-d88 B: la tolerancia del planeta de la partida
         "aborto_termico_activo": termico.ABORTO_TERMICO_ACTIVO,    # O2 de QA: la interfaz aclara si el aborto está apagado
         "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
         "sensores": _sensores(p),                    # ARX-86

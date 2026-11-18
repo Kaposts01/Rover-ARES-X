@@ -19,6 +19,9 @@ from simulador import BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, World
 PESOS_POR_DEFECTO = {"ciencia": 1.0, "distancia": 0.3, "energia": 0.2,
                      "riesgo": 0.8, "tiempo": 0.1}
 PENALIZACION_INVIABLE = 1.0     # P(inviabilidad) por violación dura
+# ARX-92 B (§16): batería máxima posible (150 % de 149) y pendiente de la penalización por exceso de energía
+B_MAX_BATERIA = 225.0
+K_EXCESO = 0.01
 COSTO_BATERIA_PASO = 1.0        # % de batería por celda (supuesto de simulación)
 
 
@@ -410,7 +413,11 @@ class GeneticPlanner:
         refugio = tuple(int(v) for v in self.mundo.refugio)
         inicio = tuple(int(v) for v in self.mundo.inicio)
         libres = [tuple(int(v) for v in p) for p in np.argwhere(self.transitable)]
-        piso = -10.0 * PENALIZACION_INVIABLE
+        # ARX-92 B: cota del fitness de una ruta viable con los pesos del planificador (§16). El piso queda por debajo
+        # de esa cota, así que cualquier ruta inviable pierde frente a cualquier viable.
+        dmax = B_MAX_BATERIA / self.pasos_maximos
+        cota = -(self.pesos["distancia"] * dmax + self.pesos["energia"] + self.pesos["riesgo"] + self.pesos["tiempo"])
+        piso = cota - 1.0
         if construir is None:
             def construir(seq):
                 ruta = self._unir([inicio] + list(seq))
@@ -431,7 +438,11 @@ class GeneticPlanner:
                     seq.append(pasos[n])
                 seq.append(refugio)
                 ruta = construir(seq)
-                if ruta is None:
+                if isinstance(ruta, tuple):   # ARX-92 B: inviable con su exceso de energía (largo + reserva − batería)
+                    _, _, exceso = ruta
+                    f = piso - K_EXCESO * exceso
+                    cache[crom] = (Desglose(f, 0.0, 1.0, 1.0, 1.0, 1.0, -f, 0, 0), None)
+                elif ruta is None:
                     cache[crom] = (Desglose(piso, 0.0, 1.0, 1.0, 1.0, 1.0, -piso, 0, 0), None)
                 else:
                     cache[crom] = (self._desglosar([tuple(int(v) for v in c) for c in ruta],
@@ -481,7 +492,24 @@ class GeneticPlanner:
         def pas(c):
             return [None if q is None else list(map(int, q)) for q in c[1]]
 
+        def vecino_orden():
+            """ARX-92 B: orden del vecino más cercano por longitud de camino, desde el inicio, sin 2-opt."""
+            cur, pend, orden = inicio, list(sitios), []
+            while pend:
+                def coste(q):
+                    d = self._largo(cur, q)
+                    return (np.inf if d is None else d, rango[q])
+                nxt = min(pend, key=coste)
+                orden.append(nxt)
+                pend.remove(nxt)
+                cur = nxt
+            return tuple(orden)
+
+        # ARX-92 B (§16): la población se genera EXACTAMENTE como antes (mismas llamadas a self.rng); solo se reemplaza
+        # el último individuo por el orden del vecino más cercano.
         poblacion = [individuo() for _ in range(self.poblacion)]
+        if n >= 1:
+            poblacion[-1] = (vecino_orden(), tuple(None for _ in range(n + 1)))
         operaciones = ["inicial"] * len(poblacion)
         historial = []
         mejor_visto, gen_mejora = -np.inf, 0

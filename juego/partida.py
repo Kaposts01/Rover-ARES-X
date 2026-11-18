@@ -340,8 +340,10 @@ def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None, anotar=None, con
             # ARX-92c (corrección aprobada por el Maestro): la viabilidad usa la misma reserva que _planear
             # (largo + MARGEN_ENERGIA ≤ batería). Una ruta que no la cumple devuelve None y queda por debajo de
             # cualquier ruta completa viable (piso de fitness en optimizar_orden).
-            if len(c) - 1 + MARGEN_ENERGIA > m.rover.bateria:
-                return None
+            # ARX-92 B (§16): una ruta inviable se devuelve con su exceso (no se descarta): el planificador la penaliza
+            exceso = len(c) - 1 + MARGEN_ENERGIA - m.rover.bateria
+            if exceso > 0:
+                return ("inviable", c, exceso)
             return c
 
         res = gp.optimizar_orden(construir, con_paso=AG_ORDEN_CON_PASO if con_paso is None else con_paso,
@@ -358,7 +360,7 @@ def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None, anotar=None, con
         candidatos = itertools.permutations(pts) if len(pts) <= 6 else [tuple(pts)]
         for orden in candidatos:
             c = construir(list(orden) + [tuple(int(v) for v in m.mundo.refugio)])
-            if c is None:
+            if c is None or isinstance(c, tuple):
                 continue
             validas.append((gp.evaluar_ruta(c, capacidad).fitness, len(c), c))
         if not validas:

@@ -9,15 +9,16 @@ decisión de juego la toma el Maestro. Para activarlo, cambiar la constante a Tr
 """
 from simulador import BARRANCO, OBSTACULO
 
-ABORTO_TERMICO_ACTIVO = False       # apagada: sin ella T_int se calcula pero no cambia ninguna partida
+ABORTO_TERMICO_ACTIVO = True        # ev3-d88 B: activa. Criterio en docs/planes/M13_termico_B.md
 
-K_CALOR = 0.08                      # fracción del salto térmico que sube por paso
+K_CALOR = 0.01                      # fracción del salto térmico que sube por paso (ev3-d88 B: τ = 100 pasos ≈ 17 min con 10 s por paso)
 K_ENFRIAMIENTO = 0.05               # fracción del exceso que baja por paso, solo a la sombra
 REDUCCION_BLINDAJE = 40.0           # °C que resta el blindaje a la temperatura ambiente
 GANANCIA_EXPOSICION = 15.0          # °C que suma el sol directo o el suelo caliente
 T_SOMBRA = 40.0                     # °C: techo de la temperatura efectiva a la sombra o en el refugio (PLAN_PLANETAS: «unos 40 °C»)
 T_INT_INICIAL = 20.0                # °C al empezar la partida
 TOLERANCIA = 60.0                   # °C: por encima, el hardware está fuera de rango (igual que difuso.TEMPERATURA_TOLERANCIA)
+TOLERANCIA_POR_PLANETA = {"Mercurio": 60.0, "Venus": 60.0}   # ev3-d88 B: mismo equipo en ambos planetas; tabla para otro equipo
 PASOS_MAXIMOS_SOBRE_TOLERANCIA = 5  # el aborto llega al paso siguiente a cinco seguidos sobre la tolerancia
 
 # Temperatura ambiente por planeta rover, °C (Mercurio: de día; supuesto de simulación)
@@ -65,8 +66,12 @@ class Termico:
         return self.t_int
 
     @property
+    def tolerancia(self) -> float:
+        return TOLERANCIA_POR_PLANETA.get(self.planeta, TOLERANCIA)
+
+    @property
     def sobre_tolerancia(self) -> bool:
-        return self.t_int > TOLERANCIA
+        return self.t_int > self.tolerancia
 
     @property
     def debe_abortar(self) -> bool:

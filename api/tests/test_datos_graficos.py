@@ -87,6 +87,14 @@ def test_temperatura_es_cuarta_entrada_con_reglas_propias(cliente):
     assert barrido["temperatura"] == 40.0 and len(barrido["filas"]) == 4
 
 
+def test_laboratorio_con_bandera_encendida_responde_con_la_temperatura_pedida(cliente):
+    # ev3-d88 B: con el aborto activo y una partida en curso, /difuso usa la temperatura que se PIDE (no la T_int)
+    assert cliente.post("/paso").status_code == 200
+    fria = cliente.get("/difuso?distancia=18&bateria=30&inclinacion=2&temperatura=-60").json()
+    assert any(r["id"] == "R11" for r in fria["reglas_activadas"])
+    assert fria["punto_entrada"]["temperatura"]["fria"] == 1.0
+
+
 def test_temperatura_fuera_de_rango_es_400(cliente):
     assert cliente.get("/difuso?temperatura=100").status_code == 400
     assert cliente.get("/difuso?temperatura=nan").status_code == 400

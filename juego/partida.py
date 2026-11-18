@@ -397,6 +397,20 @@ def _cronometrado(metodo):
     return envuelto
 
 
+def _paso_de_juego(metodo):
+    """ev3-d88 B: marca que el método corre un paso de juego. Mientras dura, el difuso usa la T_int de la partida
+    (envoltorio de __init__); fuera del paso (laboratorio /difuso), la temperatura que se pide."""
+    @functools.wraps(metodo)
+    def envuelto(self, *args, **kwargs):
+        previo = self._en_paso_juego
+        self._en_paso_juego = True
+        try:
+            return metodo(self, *args, **kwargs)
+        finally:
+            self._en_paso_juego = previo
+    return envuelto
+
+
 def bateria_por_defecto(nivel: int, filas: int, columnas: int, garantia: bool = True) -> float:
     """ARX-87: batería inicial por defecto del nivel y el tamaño (la misma fórmula que usa Partida si no hay campo)."""
     con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
@@ -519,11 +533,14 @@ class Partida:
         self.planeta = planeta
         self.termico = termico.Termico(planeta)
         self._termico_activo = bool(garantia) and self.termico.activo     # planeta sin modelo: inactivo, sin ValueError
+        self._en_paso_juego = False                                       # ev3-d88 B: ver _paso_de_juego
         if self._termico_activo:
             _inferir = self.mision.difuso.inferir
 
             def _inferir_con_temperatura(distancia, bateria, inclinacion, temperatura=0.0):
-                if termico.ABORTO_TERMICO_ACTIVO:
+                # ev3-d88 B: solo durante el paso de juego se usa la T_int; el laboratorio /difuso responde con la
+                # temperatura que se pide
+                if termico.ABORTO_TERMICO_ACTIVO and self._en_paso_juego:
                     temperatura = self.termico.t_int
                 return _inferir(distancia, bateria, inclinacion, temperatura)
             self.mision.difuso.inferir = _inferir_con_temperatura
@@ -953,6 +970,7 @@ class Partida:
         del self.avisos[:-20]
 
     @_cronometrado
+    @_paso_de_juego
     def avanzar_modo(self, modo: str, veto: bool = True) -> dict:
         """Un paso conducido solo por rna, difuso o ag (ARX-11). Ver juego/conduccion.py."""
         if self._recargando > 0:
@@ -1091,6 +1109,7 @@ class Partida:
         return max(abs(ruta[1][0] - pos[0]), abs(ruta[1][1] - pos[1])) > 1
 
     @_cronometrado
+    @_paso_de_juego
     def avanzar_ia(self) -> dict:
         m = self.mision
         if self.estado in ESTADOS_TERMINALES:

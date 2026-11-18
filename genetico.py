@@ -25,6 +25,15 @@ K_EXCESO = 0.01
 COSTO_BATERIA_PASO = 1.0        # % de batería por celda (supuesto de simulación)
 
 
+def cota_viable(pesos: dict, pasos_maximos: int, bateria: float) -> float:
+    """ARX-92 B (§16): cota inferior del fitness de una ruta viable con estos pesos. Con pesos ≥ 0, ciencia ≥ 0,
+    riesgo, energía y tiempo en [0, 1] y distancia ≤ max(B_MAX_BATERIA, batería) / pasos_maximos (una ruta viable
+    tiene pasos ≤ batería, porque el coste por paso es 1). El límite de batería se respeta siempre: si la batería
+    fuera mayor que B_MAX_BATERIA, la cota usa la batería real."""
+    dmax = max(B_MAX_BATERIA, bateria) / pasos_maximos
+    return -(pesos["distancia"] * dmax + pesos["energia"] + pesos["riesgo"] + pesos["tiempo"])
+
+
 def mapa_estimado(mundo: World, rng: np.random.Generator, p_detectar: float = 0.8,
                   p_prior: float = 0.05) -> np.ndarray:
     """Riesgo estimado por celda en [0, 1] que el rover construye con sus sensores.
@@ -415,9 +424,7 @@ class GeneticPlanner:
         libres = [tuple(int(v) for v in p) for p in np.argwhere(self.transitable)]
         # ARX-92 B: cota del fitness de una ruta viable con los pesos del planificador (§16). El piso queda por debajo
         # de esa cota, así que cualquier ruta inviable pierde frente a cualquier viable.
-        dmax = B_MAX_BATERIA / self.pasos_maximos
-        cota = -(self.pesos["distancia"] * dmax + self.pesos["energia"] + self.pesos["riesgo"] + self.pesos["tiempo"])
-        piso = cota - 1.0
+        piso = cota_viable(self.pesos, self.pasos_maximos, self.bateria) - 1.0
         if construir is None:
             def construir(seq):
                 ruta = self._unir([inicio] + list(seq))

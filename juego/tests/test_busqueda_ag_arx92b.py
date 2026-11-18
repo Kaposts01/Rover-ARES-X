@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np  # noqa: E402
 import pytest  # noqa: E402
 
-from genetico import GeneticPlanner  # noqa: E402
+from genetico import GeneticPlanner, cota_viable  # noqa: E402
 from juego.partida import COLUMNAS_BASE, FILAS_BASE, Partida  # noqa: E402
 
 
@@ -20,6 +20,24 @@ def _planificador(semilla=3, pesos=None):
     gp = GeneticPlanner(replace(p.mundo, inicio=origen, sitios=pend), m.riesgo, bateria=100.0,
                         poblacion=30, generaciones=30, semilla=7, pesos=pesos)
     return gp, origen, list(pend)
+
+
+def test_cota_con_todos_los_pesos_en_5():
+    # ARX-92 B (QA): con TODOS los pesos en 5, un cromosoma inviable queda por debajo de la cota de cualquier viable
+    pesos = {k: 5.0 for k in ("ciencia", "distancia", "energia", "riesgo", "tiempo")}
+    gp, _, _ = _planificador(pesos=pesos)
+    cota = cota_viable(gp.pesos, gp.pasos_maximos, gp.bateria)
+    viable = gp.optimizar_orden()
+    assert viable.viable and viable.mejor_desglose.fitness >= cota
+    inviable = gp.optimizar_orden(construir=lambda seq: ("inviable", seq, 5.0))
+    assert not inviable.viable and inviable.mejor_desglose.fitness < cota
+
+
+def test_con_mas_exceso_menos_fitness():
+    gp, _, _ = _planificador()
+    poco = gp.optimizar_orden(construir=lambda seq: ("inviable", seq, 1.0))
+    mucho = gp.optimizar_orden(construir=lambda seq: ("inviable", seq, 50.0))
+    assert mucho.mejor_desglose.fitness < poco.mejor_desglose.fitness
 
 
 @pytest.mark.parametrize("peso", [0.0, 1.0, 5.0])

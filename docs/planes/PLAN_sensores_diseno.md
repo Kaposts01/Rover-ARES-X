@@ -113,7 +113,65 @@ Costo: 94a–94d ~6 h de agente; 94e ~15 min de CPU con turno; 94f 1–2 h de Do
 
 ## Parte 2 · Diseño del juego (ARX-29, 50, 51, 57, 59)
 
-*(pendiente: se escribe y confirma después de la parte 1)*
+### 2.1 Qué falta exactamente (cuadro de la meta del 17/11)
+
+- **M12** parcial: «el terreno y los peligros son los de Marte en todos los planetas; obstáculos móviles no existen». Hoy el planeta solo cambia el aspecto (`app.js`, texturas), la temperatura interna (`juego/termico.py`, solo Mercurio, Venus, Tierra y Marte tienen `T_amb`) y la validación rover/sonda.
+- **M15** parcial: «riesgo estimado no dibujado en la escena» (la capa la está haciendo `Lider_Rover`, fuera de este plan) y «obstáculos móviles». La escena ya sabe dibujarlos: `moviles.js` tiene `actualizarRoca` para `tipo === "obstaculo_movil"`, y el contrato §10 reserva `obstaculos_moviles` (hoy siempre vacío en `/moviles`).
+- **M13** parcial (de paso): el aborto térmico existe pero está apagado (`termico.ABORTO_TERMICO_ACTIVO = False`); solo tiene sentido en los planetas calientes, así que se decide aquí.
+- Alcance mínimo que cierra M12 y M15: obstáculos móviles reales (ARX-29) y que **al menos el terreno y un peligro cambien por planeta** en los cuatro planetas de rover (ARX-50/51/57). Los cuatro de sonda quedan fuera: ev3-d61 terminó en repliegue C (pantalla de sonda parcial, M14) y no son terreno de rover.
+
+### 2.2 ARX-29 · Obstáculos móviles
+
+**Diseño.** Módulo nuevo `juego/moviles.py` con `ObstaculoMovil(id, pos, ruta_patrulla, periodo)`: rocas o dunas que van y vuelven por una patrulla de 2 o 3 celdas libres contiguas, moviéndose una celda cada `periodo` pasos (3). Cantidad por nivel (supuesto): 0, 1, 1, 2, 2. Colocación con el mismo criterio de los drones (`combate._colocar_drones`): celdas libres, lejos del inicio, nunca sitios, refugio, inicio ni estaciones. Mientras ocupa una celda, esa celda es OBSTACULO en el mundo real (`mundo.tipo`), y vuelve a LIBRE al irse: así la física (`paso_fisico`) lo bloquea y el **sensor de proximidad lo ve como lo que es, un volumen**, sin ninguna vía oculta. Nunca entra en la celda del rover ni en la de un dron. Mapa estimado: la celda que el sensor ve se marca `riesgo = 1,0` como hoy; la celda que el obstáculo deja vuelve al prior (0,05) salvo que el mundo real tenga ahí otro peligro. Replanificación: por las vías que ya existen (`V-OBSTACULO-EN-RUTA`, `V-RUTA-CON-RIESGO`); la bitácora anota `obstaculo_movil:<id>` en el motivo cuando es él quien bloquea (M3). **Garantía:** `_es_ganable` trata las celdas de patrulla como bloqueadas (conservadora, igual que con los drones obligatorios); un obstáculo que aislaría refugio o sitio se descarta al colocar, como hace el sismo. API: `/moviles.obstaculos_moviles` con `{id, tipo: "obstaculo_movil", pos, trayectoria, estado: "patrulla"}` (forma ya pactada en el contrato §10); `/mapa` ya refleja el `tipo` del paso. Escena: nada nuevo salvo QA en Chrome (`actualizarRoca` existe), lo que cierra también ARX-34b.
+
+**Lo que no vale la pena:** obstáculos que persiguen o dañan (eso ya lo hacen los drones), o que muten el mapa estimado del rover «por telepatía». Si el usuario quiere que choquen con el rover, es la opción B de la ficha y cambia cómo se pierde.
+
+### 2.3 ARX-50 / 51 / 57 · Escenario, terreno y peligros por planeta
+
+**Alcance honesto.** ev3-d42 eligió «un plan propio por planeta» y `PLAN_PLANETAS.md` ya lo escribe para los ocho. Lo que propongo es **implementar tres mecánicas de suelo, una por familia, y que cada planeta las parametrice** (densidades, eventos, temperatura, gravedad): respeta los ocho planes sin ocho caminos de código. Solo los cuatro planetas de rover reciben terreno; los de sonda ya tienen su pantalla (ARX-85) y su bloqueo.
+
+**Capa de suelo** (`World.suelo`, aparte de `tipo`: una celda LIBRE puede tener suelo NORMAL, LAVA, HIELO o ARENA; nunca sobre sitios, refugio, inicio ni estaciones):
+
+| Suelo | Planeta (densidad supuesta) | Efecto físico al pisarla | Cómo la ve el rover (sin vía oculta) | Supervisor |
+|---|---|---|---|---|
+| LAVA | Mercurio grietas 2 %, Venus charcos 5 % | −20 % de batería y +15 °C de `T_int` por paso; nunca es FRACASO instantáneo (el FRACASO llega por batería 0 o aborto térmico) | Cámara térmica: `temperatura_suelo_frontal` de la celda siguiente, ruido σ 20 °C (una grieta incandescente se ve); mapa orbital con p 0,9 (brilla) | `V-SUELO-CALIENTE` si la lectura supera 200 °C; la garantía la trata como bloqueada |
+| HIELO | Marte (variante polar desde el nivel 3) 4 %, Tierra 2 % | Con probabilidad 0,5 (semilla) el rover desliza una celda más en su rumbo si está libre; +1 de batería | IMU: vibración baja en la celda que se pisa; el orbital casi no lo distingue (p 0,3) | Ninguno (no es mortal); se marca `riesgo = 0,5` al descubrirlo para que la ruta lo evite si puede |
+| ARENA densa | Marte dunas 6 %, Tierra 3 % | Doble costo de batería por paso | IMU: vibración alta en la celda pisada; orbital p 0,6 | Ninguno; `riesgo = 0,3` al descubrirla |
+
+La vibración de la parte 1 (IMU de la celda actual) es la que identifica HIELO y ARENA: con esto deja de ser un rasgo vacío. La RNA de la parte 1 sigue clasificando la celda siguiente en libre/obstáculo/barranco; **no** se le pide aprender suelos (sería otro modelo y otro dataset; queda declarado como trabajo futuro).
+
+**Parámetros por planeta** (`juego/escenario.py`, nuevo: `escenario(planeta, nivel)` → densidades de obstáculos y barrancos (× factor), suelos, eventos activos, probabilidad y tipo de ambiente, `T_amb` (ya en `termico.py`), gravedad → costo por paso (0,38 g: ×0,9; 0,91 g: ×1,0; 1 g: ×1,05; supuesto declarado), aborto térmico encendido solo en Mercurio y Venus). Marte con los valores de hoy en nivel 1–2 (el congelado no cambia por este bloque; cambia por la parte 1).
+
+**Eventos propios (ARX-57)**, con el marco de ARX-30 (generador propio por evento, probabilidad por nivel, descarte si aísla refugio o sitio): Venus «erupción» (abre 2–3 celdas de LAVA a 2–4 celdas del rover), Mercurio «grieta incandescente» (1 celda LAVA), Marte «placa de hielo» (2 celdas HIELO), Tierra «deslizamiento» (una ladera con pendiente > 20° pasa a OBSTACULO; reutiliza el resbalón de ARX-28c, que se activa en Tierra). La tormenta de arena solo en Marte y Tierra; la noche en todos los de rover; la lluvia de Tierra es la tormenta con otro nombre y sin polvo.
+
+**Interfaz (ARX-51):** capa de suelo en la escena (lava con brillo, hielo claro, arena ocre) sobre la textura del planeta que ya existe; leyenda; medidor de calor visible en los planetas calientes (`CALOR_MOTOR`); el selector «Escenario» ya no existe (ev3-d46).
+
+**Lo que no vale la pena ahora:** modo sonda completo (ev3-d61 B, más de dos días, M14), presión y corrosión de Venus como variables aparte (se expresan en el desgaste de batería), radiación de Mercurio (ídem), y una RNA de suelos.
+
+### 2.4 ARX-59 · Dificultad por escalón: ¿sigue vigente?
+
+Metas de ev3-d43 A: Medio gana el 60–70 % y dura más de 150 pasos; Hardcore gana menos del 10 % y dura más de 300; Muy fácil ~500 pasos. Medido (ARX-58, 20 semillas por nivel, 17/11): **pequeño 20/20 en los cinco niveles** (no hay escalón); grande 20, 20, 10, 6 y 4 de 20 (100, 100, 50, 30 y 20 %). Las estaciones de recarga (ev3-d45 A, ev3-d47 B) quedaron detrás de una bandera con un bucle (semilla 2018) y duraciones de 107–171 pasos: la meta de 500 pasos **no se alcanza con estaciones ni sin ellas**. Lo que sí es barato y cambia el escalón en ambos tamaños: más sitios y drones por nivel (ev3-d45 B, ~4 h) y los peligros nuevos por nivel de este plan (móviles y suelos crecen con el nivel). Va a ficha (ev3-d87) porque cambia cómo se gana.
+
+### 2.5 Tareas
+
+| Tarea | Paso | Criterio de hecho | Archivos |
+|---|---|---|---|
+| 29a Motor | `juego/moviles.py`; colocación, patrulla, `tipo` ocupada/liberada; garantía conservadora; motivo en bitácora | Pruebas: nunca pisa rover, dron, sitio ni refugio; la celda liberada vuelve a LIBRE y su riesgo al prior; una partida con móviles sigue ganable si la garantía dijo sí (20 semillas, nivel 4) | `juego/moviles.py` (nuevo), `juego/partida.py` (tick y garantía), `tests/` |
+| 29b API y escena | `/moviles.obstaculos_moviles` con la forma del contrato; QA en Chrome con `actualizarRoca` (cierra ARX-34b) | Prueba de la API; captura en Chrome con la roca moviéndose y la ruta replanificada | `api/servidor.py`, `api/tests/`, `docs/CONTRATOS_GRAFICOS.md` §10 |
+| 50a Escenario | `juego/escenario.py` con los parámetros por planeta y nivel; `Partida` los usa | Prueba: Marte nivel 1 20×30 produce el mismo mundo que hoy (hash); cada planeta cambia al menos densidad, eventos y `T_amb` | `juego/escenario.py` (nuevo), `juego/partida.py`, `simulador.py` (`generar_mundo` acepta `suelos`) |
+| 50b Suelos | `World.suelo`; LAVA, HIELO, ARENA con sus efectos físicos; sensores IR y IMU; vetos y riesgo de la tabla; garantía trata LAVA como bloqueada | Pruebas por suelo (efecto, lectura, veto); `paso_fisico` sobre hielo desliza con semilla fija; ninguna lectura consulta `suelo` salvo para la física de la celda pisada y la IR de la contigua | `simulador.py`, `integracion.py`, `tests/` |
+| 50c Térmico | Aborto térmico encendido por escenario (Mercurio, Venus); sombra de obstáculos y barrancos ya existe | 20 semillas Venus nivel 3: proporción de abortos térmicos publicada tal como salga | `juego/termico.py`, `juego/partida.py` |
+| 57a Eventos | Erupción, grieta incandescente, placa de hielo, deslizamiento, con el marco de ARX-30 | Pruebas: cada evento respeta refugio y sitios; aparece en `/moviles.eventos_del_paso` con `celdas` | `juego/partida.py`, `api/servidor.py`, `tests/` |
+| 51a Escena | Capa de suelo, leyenda, medidor de calor en calientes | QA en Chrome en los cuatro planetas de rover | `api/static/app.js`, `efectos.js`, `index.html` |
+| 59a Escalón | Según ev3-d87; se mide **una vez**, al final, en la regeneración de la parte 3 | Tabla por nivel y tamaño publicada tal como salga, con las metas de ev3-d43 al lado | `juego/partida.py`, docs |
+
+Costos: 29a–b ~6 h + QA 1 h; 50a–c ~10 h; 57a ~4 h; 51a ~3 h; 59a 0–4 h según la ficha. En total dos a tres días de agente, más la medición única. Orden: 29 puede ir en paralelo con la parte 1 (archivos distintos, ver parte 3); 50/51/57 **después** de ARX-94 (los dos tocan `simulador.py` y los sensores) y 59 al final.
+
+### 2.6 Fichas de la parte 2 (en el mismo JSON)
+
+- **ev3-d85** · ARX-29: **A** solo bloquean (patrulla de 2–3 celdas, periodo 3, garantía conservadora; recomendada); **B** además dañan la batería si alcanzan al rover (cambia cómo se pierde); **C** no implementar y declarar.
+- **ev3-d86** · ARX-50/51/57: **A** tres mecánicas de suelo por familia, parametrizadas por planeta, cuatro planetas de rover, aborto térmico encendido en los calientes (recomendada, ~2 días); **B** A más el modo sonda completo (ev3-d61 B, +2 días, M14); **C** solo parámetros por planeta (densidades, eventos, temperatura, gravedad) sin suelos nuevos (~4 h; M12 queda parcial con nota).
+- **ev3-d87** · ARX-59: **A** más sitios y drones por escalón sin estaciones (ev3-d45 B; recomendada, ~4 h) y declarar que la meta de 500 pasos no se alcanza; **B** retomar las estaciones (medio día más el bucle de la semilla 2018 y la medición) para 300–500 pasos; **C** cerrar ARX-59 con la tabla medida y lo que agreguen 29 y 50/57, sin tocar sitios.
 
 ## Parte 3 · Paralelismo y plan de regeneración
 
@@ -121,4 +179,5 @@ Costo: 94a–94d ~6 h de agente; 94e ~15 min de CPU con turno; 94f 1–2 h de Do
 
 ## Dónde quedé
 
-- 17/11 22:5x · Parte 1 escrita y medida (scripts junto al plan). Faltan partes 2 y 3.
+- 17/11 22:05 · Parte 1 escrita y medida (scripts junto al plan); commit 338d4ad.
+- 17/11 22:3x · Parte 2 escrita (ARX-29, 50/51/57, 59; fichas ev3-d85 a d87). Falta la parte 3.

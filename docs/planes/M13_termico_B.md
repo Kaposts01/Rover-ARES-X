@@ -24,3 +24,8 @@ La B de la AG (envoltorio de `_ag_con_todos_los_sitios`) queda intacta: no se to
 
 ## Medición
 - El mismo barrido que M13 (40×60, 20 semillas por nivel, Mercurio y Venus), con turno. Se publica tal como salga, incluidas las cifras antes (M13) y después.
+
+## Condición de revisión (Orquestador, antes de codificar)
+- `K_CALOR` y `ABORTO_TERMICO_ACTIVO` son GLOBALES. T_int alimenta al difuso (`_inferir_con_temperatura`, cuarta entrada de ev3-d40), así que cambiar `K_CALOR` puede mover las velocidades del difuso también en Marte, y con eso el congelado y el exigente.
+- Criterio: el **congelado (`d6fb9079…`) y el exigente de 4 sitios deben quedar IDÉNTICOS por hash**. Se comprueba al codificar, antes de pedir turno.
+- Si cambian, **se para** y se trae la fila afectada. **No se restringe `K_CALOR` por planeta** para esquivarlo: eso sería una segunda decisión.

@@ -1,0 +1,49 @@
+[
+  {
+    "code": "ev3-d83",
+    "title": "ARES-X (ARX-94): rediseño de sensores para que la RNA no sea redundante; ¿con mapa orbital que no ve grietas, con el mapa de hoy, o no rediseñar?",
+    "what": "Medido (PLAN_sensores_diseno.md §1.2–1.3): la RNA es redundante porque recibe el tipo real de las celdas vecinas como rasgo (borde_barranco) y porque el sensor de proximidad ve barrancos a 20 celdas, cosa que un haz no hace. Además el relieve se genera por filas independientes: vecinos norte-sur difieren 0,67 m de mediana y hasta 6 m, así que ningún sensor físico de desnivel sirve sin cambiar el relieve. Con relieve suave, barrancos de 1–4 m de profundidad, telémetro inclinado (σ 0,5 m) y cámara de contraste (σ 0,4), la RNA fusiona ambos y detecta un 4–10 % de barrancos que el veto duro no ve (7 de 73), con menos falsos positivos (6 frente a 9); sin cámara, 0 %. Con el mapa orbital al 80 % el efecto en partida sería menos de un barranco por juego: el criterio previo (≥ 5 de 20 semillas con cambio) está en riesgo salvo que el mapa previo no vea barrancos poco profundos.",
+    "impact": "M2 y M7 (aporte y vínculo de la RNA), M5 y M6 (modelo v2 reportado completo; v1 conservado), M12 (sensores ruidosos con justificación física). Cambia el mundo y por tanto todas las cifras (ficha ev3-d84). Un solo frente, ~1 día de agente + QA.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Sensores físicos + mapa orbital que no ve barrancos poco profundos", "detail": "ARX-94a–f: relieve suave, profundidad por barranco, telémetro inclinado, cámara, vibración de la celda actual; vetos por sensor (desnivel < −2 m) más la RNA en la banda de 1–2 m; mapa orbital con p_detectar 0,8 para obstáculos y barrancos profundos y 0,3 para los de menos de 2 m (una imagen orbital resuelve relieve grande, no grietas). Única opción con la que el criterio de 5/20 es alcanzable; se publica tal como salga. ~1 día + 15 min de CPU con turno + QA."},
+      {"key": "B", "label": "Sensores físicos con el mapa orbital de hoy (0,8 para todo)", "detail": "Igual que A sin tocar el mapa previo. La RNA deja de copiar el mapa (M7 honesto, M5/M6 completos) pero su efecto en partida queda en ~1 de cada 10 barrancos desconocidos: M2-RNA probablemente sigue parcial y así se informa. Mismo costo que A."},
+      {"key": "C", "label": "No rediseñar: declarar la RNA como fusión redundante", "detail": "Sin código. El informe cierra M2-RNA con los números de 28f, 93 y esta medición, y declara el rediseño como trabajo futuro con plan. 0,5 h de Docs. No cumple lo que pidió el usuario el 17/11."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3083,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-94", "ARX-93", "ARX-48"],
+    "evidence": [],
+    "evidenceNote": "docs/planes/PLAN_sensores_diseno.md §1.1–1.4 y scripts PLAN_sensores_medicion_1.py y _2.py (9 s de CPU, 60 mapas de entrenamiento, 20 de prueba, 7402 lecturas, 73 barrancos); RNA_aporte.md §3 y §10; genetico.py mapa_estimado (p_detectar 0,8); integracion.py SafetySupervisor. Recomiendo A: es la única con la que el criterio previo puede cumplirse y su supuesto (orbital no ve grietas) es físico y declarado. La responde el Maestro por delegación."
+  },
+  {
+    "code": "ev3-d84",
+    "title": "ARES-X (ARX-94): el rediseño cambia el relieve y todas las cifras; ¿regenerar con atribución o mantener el esquema viejo por defecto?",
+    "what": "El mundo v2 (relieve suave 2D y profundidad por barranco) cambia el congelado, el exigente, el exigente de 10 sitios, la traza de divergencias, la tabla de modos, la rejilla, la línea base por nivel y la garantía de ganabilidad. Hoy el hash del congelado es d6fb9079 (entrega del 17/11). Hay dos caminos: regenerar una sola vez al cierre de la parte 1 con una tabla antes → después y la causa anotada, o dejar el mundo y los sensores viejos por defecto (bandera MUNDO_V1 = True) y usar el v2 solo en el laboratorio de la RNA y en una comparación aparte.",
+    "impact": "M18 (reproducibilidad y cifras), M19 y M20 (ablaciones y exportación), y el tiempo de la parte 3 (una regeneración de ~40 min de CPU con turno). B conserva las cifras publicadas pero deja el juego por defecto con la RNA redundante y duplica caminos de código y pruebas.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Regenerar con atribución (una sola vez al cierre de la parte 1)", "detail": "Hash nuevo del congelado; tabla antes → después por métrica con la causa «mundo v2 + sensores»; el informe conserva la tabla del 17/11 rotulada como entrega y suma la nueva. ~40 min de CPU con turno + 1 h de Docs. Es coherente con el plan de regeneración única de la parte 3."},
+      {"key": "B", "label": "Mantener el esquema viejo por defecto; v2 solo en el laboratorio", "detail": "MUNDO_V1 = True por defecto; las cifras publicadas no cambian; el laboratorio de la RNA y una comparación aparte usan v2. El juego sigue con la RNA redundante. Doble camino de código y pruebas (~+2 h de mantenimiento en cada tarea posterior)."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3084,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-94", "ARX-48"],
+    "evidence": [],
+    "evidenceNote": "PLAN_sensores_diseno.md §1.5; hash del congelado d6fb9079 en el cuadro de la meta del 17/11; scripts/regenerar_todo.py (tanda única). Recomiendo A. La responde el Maestro por delegación."
+  }
+]

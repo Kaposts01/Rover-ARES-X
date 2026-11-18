@@ -185,7 +185,7 @@ Estado al commit de la regeneración definitiva (`fcd2835`). Cada fila se verifi
   - Hecho: temperatura como cuarta entrada, ev3-d40 A (`difuso.py`, regla R10).
   - Hecho: membresías por entrada en la API (`punto_entrada` en `_difuso_datos`, `api/servidor.py`).
   - Sin verificar: curvas de las membresías en la API.
-  - Pendiente: aborto térmico (ARX-83). El código está en `juego/termico.py` con `ABORTO_TERMICO_ACTIVO = False`; activarlo requiere la medición de QA y una decisión.
+  - Decidido ev3-d88 → A: aviso sin aborto (`T-SOBRE-TOLERANCIA`). El código está en `juego/termico.py` con `ABORTO_TERMICO_ACTIVO = False`; la medición está en `docs/planes/M13_termico_B.md`.
 - **AG (15 %):**
   - Hecho: `/ag` devuelve `candidatos`, `generaciones` (historial por generación con cromosoma, fitness y operación) y `parametros` (ARX-47a, `api/servidor.py`).
   - Hecho: el AG decide el orden de visita en el juego (entrega 2, ARX-92c).

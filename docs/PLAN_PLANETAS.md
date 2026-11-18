@@ -19,16 +19,16 @@ Cálculo por paso (supuesto de simulación):
 - `T_int(t+1) = T_int(t) + k_calor · max(0, T_amb_efectiva − T_int(t)) − k_enfriamiento · max(0, T_int(t) − T_amb_efectiva) · sombra`
 - `T_amb_efectiva = T_amb_planeta + ganancia_exposicion` (sol directo o suelo caliente) `− reduccion_blindaje`.
 - `sombra` vale 1 en una celda a la sombra o en el refugio, y 0 al sol. Un cráter o un barranco dan sombra.
-- Tolerancia del hardware (aborto, §12): `T_int > 60 °C` **durante más de 5 pasos seguidos**. Así el calor es un peligro
+- Tolerancia del hardware (§12; ev3-d88 → A: aviso `T-SOBRE-TOLERANCIA`, sin aborto): `T_int > 60 °C` **durante más de 5 pasos seguidos**. Así el calor es un peligro
   que obliga a buscar sombra, no un aborto instantáneo.
-- Valores supuestos: `k_calor = 0,08`, `k_enfriamiento = 0,05`, `reduccion_blindaje = 40 °C`, `ganancia_exposicion = 15 °C`.
+- Valores supuestos: `k_calor = 0,01` (ev3-d88 B: τ = 100 pasos con 10 s por paso; antes 0,08), `k_enfriamiento = 0,05`, `reduccion_blindaje = 40 °C`, `ganancia_exposicion = 15 °C`.
 
 Efecto sobre cada planeta jugable:
 
 - **Mercurio:** de día `T_amb_efectiva` pasa de 430 °C; a la sombra de un cráter baja a unos 40 °C. El rover tiene
   que alternar sol y sombra, y el difuso reduce velocidad (R10) al subir `T_int`.
-- **Venus:** `T_amb_efectiva` ≈ 464 °C con blindaje. La `T_int` sube de forma sostenida; el rover sobrevive unos
-  pocos pasos al sol y necesita refugio o sombra (cráter o pared de roca) para enfriarse. Es un reto, no un aborto seguro.
+- **Venus:** `T_amb_efectiva` ≈ 464 °C con blindaje. La `T_int` sube de forma sostenida; con `k_calor = 0,01` el rover
+  tarda del orden de 20 a 30 pasos en superar 60 °C durante 5 seguidos (barrido ev3-d88 B) y necesita refugio o sombra (cráter o pared de roca) para enfriarse. Es un reto; hoy solo avisa, no aborta.
 - **Marte, Tierra, Mercurio nocturno, etc.:** la temperatura interna se mantiene en rango normal la mayor parte del tiempo.
 
 ## Tabla resumen

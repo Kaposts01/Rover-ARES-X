@@ -17,6 +17,15 @@ LIBRE, OBSTACULO, BARRANCO = 0, 1, 2
 FIRMA_BARRANCO_ACTIVA = False
 DESNIVEL_BARRANCO_M = 3.0
 
+# ARX-94a: mundo v2 (relieve suave 2D, barrancos con profundidad propia U(1, 4) m, obstáculos con
+# altura). MUNDO_V1 = True reproduce exactamente el mundo anterior (suma de ruido por filas y
+# firma opcional del barranco); es el perfil "v1" de pruebas y comparaciones.
+MUNDO_V1 = False
+RELIEVE_SIGMA_M = 1.5        # desviación del relieve v2 (supuesto de simulación)
+RELIEVE_SUAVIDAD = 3.0       # escala de suavizado del relieve v2, en celdas
+PROFUNDIDAD_BARRANCO_M = (1.0, 4.0)
+ALTURA_OBSTACULO_M = (0.3, 2.0)
+
 # Movimientos cardinales (fila, columna)
 # Ocho direcciones (ev3-d29 B). Una diagonal se permite si la celda de destino es transitable.
 MOVIMIENTOS = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "O": (0, -1),
@@ -72,6 +81,14 @@ class World:
     refugio: tuple
     inicio: tuple
     semilla: int
+    profundidad: np.ndarray = None   # metros bajo el relieve; 0 fuera de barrancos (ARX-94a)
+    altura: np.ndarray = None        # metros sobre el suelo; solo en obstáculos (ARX-94a)
+
+    def __post_init__(self):
+        if self.profundidad is None:
+            self.profundidad = np.zeros(self.tipo.shape)
+        if self.altura is None:
+            self.altura = np.zeros(self.tipo.shape)
 
     @property
     def forma(self):
@@ -84,15 +101,43 @@ class World:
     def transitable(self, pos) -> bool:
         return self.dentro(pos) and self.tipo[pos] == LIBRE
 
-    def marcar_barranco(self, pos) -> None:
-        """Evento manual o de simulación: convierte una celda en precipicio."""
+    def marcar_barranco(self, pos, rng=None) -> None:
+        """Evento manual o de simulación: convierte una celda en precipicio.
+
+        Mundo v2: la celda baja U(1, 4) m sorteados con `rng` (el generador del evento; si no se da,
+        uno determinista derivado de la semilla y la celda). Marcar dos veces no baja dos veces.
+        """
         if not self.dentro(pos):
             raise ValueError(f"Celda fuera del mapa: {pos}")
         if pos in (self.inicio, self.refugio):
             raise ValueError("No se puede poner un barranco sobre inicio o refugio.")
-        if FIRMA_BARRANCO_ACTIVA and self.tipo[pos] != BARRANCO:
-            self.elevacion[pos] -= DESNIVEL_BARRANCO_M
+        if self.tipo[pos] != BARRANCO:
+            if not MUNDO_V1:
+                if rng is None:
+                    rng = np.random.default_rng([abs(int(self.semilla)), int(pos[0]), int(pos[1])])
+                prof = float(rng.uniform(*PROFUNDIDAD_BARRANCO_M))
+                self.elevacion[pos] -= prof
+                self.profundidad[pos] = prof
+            elif FIRMA_BARRANCO_ACTIVA:
+                self.elevacion[pos] -= DESNIVEL_BARRANCO_M
+                self.profundidad[pos] = DESNIVEL_BARRANCO_M
         self.tipo[pos] = BARRANCO
+
+
+def _relieve_suave(rng, forma, sigma_m=RELIEVE_SIGMA_M, suavidad=RELIEVE_SUAVIDAD) -> np.ndarray:
+    """Relieve 2D: ruido gaussiano blanco filtrado con un núcleo gaussiano separable y reescalado
+    a desviación `sigma_m`. Vecinos de cualquier dirección difieren poco (no hay suma por filas)."""
+    ruido = rng.normal(0, 1, size=forma)
+    radio = int(np.ceil(3 * suavidad))
+    x = np.arange(-radio, radio + 1)
+    nucleo = np.exp(-0.5 * (x / suavidad) ** 2)
+    nucleo /= nucleo.sum()
+    for eje in (0, 1):
+        pad = [(0, 0), (0, 0)]
+        pad[eje] = (radio, radio)
+        relleno = np.pad(ruido, pad, mode="reflect")
+        ruido = np.apply_along_axis(lambda v: np.convolve(v, nucleo, mode="valid"), eje, relleno)
+    return ruido / ruido.std() * sigma_m
 
 
 def generar_mundo(semilla: int, filas: int = 20, columnas: int = 30,
@@ -116,10 +161,23 @@ def generar_mundo(semilla: int, filas: int = 20, columnas: int = 30,
         if p not in (inicio, refugio):
             tipo[p] = BARRANCO
 
-    # Elevación suavizada: base de altimetría (supuesto de simulación)
-    elevacion = np.cumsum(rng.normal(0, 0.2, size=(filas, columnas)), axis=1)
-    if FIRMA_BARRANCO_ACTIVA:
-        elevacion[tipo == BARRANCO] -= DESNIVEL_BARRANCO_M
+    profundidad = np.zeros((filas, columnas))
+    altura = np.zeros((filas, columnas))
+    if MUNDO_V1:
+        # Mundo v1: elevación por suma de ruido a lo largo de cada fila (supuesto original)
+        elevacion = np.cumsum(rng.normal(0, 0.2, size=(filas, columnas)), axis=1)
+        if FIRMA_BARRANCO_ACTIVA:
+            elevacion[tipo == BARRANCO] -= DESNIVEL_BARRANCO_M
+            profundidad[tipo == BARRANCO] = DESNIVEL_BARRANCO_M
+    else:
+        # Mundo v2: relieve suave 2D; el barranco baja U(1, 4) m bajo el relieve; el obstáculo tiene altura
+        elevacion = _relieve_suave(rng, (filas, columnas))
+        sorteo_prof = rng.uniform(*PROFUNDIDAD_BARRANCO_M, size=(filas, columnas))
+        sorteo_alt = rng.uniform(*ALTURA_OBSTACULO_M, size=(filas, columnas))
+        es_barranco = tipo == BARRANCO
+        profundidad[es_barranco] = sorteo_prof[es_barranco]
+        elevacion[es_barranco] -= sorteo_prof[es_barranco]
+        altura[tipo == OBSTACULO] = sorteo_alt[tipo == OBSTACULO]
 
     sitios = {}
     intentos = 0
@@ -130,7 +188,8 @@ def generar_mundo(semilla: int, filas: int = 20, columnas: int = 30,
             sitios[p] = int(rng.integers(1, 10))
 
     return World(tipo=tipo, elevacion=elevacion, sitios=sitios,
-                 refugio=refugio, inicio=inicio, semilla=semilla)
+                 refugio=refugio, inicio=inicio, semilla=semilla,
+                 profundidad=profundidad, altura=altura)
 
 
 @dataclass

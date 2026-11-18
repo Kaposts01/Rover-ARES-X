@@ -94,6 +94,7 @@ def test_bitacora_exporta_dataframe():
 
 def test_firma_barranco_apagada_no_cambia_el_mundo(monkeypatch):
     import simulador
+    monkeypatch.setattr(simulador, "MUNDO_V1", True)
     assert simulador.FIRMA_BARRANCO_ACTIVA is False
     a = generar_mundo(semilla=11)
     monkeypatch.setattr(simulador, "FIRMA_BARRANCO_ACTIVA", False)
@@ -103,6 +104,7 @@ def test_firma_barranco_apagada_no_cambia_el_mundo(monkeypatch):
 
 def test_firma_barranco_encendida_baja_las_celdas_barranco(monkeypatch):
     import simulador
+    monkeypatch.setattr(simulador, "MUNDO_V1", True)
     apagado = generar_mundo(semilla=11)
     monkeypatch.setattr(simulador, "FIRMA_BARRANCO_ACTIVA", True)
     m = generar_mundo(semilla=11)
@@ -115,6 +117,7 @@ def test_firma_barranco_encendida_baja_las_celdas_barranco(monkeypatch):
 
 def test_marcar_barranco_lleva_la_firma_solo_con_la_bandera(monkeypatch):
     import simulador
+    monkeypatch.setattr(simulador, "MUNDO_V1", True)
     for activa, baja in ((False, 0.0), (True, 3.0)):
         monkeypatch.setattr(simulador, "FIRMA_BARRANCO_ACTIVA", activa)
         m = generar_mundo(semilla=3, n_barrancos=0)
@@ -123,3 +126,83 @@ def test_marcar_barranco_lleva_la_firma_solo_con_la_bandera(monkeypatch):
         m.marcar_barranco((5, 5))  # repetir no baja dos veces
         assert m.tipo[5, 5] == BARRANCO
         assert float(m.elevacion[5, 5]) == pytest.approx(antes - baja)
+
+
+# ---- ARX-94a: mundo v2 (relieve suave, profundidad, altura) ----
+
+# hash de tipo y elevacion de las semillas 0..19 con el generador anterior (commit a0bf109)
+HASH_MUNDO_V1 = "e4c644b4284dbb184f75e0bffb4734fcae1a59a2b3d7665ba438fe44c99bc6e9"
+
+
+def _hash_mundos(n=20):
+    import hashlib
+    h = hashlib.sha256()
+    for s in range(n):
+        m = generar_mundo(s)
+        h.update(m.tipo.tobytes())
+        h.update(m.elevacion.tobytes())
+    return h.hexdigest()
+
+
+def test_mundo_v1_reproduce_el_mapa_de_antes(monkeypatch):
+    import simulador
+    monkeypatch.setattr(simulador, "MUNDO_V1", True)
+    assert _hash_mundos() == HASH_MUNDO_V1
+
+
+def test_mundo_v2_es_el_defecto_y_cambia_la_elevacion():
+    import simulador
+    assert simulador.MUNDO_V1 is False
+    assert _hash_mundos() != HASH_MUNDO_V1
+
+
+def test_mundo_v2_misma_semilla_mismo_mundo():
+    a, b = generar_mundo(7), generar_mundo(7)
+    for campo in ("tipo", "elevacion", "profundidad", "altura"):
+        assert np.array_equal(getattr(a, campo), getattr(b, campo))
+    assert not np.array_equal(a.elevacion, generar_mundo(8).elevacion)
+
+
+def test_relieve_v2_suave_entre_vecinos_norte_sur():
+    d = np.concatenate([np.abs(np.diff(generar_mundo(s).elevacion, axis=0)).ravel() for s in range(20)])
+    assert np.median(d) < 0.3
+    assert np.percentile(d, 90) < 0.8
+
+
+def test_barranco_v2_baja_de_1_a_4_m_bajo_sus_vecinos():
+    n = 0
+    for s in range(20):
+        m = generar_mundo(s)
+        assert np.all(m.profundidad[m.tipo != BARRANCO] == 0)
+        for f, c in zip(*np.nonzero(m.tipo == BARRANCO)):
+            n += 1
+            assert 1.0 <= m.profundidad[f, c] <= 4.0
+            vec = [m.elevacion[f + a, c + b] for a in (-1, 0, 1) for b in (-1, 0, 1)
+                   if (a or b) and m.dentro((f + a, c + b)) and m.tipo[f + a, c + b] != BARRANCO]
+            if vec:
+                # el relieve cambia poco entre vecinos: el hoyo queda dentro de la banda +- 1 m
+                assert 0.0 < np.mean(vec) - m.elevacion[f, c] < 5.0
+                assert np.mean(vec) - m.elevacion[f, c] == pytest.approx(m.profundidad[f, c], abs=1.0)
+    assert n > 0
+
+
+def test_obstaculo_v2_tiene_altura_entre_03_y_2_m():
+    m = generar_mundo(3)
+    es_o = m.tipo == OBSTACULO
+    assert es_o.any()
+    assert np.all((m.altura[es_o] >= 0.3) & (m.altura[es_o] <= 2.0))
+    assert np.all(m.altura[~es_o] == 0)
+
+
+def test_marcar_barranco_v2_asigna_profundidad_con_el_generador_del_evento():
+    m = generar_mundo(3, n_barrancos=0)
+    antes = float(m.elevacion[5, 5])
+    m.marcar_barranco((5, 5), rng=np.random.default_rng(99))
+    esperado = float(np.random.default_rng(99).uniform(1.0, 4.0))
+    assert m.profundidad[5, 5] == pytest.approx(esperado)
+    assert m.elevacion[5, 5] == pytest.approx(antes - esperado)
+    m.marcar_barranco((5, 5), rng=np.random.default_rng(1))   # repetir no baja otra vez
+    assert m.elevacion[5, 5] == pytest.approx(antes - esperado)
+    otra = generar_mundo(3, n_barrancos=0)
+    otra.marcar_barranco((6, 6))
+    assert 1.0 <= otra.profundidad[6, 6] <= 4.0

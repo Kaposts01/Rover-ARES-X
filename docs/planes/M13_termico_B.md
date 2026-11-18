@@ -29,3 +29,23 @@ La B de la AG (envoltorio de `_ag_con_todos_los_sitios`) queda intacta: no se to
 - `K_CALOR` y `ABORTO_TERMICO_ACTIVO` son GLOBALES. T_int alimenta al difuso (`_inferir_con_temperatura`, cuarta entrada de ev3-d40), así que cambiar `K_CALOR` puede mover las velocidades del difuso también en Marte, y con eso el congelado y el exigente.
 - Criterio: el **congelado (`d6fb9079…`) y el exigente de 4 sitios deben quedar IDÉNTICOS por hash**. Se comprueba al codificar, antes de pedir turno.
 - Si cambian, **se para** y se trae la fila afectada. **No se restringe `K_CALOR` por planeta** para esquivarlo: eso sería una segunda decisión.
+
+## Resultados (medición con turno, Esp_QA libre a 23:36; inicio 23:38, fin 00:09)
+Script: `scripts/barrido_termico_B.py` (variante de M13: línea base con K_CALOR 0,08 y bandera apagada; encendida con K_CALOR 0,01 y aborto activo). Datos: `docs/planes/mediciones/barrido_termico_B.json` y `.log`.
+Control: la línea base reproduce M13 (20/20, 20/20, 19/20, 17/20, 15/20 en Mercurio; igual en Venus).
+
+Se gana hoy · abortadas con la configuración nueva · paso medio del aborto · T interna media y máxima:
+| Planeta | Nivel | Gana hoy | Abortadas | Siguen ganando | Paso medio aborto | T media | T máx |
+|---|---|---|---|---|---|---|---|
+| Mercurio | 1 | 20/20 | 20 | 0 | 22,8 | 72,8 | 79,8 |
+| Mercurio | 2 | 20/20 | 20 | 0 | 24,4 | 74,4 | 79,9 |
+| Mercurio | 3 | 19/20 | 19 | 0 | 25,4 | 74,7 | 80,0 |
+| Mercurio | 4 | 17/20 | 17 | 0 | 24,5 | 74,4 | 80,1 |
+| Mercurio | 5 | 15/20 | 15 | 0 | 30,4 | 73,7 | 79,5 |
+| Venus | 1 | 20/20 | 20 | 0 | 20,6 | 73,2 | 82,1 |
+| Venus | 2 | 20/20 | 20 | 0 | 22,6 | 74,8 | 81,4 |
+| Venus | 3 | 19/20 | 19 | 0 | 23,5 | 75,2 | 81,8 |
+| Venus | 4 | 17/20 | 17 | 0 | 22,9 | 74,5 | 81,7 |
+| Venus | 5 | 15/20 | 15 | 0 | 27,0 | 74,1 | 81,5 |
+
+Lectura: todas las partidas que se ganan hoy abortan con la configuración nueva, entre los pasos 20 y 30. No queda ninguna ganable, así que **no hay repliegue a A** (solo había que declararlo si no quedaba ninguna ganable con el aborto activo). Resultado: el aborto llega en el paso ~23 de media, con temperatura interna que supera los 60 °C de forma sostenida.

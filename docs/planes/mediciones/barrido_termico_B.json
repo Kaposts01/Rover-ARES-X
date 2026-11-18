@@ -1,0 +1,3399 @@
+{
+ "filas": [
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 1,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 93,
+    "tmax": 363.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 77.5,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 72,
+    "tmax": 377.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 77.4,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 109,
+    "tmax": 383.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 68.3,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 4,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 73,
+    "tmax": 347.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 71.9,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 5,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 79,
+    "tmax": 363.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 74.7,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 110,
+    "tmax": 346.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 77.3,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 7,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 70,
+    "tmax": 344.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 24,
+    "tmax": 76.9,
+    "aborto_paso": 24
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 8,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 95,
+    "tmax": 381.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 77.4,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 9,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 80,
+    "tmax": 392.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 70.9,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 100,
+    "tmax": 369.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 64.9,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 74,
+    "tmax": 359.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 36,
+    "tmax": 68.3,
+    "aborto_paso": 36
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 121,
+    "tmax": 379.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 66.1,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 108,
+    "tmax": 356.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 47,
+    "tmax": 78.8,
+    "aborto_paso": 47
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 81,
+    "tmax": 387.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 68.7,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 94,
+    "tmax": 347.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 64.1,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 72,
+    "tmax": 329.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 64.1,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 78,
+    "tmax": 333.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 73.3,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 18,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 96,
+    "tmax": 368.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 28,
+    "tmax": 79.8,
+    "aborto_paso": 28
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 19,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 87,
+    "tmax": 378.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 27,
+    "tmax": 79.3,
+    "aborto_paso": 27
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 1,
+   "semilla": 20,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 83,
+    "tmax": 358.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 16,
+    "tmax": 77.2,
+    "aborto_paso": 16
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 1,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 95,
+    "tmax": 357.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 31,
+    "tmax": 70.1,
+    "aborto_paso": 31
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 77,
+    "tmax": 356.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 78.1,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 90,
+    "tmax": 317.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 64.2,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 4,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 78,
+    "tmax": 345.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 78.7,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 5,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 91,
+    "tmax": 366.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 78.8,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 71,
+    "tmax": 325.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 25,
+    "tmax": 79.9,
+    "aborto_paso": 25
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 7,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 73,
+    "tmax": 378.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 36,
+    "tmax": 70.6,
+    "aborto_paso": 36
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 8,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 80,
+    "tmax": 285.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 36,
+    "tmax": 65.3,
+    "aborto_paso": 36
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 9,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 370.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 79.9,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 69,
+    "tmax": 339.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 27,
+    "tmax": 74.5,
+    "aborto_paso": 27
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 74,
+    "tmax": 373.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 28,
+    "tmax": 65.4,
+    "aborto_paso": 28
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 80,
+    "tmax": 372.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 77.5,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 109,
+    "tmax": 388.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 78.6,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 66,
+    "tmax": 374.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 16,
+    "tmax": 73.9,
+    "aborto_paso": 16
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 107,
+    "tmax": 383.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 24,
+    "tmax": 78.1,
+    "aborto_paso": 24
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 107,
+    "tmax": 389.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 16,
+    "tmax": 77.2,
+    "aborto_paso": 16
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 67,
+    "tmax": 308.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 35,
+    "tmax": 71.2,
+    "aborto_paso": 35
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 18,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 66,
+    "tmax": 303.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 31,
+    "tmax": 74.8,
+    "aborto_paso": 31
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 19,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 114,
+    "tmax": 361.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 17,
+    "tmax": 74.0,
+    "aborto_paso": 17
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 2,
+   "semilla": 20,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 91,
+    "tmax": 381.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 77.6,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 1,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 108,
+    "tmax": 364.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 26,
+    "tmax": 80.0,
+    "aborto_paso": 26
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 91,
+    "tmax": 366.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 35,
+    "tmax": 76.9,
+    "aborto_paso": 35
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 75,
+    "tmax": 347.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 29,
+    "tmax": 72.3,
+    "aborto_paso": 29
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 4,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 115,
+    "tmax": 392.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 16,
+    "tmax": 77.2,
+    "aborto_paso": 16
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 5,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 70,
+    "tmax": 384.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 75.6,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 75,
+    "tmax": 371.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 28,
+    "tmax": 78.4,
+    "aborto_paso": 28
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 7,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 105,
+    "tmax": 374.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 73.7,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 8,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 358.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 26,
+    "tmax": 66.0,
+    "aborto_paso": 26
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 9,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 320.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 32,
+    "tmax": 77.9,
+    "aborto_paso": 32
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 72,
+    "tmax": 389.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 28,
+    "tmax": 66.2,
+    "aborto_paso": 28
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 83,
+    "tmax": 347.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 71.2,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 99,
+    "tmax": 385.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 16,
+    "tmax": 77.2,
+    "aborto_paso": 16
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 69,
+    "tmax": 322.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 24,
+    "tmax": 78.0,
+    "aborto_paso": 24
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 97,
+    "tmax": 309.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 48,
+    "tmax": 80.0,
+    "aborto_paso": 48
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 310.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 77.0,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 111,
+    "tmax": 389.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 67.4,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 122,
+    "tmax": 352.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 27,
+    "tmax": 79.3,
+    "aborto_paso": 27
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 18,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 72,
+    "tmax": 374.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 79.7,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 19,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 112,
+    "tmax": 369.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 26,
+    "tmax": 65.4,
+    "aborto_paso": 26
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 3,
+   "semilla": 20,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 65,
+    "tmax": 358.1,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 1,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 106,
+    "tmax": 384.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 77.3,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 103,
+    "tmax": 390.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 70.9,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 106,
+    "tmax": 322.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 25,
+    "tmax": 78.1,
+    "aborto_paso": 25
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 4,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 94,
+    "tmax": 391.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 77.5,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 5,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 77,
+    "tmax": 354.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 31,
+    "tmax": 80.1,
+    "aborto_paso": 31
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 91,
+    "tmax": 386.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 73.1,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 7,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 97,
+    "tmax": 388.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 26,
+    "tmax": 64.9,
+    "aborto_paso": 26
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 8,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 98,
+    "tmax": 367.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 73.9,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 9,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 133,
+    "tmax": 393.0,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 89,
+    "tmax": 372.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 77.3,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 103,
+    "tmax": 334.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 24,
+    "tmax": 78.3,
+    "aborto_paso": 24
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 110,
+    "tmax": 358.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 16,
+    "tmax": 77.2,
+    "aborto_paso": 16
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 80,
+    "tmax": 301.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 30,
+    "tmax": 65.3,
+    "aborto_paso": 30
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 98,
+    "tmax": 341.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 75.2,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 116,
+    "tmax": 348.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 80.1,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 76,
+    "tmax": 361.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 28,
+    "tmax": 72.1,
+    "aborto_paso": 28
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 103,
+    "tmax": 347.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 64.0,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 18,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 64,
+    "tmax": 349.6,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 19,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 121,
+    "tmax": 363.4,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 4,
+   "semilla": 20,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 102,
+    "tmax": 360.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 49,
+    "tmax": 79.9,
+    "aborto_paso": 49
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 1,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 98,
+    "tmax": 345.7,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 82,
+    "tmax": 372.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 16,
+    "tmax": 72.7,
+    "aborto_paso": 16
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 94,
+    "tmax": 307.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 33,
+    "tmax": 77.4,
+    "aborto_paso": 33
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 4,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 93,
+    "tmax": 315.6,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 5,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 96,
+    "tmax": 359.8,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 332.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 79.5,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 7,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 66,
+    "tmax": 289.0,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 8,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 65,
+    "tmax": 283.9,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 9,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 98,
+    "tmax": 330.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 40,
+    "tmax": 79.5,
+    "aborto_paso": 40
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 94,
+    "tmax": 329.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 31,
+    "tmax": 78.8,
+    "aborto_paso": 31
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 106,
+    "tmax": 368.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 29,
+    "tmax": 74.4,
+    "aborto_paso": 29
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 95,
+    "tmax": 356.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 35,
+    "tmax": 69.6,
+    "aborto_paso": 35
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 93,
+    "tmax": 334.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 68.3,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 104,
+    "tmax": 335.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 35,
+    "tmax": 64.7,
+    "aborto_paso": 35
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 98,
+    "tmax": 363.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 44,
+    "tmax": 65.7,
+    "aborto_paso": 44
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 75,
+    "tmax": 336.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 77.7,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 93,
+    "tmax": 333.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 26,
+    "tmax": 78.9,
+    "aborto_paso": 26
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 18,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 89,
+    "tmax": 330.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 47,
+    "tmax": 72.9,
+    "aborto_paso": 47
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 19,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 100,
+    "tmax": 357.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 31,
+    "tmax": 77.1,
+    "aborto_paso": 31
+   }
+  },
+  {
+   "planeta": "Mercurio",
+   "nivel": 5,
+   "semilla": 20,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 102,
+    "tmax": 346.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 30,
+    "tmax": 68.8,
+    "aborto_paso": 30
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 1,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 93,
+    "tmax": 393.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 82.1,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 72,
+    "tmax": 409.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 17,
+    "tmax": 78.8,
+    "aborto_paso": 17
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 109,
+    "tmax": 415.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 71.7,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 4,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 73,
+    "tmax": 376.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 76.0,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 5,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 79,
+    "tmax": 393.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 17,
+    "tmax": 73.9,
+    "aborto_paso": 17
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 110,
+    "tmax": 374.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 78.7,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 7,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 70,
+    "tmax": 373.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 81.5,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 8,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 95,
+    "tmax": 413.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 78.8,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 9,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 80,
+    "tmax": 425.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 75.3,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 100,
+    "tmax": 400.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 17,
+    "tmax": 68.6,
+    "aborto_paso": 17
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 74,
+    "tmax": 389.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 35,
+    "tmax": 71.6,
+    "aborto_paso": 35
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 121,
+    "tmax": 410.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 69.8,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 108,
+    "tmax": 386.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 33,
+    "tmax": 65.2,
+    "aborto_paso": 33
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 81,
+    "tmax": 419.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 69.1,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 94,
+    "tmax": 376.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 67.9,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 72,
+    "tmax": 356.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 67.9,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 78,
+    "tmax": 360.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 74.2,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 18,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 96,
+    "tmax": 399.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 67.8,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 19,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 87,
+    "tmax": 410.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 67.0,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 1,
+   "semilla": 20,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 83,
+    "tmax": 388.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 78.6,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 1,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 95,
+    "tmax": 386.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 30,
+    "tmax": 70.0,
+    "aborto_paso": 30
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 77,
+    "tmax": 385.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 79.2,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 90,
+    "tmax": 342.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 68.0,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 4,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 78,
+    "tmax": 374.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 80.1,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 5,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 91,
+    "tmax": 397.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 80.1,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 71,
+    "tmax": 352.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 66.5,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 7,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 73,
+    "tmax": 409.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 35,
+    "tmax": 70.6,
+    "aborto_paso": 35
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 8,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 80,
+    "tmax": 307.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 25,
+    "tmax": 65.8,
+    "aborto_paso": 25
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 9,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 401.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 81.4,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 69,
+    "tmax": 367.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 26,
+    "tmax": 75.0,
+    "aborto_paso": 26
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 74,
+    "tmax": 404.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 27,
+    "tmax": 68.9,
+    "aborto_paso": 27
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 80,
+    "tmax": 403.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 78.9,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 109,
+    "tmax": 421.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 79.8,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 66,
+    "tmax": 405.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 78.6,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 107,
+    "tmax": 415.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 64.6,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 107,
+    "tmax": 422.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 78.6,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 67,
+    "tmax": 333.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 35,
+    "tmax": 74.8,
+    "aborto_paso": 35
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 18,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 66,
+    "tmax": 328.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 30,
+    "tmax": 77.3,
+    "aborto_paso": 30
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 19,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 114,
+    "tmax": 390.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 16,
+    "tmax": 78.8,
+    "aborto_paso": 16
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 2,
+   "semilla": 20,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 91,
+    "tmax": 412.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 79.0,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 1,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 108,
+    "tmax": 394.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 25,
+    "tmax": 81.4,
+    "aborto_paso": 25
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 91,
+    "tmax": 396.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 35,
+    "tmax": 81.2,
+    "aborto_paso": 35
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 75,
+    "tmax": 376.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 29,
+    "tmax": 76.4,
+    "aborto_paso": 29
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 4,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 115,
+    "tmax": 425.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 78.6,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 5,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 70,
+    "tmax": 417.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 17,
+    "tmax": 76.7,
+    "aborto_paso": 17
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 75,
+    "tmax": 401.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 27,
+    "tmax": 79.3,
+    "aborto_paso": 27
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 7,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 105,
+    "tmax": 405.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 78.2,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 8,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 388.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 25,
+    "tmax": 69.7,
+    "aborto_paso": 25
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 9,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 346.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 26,
+    "tmax": 65.1,
+    "aborto_paso": 26
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 72,
+    "tmax": 422.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 27,
+    "tmax": 69.8,
+    "aborto_paso": 27
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 83,
+    "tmax": 376.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 75.7,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 99,
+    "tmax": 418.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 78.6,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 69,
+    "tmax": 349.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 79.1,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 97,
+    "tmax": 334.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 34,
+    "tmax": 66.0,
+    "aborto_paso": 34
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 335.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 81.8,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 111,
+    "tmax": 421.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 71.5,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 122,
+    "tmax": 381.2,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 69.4,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 18,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 72,
+    "tmax": 406.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 81.2,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 19,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 112,
+    "tmax": 400.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 25,
+    "tmax": 69.0,
+    "aborto_paso": 25
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 3,
+   "semilla": 20,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 65,
+    "tmax": 387.7,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 1,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 106,
+    "tmax": 416.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 78.6,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 103,
+    "tmax": 422.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 20,
+    "tmax": 75.1,
+    "aborto_paso": 20
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 106,
+    "tmax": 348.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 24,
+    "tmax": 79.5,
+    "aborto_paso": 24
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 4,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 94,
+    "tmax": 424.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 78.9,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 5,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 77,
+    "tmax": 384.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 30,
+    "tmax": 81.3,
+    "aborto_paso": 30
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 91,
+    "tmax": 418.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 64.2,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 7,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 97,
+    "tmax": 420.7,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 26,
+    "tmax": 68.3,
+    "aborto_paso": 26
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 8,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 98,
+    "tmax": 397.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 22,
+    "tmax": 78.5,
+    "aborto_paso": 22
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 9,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 133,
+    "tmax": 425.9,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 89,
+    "tmax": 403.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 18,
+    "tmax": 78.7,
+    "aborto_paso": 18
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 103,
+    "tmax": 362.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 64.8,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 110,
+    "tmax": 388.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 78.6,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 80,
+    "tmax": 325.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 29,
+    "tmax": 68.5,
+    "aborto_paso": 29
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 98,
+    "tmax": 370.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 76.1,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 116,
+    "tmax": 377.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 81.7,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 76,
+    "tmax": 391.9,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 27,
+    "tmax": 76.0,
+    "aborto_paso": 27
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 103,
+    "tmax": 376.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 21,
+    "tmax": 67.7,
+    "aborto_paso": 21
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 18,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 64,
+    "tmax": 378.4,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 19,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 121,
+    "tmax": 393.6,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 4,
+   "semilla": 20,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 102,
+    "tmax": 390.4,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 45,
+    "tmax": 69.6,
+    "aborto_paso": 45
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 1,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 98,
+    "tmax": 374.3,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 2,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 82,
+    "tmax": 403.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 73.6,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 3,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 94,
+    "tmax": 332.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 23,
+    "tmax": 67.8,
+    "aborto_paso": 23
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 4,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 93,
+    "tmax": 341.3,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 5,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 96,
+    "tmax": 389.6,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 6,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 84,
+    "tmax": 360.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 81.0,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 7,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 66,
+    "tmax": 312.3,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 8,
+   "apagada": {
+    "estado": "FRACASO",
+    "pasos": 65,
+    "tmax": 306.6,
+    "aborto_paso": null
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 9,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 98,
+    "tmax": 357.6,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 39,
+    "tmax": 80.5,
+    "aborto_paso": 39
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 10,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 94,
+    "tmax": 356.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 30,
+    "tmax": 80.2,
+    "aborto_paso": 30
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 11,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 106,
+    "tmax": 399.3,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 28,
+    "tmax": 79.0,
+    "aborto_paso": 28
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 12,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 95,
+    "tmax": 385.8,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 34,
+    "tmax": 73.3,
+    "aborto_paso": 34
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 13,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 93,
+    "tmax": 362.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 72.3,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 14,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 104,
+    "tmax": 363.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 34,
+    "tmax": 67.8,
+    "aborto_paso": 34
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 15,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 98,
+    "tmax": 393.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 19,
+    "tmax": 64.8,
+    "aborto_paso": 19
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 16,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 75,
+    "tmax": 364.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 15,
+    "tmax": 64.2,
+    "aborto_paso": 15
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 17,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 93,
+    "tmax": 361.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 24,
+    "tmax": 76.6,
+    "aborto_paso": 24
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 18,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 89,
+    "tmax": 358.0,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 46,
+    "tmax": 76.5,
+    "aborto_paso": 46
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 19,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 100,
+    "tmax": 387.5,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 31,
+    "tmax": 81.5,
+    "aborto_paso": 31
+   }
+  },
+  {
+   "planeta": "Venus",
+   "nivel": 5,
+   "semilla": 20,
+   "apagada": {
+    "estado": "EXITO",
+    "pasos": 102,
+    "tmax": 375.1,
+    "aborto_paso": null
+   },
+   "encendida": {
+    "estado": "MODO_SEGURO",
+    "pasos": 29,
+    "tmax": 71.9,
+    "aborto_paso": 29
+   }
+  }
+ ],
+ "resumen": {
+  "Mercurio-1": {
+   "se_gana_hoy": 20,
+   "de": 20,
+   "abortadas": 20,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 22.8,
+   "tmax_media": 72.8,
+   "tmax_maxima": 79.8
+  },
+  "Mercurio-2": {
+   "se_gana_hoy": 20,
+   "de": 20,
+   "abortadas": 20,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 24.4,
+   "tmax_media": 74.4,
+   "tmax_maxima": 79.9
+  },
+  "Mercurio-3": {
+   "se_gana_hoy": 19,
+   "de": 20,
+   "abortadas": 19,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 25.4,
+   "tmax_media": 74.7,
+   "tmax_maxima": 80.0
+  },
+  "Mercurio-4": {
+   "se_gana_hoy": 17,
+   "de": 20,
+   "abortadas": 17,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 24.5,
+   "tmax_media": 74.4,
+   "tmax_maxima": 80.1
+  },
+  "Mercurio-5": {
+   "se_gana_hoy": 15,
+   "de": 20,
+   "abortadas": 15,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 30.4,
+   "tmax_media": 73.7,
+   "tmax_maxima": 79.5
+  },
+  "Venus-1": {
+   "se_gana_hoy": 20,
+   "de": 20,
+   "abortadas": 20,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 20.6,
+   "tmax_media": 73.2,
+   "tmax_maxima": 82.1
+  },
+  "Venus-2": {
+   "se_gana_hoy": 20,
+   "de": 20,
+   "abortadas": 20,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 22.6,
+   "tmax_media": 74.8,
+   "tmax_maxima": 81.4
+  },
+  "Venus-3": {
+   "se_gana_hoy": 19,
+   "de": 20,
+   "abortadas": 19,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 23.5,
+   "tmax_media": 75.2,
+   "tmax_maxima": 81.8
+  },
+  "Venus-4": {
+   "se_gana_hoy": 17,
+   "de": 20,
+   "abortadas": 17,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 22.9,
+   "tmax_media": 74.5,
+   "tmax_maxima": 81.7
+  },
+  "Venus-5": {
+   "se_gana_hoy": 15,
+   "de": 20,
+   "abortadas": 15,
+   "siguen_ganando": 0,
+   "otro_estado_encendida": 0,
+   "paso_medio_aborto": 27.0,
+   "tmax_media": 74.1,
+   "tmax_maxima": 81.5
+  }
+ },
+ "segundos": 1856
+}

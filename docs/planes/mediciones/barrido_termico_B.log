@@ -1,0 +1,22 @@
+Mercurio nivel 1 listo 114 s
+Mercurio nivel 2 listo 229 s
+Mercurio nivel 3 listo 464 s
+Mercurio nivel 4 listo 700 s
+Mercurio nivel 5 listo 929 s
+Venus nivel 1 listo 1041 s
+Venus nivel 2 listo 1153 s
+Venus nivel 3 listo 1381 s
+Venus nivel 4 listo 1626 s
+Venus nivel 5 listo 1856 s
+Mercurio-1 {'se_gana_hoy': 20, 'de': 20, 'abortadas': 20, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 22.8, 'tmax_media': 72.8, 'tmax_maxima': 79.8}
+Mercurio-2 {'se_gana_hoy': 20, 'de': 20, 'abortadas': 20, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 24.4, 'tmax_media': 74.4, 'tmax_maxima': 79.9}
+Mercurio-3 {'se_gana_hoy': 19, 'de': 20, 'abortadas': 19, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 25.4, 'tmax_media': 74.7, 'tmax_maxima': 80.0}
+Mercurio-4 {'se_gana_hoy': 17, 'de': 20, 'abortadas': 17, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 24.5, 'tmax_media': 74.4, 'tmax_maxima': 80.1}
+Mercurio-5 {'se_gana_hoy': 15, 'de': 20, 'abortadas': 15, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 30.4, 'tmax_media': 73.7, 'tmax_maxima': 79.5}
+Venus-1 {'se_gana_hoy': 20, 'de': 20, 'abortadas': 20, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 20.6, 'tmax_media': 73.2, 'tmax_maxima': 82.1}
+Venus-2 {'se_gana_hoy': 20, 'de': 20, 'abortadas': 20, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 22.6, 'tmax_media': 74.8, 'tmax_maxima': 81.4}
+Venus-3 {'se_gana_hoy': 19, 'de': 20, 'abortadas': 19, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 23.5, 'tmax_media': 75.2, 'tmax_maxima': 81.8}
+Venus-4 {'se_gana_hoy': 17, 'de': 20, 'abortadas': 17, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 22.9, 'tmax_media': 74.5, 'tmax_maxima': 81.7}
+Venus-5 {'se_gana_hoy': 15, 'de': 20, 'abortadas': 15, 'siguen_ganando': 0, 'otro_estado_encendida': 0, 'paso_medio_aborto': 27.0, 'tmax_media': 74.1, 'tmax_maxima': 81.5}
+escrito barrido_termico_B.json
+codigo 0

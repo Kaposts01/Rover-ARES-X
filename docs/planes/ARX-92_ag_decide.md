@@ -253,3 +253,28 @@ Con pesos por defecto, `L = −1,2125`. Con los pesos del laboratorio en su máx
 **Siembra sin mover el generador.** La población inicial se genera EXACTAMENTE como hoy (mismas llamadas a `self.rng`, mismo orden). Solo después se REEMPLAZA el último individuo por el orden del vecino más cercano por longitud de camino (`_largo`, desde el inicio, sin 2-opt), sin pasos de paso. Así lo único que cambia es ese individuo.
 
 **Efecto esperado en los hashes.** El congelado y el exigente de 4 sitios cambian solo si alguna ruta del AG es inviable o si el individuo sembrado llega a ser el mejor. Si cambian, se explica fila por fila; no se ajusta nada para que vuelvan.
+
+## 17. Medición de la opción B (8f9828a): exigente de 10 sitios, 20 semillas
+
+Datos: `docs/planes/mediciones/medicion_B_ex10.json` y `.log` (publicados tal como salieron). Antes: a62a1f6 (`medicion_92c_ex10.json`).
+
+**Éxitos por variante, con umbral (oficial), de 20 semillas**
+
+| Variante | Antes (a62a1f6) | Después (B) |
+|---|---|---|
+| híbrido | 12/20 | 17/20 |
+| sin RNA | 12/20 | 17/20 |
+| sin difuso | 9/20 | 14/20 |
+| sin AG: vecino más cercano | 14/20 | 14/20 |
+| sin AG: permutación más corta | 16/20 | 17/20 |
+| 2-opt | 17/20 | 17/20 |
+| AG puro (riesgo congelado) | 9/20 | 15/20 |
+| ruta corta | 7/20 | 7/20 |
+
+Las variantes sin AG (vecino más cercano, ruta corta, 2-opt) no cambian; las que usan el orden del AG sí.
+
+**Híbrido: desglose de derrotas.** Antes, 8 fallos: 5 «sitios descartados» (el plan inicial sin sitios), 2 «sin batería en el camino» y 1 «otra». Después, 3 fallos: 2 «sin batería en el camino» y 1 «otra»; ya no hay ningún plan sin sitios. Con umbral y sin umbral, 17/20 en las dos columnas.
+
+**Congelado (20 semillas) y exigente de 4 sitios (20 semillas), contra los JSON publicados en main (`a0bf109`):** las 160 filas de cada escenario son iguales. No cambian. El hash del congelado con las semillas 1 a 3 es `d6fb9079…`, igual que la constante.
+
+**Lectura.** La penalización graduada y la siembra cambian solo el exigente de 10 sitios, donde hay rutas del AG inviables y el orden del vecino compite con el AG. En escenarios de 4 sitios no cambian nada, de forma que el congelado queda intacto.

@@ -210,6 +210,9 @@ const grupoEfectos = new THREE.Group();
 scene.add(grupoEfectos);
 const grupoRecorrido = new THREE.Group();
 scene.add(grupoRecorrido);
+const grupoRiesgo = new THREE.Group();   // M15: capa opcional de riesgo estimado (apagada por defecto)
+scene.add(grupoRiesgo);
+window.__ares.grupoRiesgo = grupoRiesgo;   // QA de la capa de riesgo
 
 let mapa = null;
 let estado = null;
@@ -408,6 +411,104 @@ function obtenerTexturaSolar() {
   texturaSolar = new THREE.CanvasTexture(c);
   texturaSolar.colorSpace = THREE.SRGBColorSpace;
   return texturaSolar;
+}
+
+// ---------- capa de riesgo estimado (M15) ----------
+const RIESGO_MIN_VISIBLE = 0.05;   // por debajo no se pinta la celda
+const RIESGO_OPACIDAD = 0.45;
+let capaRiesgoActiva = false;      // apagada por defecto
+
+// Verde (0) -> amarillo (0,5) -> rojo (1)
+function colorRiesgo(r) {
+  const t = Math.min(1, Math.max(0, r));
+  return t < 0.5 ? [2 * t, 1, 0.15] : [1, 2 * (1 - t), 0.15];
+}
+
+function limpiarCapaRiesgo() {
+  for (const o of grupoRiesgo.children) {
+    o.geometry.dispose();
+    o.material.dispose();
+  }
+  grupoRiesgo.clear();
+}
+
+// Una malla con una celda por celda del mapa, pegada al relieve y con el color del riesgo de /mapa
+function construirCapaRiesgo(datos) {
+  limpiarCapaRiesgo();
+  const rz = datos && datos.riesgo_estimado;
+  const valida = Array.isArray(rz) && rz.length === datos.filas
+    && rz.every((fila) => Array.isArray(fila) && fila.length === datos.columnas);
+  if (!valida) return false;
+  const SUB = 2;   // cada celda en 2x2 trozos para seguir el relieve
+  const pos = [];
+  const col = [];
+  const idx = [];
+  for (let f = 0; f < datos.filas; f++) {
+    for (let c = 0; c < datos.columnas; c++) {
+      const r = rz[f][c];
+      if (!(r >= RIESGO_MIN_VISIBLE)) continue;
+      const [cr, cg, cb] = colorRiesgo(r);
+      const base = pos.length / 3;
+      for (let j = 0; j <= SUB; j++) {
+        for (let i = 0; i <= SUB; i++) {
+          const x = c + i / SUB;
+          const z = f + j / SUB;
+          pos.push(x, alturaTerreno(x, z) + 0.04, z);
+          col.push(cr, cg, cb);
+        }
+      }
+      for (let j = 0; j < SUB; j++) {
+        for (let i = 0; i < SUB; i++) {
+          const a = base + j * (SUB + 1) + i;
+          const b = a + 1;
+          const d = a + SUB + 1;
+          idx.push(a, d, b, b, d, d + 1);
+        }
+      }
+    }
+  }
+  if (!idx.length) return true;   // hay dato, pero todo el mapa está por debajo del umbral
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geom.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  geom.setIndex(idx);
+  const malla = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+    vertexColors: true, transparent: true, opacity: RIESGO_OPACIDAD, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide,
+  }));
+  malla.name = "capa-riesgo";
+  malla.renderOrder = 2;
+  grupoRiesgo.add(malla);
+  return true;
+}
+
+function avisoRiesgo(texto) {
+  const el = document.getElementById("riesgo-aviso");
+  if (el) el.textContent = texto;
+}
+
+// Pide /mapa (el riesgo estimado cambia con la partida) y redibuja la capa; si no hay dato, la apaga y lo dice
+async function actualizarCapaRiesgo() {
+  limpiarCapaRiesgo();
+  avisoRiesgo("");
+  if (!capaRiesgoActiva) return;
+  const mp = mapa ? await llamar("GET", "/mapa") : null;
+  if (!capaRiesgoActiva) return;   // se apagó mientras llegaba la respuesta
+  if (!mp || !construirCapaRiesgo(mp)) {
+    capaRiesgoActiva = false;
+    const caja = document.getElementById("riesgo-capa");
+    if (caja) caja.checked = false;
+    avisoRiesgo(mapa ? "sin datos de riesgo" : "sin partida: no hay riesgo que mostrar");
+  }
+}
+
+const cajaRiesgo = document.getElementById("riesgo-capa");
+if (cajaRiesgo) {
+  cajaRiesgo.checked = false;
+  cajaRiesgo.addEventListener("change", () => {
+    capaRiesgoActiva = cajaRiesgo.checked;
+    actualizarCapaRiesgo();
+  });
 }
 
 // ---------- terreno ----------
@@ -1749,6 +1850,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     if (!mp) return false;
     mapa = mp;
     construirMapa(mapa);
+    if (capaRiesgoActiva) construirCapaRiesgo(mapa) || actualizarCapaRiesgo();   // M15: la capa sigue al mapa nuevo
     aplicarAspecto(planetaActivo);
     construirRover();
     ubicarRover(datos.posicion, datos.rumbo_sugerido, true);

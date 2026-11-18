@@ -279,5 +279,35 @@ Las variantes sin AG (vecino más cercano, ruta corta, 2-opt) no cambian; las qu
 
 **Lectura.** La penalización graduada y la siembra cambian solo el exigente de 10 sitios, donde hay rutas del AG inviables y el orden del vecino compite con el AG. En escenarios de 4 sitios no cambian nada, de forma que el congelado queda intacto.
 
+## 18. Regeneración del exigente de 10 sitios tras la segunda corrección (ev3-d80 B)
+
+**Criterio previo:** §16 (commit 773451b), con las precisiones del Orquestador de f149da7; escritas antes de codificar.
+**Segunda corrección sobre el AG:** es la segunda corrección sobre el AG. La permite el usuario solo para la B. Cambia el piso de la inviabilidad (cota derivada de los pesos, `cota_viable`), y la batería de la cota usa `max(B_MAX_BATERIA, batería)` (QA, cbed987).
+**Turno:** 00:34:29 a 00:39:35 (inicio y fin de `scripts/comparacion_politicas.py 20 exigente10`). Código: cbed987 (con 5f80d91, solo documentación).
+**Hashes antes de medir:** congelado y exigente de 4 sitios, 160 filas cada uno, 0 distintas frente a los publicados.
+**JSON regenerado:** `docs/COMPARACION_POLITICAS_exigente10.json`, sha256 `15d97b8d21ec60d7…` (primeros 16 caracteres). El JSON «antes» de `medicion_92c_ex10.*` (a62a1f6) no se toca; la «después» de la B es `medicion_B_ex10.*` (3182fcd).
+
+**Éxitos, 20 semillas, columna con umbral (antes → después):**
+
+| Variante | Antes | Después |
+|---|---|---|
+| Híbrido | 12 | 17 |
+| Sin RNA | 12 | 17 |
+| Sin difuso | 9 | 14 |
+| AG puro | 9 | 15 |
+| Permutación más corta (AG de orden con pesos de distancia) | 16 | 17 |
+| Vecino más cercano (sin AG) | 14 | 14 |
+| 2-opt (sin AG) | 17 | 17 |
+| Ruta corta (voraz) | 7 | 7 |
+
+La fila de la permutación más corta no es «sin cambio»: esa variante usa el AG de orden con los pesos de distancia, y ese AG cambió.
+Filas distintas por variante, comparando con 5f80d91: híbrido 20, sin RNA 20, sin difuso 19, más corta 18, AG puro 20. Vecino, 2-opt y ruta corta: 0.
+
+**Derrotas del híbrido:** de 8 de 20 a 3 de 20 (semillas 7, 9 y 16: dos sin batería en el camino y una de otra causa). Ninguna con planes sin sitios.
+
+**El umbral no explica la diferencia:** el híbrido gana 17 de 20 con umbral y 17 de 20 sin umbral (diagnóstico, no oficial).
+
+Lo que no se cambia: los pasos medios de la columna oficial se publican tal como salen en el JSON; no hay una tercera corrección.
+
 ## Nota para ARX-59 (QA de ARX-92 B)
 - Con `ESTACIONES_ACTIVAS`, `_plan_con_paradas` no gradúa: el orden de las paradas no pasa por la penalización graduada de la B. Hay que tenerlo en cuenta antes de activar estaciones en el AG de orden.

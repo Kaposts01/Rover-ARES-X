@@ -1445,6 +1445,75 @@ function barra(id, valor) {
   document.getElementById(id).style.width = valor === null || valor === undefined ? "0%" : `${(valor * 100).toFixed(1)}%`;
 }
 
+// Las cuatro líneas del porqué de un paso (RNA, difuso, planificador, supervisor), solo con los datos de /paneles
+function decisionesDelPaso(p) {
+  const lineas = [];
+  const r = p.rna || {};
+  const probs = [["libre", r.p_libre], ["obstáculo", r.p_obstaculo], ["barranco", r.p_barranco]].filter(([, v]) => v != null);
+  if (probs.length) {
+    const [clase, valor] = probs.reduce((x, y) => (y[1] > x[1] ? y : x));
+    lineas.push(`RNA: predijo ${clase} (${pct(valor)})`);
+  } else lineas.push("RNA: sin dato");
+  const d = p.difuso || {};
+  if (d.usado === false) lineas.push("Difuso: no usado");
+  else if (d.velocidad == null && !(d.reglas && d.reglas.length)) lineas.push("Difuso: sin dato");
+  else {
+    const reglas = (d.reglas || []).map(x => (Array.isArray(x)
+      ? `${x[0]} (fuerza ${Number(x[1]).toFixed(2).replace(".", ",")})`
+      : String(x))).join(", ") || "sin regla";
+    const vel = d.velocidad == null ? "sin dato" : Number(d.velocidad).toFixed(3).replace(".", ",");
+    lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
+  }
+  const ruta = (p.ag || {}).ruta_planeada || [];
+  lineas.push(ruta.length ? `Planificador: ruta de ${ruta.length} celdas` : "Planificador: sin ruta");
+  const supv = p.supervisor || {};
+  const vetos = (supv.motivos || []).filter(m => String(m).startsWith("V-"));
+  lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto ${vetos.join(", ")}` : ""}`);
+  return lineas;
+}
+
+// ARX-36a: tira de decisiones, una fila por paso del automático (la más nueva arriba), con las mismas cuatro líneas
+const TIRA_MAX = 12;
+let tiraPasos = [];
+function registrarTira(p) {
+  const ultimo = tiraPasos.length ? tiraPasos[0].paso : null;
+  if (p.paso == null || (ultimo != null && p.paso < ultimo)) tiraPasos = [];   // otra misión: se vacía
+  if (p.paso != null && (!tiraPasos.length || tiraPasos[0].paso !== p.paso)) {
+    tiraPasos.unshift({ paso: p.paso, lineas: decisionesDelPaso(p) });
+    tiraPasos.length = Math.min(tiraPasos.length, TIRA_MAX);
+  }
+  pintarTira();
+}
+function pintarTira() {
+  const caja = document.getElementById("tira-caja");
+  if (!caja) return;
+  const visible = document.getElementById("modo").value === "automatico" && Boolean(estado);
+  caja.classList.toggle("oculto", !visible);
+  if (!visible) return;
+  const cuerpo = document.getElementById("tira-filas");
+  if (!tiraPasos.length) {
+    const vacio = document.createElement("div");
+    vacio.className = "ayuda";
+    vacio.textContent = "sin pasos todavía";
+    cuerpo.replaceChildren(vacio);
+    return;
+  }
+  cuerpo.replaceChildren(...tiraPasos.map((f) => {
+    const fila = document.createElement("div");
+    fila.className = "tira-fila";
+    const n = document.createElement("span");
+    n.className = "tira-paso";
+    n.textContent = `paso ${f.paso}`;
+    fila.appendChild(n);
+    for (const t of f.lineas) {
+      const c = document.createElement("span");
+      c.textContent = t;
+      fila.appendChild(c);
+    }
+    return fila;
+  }));
+}
+
 function pintarPaneles(p) {
   const rna = p.rna || {};
   document.getElementById("rna-libre").textContent = pct(rna.p_libre);
@@ -1494,30 +1563,9 @@ function pintarPaneles(p) {
   // ARX-88: el porqué del paso con datos reales (M17): RNA, difuso, planificador y supervisor
   const porque = document.getElementById("sup-porque");
   if (porque) {
-    const lineas = [];
-    const r = p.rna || {};
-    const probs = [["libre", r.p_libre], ["obstáculo", r.p_obstaculo], ["barranco", r.p_barranco]].filter(([, v]) => v != null);
-    if (probs.length) {
-      const [clase, valor] = probs.reduce((x, y) => (y[1] > x[1] ? y : x));
-      lineas.push(`RNA: predijo ${clase} (${pct(valor)})`);
-    } else lineas.push("RNA: sin dato");
-    const d = p.difuso || {};
-    if (d.usado === false) lineas.push("Difuso: no usado");
-    else if (d.velocidad == null && !(d.reglas && d.reglas.length)) lineas.push("Difuso: sin dato");
-    else {
-      const reglas = (d.reglas || []).map(x => (Array.isArray(x)
-        ? `${x[0]} (fuerza ${Number(x[1]).toFixed(2).replace(".", ",")})`
-        : String(x))).join(", ") || "sin regla";
-      const vel = d.velocidad == null ? "sin dato" : Number(d.velocidad).toFixed(3).replace(".", ",");
-      lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
-    }
-    const ruta = (p.ag || {}).ruta_planeada || [];
-    lineas.push(ruta.length ? `Planificador: ruta de ${ruta.length} celdas` : "Planificador: sin ruta");
-    const supv = p.supervisor || {};
-    const vetos = (supv.motivos || []).filter(m => String(m).startsWith("V-"));
-    lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto ${vetos.join(", ")}` : ""}`);
-    porque.replaceChildren(...lineas.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+    porque.replaceChildren(...decisionesDelPaso(p).map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
   }
+  registrarTira(p);
   // ARX-86: lecturas de los sensores en el rumbo actual y riesgo estimado de la celda de enfrente
   const sen = p.sensores;
   const indicador = document.getElementById("sup-sensores");

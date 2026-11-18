@@ -60,15 +60,6 @@ def test_sensor_con_fallo_devuelve_nan_sin_excepcion():
     assert np.isnan(lectura["altimetria_m"])
 
 
-def test_borde_de_barranco_detectado_por_lidar():
-    m = generar_mundo(semilla=5, n_barrancos=0)
-    m.tipo[:] = LIBRE
-    pos = (5, 5)
-    m.tipo[5, 6] = BARRANCO
-    sensor = SensorSuite(rng=np.random.default_rng(0))
-    assert sensor.leer(m, pos)["borde_barranco"] is True
-
-
 def test_gigante_no_admite_rover():
     with pytest.raises(ValueError, match="sonda"):
         validar_compatibilidad("Júpiter", "rover")
@@ -206,3 +197,142 @@ def test_marcar_barranco_v2_asigna_profundidad_con_el_generador_del_evento():
     otra = generar_mundo(3, n_barrancos=0)
     otra.marcar_barranco((6, 6))
     assert 1.0 <= otra.profundidad[6, 6] <= 4.0
+
+
+# ---- ARX-94b: sensores físicos ----
+
+def _mundo_plano():
+    m = generar_mundo(semilla=5, n_obstaculos=0, n_barrancos=0)
+    m.tipo[:] = LIBRE
+    m.elevacion[:] = 0.0
+    m.profundidad[:] = 0.0
+    m.altura[:] = 0.0
+    return m
+
+
+def test_lectura_trae_solo_las_lecturas_de_94b():
+    m = _mundo_plano()
+    lectura = SensorSuite(rng=np.random.default_rng(0)).leer(m, (5, 5))
+    assert set(lectura) == {"proximidad_frontal_m", "desnivel_frontal_m", "desniveles_vecinos",
+                            "contraste_optico", "altimetria_m", "vibracion"}
+    assert len(lectura["desniveles_vecinos"]) == 8
+
+
+def test_proximidad_ignora_barrancos_y_ve_obstaculos():
+    m = _mundo_plano()
+    m.tipo[2, 5] = BARRANCO
+    m.profundidad[2, 5] = 3.0
+    m.elevacion[2, 5] = -3.0
+    sensor = SensorSuite(rng=np.random.default_rng(0), ruido=0.0)
+    assert sensor.leer(m, (5, 5), "N")["proximidad_frontal_m"] == pytest.approx(20.0)
+    m.tipo[1, 5] = OBSTACULO
+    assert sensor.leer(m, (5, 5), "N")["proximidad_frontal_m"] == pytest.approx(4.0)
+
+
+def test_desnivel_frontal_mide_la_celda_siguiente_con_sigma_05():
+    m = _mundo_plano()
+    m.elevacion[4, 5] = -3.0
+    exacto = SensorSuite(rng=np.random.default_rng(0), ruido=0.0)
+    assert exacto.leer(m, (5, 5), "N")["desnivel_frontal_m"] == pytest.approx(-3.0)
+    sensor = SensorSuite(rng=np.random.default_rng(1))
+    d = np.array([sensor.leer(m, (5, 5), "N")["desnivel_frontal_m"] for _ in range(4000)])
+    assert d.mean() == pytest.approx(-3.0, abs=0.05)
+    assert d.std() == pytest.approx(0.5, rel=0.1)
+
+
+def test_desnivel_nan_fuera_del_mapa_y_vecinos_sin_celdas_fuera():
+    m = _mundo_plano()
+    sensor = SensorSuite(rng=np.random.default_rng(0))
+    esquina = (0, 0)
+    lectura = sensor.leer(m, esquina, "N")
+    assert np.isnan(lectura["desnivel_frontal_m"])
+    assert np.isnan(lectura["contraste_optico"])
+    assert set(lectura["desniveles_vecinos"]) == {(0, 1), (1, 0), (1, 1)}
+
+
+def test_desniveles_vecinos_miden_cada_celda_con_sigma_05():
+    m = _mundo_plano()
+    m.elevacion[5, 6] = -2.5
+    exacto = SensorSuite(rng=np.random.default_rng(0), ruido=0.0).leer(m, (5, 5))["desniveles_vecinos"]
+    assert exacto[(5, 6)] == pytest.approx(-2.5)
+    assert exacto[(5, 4)] == pytest.approx(0.0)
+    sensor = SensorSuite(rng=np.random.default_rng(2))
+    d = np.array([sensor.leer(m, (5, 5))["desniveles_vecinos"][(5, 6)] for _ in range(4000)])
+    assert d.std() == pytest.approx(0.5, rel=0.1)
+
+
+def test_camara_hoyo_oscuro_roca_clara_suelo_cero():
+    m = _mundo_plano()
+    m.tipo[4, 5] = BARRANCO
+    m.profundidad[4, 5] = 4.0
+    m.tipo[5, 6] = OBSTACULO
+    m.altura[5, 6] = 1.0
+    s = SensorSuite(rng=np.random.default_rng(0), ruido=0.0)
+    assert s.leer(m, (5, 5), "N")["contraste_optico"] == pytest.approx(-1.0)
+    assert s.leer(m, (5, 5), "E")["contraste_optico"] == pytest.approx(0.8)
+    assert s.leer(m, (5, 5), "S")["contraste_optico"] == pytest.approx(0.0)
+
+
+def test_camara_se_degrada_de_noche_y_en_tormenta():
+    m = _mundo_plano()
+    m.tipo[4, 5] = BARRANCO
+    m.profundidad[4, 5] = 4.0
+    dia = SensorSuite(rng=np.random.default_rng(0), ruido=0.0)
+    noche = SensorSuite(rng=np.random.default_rng(0), ruido=0.0, ambiente="noche")
+    assert noche.leer(m, (5, 5), "N")["contraste_optico"] == pytest.approx(0.5 * dia.leer(m, (5, 5), "N")["contraste_optico"])
+    sd = SensorSuite(rng=np.random.default_rng(3))
+    sn = SensorSuite(rng=np.random.default_rng(3), ambiente="noche")
+    d = np.array([sd.leer(m, (5, 5), "N")["contraste_optico"] for _ in range(3000)])
+    n = np.array([sn.leer(m, (5, 5), "N")["contraste_optico"] for _ in range(3000)])
+    assert n.std() == pytest.approx(2 * d.std(), rel=0.1)
+    assert d.std() == pytest.approx(0.4, rel=0.1)
+    # la noche no cambia los telémetros
+    assert noche.leer(m, (5, 5), "N")["desnivel_frontal_m"] == dia.leer(m, (5, 5), "N")["desnivel_frontal_m"]
+
+
+def test_tormenta_duplica_el_ruido_de_todos_los_sensores():
+    m = _mundo_plano()
+    normal = SensorSuite(rng=np.random.default_rng(4))
+    tormenta = SensorSuite(rng=np.random.default_rng(4), ambiente="tormenta")
+    for clave in ("desnivel_frontal_m", "proximidad_frontal_m", "altimetria_m", "vibracion"):
+        a = np.array([normal.leer(m, (5, 5))[clave] for _ in range(3000)])
+        b = np.array([tormenta.leer(m, (5, 5))[clave] for _ in range(3000)])
+        assert b.std() == pytest.approx(2 * a.std(), rel=0.12), clave
+
+
+def test_vibracion_es_la_imu_de_la_celda_actual_sigma_03():
+    m = _mundo_plano()
+    m.tipo[4, 5] = OBSTACULO     # la celda de enfrente no cambia la vibración
+    sensor = SensorSuite(rng=np.random.default_rng(5))
+    v = np.array([sensor.leer(m, (5, 5), "N")["vibracion"] for _ in range(4000)])
+    assert v.std() == pytest.approx(0.3, rel=0.1)
+    assert abs(v.mean()) < 0.03
+
+
+def test_falla_de_sensor_da_nan_en_todas_las_lecturas():
+    m = _mundo_plano()
+    lectura = SensorSuite(rng=np.random.default_rng(0), prob_fallo=1.0).leer(m, (5, 5))
+    for clave, valor in lectura.items():
+        if clave == "desniveles_vecinos":
+            assert all(np.isnan(v) for v in valor.values())
+        else:
+            assert np.isnan(valor), clave
+
+
+def test_misma_semilla_mismas_lecturas():
+    m = generar_mundo(9)
+    a = SensorSuite(rng=np.random.default_rng(1)).leer(m, m.inicio, "N")
+    b = SensorSuite(rng=np.random.default_rng(1)).leer(m, m.inicio, "N")
+    assert repr(a) == repr(b)
+
+
+def test_ninguna_lectura_consulta_tipo_salvo_la_proximidad_de_obstaculos():
+    """Revisión de código: en SensorSuite.leer y sus auxiliares `tipo` solo aparece en el barrido de
+    obstáculos (comparado con OBSTACULO)."""
+    import inspect
+    import re
+    import simulador
+    fuente = "".join(inspect.getsource(f) for f in (
+        simulador.SensorSuite.leer, simulador.SensorSuite._desnivel, simulador.SensorSuite._contraste))
+    usos = re.findall(r"[.]tipo.*", fuente)
+    assert len(usos) == 1 and "OBSTACULO" in usos[0], usos

@@ -126,6 +126,9 @@ def test_con_el_borde_encendido_los_vetos_no_cambian():
     fila, col = mundo.inicio
     mision.riesgo[:] = 0.0
     mundo.tipo[fila, col + 1] = BARRANCO       # barranco de enfrente: el LIDAR sigue vetando primero
+    mundo.elevacion[fila, col] = 0.0           # ARX-94b: el sensor mide la geometría (desnivel de 3 m)
+    mundo.elevacion[fila, col + 1] = -3.0
+    mundo.profundidad[fila, col + 1] = 3.0
     mision.ruta = [mundo.inicio, (fila, col + 1), (fila, col + 2)]
     mision.paso_mision()
     assert "V-RUTA-CON-RIESGO" in mision.log.a_dataframe()["motivos"].iloc[-1] or         mision.log.a_dataframe()["accion"].iloc[-1] == "replanificar"

@@ -213,8 +213,9 @@ def _mundo_plano():
 def test_lectura_trae_solo_las_lecturas_de_94b():
     m = _mundo_plano()
     lectura = SensorSuite(rng=np.random.default_rng(0)).leer(m, (5, 5))
+    # borde_barranco y celdas_barranco son transitorias (derivadas, se retiran en 94c)
     assert set(lectura) == {"proximidad_frontal_m", "desnivel_frontal_m", "desniveles_vecinos",
-                            "contraste_optico", "altimetria_m", "vibracion"}
+                            "contraste_optico", "altimetria_m", "vibracion", "borde_barranco", "celdas_barranco"}
     assert len(lectura["desniveles_vecinos"]) == 8
 
 
@@ -315,6 +316,8 @@ def test_falla_de_sensor_da_nan_en_todas_las_lecturas():
     for clave, valor in lectura.items():
         if clave == "desniveles_vecinos":
             assert all(np.isnan(v) for v in valor.values())
+        elif clave == "celdas_barranco":
+            assert valor == set()          # transitoria: derivada del desnivel, sin celdas con falla
         else:
             assert np.isnan(valor), clave
 
@@ -336,3 +339,25 @@ def test_ninguna_lectura_consulta_tipo_salvo_la_proximidad_de_obstaculos():
         simulador.SensorSuite.leer, simulador.SensorSuite._desnivel, simulador.SensorSuite._contraste))
     usos = re.findall(r"[.]tipo.*", fuente)
     assert len(usos) == 1 and "OBSTACULO" in usos[0], usos
+
+
+def test_borde_y_celdas_barranco_son_derivados_del_desnivel_transitorio():
+    """ARX-94b (opción 2, transitorio hasta 94c): borde_barranco y celdas_barranco salen del desnivel medido."""
+    import numpy as np
+    from simulador import SensorSuite, generar_mundo, UMBRAL_BORDE_M
+    mundo = generar_mundo(5, filas=20, columnas=30)
+    pos = (10, 10)
+    sensor = SensorSuite(rng=np.random.default_rng(3), ruido=0.0, prob_fallo=0.0)
+    # celda siguiente (norte) a 3 m por debajo: barranco medido
+    mundo.elevacion[pos] = 0.0
+    mundo.elevacion[(9, 10)] = -3.0
+    lectura = sensor.leer(mundo, pos, "N")
+    assert lectura["desnivel_frontal_m"] == pytest.approx(-3.0)
+    assert lectura["borde_barranco"] is True
+    assert (9, 10) in lectura["celdas_barranco"]
+    assert lectura["celdas_barranco"] == {c for c, d in lectura["desniveles_vecinos"].items() if d < UMBRAL_BORDE_M}
+    # terreno llano: ninguna derivación
+    mundo.elevacion[(9, 10)] = 0.0
+    lectura = sensor.leer(mundo, pos, "N")
+    assert lectura["borde_barranco"] is False
+    assert lectura["celdas_barranco"] == set()

@@ -1,11 +1,10 @@
-"""ev3-d88 B: barrido de M13 con la configuración nueva. Línea base «hoy» = K_CALOR 0,08 con la bandera apagada
-(debe reproducir M13, 53637e0); encendida = K_CALOR 0,01 con el aborto activo. Tamaño 40×60, 20 semillas por nivel.
-M13: barrido térmico de Mercurio (de día) y Venus, 20 semillas por nivel, tamaño grande (40×60).
+"""ev3-d88 B: barrido del criterio de M13 (Mercurio de día y Venus, 20 semillas por nivel, 40×60) con la configuración
+nueva. Línea base «hoy» = K_CALOR 0,08 con la bandera apagada (modelo anterior; reproduce 53637e0). Encendida =
+K_CALOR 0,01 con el aborto activo. Criterio en docs/planes/M13_termico_B.md.
 
-La bandera termico.ABORTO_TERMICO_ACTIVO se enciende SOLO dentro de este script (atributo del módulo) y se restaura al
-terminar. Criterio en docs/planes/M13_barrido_termico.md.
+Las constantes termico.ABORTO_TERMICO_ACTIVO y termico.K_CALOR se fijan por ejecución (con la del módulo al terminar).
 
-Uso (desde la raíz del repositorio; es medición pesada, con turno):  python scripts/barrido_termico_m13.py SALIDA.json
+Uso (desde la raíz del repositorio; es medición pesada, con turno):  python scripts/barrido_termico_B.py SALIDA.json
 """
 import json
 import os

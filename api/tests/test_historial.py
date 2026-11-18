@@ -470,11 +470,11 @@ def test_estado_expone_la_temperatura_interna_segun_el_planeta():
         assert c.post("/partida", json={"semilla": 11, "nivel": 1, "planeta": planeta}).status_code == 200
         assert campos <= set(c.get("/estado").json())
         series[planeta] = [c.get("/estado").json()["temperatura_interna"]]
-        for _ in range(20):    # ev3-d88 B: τ = 100 pasos; en Venus T_int supera 60 °C hacia el paso 8–10
+        for _ in range(20):    # ev3-d88 B: τ = 100 pasos; la serie sube sin pasar de la tolerancia en estos pasos
             c.post("/paso")
             series[planeta].append(c.get("/estado").json()["temperatura_interna"])
         assert c.get("/estado").json()["tolerancia"] == 60.0
-    # ev3-d88 B: con τ = 100 pasos y el rover pisando sombra, T_int sube pero no pasa de 60 en 20 pasos;
-    # el umbral de 60 °C se mide en el barrido (M13), no aquí
+    # ev3-d88 B: la comprobación es solo de tendencia (sube en Venus, no sube en Marte); el umbral de 60 °C
+    # se mide en el barrido, no aquí
     assert series["Venus"][-1] > series["Venus"][0]
     assert max(series["Marte"]) <= series["Marte"][0]

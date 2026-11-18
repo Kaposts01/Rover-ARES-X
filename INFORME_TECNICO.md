@@ -103,9 +103,26 @@ No se abre ningún intento más para la RNA salvo que el usuario lo pida.
 
 En el juego, el AG decide el orden de visita de los sitios, con la misma restricción de energía que la ejecución (`juego/partida.py`, `_ag_con_todos_los_sitios`, línea 290; el método queda en `METODO_AG_ORDEN`, línea 280). La búsqueda exhaustiva de la ruta más corta queda como respaldo, para cuando el AG no encuentra un orden viable (líneas 355 a 374). Con más de seis sitios, el respaldo conserva el orden dado.
 
-**Medición con 10 sitios y 20 semillas** (escenario exigente de 10 sitios, columna con umbral, ev3-d74; `docs/planes/mediciones/medicion_92c_ex10.json`): sin AG, 2-opt 17; sin AG, permutación más corta 16; sin AG, vecino más cercano 14; híbrido 12; sin RNA 12; sin difuso 9; ruta corta (voraz) 7. AG puro 9 (el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto). Sin umbral, el híbrido también gana 12: el umbral no explica la diferencia. Una mejora local simple supera al AG, y el AG supera a la ruta voraz.
+**Medición con 10 sitios y 20 semillas, antes de la segunda corrección** (escenario exigente de 10 sitios, columna con umbral, ev3-d74; `docs/planes/mediciones/medicion_92c_ex10.json`): sin AG, 2-opt 17; sin AG, permutación más corta 16; sin AG, vecino más cercano 14; híbrido 12; sin RNA 12; sin difuso 9; ruta corta (voraz) 7. AG puro 9 (el mismo AG de orden con el riesgo congelado y sin RNA ni difuso; no es un AG distinto). Sin umbral, el híbrido también gana 12: el umbral no explica la diferencia. Una mejora local simple supera al AG, y el AG supera a la ruta voraz.
 
-**Derrotas del híbrido** (8 de 20): 5 con sitios descartados, 2 sin batería en el camino y 1 de otra causa. El 12 de 20 mide una falla de búsqueda del AG, no una peor decisión: el fitness es plano entre rutas inviables y la población inicial es aleatoria. En 6 de las 8 derrotas (semillas 2, 3, 7, 9, 16 y 19) existía un orden completo y viable que el vecino más cercano y 2-opt encontraron. El juego normal, con seis sitios o menos, no se ve afectado por esta falla. Trabajo futuro, con diseño: penalizar la inviabilidad de forma graduada (M8) y sembrar la población con el vecino más cercano, medido con el mismo protocolo de 20 semillas; y un umbral relativo al largo de la ruta.
+**Derrotas del híbrido antes de la segunda corrección** (8 de 20): 5 con sitios descartados, 2 sin batería en el camino y 1 de otra causa. El 12 de 20 mide una falla de búsqueda del AG, no una peor decisión: el fitness es plano entre rutas inviables y la población inicial es aleatoria. En 6 de las 8 derrotas (semillas 2, 3, 7, 9, 16 y 19) existía un orden completo y viable que el vecino más cercano y 2-opt encontraron. El juego normal, con seis sitios o menos, no se ve afectado por esta falla.
+
+**Segunda corrección sobre el AG (ARX-92 B, ev3-d80 B).** Es una segunda corrección sobre el AG, permitida por el usuario solo para la B. Dos cambios: penalización graduada de la inviabilidad (piso por debajo de la cota del fitness viable, con penalización por exceso de energía) y siembra del vecino más cercano en la población inicial, sin mover el generador. El criterio está escrito antes de codificar (`docs/planes/ARX-92_ag_decide.md` §16, commit 773451b, con las precisiones de f149da7). Medido en `docs/COMPARACION_POLITICAS_exigente10.json` (regenerado; ver `docs/planes/ARX-92_ag_decide.md` §18):
+
+| Variante (exigente de 10 sitios, 20 semillas) | Antes | Después |
+|---|---|---|
+| Híbrido | 12 | 17 |
+| Sin RNA | 12 | 17 |
+| Sin difuso | 9 | 14 |
+| AG puro | 9 | 15 |
+| Permutación más corta (AG de orden con pesos de distancia) | 16 | 17 |
+| Vecino más cercano (sin AG) | 14 | 14 |
+| 2-opt (sin AG) | 17 | 17 |
+| Ruta corta (voraz) | 7 | 7 |
+
+La permutación más corta no está «sin cambio»: esa variante usa el AG de orden con los pesos de distancia, y ese AG cambió. Las derrotas del híbrido bajan de 8 a 3 (semillas 7, 9 y 16; sin planes sin sitios). El umbral no explica la diferencia: 17 de 20 con umbral y 17 de 20 sin umbral.
+
+Queda como trabajo futuro, con diseño: un umbral relativo al largo de la ruta. El juego normal, con seis sitios o menos, no cambia (exigente de 4 sitios y congelado: idénticos fila a fila).
 
 **Umbral de empate** (ev3-d79): con 10 sitios, anula la preferencia del fitness en 19 de 40 planificaciones (en 13 de 20 semillas, al menos una). Se derivó del error de estimación con rutas de 3 y 4 sitios; revisarlo queda como trabajo futuro. El fitness no se presenta como decisor en el juego normal. Con el peso de riesgo ×5 como único cambio, la ruta elegida no cambia con el umbral en ninguna semilla (0 de 20 en el pequeño y 0 de 10 en el grande, cifras de QA). Sin umbral, cambia en 15 de 20 y 5 de 10. Las cifras son de la verificación de QA; la receta está en `docs/planes/medicion_92a_pesos_umbral.py`.
 

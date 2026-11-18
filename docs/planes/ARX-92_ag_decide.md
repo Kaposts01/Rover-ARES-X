@@ -223,3 +223,91 @@ Datos: `docs/planes/mediciones/medicion_92c_ex10.json` y `.log`. Publicado tal c
 **Efecto de la corrección frente a la medición anterior (§13), mismas semillas:** recuperadas las semillas 1 y 12; perdidas las semillas 2 y 7, que antes tenían plan completo y ahora tienen plan sin sitios. Balance neto del híbrido: 0. Causa probable: con la reserva, el AG de orden no encuentra un orden viable en su búsqueda (en las semillas 1 a 3 y 7 se usó el respaldo). El respaldo con 10 sitios solo prueba un orden (el ordenado por número), y si no cabe, devuelve la ruta original, que `_planear` descarta. **No se corrige ahora** (no hay segunda corrección).
 
 **Lectura para el informe:** la corrección hace que el criterio de reserva sea coherente con el juego, pero en el exigente de 10 sitios no mejora el híbrido. Con el umbral y sin él, el híbrido da el mismo número de éxitos.
+
+## 16. Opción B de ev3-d80 (búsqueda del AG): criterio escrito ANTES de codificar
+
+Rama `feat/arx-92-busqueda-ag` desde a0bf109. Se codifica solo tras la confirmación del Orquestador.
+
+- **Penalización graduada de la inviabilidad.** Una ruta es inviable si `largo + MARGEN_ENERGIA > batería` (la misma reserva que `_planear` y que la viabilidad de §14). Para una ruta inviable, el fitness es `piso − K · exceso`, con `exceso = largo + MARGEN_ENERGIA − batería > 0`, `piso = −10` (como hoy) y `K = 0,01` por unidad de exceso, fijado aquí. Así, un exceso mayor puntúa peor, y toda ruta inviable queda siempre por debajo de cualquier ruta completa viable (fitness ≥ 0 en las medidas de 92a–92c). Es M8.
+- **Siembra de la población inicial.** Un individuo de la población inicial lleva el orden del vecino más cercano (sin 2-opt), con los sitios en ese orden y sin pasos de paso. El resto sigue aleatorio. Determinista: usa la semilla del planificador.
+- **Nada más cambia.** Mismos pesos, umbral (0,0223), generaciones, población, operadores y desempate.
+- **Medición (una sola vez, con turno).** Las mismas 20 semillas del exigente de 10 sitios, todas las variantes. Se publican las dos mediciones: la de a62a1f6 y la nueva, tal como salgan. No se ajusta nada después de medir.
+- **Hashes.** El congelado (`d6fb9079…`) y el exigente de 4 sitios deben quedar iguales. Si cambian, se informa aquí por qué. La graduación solo afecta a rutas inviables, y el congelado puede tenerlas por la reserva de §14: si cambia, se explica con las filas.
+- **Verificación.** Pruebas acotadas de genetico, orden AG, reserva y rendimiento. Suite y hashes antes de cualquier integración.
+
+### 16 (precisiones del Orquestador, antes de codificar)
+
+**Cota del fitness de una ruta viable (demostrada con la fórmula de `_desglosar`).** El fitness es `w_c·ciencia − w_d·dist − w_e·energia − w_r·riesgo − w_t·tiempo − penal`, con pesos `w_* ∈ [0, 5]` (la interfaz los limita a ese rango) y, para una ruta viable (`penal = 0`):
+- `ciencia ∈ [0, 1]` (suma de valores de sitios / valor total): término ≥ 0.
+- `dist = pasos / (filas·columnas)`. Una ruta viable cumple `pasos + MARGEN_ENERGIA ≤ batería ≤ B_MAX`, con `B_MAX = 225` (150 % de 149, la batería por defecto más alta). Así `pasos ≤ 225` y, con el tablero más pequeño (20×30 = 600 celdas), `dist ≤ 225/600 = 0,375`.
+- `energia = min(1, pasos·COSTO/batería) ∈ [0, 1]`; `riesgo` es media de celdas ∈ [0, 1]; `tiempo = giros/max(pasos,1) ∈ [0, 1]`.
+
+Por tanto, para toda ruta viable y todos los pesos del rango:
+
+`fitness ≥ L = −( w_d·0,375 + w_e + w_r + w_t )`.
+
+Con pesos por defecto, `L = −1,2125`. Con los pesos del laboratorio en su máximo, `L = −5·(0,375 + 3) = −16,875`.
+
+**Piso de la inviabilidad, derivado de L (no fijo).** `P = L − 1`, calculado por planificador con sus pesos. Para una ruta inviable: `fitness = P − K·exceso`, con `exceso = largo + MARGEN_ENERGIA − batería > 0` y `K = 0,01`. Entonces `fitness_inviable < P < L ≤ fitness_viable`: queda siempre por debajo de cualquier ruta viable, con cualquier peso del rango. Esto sustituye al −10 fijo de hoy, que no estaba demostrado para pesos altos.
+
+**Siembra sin mover el generador.** La población inicial se genera EXACTAMENTE como hoy (mismas llamadas a `self.rng`, mismo orden). Solo después se REEMPLAZA el último individuo por el orden del vecino más cercano por longitud de camino (`_largo`, desde el inicio, sin 2-opt), sin pasos de paso. Así lo único que cambia es ese individuo.
+
+**Efecto esperado en los hashes.** El congelado y el exigente de 4 sitios cambian solo si alguna ruta del AG es inviable o si el individuo sembrado llega a ser el mejor. Si cambian, se explica fila por fila; no se ajusta nada para que vuelvan.
+
+## 17. Medición de la opción B (8f9828a): exigente de 10 sitios, 20 semillas
+
+Datos: `docs/planes/mediciones/medicion_B_ex10.json` y `.log` (publicados tal como salieron). Antes: a62a1f6 (`medicion_92c_ex10.json`).
+
+**Éxitos por variante, con umbral (oficial), de 20 semillas**
+
+| Variante | Antes (a62a1f6) | Después (B) |
+|---|---|---|
+| híbrido | 12/20 | 17/20 |
+| sin RNA | 12/20 | 17/20 |
+| sin difuso | 9/20 | 14/20 |
+| sin AG: vecino más cercano | 14/20 | 14/20 |
+| sin AG: permutación más corta | 16/20 | 17/20 |
+| 2-opt | 17/20 | 17/20 |
+| AG puro (riesgo congelado) | 9/20 | 15/20 |
+| ruta corta | 7/20 | 7/20 |
+
+Las variantes sin AG (vecino más cercano, ruta corta, 2-opt) no cambian; las que usan el orden del AG sí.
+
+**Híbrido: desglose de derrotas.** Antes, 8 fallos: 5 «sitios descartados» (el plan inicial sin sitios), 2 «sin batería en el camino» y 1 «otra». Después, 3 fallos: 2 «sin batería en el camino» y 1 «otra»; ya no hay ningún plan sin sitios. Con umbral y sin umbral, 17/20 en las dos columnas.
+
+**Congelado (20 semillas) y exigente de 4 sitios (20 semillas), contra los JSON publicados en main (`a0bf109`):** las 160 filas de cada escenario son iguales. No cambian. El hash del congelado con las semillas 1 a 3 es `d6fb9079…`, igual que la constante.
+
+**Lectura.** La penalización graduada y la siembra cambian solo el exigente de 10 sitios, donde hay rutas del AG inviables y el orden del vecino compite con el AG. En escenarios de 4 sitios no cambian nada, de forma que el congelado queda intacto.
+
+## 18. Regeneración del exigente de 10 sitios tras la segunda corrección (ev3-d80 B)
+
+**Criterio previo:** §16 (commit 773451b), con las precisiones del Orquestador de f149da7; escritas antes de codificar.
+**Segunda corrección sobre el AG:** es la segunda corrección sobre el AG. La permite el usuario solo para la B. Cambia el piso de la inviabilidad (cota derivada de los pesos, `cota_viable`), y la batería de la cota usa `max(B_MAX_BATERIA, batería)` (QA, cbed987).
+**Turno:** 00:34:29 a 00:39:35 (inicio y fin de `scripts/comparacion_politicas.py 20 exigente10`). Código: cbed987 (con 5f80d91, solo documentación).
+**Hashes antes de medir:** congelado y exigente de 4 sitios, 160 filas cada uno, 0 distintas frente a los publicados.
+**JSON regenerado:** `docs/COMPARACION_POLITICAS_exigente10.json`, sha256 `15d97b8d21ec60d7…` (primeros 16 caracteres). El JSON «antes» de `medicion_92c_ex10.*` (a62a1f6) no se toca; la «después» de la B es `medicion_B_ex10.*` (3182fcd).
+
+**Éxitos, 20 semillas, columna con umbral (antes → después):**
+
+| Variante | Antes | Después |
+|---|---|---|
+| Híbrido | 12 | 17 |
+| Sin RNA | 12 | 17 |
+| Sin difuso | 9 | 14 |
+| AG puro | 9 | 15 |
+| Permutación más corta (AG de orden con pesos de distancia) | 16 | 17 |
+| Vecino más cercano (sin AG) | 14 | 14 |
+| 2-opt (sin AG) | 17 | 17 |
+| Ruta corta (voraz) | 7 | 7 |
+
+La fila de la permutación más corta no es «sin cambio»: esa variante usa el AG de orden con los pesos de distancia, y ese AG cambió.
+Filas distintas por variante, comparando con 5f80d91: híbrido 20, sin RNA 20, sin difuso 19, más corta 18, AG puro 20. Vecino, 2-opt y ruta corta: 0.
+
+**Derrotas del híbrido:** de 8 de 20 a 3 de 20 (semillas 7, 9 y 16: dos sin batería en el camino y una de otra causa). Ninguna con planes sin sitios.
+
+**El umbral no explica la diferencia:** el híbrido gana 17 de 20 con umbral y 17 de 20 sin umbral (diagnóstico, no oficial).
+
+Lo que no se cambia: los pasos medios de la columna oficial se publican tal como salen en el JSON; no hay una tercera corrección.
+
+## Nota para ARX-59 (QA de ARX-92 B)
+- Con `ESTACIONES_ACTIVAS`, `_plan_con_paradas` no gradúa: el orden de las paradas no pasa por la penalización graduada de la B. Hay que tenerlo en cuenta antes de activar estaciones en el AG de orden.

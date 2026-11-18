@@ -32,6 +32,8 @@ Con la bandera encendida, el difuso también recibe T_int (`_inferir_con_tempera
 
 Datos: `mediciones/barrido_m13.json` y `mediciones/barrido_m13.log`. Tamaño grande (40×60), 20 semillas por nivel, control automático.
 
+> **Rótulo (ev3-d88, QA):** esta tabla es del **modelo anterior, K_CALOR 0,08**. El modelo vigente (K_CALOR 0,01, τ = 100 pasos) y su medición están en `docs/planes/M13_termico_B.md`.
+
 | Planeta · nivel | Se gana hoy (apagada) | Abortadas (encendida) | Siguen ganando (encendida) | Paso medio del aborto | T interna media (°C) | T interna máxima (°C) |
 |---|---|---|---|---|---|---|
 | Mercurio · 1 | 20/20 | 20 | 0 | 7,5 | 152,3 | 192,7 |

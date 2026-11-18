@@ -223,3 +223,14 @@ Datos: `docs/planes/mediciones/medicion_92c_ex10.json` y `.log`. Publicado tal c
 **Efecto de la corrección frente a la medición anterior (§13), mismas semillas:** recuperadas las semillas 1 y 12; perdidas las semillas 2 y 7, que antes tenían plan completo y ahora tienen plan sin sitios. Balance neto del híbrido: 0. Causa probable: con la reserva, el AG de orden no encuentra un orden viable en su búsqueda (en las semillas 1 a 3 y 7 se usó el respaldo). El respaldo con 10 sitios solo prueba un orden (el ordenado por número), y si no cabe, devuelve la ruta original, que `_planear` descarta. **No se corrige ahora** (no hay segunda corrección).
 
 **Lectura para el informe:** la corrección hace que el criterio de reserva sea coherente con el juego, pero en el exigente de 10 sitios no mejora el híbrido. Con el umbral y sin él, el híbrido da el mismo número de éxitos.
+
+## 16. Opción B de ev3-d80 (búsqueda del AG): criterio escrito ANTES de codificar
+
+Rama `feat/arx-92-busqueda-ag` desde a0bf109. Se codifica solo tras la confirmación del Orquestador.
+
+- **Penalización graduada de la inviabilidad.** Una ruta es inviable si `largo + MARGEN_ENERGIA > batería` (la misma reserva que `_planear` y que la viabilidad de §14). Para una ruta inviable, el fitness es `piso − K · exceso`, con `exceso = largo + MARGEN_ENERGIA − batería > 0`, `piso = −10` (como hoy) y `K = 0,01` por unidad de exceso, fijado aquí. Así, un exceso mayor puntúa peor, y toda ruta inviable queda siempre por debajo de cualquier ruta completa viable (fitness ≥ 0 en las medidas de 92a–92c). Es M8.
+- **Siembra de la población inicial.** Un individuo de la población inicial lleva el orden del vecino más cercano (sin 2-opt), con los sitios en ese orden y sin pasos de paso. El resto sigue aleatorio. Determinista: usa la semilla del planificador.
+- **Nada más cambia.** Mismos pesos, umbral (0,0223), generaciones, población, operadores y desempate.
+- **Medición (una sola vez, con turno).** Las mismas 20 semillas del exigente de 10 sitios, todas las variantes. Se publican las dos mediciones: la de a62a1f6 y la nueva, tal como salgan. No se ajusta nada después de medir.
+- **Hashes.** El congelado (`d6fb9079…`) y el exigente de 4 sitios deben quedar iguales. Si cambian, se informa aquí por qué. La graduación solo afecta a rutas inviables, y el congelado puede tenerlas por la reserva de §14: si cambia, se explica con las filas.
+- **Verificación.** Pruebas acotadas de genetico, orden AG, reserva y rendimiento. Suite y hashes antes de cualquier integración.

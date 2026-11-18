@@ -1446,6 +1446,11 @@ class Partida:
         if not self._termico_activo or self.estado in ESTADOS_TERMINALES:
             return
         self.termico.paso(termico.es_sombra(self.mundo, self.rover.posicion))
+        if self.termico.pasos_sobre_tolerancia == termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA + 1:
+            # ev3-d88 B, opción A: exceso sostenido, solo aviso con código y bitácora (sin MODO_SEGURO)
+            self._avisar(f"T-SOBRE-TOLERANCIA: {self.t_int:.0f} °C interna, más de "
+                         f"{termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA} pasos sobre {termico.TOLERANCIA:.0f} °C")
+            self.mision._registrar("temperatura", 0.0, ["T-SOBRE-TOLERANCIA"], {}, None)
         if termico.ABORTO_TERMICO_ACTIVO and self.termico.debe_abortar:
             m = self.mision
             self.rover.en_modo_seguro = True

@@ -29,14 +29,16 @@ def _quieta(planeta, **kw):
     return Partida(semilla=11, planeta=planeta, eventos_activos=(), **kw)
 
 
-def test_bandera_encendida_por_defecto_y_aborta_con_exceso_sostenido():
-    # ev3-d88 B: el aborto está activo por decisión; exige más de 5 pasos seguidos sobre la tolerancia
-    assert termico.ABORTO_TERMICO_ACTIVO is True
+def test_bandera_apagada_por_defecto_sin_aborto_y_con_aviso():
+    # ev3-d88 B, repliegue a A: sin aborto; el exceso sostenido solo avisa, una vez, con código y en la bitácora
+    assert termico.ABORTO_TERMICO_ACTIVO is False
     p = _quieta("Venus")
     _al_sol(p)
     for _ in range(40):
         p._tick_ambiente()
-    assert p.estado == "MODO_SEGURO"
+    assert p.t_int > termico.TOLERANCIA and p.estado not in ("MODO_SEGURO",)
+    assert sum(a.startswith("T-SOBRE-TOLERANCIA") for a in p.avisos) == 1
+    assert sum("T-SOBRE-TOLERANCIA" in str(m) for m in p.bitacora()["motivos"]) == 1
 
 
 def test_marte_se_mantiene_bajo_la_tolerancia_en_400_pasos(bandera):

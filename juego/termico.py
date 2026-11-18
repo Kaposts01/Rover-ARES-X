@@ -9,7 +9,7 @@ decisión de juego la toma el Maestro. Para activarlo, cambiar la constante a Tr
 """
 from simulador import BARRANCO, OBSTACULO
 
-ABORTO_TERMICO_ACTIVO = True        # ev3-d88 B: activa. Criterio en docs/planes/M13_termico_B.md
+ABORTO_TERMICO_ACTIVO = False       # ev3-d88 B: repliegue a A (solo aviso): con el aborto no queda ninguna partida ganable (docs/planes/M13_termico_B.md)
 
 K_CALOR = 0.01                      # fracción del salto térmico que sube por paso (ev3-d88 B: τ = 100 pasos ≈ 17 min con 10 s por paso)
 K_ENFRIAMIENTO = 0.05               # fracción del exceso que baja por paso, solo a la sombra

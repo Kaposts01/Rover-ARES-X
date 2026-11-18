@@ -49,3 +49,13 @@ Se gana hoy · abortadas con la configuración nueva · paso medio del aborto ·
 | Venus | 5 | 15/20 | 15 | 0 | 27,0 | 74,1 | 81,5 |
 
 Lectura: todas las partidas que se ganan hoy abortan con la configuración nueva, entre los pasos 20 y 30. No queda ninguna ganable, así que **no hay repliegue a A** (solo había que declararlo si no quedaba ninguna ganable con el aborto activo). Resultado: el aborto llega en el paso ~23 de media, con temperatura interna que supera los 60 °C de forma sostenida.
+
+## Repliegue a A (declarado)
+Criterio del plan: si con la nueva configuración no queda ninguna partida ganable, se repliega a A. Con K_CALOR 0,01 y el aborto activo quedan **0 ganadas** en los diez casos (Mercurio y Venus, niveles 1–5). Se aplica el repliegue.
+- `ABORTO_TERMICO_ACTIVO = False` (sin aborto). `K_CALOR = 0,01` se queda: es la corrección física declarada, y el congelado y el exigente de 4 sitios salen idénticos por hash y por fila (20 semillas).
+- **Opción A (solo aviso):** cuando T_int supera la tolerancia de forma sostenida (más de 5 pasos seguidos), se añade el aviso con código `T-SOBRE-TOLERANCIA` a los avisos de la partida y a la bitácora (motivo `T-SOBRE-TOLERANCIA`), una vez por episodio. Sin MODO_SEGURO. Lo fijan `test_bandera_apagada_por_defecto_sin_aborto_y_con_aviso`.
+- Limitación: el aviso llega a la interfaz por la lista de avisos (`/estado.avisos`), que la app muestra al aparecer; no hay un elemento nuevo en el panel.
+- Resultado que lo motiva (con aborto): paso medio del aborto 20,6–30,4; T máxima 79,5–82,1 °C.
+- Sin el aborto, el rover no tiene cómo enfriarse. Queda como trabajo futuro: sombra, refugio o ciclo día-noche.
+
+Corrección de una lectura: en un mensaje previo se dijo que no hacía falta repliegue. Era incorrecto: el criterio aplica cuando no queda ninguna ganable con la nueva configuración, y con el aborto no queda ninguna.

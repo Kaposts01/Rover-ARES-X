@@ -278,3 +278,6 @@ Las variantes sin AG (vecino más cercano, ruta corta, 2-opt) no cambian; las qu
 **Congelado (20 semillas) y exigente de 4 sitios (20 semillas), contra los JSON publicados en main (`a0bf109`):** las 160 filas de cada escenario son iguales. No cambian. El hash del congelado con las semillas 1 a 3 es `d6fb9079…`, igual que la constante.
 
 **Lectura.** La penalización graduada y la siembra cambian solo el exigente de 10 sitios, donde hay rutas del AG inviables y el orden del vecino compite con el AG. En escenarios de 4 sitios no cambian nada, de forma que el congelado queda intacto.
+
+## Nota para ARX-59 (QA de ARX-92 B)
+- Con `ESTACIONES_ACTIVAS`, `_plan_con_paradas` no gradúa: el orden de las paradas no pasa por la penalización graduada de la B. Hay que tenerlo en cuenta antes de activar estaciones en el AG de orden.

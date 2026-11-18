@@ -1,0 +1,121 @@
+[
+  {
+    "code": "ev3-d83",
+    "title": "ARES-X (ARX-94): rediseño de sensores para que la RNA no sea redundante; ¿con mapa orbital que no ve grietas, con el mapa de hoy, o no rediseñar?",
+    "what": "Medido (PLAN_sensores_diseno.md §1.2–1.3): la RNA es redundante porque recibe el tipo real de las celdas vecinas como rasgo (borde_barranco) y porque el sensor de proximidad ve barrancos a 20 celdas, cosa que un haz no hace. Además el relieve se genera por filas independientes: vecinos norte-sur difieren 0,67 m de mediana y hasta 6 m, así que ningún sensor físico de desnivel sirve sin cambiar el relieve. Con relieve suave, barrancos de 1–4 m de profundidad, telémetro inclinado (σ 0,5 m) y cámara de contraste (σ 0,4), la RNA fusiona ambos y detecta un 4–10 % de barrancos que el veto duro no ve (7 de 73), con menos falsos positivos (6 frente a 9); sin cámara, 0 %. Con el mapa orbital al 80 % el efecto en partida sería menos de un barranco por juego: el criterio previo (≥ 5 de 20 semillas con cambio) está en riesgo salvo que el mapa previo no vea barrancos poco profundos.",
+    "impact": "M2 y M7 (aporte y vínculo de la RNA), M5 y M6 (modelo v2 reportado completo; v1 conservado), M12 (sensores ruidosos con justificación física). Cambia el mundo y por tanto todas las cifras (ficha ev3-d84). Un solo frente, ~1 día de agente + QA.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Sensores físicos + mapa orbital que no ve barrancos poco profundos", "detail": "ARX-94a–f: relieve suave, profundidad por barranco, telémetro inclinado, cámara, vibración de la celda actual; vetos por sensor (desnivel < −2 m) más la RNA en la banda de 1–2 m; mapa orbital con p_detectar 0,8 para obstáculos y barrancos profundos y 0,3 para los de menos de 2 m (una imagen orbital resuelve relieve grande, no grietas). Única opción con la que el criterio de 5/20 es alcanzable; se publica tal como salga. ~1 día + 15 min de CPU con turno + QA."},
+      {"key": "B", "label": "Sensores físicos con el mapa orbital de hoy (0,8 para todo)", "detail": "Igual que A sin tocar el mapa previo. La RNA deja de copiar el mapa (M7 honesto, M5/M6 completos) pero su efecto en partida queda en ~1 de cada 10 barrancos desconocidos: M2-RNA probablemente sigue parcial y así se informa. Mismo costo que A."},
+      {"key": "C", "label": "No rediseñar: declarar la RNA como fusión redundante", "detail": "Sin código. El informe cierra M2-RNA con los números de 28f, 93 y esta medición, y declara el rediseño como trabajo futuro con plan. 0,5 h de Docs. No cumple lo que pidió el usuario el 17/11."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3083,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-94", "ARX-93", "ARX-48"],
+    "evidence": [],
+    "evidenceNote": "docs/planes/PLAN_sensores_diseno.md §1.1–1.4 y scripts PLAN_sensores_medicion_1.py y _2.py (9 s de CPU, 60 mapas de entrenamiento, 20 de prueba, 7402 lecturas, 73 barrancos); RNA_aporte.md §3 y §10; genetico.py mapa_estimado (p_detectar 0,8); integracion.py SafetySupervisor. Recomiendo A: es la única con la que el criterio previo puede cumplirse y su supuesto (orbital no ve grietas) es físico y declarado. La responde el Maestro por delegación."
+  },
+  {
+    "code": "ev3-d84",
+    "title": "ARES-X (ARX-94): el rediseño cambia el relieve y todas las cifras; ¿regenerar con atribución o mantener el esquema viejo por defecto?",
+    "what": "El mundo v2 (relieve suave 2D y profundidad por barranco) cambia el congelado, el exigente, el exigente de 10 sitios, la traza de divergencias, la tabla de modos, la rejilla, la línea base por nivel y la garantía de ganabilidad. Hoy el hash del congelado es d6fb9079 (entrega del 17/11). Hay dos caminos: regenerar una sola vez al cierre de la parte 1 con una tabla antes → después y la causa anotada, o dejar el mundo y los sensores viejos por defecto (bandera MUNDO_V1 = True) y usar el v2 solo en el laboratorio de la RNA y en una comparación aparte.",
+    "impact": "M18 (reproducibilidad y cifras), M19 y M20 (ablaciones y exportación), y el tiempo de la parte 3 (una regeneración de ~40 min de CPU con turno). B conserva las cifras publicadas pero deja el juego por defecto con la RNA redundante y duplica caminos de código y pruebas.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Regenerar con atribución (una sola vez al cierre de la parte 1)", "detail": "Hash nuevo del congelado; tabla antes → después por métrica con la causa «mundo v2 + sensores»; el informe conserva la tabla del 17/11 rotulada como entrega y suma la nueva. ~40 min de CPU con turno + 1 h de Docs. Es coherente con el plan de regeneración única de la parte 3."},
+      {"key": "B", "label": "Mantener el esquema viejo por defecto; v2 solo en el laboratorio", "detail": "MUNDO_V1 = True por defecto; las cifras publicadas no cambian; el laboratorio de la RNA y una comparación aparte usan v2. El juego sigue con la RNA redundante. Doble camino de código y pruebas (~+2 h de mantenimiento en cada tarea posterior)."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3084,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-94", "ARX-48"],
+    "evidence": [],
+    "evidenceNote": "PLAN_sensores_diseno.md §1.5; hash del congelado d6fb9079 en el cuadro de la meta del 17/11; scripts/regenerar_todo.py (tanda única). Recomiendo A. La responde el Maestro por delegación."
+  },
+  {
+    "code": "ev3-d85",
+    "title": "ARES-X (ARX-29): obstáculos móviles; ¿solo bloquean el paso o además dañan al rover?",
+    "what": "Hoy no existen (`/moviles.obstaculos_moviles` siempre vacío; la escena ya sabe dibujarlos con `actualizarRoca`). Propuesta (PLAN_sensores_diseno.md §2.2): rocas o dunas que patrullan 2–3 celdas libres y se mueven una celda cada 3 pasos; 0, 1, 1, 2 y 2 por nivel; mientras ocupan una celda son un OBSTACULO real que el sensor de proximidad ve como volumen; nunca entran en la celda del rover ni de un dron; la garantía de ganabilidad trata sus celdas de patrulla como bloqueadas. Cambia la dificultad (rutas más largas y replanificaciones) en los niveles 2 a 5; el congelado (nivel 1) no cambia por esto.",
+    "impact": "M12 y M15 (obstáculos móviles visibles y con efecto), M3 (motivo en la bitácora). Cierra también ARX-34b. B cambia cómo se pierde (daño de batería). ~6 h de agente + 1 h de QA en Chrome.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Solo bloquean el paso (patrulla, garantía conservadora)", "detail": "El rover los ve con el sensor de proximidad, el mapa estimado los marca y los libera, y la ruta se replanifica por las vías que ya existen. No cambian cómo se gana ni cómo se pierde salvo por la batería gastada en el rodeo. ~6 h + QA."},
+      {"key": "B", "label": "Además dañan la batería si alcanzan al rover", "detail": "Igual que A, pero si el obstáculo llega a la celda del rover le cuesta 5 % de batería (como un meteorito). Cambia cómo se pierde y exige medir la tasa de éxito por nivel otra vez. ~+1 h."},
+      {"key": "C", "label": "No implementar", "detail": "Se declara en el informe; M12 y M15 quedan parciales por este punto. 0 h."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3085,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-29", "ARX-34"],
+    "evidence": [],
+    "evidenceNote": "PLAN_sensores_diseno.md §2.2; docs/CONTRATOS_GRAFICOS.md §10 (forma pactada de obstaculos_moviles); api/static/moviles.js actualizarRoca; juego/combate.py (colocación de drones reutilizable). Recomiendo A: cierra M12/M15 sin tocar las reglas de victoria. La responde el Maestro por delegación."
+  },
+  {
+    "code": "ev3-d86",
+    "title": "ARES-X (ARX-50/51/57): terreno y peligros por planeta; ¿tres mecánicas de suelo por familia en los cuatro planetas de rover, también la sonda completa, o solo parámetros?",
+    "what": "Hoy el planeta solo cambia el aspecto, la temperatura interna y la validación rover/sonda; el terreno y los peligros son los de Marte en los ocho (cuadro de la meta, M12 parcial). ev3-d42 B pidió un plan por planeta y PLAN_PLANETAS.md ya lo tiene. Propuesta (PLAN_sensores_diseno.md §2.3): una capa de suelo con tres mecánicas, LAVA (Mercurio, Venus: −20 % de batería y +15 °C por paso; cámara térmica y veto V-SUELO-CALIENTE), HIELO (Marte polar, Tierra: deslizamiento con semilla; lo detecta la IMU al pisarlo) y ARENA densa (Marte, Tierra: doble costo; IMU), parametrizadas por planeta y nivel (densidades, eventos propios, temperatura, gravedad), con el aborto térmico encendido solo en Mercurio y Venus (hoy apagado, M13). Eventos propios: erupción, grieta incandescente, placa de hielo, deslizamiento. Los cuatro planetas de sonda quedan con su pantalla parcial (ev3-d61 C).",
+    "impact": "M12 (perfiles planetarios con terreno y peligros propios), M13 (aborto térmico con efecto), M15 (capa de suelo visible), M14 solo con B. Cambia cómo se pierde en los planetas calientes (aborto térmico) y la dificultad por planeta; Marte nivel 1 en 20×30 no cambia por este bloque. Va después de ARX-94 porque ambos tocan simulador.py y los sensores.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Tres mecánicas de suelo por familia, parametrizadas por planeta; cuatro planetas de rover; aborto térmico en los calientes", "detail": "ARX-50a–c, 57a, 51a del plan: ~2 días de agente + 3 h de QA en Chrome + medición por planeta (20 semillas, nivel 3) publicada tal como salga. Respeta los ocho planes de PLAN_PLANETAS.md sin ocho caminos de código."},
+      {"key": "B", "label": "A más el modo sonda completo", "detail": "Agrega descenso por capas, ráfaga y vórtices como misión propia con AG (ev3-d61 B). Cierra M14. +2 días o más y pruebas nuevas."},
+      {"key": "C", "label": "Solo parámetros por planeta, sin suelos nuevos", "detail": "Densidades, eventos activos, temperatura y gravedad por planeta (~4 h). M12 queda parcial con nota: los peligros siguen siendo los de Marte."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3086,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-50", "ARX-51", "ARX-57", "ARX-83"],
+    "evidence": [],
+    "evidenceNote": "PLAN_sensores_diseno.md §2.3; docs/PLAN_PLANETAS.md (tabla y planes por planeta); juego/termico.py (ABORTO_TERMICO_ACTIVO = False, T_amb de 4 planetas); cuadro de la meta del 17/11 (M12, M13, M14 parciales). Recomiendo A. La responde el Maestro por delegación."
+  },
+  {
+    "code": "ev3-d87",
+    "title": "ARES-X (ARX-59): el mapa pequeño se gana 20/20 en los cinco niveles y la meta de 500 pasos no se alcanza; ¿más sitios y drones por escalón, retomar las estaciones, o cerrar con lo medido?",
+    "what": "Metas de ev3-d43 A: Medio 60–70 % y más de 150 pasos; Hardcore menos del 10 % y más de 300; Muy fácil ~500 pasos. Medido (ARX-58, 20 semillas por nivel): pequeño 20/20 en los cinco niveles (sin escalón); grande 20, 20, 10, 6 y 4 de 20. Las estaciones de recarga (ev3-d45 A, ev3-d47 B) quedaron detrás de una bandera apagada con un bucle (semilla 2018) y partidas de 107–171 pasos: ni con ellas se llega a 300–500. Los peligros nuevos de este plan (móviles y suelos) crecen con el nivel y moverán algo el escalón, pero no en el pequeño nivel 5 de hoy.",
+    "impact": "M13 (dificultad y estados) y la tabla de éxito por nivel que publica el informe. A y B cambian cómo se gana; cualquier cambio exige una medición única al final (parte 3). Las cifras del congelado (nivel 1) no cambian con A.",
+    "project": "Trabajo",
+    "group": "ARES-X",
+    "critical": false,
+    "options": [
+      {"key": "A", "label": "Más sitios y drones por escalón, sin estaciones (ev3-d45 B)", "detail": "Muy fácil 3 sitios, Fácil 4, Medio 5 con 2 drones, Difícil 6 con 3, Hardcore 6 con 4 (la garantía admite hasta 6 objetivos). ~4 h + medición única. Se declara que la meta de 500 pasos no se alcanza; las partidas quedan en ~100–200 pasos."},
+      {"key": "B", "label": "Retomar las estaciones de recarga para alargar a 300–500 pasos", "detail": "Medio día más el bucle de la semilla 2018 y la garantía con cadena de estaciones (ev3-d47); medición con 20 semillas. Riesgo alto de no llegar a 500 igual (medido 107–171)."},
+      {"key": "C", "label": "Cerrar ARX-59 con la tabla medida", "detail": "Publicar la tabla de ARX-58 más lo que agreguen 29 y 50/57, con las metas de ev3-d43 al lado y la explicación. 0 h de código."}
+    ],
+    "recommended": "A",
+    "chosen": null,
+    "note": "",
+    "decidedAt": null,
+    "status": "pending",
+    "order": 3087,
+    "creada": "2026-11-17",
+    "tareas": ["ARX-59", "ARX-58"],
+    "evidence": [],
+    "evidenceNote": "docs/planes/ARX-58_linea_base.md (tablas); ev3-d43, d45, d47; juego/partida.py ESTACIONES_ACTIVAS = False y _es_ganable (tope de 6 objetivos). Recomiendo A: es lo único barato que crea un escalón también en el pequeño; la meta de 500 pasos se declara no alcanzada con los números. La responde el Maestro por delegación."
+  }
+]

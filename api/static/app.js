@@ -2058,11 +2058,13 @@ async function correrViaje() {
   const pend = viajePendiente; viajePendiente = null;
   if (!pend || !debeViajar({ previo: pend.desde, nuevo: pend.hacia, activado: viajeActivado() })) return;
   let guarda = null, liberar = null;
+  const menu = document.getElementById("menu");   // el asistente de inicio tapa la escena: se oculta solo mientras dura el viaje
   try {
     const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const modo = modoMovimiento(reducido, true);
     if (modo === "ninguno") return;
     if (!tarjetaViaje) tarjetaViaje = crearTarjetaViaje(document.body);
+    if (menu) menu.style.visibility = "hidden";
     const datos = datosTarjeta(pend.desde, pend.hacia, planetasDatos);
     await new Promise((resolver) => {
       let hecho = false;
@@ -2084,6 +2086,7 @@ async function correrViaje() {
     console.warn("viaje: fallo, sigue la partida normal", e);
   } finally {
     clearTimeout(guarda);
+    if (menu) menu.style.visibility = "";
     try { if (tarjetaViaje) tarjetaViaje.ocultar(); } catch (e) { /* ya oculta */ }
     try { if (viaje) viaje.dispose(); } catch (e) { /* ya liberado */ }
     viaje = null;

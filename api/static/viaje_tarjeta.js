@@ -22,7 +22,7 @@ export function crearTarjetaViaje(contenedor) {
   const onTecla = (e) => {
     if (raiz.classList.contains("oculto")) return;
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (alOmitir) alOmitir(); return; }
-    if (!["Tab", "Enter", " "].includes(e.key)) e.stopPropagation();   // mientras dura, las teclas de conducción no llegan a la partida
+    if (!["Tab", "Enter"].includes(e.key)) e.stopPropagation();   // mientras dura, las teclas de conducción (y el espacio, que dispara) no llegan a la partida; el espacio activa el botón enfocado por su acción por defecto
   };
   omitir.addEventListener("click", () => { if (alOmitir) alOmitir(); });
   window.addEventListener("keydown", onTecla, true);

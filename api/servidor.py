@@ -608,17 +608,39 @@ COMPARACION_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
                                 "docs", "COMPARACION_POLITICAS.json")
 
 
-def _rna_entrada(sesion, proximidad, borde, gradiente, vibracion) -> dict:
+# ARX-94d: parámetro de la consulta /rna, rango y rasgo del modelo al que corresponde
+PARAMETROS_RNA = {
+    "proximidad_frontal_m": ("proximidad", 0.0, 20.0),
+    "desnivel_frontal_m": ("desnivel", -10.0, 10.0),
+    "contraste_optico": ("contraste", -2.0, 2.0),
+    "vibracion": ("vibracion", -5.0, 5.0),
+    "borde_barranco": ("borde", 0.0, 1.0),
+    "gradiente_altura_m": ("gradiente", -10.0, 10.0),
+}
+
+
+def _modelo_rna(sesion):
+    """El NeuralPerception que usa la partida (la misión puede traerlo envuelto)."""
+    r = sesion.partida.mision.rna
+    return r._rna if hasattr(r, "_rna") else r
+
+
+def _info_modelo(rna) -> dict:
+    return {"perfil": getattr(rna, "perfil", None), "rasgos": list(rna.nombres)}
+
+
+def _rna_entrada(sesion, entrada: dict) -> dict:
     """Entrada → normalización → activaciones de las capas → probabilidades → acción (CA-06, §10.1).
 
-    Las activaciones se calculan con los pesos del MLP (ReLU en las ocultas, softmax a la salida).
-    `rna.py` no se modifica. La acción la decide el supervisor con los mismos valores.
+    `entrada` va por nombre de rasgo del modelo activo (v1 o v2). Las activaciones se calculan con los pesos
+    del MLP (ReLU en las ocultas, softmax a la salida). La acción la decide el supervisor con los mismos valores.
     """
-    from rna import NOMBRES_RASGOS, CLASES
+    from rna import CLASES
     m = sesion.partida.mision
-    nn = m.rna.modelo if hasattr(m.rna, "modelo") else m.rna._rna.modelo
-    esc = m.rna.escalador if hasattr(m.rna, "escalador") else m.rna._rna.escalador
-    x = np.asarray([proximidad, borde, gradiente, vibracion], dtype=float)
+    modelo = _modelo_rna(sesion)
+    nn, esc = modelo.modelo, modelo.escalador
+    nombres = list(modelo.nombres)
+    x = np.asarray([entrada[k] for k in nombres], dtype=float)
     z = esc.transform(x.reshape(1, -1))[0]
     capas = [z]
     a = z
@@ -630,14 +652,20 @@ def _rna_entrada(sesion, proximidad, borde, gradiente, vibracion) -> dict:
     probs = e / e.sum()
     proba = {CLASES[c]: round(float(p), 4) for c, p in zip(nn.classes_, probs)}
     # altimetria_m no es entrada de la RNA: se pasa 0 para que el supervisor pueda decidir
-    lectura = {"proximidad_frontal_m": float(proximidad), "altimetria_m": 0.0, "desnivel_frontal_m": -3.0 if borde >= 0.5 else 0.0}
+    if "desnivel_frontal_m" in entrada:
+        desnivel = float(entrada["desnivel_frontal_m"])
+    else:
+        desnivel = -3.0 if entrada.get("borde_barranco", 0.0) >= 0.5 else 0.0
+    lectura = {"proximidad_frontal_m": float(entrada["proximidad_frontal_m"]), "altimetria_m": 0.0,
+               "desnivel_frontal_m": desnivel}
     dec = m.supervisor.decidir({k: float(v) for k, v in zip(["libre", "obstáculo", "barranco"],
                                                              [proba.get("libre", 0), proba.get("obstáculo", 0),
                                                               proba.get("barranco", 0)])},
                                0.5, lectura, float(sesion.partida.rover.bateria))
     return {
-        "entrada": dict(zip(NOMBRES_RASGOS, [float(v) for v in x])),
-        "normalizada": dict(zip(NOMBRES_RASGOS, [round(float(v), 4) for v in z])),
+        "modelo": _info_modelo(modelo),
+        "entrada": dict(zip(nombres, [float(v) for v in x])),
+        "normalizada": dict(zip(nombres, [round(float(v), 4) for v in z])),
         "activaciones": {"oculta_1": [round(float(v), 4) for v in capas[1]],
                          "oculta_2": [round(float(v), 4) for v in capas[2]],
                          "salida_logits": [round(float(v), 4) for v in capas[3]]},
@@ -648,18 +676,29 @@ def _rna_entrada(sesion, proximidad, borde, gradiente, vibracion) -> dict:
     }
 
 
-def _evaluacion_rna_notebook() -> dict:
+def _modelo_evaluacion(perfil: str):
+    """(perfil resuelto, nombres de rasgos) del modelo a evaluar: el pedido o, sin pedido, el activo."""
+    from rna import PERFILES_RASGOS, perfil_activo
+    perfil = perfil or perfil_activo()
+    if perfil not in ("v1", "v2"):
+        raise ErrorApi(400, "perfil debe ser v1 o v2")
+    return perfil, PERFILES_RASGOS[perfil]
+
+
+def _evaluacion_rna_notebook(perfil: str = None) -> dict:
     """Evaluación reproducible del informe: 60 mapas (42/9/9), 400 muestras por mapa, prueba en los mapas 51-59.
-    Es la misma configuración de construir_notebook.py. Se calcula una vez por proceso."""
-    if "notebook" in _cache_evaluacion_rna:
-        return _cache_evaluacion_rna["notebook"]
+    Es la misma configuración de construir_notebook.py. Se calcula una vez por proceso y perfil (v1 o v2)."""
+    perfil, nombres = _modelo_evaluacion(perfil)
+    if ("notebook", perfil) in _cache_evaluacion_rna:
+        return _cache_evaluacion_rna[("notebook", perfil)]
     from rna import generar_dataset, particion_por_mapas, NeuralPerception, CLASES
     tr, _, te = particion_por_mapas(total_mapas=60)
-    X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400)
-    X_te, y_te = generar_dataset(te, muestras_por_mapa=400)
-    res = NeuralPerception(semilla=42).entrenar(X_tr, y_tr).evaluar(X_te, y_te)
+    X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400, perfil=perfil)
+    X_te, y_te = generar_dataset(te, muestras_por_mapa=400, perfil=perfil)
+    res = NeuralPerception(semilla=42, nombres=nombres, perfil=perfil).entrenar(X_tr, y_tr).evaluar(X_te, y_te)
     datos = {
         "configuracion": "notebook: 60 mapas (42/9/9), 400 muestras por mapa, semilla 42",
+        "perfil": perfil, "rasgos": list(nombres),
         "clases": [CLASES[c] for c in sorted(CLASES)],
         "matriz_confusion": res.matriz_confusion.tolist(),
         "macro_f1": round(float(res.macro_f1), 3),
@@ -669,26 +708,29 @@ def _evaluacion_rna_notebook() -> dict:
         "muestras_prueba": int(len(y_te)),
         "mapas_prueba": [int(v) for v in te],
     }
-    _cache_evaluacion_rna["notebook"] = datos
+    _cache_evaluacion_rna[("notebook", perfil)] = datos
     return datos
 
 
-def _evaluacion_rna(sesion) -> dict:
+def _evaluacion_rna(sesion, perfil: str = None) -> dict:
     """Matriz de confusión, macro-F1, recall de barrancos y línea base de la RNA del juego (CA-06).
 
     Usa los mapas de prueba de la misma partición con la que se entrena el modelo del juego
     (`integracion.rna_entrenada`: 30 mapas). Es distinta de la evaluación de 60 mapas del INFORME.
-    Se calcula una vez por proceso.
+    Sin `perfil` evalúa el modelo de la partida; con `perfil` v1 o v2, el de ese perfil. Una vez por proceso.
     """
-    if "datos" in _cache_evaluacion_rna:
-        return _cache_evaluacion_rna["datos"]
     from rna import generar_dataset, particion_por_mapas, CLASES
-    m = sesion.partida.mision
+    from integracion import rna_entrenada
+    modelo = _modelo_rna(sesion)
+    perfil, nombres = _modelo_evaluacion(perfil or getattr(modelo, "perfil", None))
+    if ("juego", perfil) in _cache_evaluacion_rna:
+        return _cache_evaluacion_rna[("juego", perfil)]
+    base = modelo if getattr(modelo, "perfil", None) == perfil else rna_entrenada(perfil=perfil)
     _, _, prueba = particion_por_mapas(total_mapas=30)
-    X, y = generar_dataset(prueba, muestras_por_mapa=300)
-    base = m.rna._rna if hasattr(m.rna, "_rna") else m.rna
+    X, y = generar_dataset(prueba, muestras_por_mapa=300, perfil=perfil)
     res = base.evaluar(X, y)
     datos = {
+        "perfil": perfil, "rasgos": list(nombres),
         "clases": [CLASES[c] for c in sorted(CLASES)],
         "matriz_confusion": res.matriz_confusion.tolist(),
         "macro_f1": round(float(res.macro_f1), 4),
@@ -699,7 +741,7 @@ def _evaluacion_rna(sesion) -> dict:
         "mapas_prueba": [int(v) for v in prueba],
         "configuracion": "juego: 30 mapas (21/4/5), 300 muestras por mapa; modelo que usa la partida",
     }
-    _cache_evaluacion_rna["datos"] = datos
+    _cache_evaluacion_rna[("juego", perfil)] = datos
     return datos
 
 
@@ -991,31 +1033,40 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         return salida
 
     @app.get("/rna")
-    def diagnostico_rna(proximidad: str = None, borde: str = None, gradiente: str = None,
-                        vibracion: str = None):
+    def diagnostico_rna(proximidad: str = None, desnivel: str = None, contraste: str = None,
+                        vibracion: str = None, borde: str = None, gradiente: str = None):
         """Laboratorio RNA (CA-06): entrada editable → normalización → activaciones → probabilidades → acción.
-        Sin parámetros usa la celda de enfrente en el rumbo del rover."""
+        Sin parámetros usa la celda de enfrente en el rumbo del rover. Responde con el modelo activo (`modelo`:
+        perfil y lista de rasgos). v2: proximidad, desnivel, contraste, vibracion; v1: proximidad, borde,
+        gradiente, vibracion. Todo parámetro dado se valida; solo cuentan los del modelo activo."""
         sesion = activa()
         p = sesion.partida
         from juego.conduccion import _observar
         obs = _observar(p)
         base = obs.get(p.rover.rumbo or "N") or next(iter(obs.values()))
         rasgos = base["rasgos"]
-        prox = _valor_rango(proximidad, "proximidad", 0.0, 20.0, rasgos[0])
-        bor = _valor_rango(borde, "borde", 0.0, 1.0, rasgos[1])
-        grad = _valor_rango(gradiente, "gradiente", -10.0, 10.0, rasgos[2])
-        vib = _valor_rango(vibracion, "vibracion", -5.0, 5.0, rasgos[3])
-        return _rna_entrada(sesion, prox, bor, grad, vib)
+        dados = {"proximidad": proximidad, "desnivel": desnivel, "contraste": contraste,
+                 "vibracion": vibracion, "borde": borde, "gradiente": gradiente}
+        for param, lo, hi in PARAMETROS_RNA.values():
+            if dados[param] is not None:
+                _valor_entrada(dados[param], param, lo, hi)
+        entrada = {}
+        for i, clave in enumerate(_modelo_rna(sesion).nombres):
+            param, lo, hi = PARAMETROS_RNA[clave]
+            actual = rasgos[i]
+            entrada[clave] = _valor_rango(dados[param], param, lo, hi, 0.0 if actual != actual else actual)
+        return _rna_entrada(sesion, entrada)
 
     @app.get("/rna/evaluacion")
-    def evaluacion_rna(modelo: str = "notebook"):
+    def evaluacion_rna(modelo: str = "notebook", perfil: str = None):
         """Matriz de confusión, macro-F1, recall de barrancos y línea base de la RNA (CA-06).
         `modelo=notebook` (por defecto): la cifra reproducible del informe. `modelo=juego`: el modelo que usa la partida.
+        `perfil` (v1 o v2; sin él, el modelo activo); la respuesta lleva `perfil` y `rasgos`.
         La primera llamada de cada modelo tarda (entrena); después queda en caché."""
         if modelo == "notebook":
-            return _evaluacion_rna_notebook()
+            return _evaluacion_rna_notebook(perfil)
         if modelo == "juego":
-            return _evaluacion_rna(activa())
+            return _evaluacion_rna(activa(), perfil)
         raise ErrorApi(400, "modelo debe ser notebook o juego")
 
     @app.get("/difuso")

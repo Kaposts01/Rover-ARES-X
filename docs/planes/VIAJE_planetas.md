@@ -55,7 +55,7 @@ Todo en `api/static/`, módulos ES, `three` por el import map (r160 vendoreado),
 | 12 s de la barra, tiempos de fase (1,7 a 3,6 s) | Duración de cine, no un tiempo de viaje. | Nunca rotularlos como tiempo de viaje. Sin tiempos de viaje reales, sin distancia entre planetas (varía mucho). |
 | Posiciones y radios de la escena (radio 7 a distancias 26-44) | No es escala. | Rotular «no está a escala». |
 | Robot que sube a una nave | Un rover real no se embarca así. | Fuera de v1 (solo viaja la nave). Rótulo ilustrativo. |
-| Rótulos «REC-BOT» y «Perseverance» | Prohibidos por el usuario. | Una prueba de texto sobre los archivos nuevos comprueba que no aparecen, ni `/home`, ni `herramientas/`, ni `ESTADO.md`, ni CDN. |
+| Rótulos y recursos propios del ejemplo | Prohibidos por el usuario. | Una prueba de texto sobre los archivos nuevos comprueba que no aparecen nombres del ejemplo, rutas de usuario ni CDN. |
 
 ## 3. Riesgos de FPS y cómo medir
 - Riesgos: segunda escena en el mismo renderer (sin segundo contexto WebGL, bien); texturas por CPU de los dos planetas (la primera vez); fugas de geometría o textura entre viajes; estela con `needsUpdate` por cuadro; la tarjeta DOM sobre WebGL.
@@ -67,7 +67,7 @@ Todo en `api/static/`, módulos ES, `three` por el import map (r160 vendoreado),
 1. `python -m pytest api/tests/test_viaje_adaptadores.py` pasa (node sobre `viaje_datos.js`). Cubre: `debeViajar` (mismo planeta, previo nulo, casilla apagada, perfil desconocido), `datosTarjeta` («Sin dato» con catálogo vacío), las 8 distancias, `fasesViaje` suma exacta, `trayectoria` en u=0 y u=1, cola de estela acotada, textos prohibidos ausentes. La suite existente `api/tests` sigue verde (sin tocar el motor: `git diff --stat` solo muestra `api/static/` y `api/tests/` nuevos).
 2. En Chrome (claude-in-chrome, partida real): (a) Marte→Venus muestra el viaje, la tarjeta con el aviso del terreno y el rótulo ilustrativo; termina y la partida nueva queda en Venus con el mismo mapa de Marte. (b) «Omitir viaje» y Escape cortan el viaje y la partida sigue normal. (c) Casilla apagada: no hay viaje, solo la cuenta atrás de siempre. (d) Con `prefers-reduced-motion` emulado: sin escena 3D, solo tarjeta estática. (e) Marte→Júpiter (sonda): viaja y el modo sonda sigue funcionando. (f) Primer inicio, recarga de página y cadena automática: no hay viaje. (g) Falla simulada (lanzar excepción en `crearViaje` desde la consola): el cambio de planeta funciona igual y queda un aviso en consola. (h) Consola sin errores y sin peticiones a otros hosts (`read_network_requests`). (i) Móvil 375 px: la tarjeta no desborda.
 3. FPS y memoria dentro del umbral de §3, con el informe y capturas en `docs/capturas/` según la regla de la skill.
-4. Sin `REC-BOT`, `Perseverance`, `/home`, `herramientas/`, `ESTADO.md` ni CDN en lo traído.
+4. Sin rótulos ni recursos propios del ejemplo, ni rutas de usuario, ni CDN en lo traído.
 5. Nada commiteado hasta que el usuario lo apruebe.
 
 ## 5. Preguntas que solo decide el usuario

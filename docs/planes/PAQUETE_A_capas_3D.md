@@ -72,3 +72,13 @@ Del ejemplo no se trae nada más que las tres piezas adaptadas: ni sus herramien
 - Rendimiento de las capas con mapa grande (40×60): se mide en Chrome antes de dar la pieza por buena.
 - Todavía no se probó nada de esto en el navegador; este documento es solo diseño.
 - `factible` y el tope de 8 candidatos son supuestos hasta ver `_desglose_fitness` y la escena.
+
+## 7. Observaciones de la QA (21/11) anotadas, sin implementar
+
+- **H-1 (alta):** el riesgo estimado parte con ~80 % de los peligros reales ya marcados (`genetico.mapa_estimado`). Decisión del usuario en la ficha ev3-d91; no se toca hasta que se responda.
+- **H-2 (media):** con el holograma encendido cada paso pide `/ag` y el AG se vuelve a correr casi siempre (la clave de caché incluye posición y riesgo). No altera la partida. Pendiente: medir los ms por paso y, si pesa, pedir `/ag` cada N pasos.
+- **H-3 (media):** el panel del holograma va con `depthTest: false`; con la cámara muy cerca puede solapar al rover. Falta comprobarlo en el navegador.
+- **H-5 (baja):** los avisos `.capa-nota` no tienen `aria-live` y el holograma no tiene alternativa de texto (los mismos datos están en los paneles de RNA, difuso y AG).
+- **H-7 (baja):** la tira de decisiones solo se repinta con un paso nuevo.
+- **H-8 (baja):** sin pruebas automáticas de los módulos three ni del selector; las capturas cubren lo visual.
+- Resueltas: **H-4** (el rótulo aclara que la curva solo une los sitios) y **H-9** (el plan ya no nombra los recursos del ejemplo).

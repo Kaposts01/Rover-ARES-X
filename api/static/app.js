@@ -2059,7 +2059,7 @@ async function correrViaje() {
   const menu = document.getElementById("menu");   // el asistente de inicio tapa la escena: se oculta solo mientras dura el viaje
   try {
     // Carga perezosa: si un módulo del viaje no carga, la partida sigue igual (con import estático rompería toda la app)
-    const [{ DURACION_VIAJE_S, GUARDA_EXTRA_S, debeViajar, datosTarjeta, modoMovimiento }, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
+    const [{ DURACION_VIAJE_S, GUARDA_EXTRA_S, CIERRE_ESTATICO_S, debeViajar, datosTarjeta, modoMovimiento }, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
       import("/static/viaje_datos.js?v=r14"), import("/static/viaje3d.js?v=r14"), import("/static/viaje_tarjeta.js?v=r14")]);
     if (!debeViajar({ previo: pend.desde, nuevo: pend.hacia, activado: true })) return;
     const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2075,7 +2075,7 @@ async function correrViaje() {
       liberar = fin;
       if (modo === "tarjeta") {
         tarjetaViaje.mostrar(datos, { estatica: true, alOmitir: fin });
-        guarda = setTimeout(fin, 5000);   // sin animación: se cierra a los 5 s o con «Continuar»
+        guarda = setTimeout(fin, CIERRE_ESTATICO_S * 1000);   // sin animación: se cierra a los 20 s o con «Continuar» / Escape
         return;
       }
       try {

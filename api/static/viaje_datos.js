@@ -1,6 +1,7 @@
 // Viaje entre planetas: datos y funciones puras (sin DOM ni THREE). Se prueban con node.
 export const DURACION_VIAJE_S = 8;
 export const GUARDA_EXTRA_S = 2;
+export const CIERRE_ESTATICO_S = 20;   // movimiento reducido: la tarjeta estática se cierra sola a los 20 s (o con «Continuar» / Escape)
 export const PLANETAS_VIAJE = ["Mercurio", "Venus", "Tierra", "Marte", "Júpiter", "Saturno", "Urano", "Neptuno"];
 // Distancia media al Sol, en millones de km. Fuente: NASA Planetary Fact Sheet (valores aproximados).
 export const DISTANCIA_SOL_MKM = {

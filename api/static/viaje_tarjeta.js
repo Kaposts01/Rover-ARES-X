@@ -18,7 +18,7 @@ export function crearTarjetaViaje(contenedor) {
   const omitir = document.createElement("button"); omitir.type = "button"; omitir.className = "secundario vj-omitir"; omitir.textContent = "Omitir viaje";
   tarjeta.append(titulo, cuerpo, avisos, barra, omitir); raiz.append(tarjeta); contenedor.append(raiz);
 
-  let alOmitir = null, intervalo = null;
+  let alOmitir = null, intervalo = null, foco = null;
   const onTecla = (e) => {
     if (raiz.classList.contains("oculto")) return;
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (alOmitir) alOmitir(); return; }
@@ -39,6 +39,7 @@ export function crearTarjetaViaje(contenedor) {
 
   // opciones: { duracion, estatica, alOmitir }. En modo estático (movimiento reducido) la barra no se anima y el botón dice «Continuar».
   function mostrar(datos, { duracion = DURACION_VIAJE_S, estatica = false, alOmitir: cb = null } = {}) {
+    try { if (!foco) foco = document.activeElement; } catch (e) { foco = null; }   // para devolver el foco al cerrar
     alOmitir = cb;
     titulo.textContent = datos.titulo;
     cuerpo.replaceChildren(columna(datos.desde, datos.origen), columna(datos.hacia, datos.destino));
@@ -57,7 +58,11 @@ export function crearTarjetaViaje(contenedor) {
     }
     omitir.focus({ preventScroll: true });
   }
-  function ocultar() { clearInterval(intervalo); intervalo = null; raiz.classList.add("oculto"); alOmitir = null; }
+  function ocultar() {
+    clearInterval(intervalo); intervalo = null; raiz.classList.add("oculto"); alOmitir = null;
+    try { if (foco && foco.isConnected && typeof foco.focus === "function") foco.focus({ preventScroll: true }); } catch (e) { /* el foco ya no existe */ }
+    foco = null;
+  }
   function dispose() { ocultar(); window.removeEventListener("keydown", onTecla, true); raiz.remove(); }
   return { mostrar, ocultar, dispose };
 }

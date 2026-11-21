@@ -27,6 +27,10 @@ UMBRAL_VELOCIDAD_MINIMA = 0.2     # por debajo de esta velocidad el rover se det
 GRADOS_POR_GRADIENTE = 20.0       # conversión supuesta de gradiente de altura a grados
 DISTANCIA_BLOQUEO_RUTA = 6       # celdas de ruta adelante que se revisan por un obstáculo visto
 MARGEN_ENERGIA = 15              # % de batería de reserva sobre el camino al refugio
+# Paquete A (incertidumbre): alcance con que se registra lo observado cuando el sensor de proximidad no ve nada
+# (distancia >= 20). El sensor llega a 20 m, pero el rover solo actúa sobre DISTANCIA_BLOQUEO_RUTA celdas de la ruta
+# (y a más distancia la lectura no cambia ninguna decisión), así que se da por mirado ese tramo y no las 20 celdas.
+ALCANCE_OBSERVACION = DISTANCIA_BLOQUEO_RUTA
 PASOS_PARADO_MAXIMO = 3          # pasos detenido seguidos antes de replanificar
 # ARX-93 (ev3-d78 A): pista aparte, apagada por defecto. Encendida (con activar_aporte_rna) la misión usa la
 # RNA sin borde_barranco y la alerta a dos celdas, sobre un mundo con la firma física del barranco.
@@ -141,6 +145,9 @@ class Mision:
         self.sensor = SensorSuite(rng=self.rng, ruido=ruido)
         self.rover = Rover(posicion=mundo.inicio, bateria=bateria)
         self.riesgo = mapa_estimado(mundo, self.rng)
+        # Paquete A: SOLO DE REGISTRO (para la capa «no observada» de la interfaz). Ninguna decisión, ruta, veto,
+        # RNA, difuso ni AG la lee, y marcarla no consume números del rng.
+        self.observadas = np.zeros(mundo.tipo.shape, dtype=bool)
         self.difuso = FuzzyController()
         self.supervisor = SafetySupervisor()
         self.k = k_puntos
@@ -235,6 +242,7 @@ class Mision:
         if self.intervencion_rna is not None and self.usar_rna:
             probs = self.intervencion_rna(probs)
         self._actualizar_mapa_estimado(pos, rumbo, lectura["proximidad_frontal_m"])
+        self._registrar_observacion(pos, rumbo, lectura["proximidad_frontal_m"])   # solo registro, no decide nada
         for celda in lectura["celdas_barranco"]:
             self.riesgo[celda] = 1.0
         alerta = self._marcar_riesgo_rna(pos, rumbo, siguiente) if self.alerta_rna_2 and self.usar_rna else None
@@ -331,6 +339,24 @@ class Mision:
         celda = self._celda_observada(pos, rumbo, distancia)
         if celda is not None:
             self.riesgo[celda] = 1.0
+
+    def _registrar_observacion(self, pos, rumbo, distancia):
+        """Marca en `observadas` (solo registro) la celda del rover y las que el sensor de proximidad cubrió en el rumbo.
+
+        Con obstáculo a `distancia` se cubren las celdas hasta él (incluida). Sin lectura válida (NaN: falla del
+        sensor) solo cuenta la celda propia; sin obstáculo (>= 20) se cubre hasta ALCANCE_OBSERVACION.
+        No usa el rng ni toca ningún estado que lean las decisiones.
+        """
+        self.observadas[pos] = True
+        if np.isnan(distancia):
+            return
+        alcance = ALCANCE_OBSERVACION if distancia >= 20 else max(1, round(distancia))
+        df, dc = MOVIMIENTOS[rumbo]
+        for paso in range(1, alcance + 1):
+            celda = (pos[0] + df * paso, pos[1] + dc * paso)
+            if not self.mundo.dentro(celda):
+                break
+            self.observadas[celda] = True
 
     def _marcar_riesgo_rna(self, pos, rumbo, siguiente):
         """Alerta temprana (ARX-93c, DESCARTADA: apagada y sin uso; ver ALERTA_RNA_2_ACTIVA). Marca en el mapa estimado la celda a dos pasos si la RNA la ve peligrosa.

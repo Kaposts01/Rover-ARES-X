@@ -11,7 +11,7 @@ export const MAX_MOMENTOS = 3;
 export const ANCHO_MOMENTO = 960;
 export const TECLAS_QUE_PASAN = ["Tab", "Enter"];   // con la pantalla abierta, el resto de las teclas no llega a la partida (el espacio dispara)
 
-// Fórmula del puntaje de juego: ciencia(0 a 1)×1000 + barrancos evitados×50 + batería(%)×5 − violaciones×500, mínimo 0.
+// Fórmula del puntaje de juego: ciencia(0 a 1)×1000 + vetos por barranco (pasos)×50 + batería(%)×5 − violaciones×500, mínimo 0.
 export const PESO_CIENCIA = 1000;
 export const PESO_BARRANCOS_EVITADOS = 50;
 export const PESO_BATERIA = 5;
@@ -31,7 +31,7 @@ export const ROTULO_FICCION = "Ficción, no evidencia";
 export const NOTA_SENAL = "La señal anómala del motor es una lectura sin explicación: no afirma vida.";
 export const NOTA_SIN_EVENTO = "Requiere un evento que el rover no tiene.";
 export const NOTA_DISTANCIA = "Distancia en celdas del mapa (sin escala en metros).";
-export const NOTA_BARRANCOS = "Barrancos evitados: pasos de la bitácora en que el veto frenó un barranco.";
+export const NOTA_BARRANCOS = "Vetos por barranco (pasos): pasos de la bitácora con veto por barranco (no barrancos distintos: puede sumar si el rover queda vetado varios pasos seguidos).";
 export const NOTA_VIOLACIONES = "Violaciones: colisiones más pasos sobre la tolerancia térmica.";
 
 const num = (v) => (v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -68,7 +68,7 @@ export function desglosePuntaje(r) {
   };
   const terminos = [
     t("ciencia", "Ciencia (0 a 1)", x.ciencia, PESO_CIENCIA, 1),
-    t("barrancos", "Barrancos evitados", x.barrancos_evitados, PESO_BARRANCOS_EVITADOS, 1),
+    t("barrancos", "Vetos por barranco (pasos)", x.barrancos_evitados, PESO_BARRANCOS_EVITADOS, 1),
     t("bateria", "Batería final (%)", x.bateria_pct, PESO_BATERIA, 1),
     t("violaciones", "Violaciones", x.violaciones, PENALIZACION_VIOLACION, -1),
   ];
@@ -79,8 +79,8 @@ export function puntajeFinal(r) { return desglosePuntaje(r).total; }
 
 export function estrellas(r) {
   const x = r || {};
-  const viol = num(x.violaciones) || 0, cien = num(x.ciencia), bat = num(x.bateria_pct);
-  let n = x.codigo === "EXITO" && viol === 0 ? 1 : 0;
+  const violN = num(x.violaciones), viol = violN || 0, cien = num(x.ciencia), bat = num(x.bateria_pct);
+  let n = x.codigo === "EXITO" && violN === 0 ? 1 : 0   // violaciones desconocidas: ninguna estrella por ese término;
   if (n === 1 && cien != null && cien >= UMBRAL_2_ESTRELLAS) n = 2;
   if (n === 2 && cien >= UMBRAL_3_CIENCIA && bat != null && bat >= UMBRAL_3_BATERIA) n = 3;
   return n;
@@ -199,8 +199,10 @@ export function evaluarLogros(evento, memoria, ahora = "") {
       const vivo = r.codigo !== "FRACASO";
       if (r.objetivos_muestreados >= 1) dar("primera_muestra");
       if (r.objetivos_totales > 0 && r.objetivos_muestreados === r.objetivos_totales) dar("cientifico");
-      if (previo === "tormenta" && amb !== "tormenta" && vivo) dar("tormenta");
-      if (previo === "noche" && amb !== "noche" && vivo) dar("noctambulo");
+      // solo si el ambiente terminó de verdad (restante 0): un evento manual que lo sobreescriba no cuenta
+      const terminó = ev.restante === 0;
+      if (previo === "tormenta" && amb !== "tormenta" && vivo && terminó) dar("tormenta");
+      if (previo === "noche" && amb !== "noche" && vivo && terminó) dar("noctambulo");
       m.mision.ambiente = amb;
       if (ev.meteorito) dar("impacto");
       if (ev.senalVisitada) { dar("senal_anomala"); dar("primer_contacto"); }

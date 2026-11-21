@@ -92,6 +92,15 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
       if (!visor.classList.contains("oculto")) cerrarVisor(); else llamar(alContinuar);
       return;
     }
+    if (e.key === "Tab") {   // foco atrapado: Tab y Mayús+Tab ciclan dentro de la tarjeta (o del visor, si está abierto)
+      const zona = visor.classList.contains("oculto") ? raiz : visor;
+      const lista = [...zona.querySelectorAll("button, input, summary, [tabindex]")].filter((x) => !x.disabled && x.offsetParent !== null && x.getAttribute("tabindex") !== "-1");
+      if (!lista.length) { e.preventDefault(); return; }
+      const primero = lista[0], ultimo = lista[lista.length - 1], activo = document.activeElement;
+      if (!zona.contains(activo)) { e.preventDefault(); primero.focus(); }
+      else if (e.shiftKey && activo === primero) { e.preventDefault(); ultimo.focus(); }
+      else if (!e.shiftKey && activo === ultimo) { e.preventDefault(); primero.focus(); }
+    }
     if (!TECLAS_QUE_PASAN.includes(e.key)) e.stopPropagation();   // mientras está abierta, las teclas de conducción (y el espacio, que dispara) no llegan a la partida; el espacio activa el botón enfocado por su acción por defecto
   };
   window.addEventListener("keydown", onTecla, true);
@@ -190,7 +199,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
       pintarEstadistica("probeta", "Objetivos muestreados", r.objetivos_muestreados == null || r.objetivos_totales == null ? "—" : `${formatoDato(r.objetivos_muestreados)} / ${formatoDato(r.objetivos_totales)}`),
       pintarEstadistica("bateria", "Batería final", r.bateria_pct == null ? "—" : `${formatoDato(r.bateria_pct, { decimales: 1 })} %`),
       pintarEstadistica("escudo", "Violaciones / vetos", r.violaciones == null && r.vetos == null ? "—" : `${formatoDato(r.violaciones)} / ${formatoDato(r.vetos)}`),
-      pintarEstadistica("montana", "Barrancos evitados", formatoDato(r.barrancos_evitados)),
+      pintarEstadistica("montana", "Vetos por barranco (pasos)", formatoDato(r.barrancos_evitados)),
       pintarEstadistica("replanificar", "Replanificaciones", formatoDato(r.replanificaciones)),
       pintarEstadistica("ubicacion", "Distancia recorrida", r.distancia == null ? "—" : `${formatoDato(r.distancia)} celdas`),
       pintarEstadistica("reloj", "Paso final", formatoDato(r.paso)),

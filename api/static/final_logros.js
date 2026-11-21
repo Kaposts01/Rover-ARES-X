@@ -49,6 +49,7 @@ export function crearLogros({ almacen = crearAlmacenLocal(), alDesbloquear = nul
   // evento: ver evaluarLogros en final_datos.js. Devuelve los logros nuevos (puede ser una lista vacía). Nunca lanza.
   function revisar(evento) {
     if (!vivo) return [];
+    if (evento && evento.tipo === "inicio") senalPrevia = false;   // partida nueva: sin señal previa
     try {
       const r = evaluarLogros(evento, memoria, new Date().toISOString());
       memoria = r.memoria;
@@ -63,13 +64,14 @@ export function crearLogros({ almacen = crearAlmacenLocal(), alDesbloquear = nul
     }
   }
   // Lee un /estado: ambiente, resultado parcial y paso de la señal anómala a «visitada» (el motor la pone en null solo al visitarla).
-  let senalPrevia = false;
+  let senalPrevia = false, semillaVista;
   function revisarEstado(e) {
     if (!e || typeof e !== "object" || e.sin_partida) return [];
     const hay = Array.isArray(e.senal);
+    if (e.semilla !== semillaVista) { senalPrevia = false; semillaVista = e.semilla; }   // otra partida: la señal de la anterior no cuenta
     const senalVisitada = senalPrevia && e.senal === null;
     senalPrevia = hay;
-    return revisar({ tipo: "paso", resultado: normalizarResultado(e), ambiente: e.ambiente, senalVisitada });
+    return revisar({ tipo: "paso", resultado: normalizarResultado(e), ambiente: e.ambiente, restante: e.ambiente_restante, senalVisitada });
   }
   function lista() { return listaLogros(memoria); }
   function borrar() {

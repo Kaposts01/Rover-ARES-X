@@ -83,6 +83,7 @@ def test_normalizar_estado_real():
 def test_desglose_suma_el_total():
     d = _js(f"m.desglosePuntaje({_p(ciencia=0.5, bateria_pct=40, violaciones=1, barrancos_evitados=4)})")
     assert [t["clave"] for t in d["terminos"]] == ["ciencia", "barrancos", "bateria", "violaciones"]
+    assert d["terminos"][1]["etiqueta"] == "Vetos por barranco (pasos)"
     assert sum(t["puntos"] for t in d["terminos"]) == d["bruto"] == 400 and d["total"] == 400
 
 
@@ -188,12 +189,12 @@ def test_logros_de_ambiente_y_eventos():
     base = {"codigo": "EXPLORACION"}
     en = _evaluar(_paso(base, ambiente="tormenta"))
     assert en["ids"] == [] and en["memoria"]["mision"]["ambiente"] == "tormenta"
-    assert _evaluar(_paso(base, ambiente="normal"), en["memoria"])["ids"] == ["tormenta"]
-    assert _evaluar(_paso({"codigo": "FRACASO"}, ambiente="normal"), en["memoria"])["ids"] == []   # no sobrevivió
+    assert _evaluar(_paso(base, ambiente="normal", restante=0), en["memoria"])["ids"] == ["tormenta"]
+    assert _evaluar(_paso({"codigo": "FRACASO"}, ambiente="normal", restante=0), en["memoria"])["ids"] == []   # no sobrevivió
     noche = _evaluar(_paso(base, ambiente="noche"))["memoria"]
     assert _evaluar(_paso(base, ambiente="noche"), noche)["ids"] == []
-    assert _evaluar(_paso(base, ambiente="normal"), noche)["ids"] == ["noctambulo"]
-    assert _evaluar(_paso(base, ambiente="normal"), noche)["memoria"]["mision"]["ambiente"] == "normal"
+    assert _evaluar(_paso(base, ambiente="normal", restante=0), noche)["ids"] == ["noctambulo"]
+    assert _evaluar(_paso(base, ambiente="normal", restante=0), noche)["memoria"]["mision"]["ambiente"] == "normal"
     assert _evaluar(_paso(base, meteorito=True))["ids"] == ["impacto"]
     assert _evaluar(_paso(base, meteorito=False))["ids"] == []
     assert _evaluar({"tipo": "meteorito"})["ids"] == ["impacto"]
@@ -335,3 +336,47 @@ def test_barrancos_evitados_cuenta_filas_con_veto_por_barranco():
         mision = _M()
 
     assert _barrancos_evitados(_P()) == 2
+
+
+@sin_node
+def test_h1_senal_de_otra_partida_no_desbloquea():
+    # lógica del cliente: la señal activa de la partida A no cuenta en la B (inicio o semilla distinta)
+    codigo = (f"import * as m from {json.dumps((ESTATICOS / 'final_logros.js').as_uri())};"
+              "globalThis.localStorage={getItem(){return null},setItem(){},removeItem(){}};"
+              "const l=m.crearLogros({almacen:m.crearAlmacenLocal()});"
+              "const ids=[];const e=(x)=>l.revisarEstado({estado:'EXPLORACION',ambiente:'normal',...x}).forEach(n=>ids.push(n.id));"
+              "e({semilla:1,senal:[2,3],paso:3});l.revisar({tipo:'inicio',planeta:'Marte'});e({semilla:2,senal:null,paso:0});"
+              "const A=[...ids];e({semilla:2,senal:[4,4],paso:2});e({semilla:2,senal:null,paso:3});"
+              "console.log(JSON.stringify({A,B:ids.filter(i=>i==='senal_anomala'||i==='primer_contacto')}));")
+    r = subprocess.run([NODE, "--input-type=module", "-"], input=codigo, capture_output=True, text=True, encoding="utf-8", timeout=30)
+    assert r.returncode == 0, r.stderr
+    o = json.loads(r.stdout)
+    assert "senal_anomala" not in o["A"] and "primer_contacto" not in o["A"]
+    assert sorted(o["B"]) == ["primer_contacto", "senal_anomala"]
+
+
+@sin_node
+def test_h2_ambiente_solo_cuenta_si_termino_de_verdad():
+    base = {"codigo": "EXPLORACION"}
+    tor = _evaluar(_paso(base, ambiente="tormenta", restante=3))["memoria"]
+    assert _evaluar(_paso(base, ambiente="noche", restante=8), tor)["ids"] == []        # evento manual que lo sobreescribe
+    assert _evaluar(_paso(base, ambiente="normal", restante=0), tor)["ids"] == ["tormenta"]
+    noc = _evaluar(_paso(base, ambiente="noche", restante=2))["memoria"]
+    assert _evaluar(_paso(base, ambiente="tormenta", restante=6), noc)["ids"] == []
+    assert _evaluar(_paso(base, ambiente="normal", restante=0), noc)["ids"] == ["noctambulo"]
+
+
+@sin_node
+def test_h4_violaciones_desconocidas_no_dan_estrella():
+    assert _js(f"m.estrellas({_p(violaciones=None)})") == 0
+    assert _js(f"m.estrellas({_p(violaciones=0)})") == 3
+
+
+def test_h5_foco_atrapado_en_la_tarjeta():
+    txt = (ESTATICOS / "final_tarjeta.js").read_text(encoding="utf-8")
+    assert 'e.key === "Tab"' in txt and "e.shiftKey && activo === primero" in txt and "!e.shiftKey && activo === ultimo" in txt
+
+
+def test_h6_plan_sin_referencia_a_inventario():
+    plan = (Path(__file__).resolve().parents[2] / "docs" / "planes" / "PANTALLA_FINAL.md").read_text(encoding="utf-8")
+    assert "inventario del ejemplo" not in plan and "proyecto de ejemplo del usuario" in plan

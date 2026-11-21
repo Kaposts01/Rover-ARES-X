@@ -1,0 +1,50 @@
+# M13 · barrido térmico: Mercurio de día y Venus (criterio escrito antes de medir)
+
+Rama feat/m13-barrido-termico desde a0bf109. No cambia el juego: la bandera `termico.ABORTO_TERMICO_ACTIVO` se enciende SOLO dentro del script, por atributo del módulo, y se restaura al terminar.
+
+## Escenarios
+- Planetas: **Mercurio** (de día: `T_AMB_POR_PLANETA["Mercurio"] = 430 °C`) y **Venus** (`464 °C`).
+- Tamaño: el **por defecto de la interfaz, grande (40×60)**.
+- Niveles 1 a 5; semillas 1 a 20 por nivel; garantía activa; control automático (`avanzar_ia`); tope de 500 pasos por partida.
+
+## Qué cuenta como «se gana hoy»
+Una partida con la bandera APAGADA que termina en `EXITO`. Es la referencia de hoy.
+
+## Qué cuenta como «abortada»
+Una partida que se gana hoy (bandera apagada) y que, con la misma semilla, planeta, nivel y tamaño, con la bandera ENCENDIDA termina en `MODO_SEGURO` (aborto térmico, estado terminal). Si con la bandera encendida termina en otro estado (`EXITO`, `FRACASO`, `SIN_RUTA`), no cuenta como abortada: se publica aparte.
+
+## Qué se publica, por planeta y nivel
+- Partidas que se ganan hoy (bandera apagada).
+- De ellas, cuántas se abortan (bandera encendida, `MODO_SEGURO`).
+- Paso medio del aborto (media del paso en el que entra en `MODO_SEGURO`).
+- Temperatura interna máxima alcanzada en la partida con la bandera encendida (°C).
+- Cuántas partidas que se ganan hoy siguen ganándose con la bandera encendida.
+
+## Nota de diseño que se publica tal cual
+Con la bandera encendida, el difuso también recibe T_int (`_inferir_con_temperatura` en `partida.py`), así que la ruta puede cambiar aunque no haya aborto. Por eso se publica cuántas partidas cambian de resultado y no solo cuántas abortan.
+
+## Reglas
+- Se publica tal como sale; no se ajusta nada para mejorar cifras.
+- Una medición, con turno, en segundo plano y en un proceso.
+- El congelado (`d6fb9079…`) no se toca: el script no altera la evaluación congelada.
+
+## Resultados (medidos 22:08–22:36, bandera encendida solo dentro del script)
+
+Datos: `mediciones/barrido_m13.json` y `mediciones/barrido_m13.log`. Tamaño grande (40×60), 20 semillas por nivel, control automático.
+
+> **Rótulo (ev3-d88, QA):** esta tabla es del **modelo anterior, K_CALOR 0,08**. El modelo vigente (K_CALOR 0,01, τ = 100 pasos) y su medición están en `docs/planes/M13_termico_B.md`.
+
+| Planeta · nivel | Se gana hoy (apagada) | Abortadas (encendida) | Siguen ganando (encendida) | Paso medio del aborto | T interna media (°C) | T interna máxima (°C) |
+|---|---|---|---|---|---|---|
+| Mercurio · 1 | 20/20 | 20 | 0 | 7,5 | 152,3 | 192,7 |
+| Mercurio · 2 | 20/20 | 20 | 0 | 7,5 | 158,5 | 191,1 |
+| Mercurio · 3 | 19/20 | 19 | 0 | 8,6 | 161,5 | 193,4 |
+| Mercurio · 4 | 17/20 | 17 | 0 | 8,4 | 151,9 | 193,4 |
+| Mercurio · 5 | 15/20 | 15 | 0 | 9,8 | 155,4 | 191,1 |
+| Venus · 1 | 20/20 | 20 | 0 | 7,5 | 163,9 | 207,7 |
+| Venus · 2 | 20/20 | 20 | 0 | 7,5 | 170,7 | 206,2 |
+| Venus · 3 | 19/20 | 19 | 0 | 8,6 | 173,9 | 208,4 |
+| Venus · 4 | 17/20 | 17 | 0 | 8,4 | 163,4 | 208,4 |
+| Venus · 5 | 15/20 | 15 | 0 | 9,8 | 167,1 | 206,2 |
+
+**Lectura.** Con la bandera encendida, toda partida que se gana hoy termina en `MODO_SEGURO` a los 7–10 pasos; ninguna sigue ganando ni termina en otro estado. La temperatura interna sube por encima de la tolerancia de 60 °C muy pronto y el aborto llega cinco pasos después. Las cifras son de la regla del aborto tal como está en `termico.py`: no se ajustó nada.

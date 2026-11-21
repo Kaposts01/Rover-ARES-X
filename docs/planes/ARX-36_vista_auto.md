@@ -52,7 +52,7 @@ Ninguna ficha: es presentación de datos que ya existen. Riesgo: la cadena autom
 
 ## 8. Verificación (QA)
 
-Chrome con la skill `prueba-juego-chrome`: cadena de 3 misiones, tira por misión visible y coherente con el indicador, `?demo=estados` recorre los ocho, consola limpia, sin regresión del bloque de medianas (ev3-d46 A).
+Prueba en Chrome: cadena de 3 misiones, tira por misión visible y coherente con el indicador, `?demo=estados` recorre los ocho, consola limpia, sin regresión del bloque de medianas (ev3-d46 A).
 
 ## Dónde quedé
 - 17/11 · Plan completo. Siguiente: `ARX-34_animaciones.md`.

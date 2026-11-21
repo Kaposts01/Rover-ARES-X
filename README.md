@@ -65,7 +65,7 @@ El mapa grande arranca con 1,49 veces la batería del pequeño, porque su ruta e
 ## Límites
 
 - Solo Marte (modo rover). Los otros planetas no están implementados.
-- Con 10 sitios (escenario exigente), el híbrido gana 12 de 20 semillas, frente a 14 con el vecino más cercano y 17 con 2-opt. Es una falla de búsqueda del AG, declarada en `INFORME_TECNICO.md` (§4.3); el juego normal no la tiene.
+- Con 10 sitios (escenario exigente), el híbrido gana 17 de 20 semillas tras la segunda corrección del AG (antes 12), frente a 14 con el vecino más cercano y 17 con 2-opt. El juego normal no se ve afectado. Detalle en `INFORME_TECNICO.md` (§4.3).
 - Los valores sin fuente son supuestos de simulación, no especificaciones de misión.
 - En el escenario normal la RNA es redundante con el supervisor. El detalle y las demás limitaciones están en `INFORME_TECNICO.md`.
 

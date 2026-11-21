@@ -340,8 +340,10 @@ def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None, anotar=None, con
             # ARX-92c (corrección aprobada por el Maestro): la viabilidad usa la misma reserva que _planear
             # (largo + MARGEN_ENERGIA ≤ batería). Una ruta que no la cumple devuelve None y queda por debajo de
             # cualquier ruta completa viable (piso de fitness en optimizar_orden).
-            if len(c) - 1 + MARGEN_ENERGIA > m.rover.bateria:
-                return None
+            # ARX-92 B (§16): una ruta inviable se devuelve con su exceso (no se descarta): el planificador la penaliza
+            exceso = len(c) - 1 + MARGEN_ENERGIA - m.rover.bateria
+            if exceso > 0:
+                return ("inviable", c, exceso)
             return c
 
         res = gp.optimizar_orden(construir, con_paso=AG_ORDEN_CON_PASO if con_paso is None else con_paso,
@@ -358,7 +360,7 @@ def _ag_con_todos_los_sitios(m, optimizar_original, pesos=None, anotar=None, con
         candidatos = itertools.permutations(pts) if len(pts) <= 6 else [tuple(pts)]
         for orden in candidatos:
             c = construir(list(orden) + [tuple(int(v) for v in m.mundo.refugio)])
-            if c is None:
+            if c is None or isinstance(c, tuple):
                 continue
             validas.append((gp.evaluar_ruta(c, capacidad).fitness, len(c), c))
         if not validas:
@@ -394,6 +396,20 @@ def _cronometrado(metodo):
         finally:
             self.tiempo_computo_s += time.perf_counter() - t0
             self._cronometro_nivel -= 1
+    return envuelto
+
+
+def _paso_de_juego(metodo):
+    """ev3-d88 B: marca que el método corre un paso de juego. Mientras dura, el difuso usa la T_int de la partida
+    (envoltorio de __init__); fuera del paso (laboratorio /difuso), la temperatura que se pide."""
+    @functools.wraps(metodo)
+    def envuelto(self, *args, **kwargs):
+        previo = self._en_paso_juego
+        self._en_paso_juego = True
+        try:
+            return metodo(self, *args, **kwargs)
+        finally:
+            self._en_paso_juego = previo
     return envuelto
 
 
@@ -519,11 +535,14 @@ class Partida:
         self.planeta = planeta
         self.termico = termico.Termico(planeta)
         self._termico_activo = bool(garantia) and self.termico.activo     # planeta sin modelo: inactivo, sin ValueError
+        self._en_paso_juego = False                                       # ev3-d88 B: ver _paso_de_juego
         if self._termico_activo:
             _inferir = self.mision.difuso.inferir
 
             def _inferir_con_temperatura(distancia, bateria, inclinacion, temperatura=0.0):
-                if termico.ABORTO_TERMICO_ACTIVO:
+                # ev3-d88 B: solo durante el paso de juego se usa la T_int; el laboratorio /difuso responde con la
+                # temperatura que se pide
+                if termico.ABORTO_TERMICO_ACTIVO and self._en_paso_juego:
                     temperatura = self.termico.t_int
                 return _inferir(distancia, bateria, inclinacion, temperatura)
             self.mision.difuso.inferir = _inferir_con_temperatura
@@ -953,6 +972,7 @@ class Partida:
         del self.avisos[:-20]
 
     @_cronometrado
+    @_paso_de_juego
     def avanzar_modo(self, modo: str, veto: bool = True) -> dict:
         """Un paso conducido solo por rna, difuso o ag (ARX-11). Ver juego/conduccion.py."""
         if self._recargando > 0:
@@ -1091,6 +1111,7 @@ class Partida:
         return max(abs(ruta[1][0] - pos[0]), abs(ruta[1][1] - pos[1])) > 1
 
     @_cronometrado
+    @_paso_de_juego
     def avanzar_ia(self) -> dict:
         m = self.mision
         if self.estado in ESTADOS_TERMINALES:
@@ -1427,13 +1448,18 @@ class Partida:
         if not self._termico_activo or self.estado in ESTADOS_TERMINALES:
             return
         self.termico.paso(termico.es_sombra(self.mundo, self.rover.posicion))
+        if self.termico.pasos_sobre_tolerancia == termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA + 1:
+            # ev3-d88 B, opción A: exceso sostenido, solo aviso con código y bitácora (sin MODO_SEGURO)
+            self._avisar(f"T-SOBRE-TOLERANCIA: {self.t_int:.0f} °C interna, más de "
+                         f"{termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA} pasos sobre {self.termico.tolerancia:.0f} °C")
+            self.mision._registrar("temperatura", 0.0, ["T-SOBRE-TOLERANCIA"], {}, None)
         if termico.ABORTO_TERMICO_ACTIVO and self.termico.debe_abortar:
             m = self.mision
             self.rover.en_modo_seguro = True
             m.estado = "MODO_SEGURO"
             m._registrar("modo_seguro", 0.0, ["V-TEMPERATURA"], {}, None)
             self._avisar(f"Aborto térmico: {self.t_int:.0f} °C interna, más de "
-                         f"{termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA} pasos sobre {termico.TOLERANCIA:.0f} °C")
+                         f"{termico.PASOS_MAXIMOS_SOBRE_TOLERANCIA} pasos sobre {self.termico.tolerancia:.0f} °C")
 
     # ---------- eventos ----------
     @_cronometrado

@@ -8,11 +8,11 @@ Documento para retomar la interfaz 3D de ARES-X. Solo lo que la interfaz hace ho
 - **Verificado en Chrome por Maestro New:** E5, O1, O2, O5, O6, O7, O8, O9 (incluido el apuntado al id del dron), ARX-77.
 - **Sin verificar en Chrome:** ARX-41 (laboratorio), O12 (avisos del motor), O11 (versión `r14`; la recarga depende de que el motor envíe `Cache-Control: no-cache` en `/static/`).
 
-- **Identificador para retomar:** `b49c5d2f-f34e-4bf4-a4bc-0bd2074af06b`. Reabrir desde `C:\Users\Usuario\Downloads\Trabajos\IA - ev3\ares_x` con `claude --resume b49c5d2f-f34e-4bf4-a4bc-0bd2074af06b`.
+- **Cómo retomar:** abrir una sesión nueva en la carpeta `ares_x`.
 
 - **Código:** `api/static/index.html`, `app.js`, `adaptador.js`, `laboratorio.js`, `efectos.js`, `moviles.js`. Sintaxis OK con `node`; referencias OK con `node docs/capturas/comprobar_referencias.mjs`.
 - **Rendimiento:** Maestro New midió 120 FPS con RTX 4060 a 1080p en las rondas 1 a 5 (mínimo 118). Las lecturas bajas fueron con la ventana oculta, no por el juego.
-- **Verificado en Chrome del usuario** (rondas 1 a 7, informe en `Downloads\pedidos\2026-11-14_rover_fps\INFORME.md`): selector de planeta solo con el nombre; «Escenario» quitado; «Misiones seguidas»; «Tamaño del mapa»; bloque automático con la cadena real; cadena automática ×3 con veto en las tres misiones; pantalla de meta combinada; salto de 3 s entre misiones; aviso de motor lento sin falsos positivos por «fin»; aviso de avisos cerrados al crear partida (N9).
+- **Verificado en Chrome del usuario** (rondas 1 a 7, informe interno de la ronda de FPS): selector de planeta solo con el nombre; «Escenario» quitado; «Misiones seguidas»; «Tamaño del mapa»; bloque automático con la cadena real; cadena automática ×3 con veto en las tres misiones; pantalla de meta combinada; salto de 3 s entre misiones; aviso de motor lento sin falsos positivos por «fin»; aviso de avisos cerrados al crear partida (N9).
 - **Pendiente de verificación en Chrome:** lo que no aparece como verificado arriba: N11 («Confirmar» de la meta), el residual de N8 (aviso tras «replanificar»), E4 (error del motor). ARX-76 (objetivos opcionales) pasó en la ronda 11, como ARX-75.
 
 ## Interruptores de datos (`api/static/adaptador.js`)

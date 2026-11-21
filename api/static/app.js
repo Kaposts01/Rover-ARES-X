@@ -5,6 +5,11 @@ import { iniciarLaboratorios } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
+import { crearEvolucion } from "/static/evolucion3d.js?v=r14";
+import { adaptarAG, ROTULO_EVOLUCION } from "/static/evolucion_datos.js?v=r14";
+import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
+import { crearHolograma } from "/static/holo3d.js?v=r14";
+import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -210,6 +215,9 @@ const grupoEfectos = new THREE.Group();
 scene.add(grupoEfectos);
 const grupoRecorrido = new THREE.Group();
 scene.add(grupoRecorrido);
+const grupoRiesgo = new THREE.Group();   // M15: capa opcional de riesgo estimado (apagada por defecto)
+scene.add(grupoRiesgo);
+window.__ares.grupoRiesgo = grupoRiesgo;   // QA de la capa de riesgo
 
 let mapa = null;
 let estado = null;
@@ -408,6 +416,274 @@ function obtenerTexturaSolar() {
   texturaSolar = new THREE.CanvasTexture(c);
   texturaSolar.colorSpace = THREE.SRGBColorSpace;
   return texturaSolar;
+}
+
+// ---------- capa de riesgo estimado (M15) ----------
+const RIESGO_OPACIDAD = 0.45;
+let capaRiesgoActiva = false;      // apagada por defecto
+
+let modoCapaRiesgo = "riesgo";     // «riesgo» (M15) o «incertidumbre» (Paquete A): misma malla, mismo grupo
+
+function limpiarCapaRiesgo() {
+  for (const o of grupoRiesgo.children) {
+    o.geometry.dispose();
+    o.material.dispose();
+  }
+  grupoRiesgo.clear();
+}
+
+// Una malla con una celda por celda del mapa, pegada al relieve y con el color del riesgo de /mapa
+function construirCapaRiesgo(datos) {
+  limpiarCapaRiesgo();
+  const rz = datos && datos.riesgo_estimado;
+  const valida = Array.isArray(rz) && rz.length === datos.filas
+    && rz.every((fila) => Array.isArray(fila) && fila.length === datos.columnas);
+  if (!valida) return false;
+  const modo = modoCapaRiesgo === "incertidumbre" && tieneObservada(datos) ? "incertidumbre" : "riesgo";
+  const SUB = 2;   // cada celda en 2x2 trozos para seguir el relieve
+  const pos = [];
+  const col = [];
+  const idx = [];
+  for (let f = 0; f < datos.filas; f++) {
+    for (let c = 0; c < datos.columnas; c++) {
+      const rgb = colorCelda(modo, rz[f][c], modo === "incertidumbre" ? datos.observada[f][c] : 0);
+      if (!rgb) continue;
+      const [cr, cg, cb] = rgb;
+      const base = pos.length / 3;
+      for (let j = 0; j <= SUB; j++) {
+        for (let i = 0; i <= SUB; i++) {
+          const x = c + i / SUB;
+          const z = f + j / SUB;
+          pos.push(x, alturaTerreno(x, z) + 0.04, z);
+          col.push(cr, cg, cb);
+        }
+      }
+      for (let j = 0; j < SUB; j++) {
+        for (let i = 0; i < SUB; i++) {
+          const a = base + j * (SUB + 1) + i;
+          const b = a + 1;
+          const d = a + SUB + 1;
+          idx.push(a, d, b, b, d, d + 1);
+        }
+      }
+    }
+  }
+  if (!idx.length) return true;   // hay dato, pero todo el mapa está por debajo del umbral
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geom.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  geom.setIndex(idx);
+  const malla = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+    vertexColors: true, transparent: true, opacity: RIESGO_OPACIDAD, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide,
+  }));
+  malla.name = modo === "incertidumbre" ? "capa-incertidumbre" : "capa-riesgo";
+  malla.renderOrder = 2;
+  grupoRiesgo.add(malla);
+  return true;
+}
+
+// H-1 (QA 21/11): el riesgo parte de un mapa previo parcial (genetico.mapa_estimado, ≈80 % de detección); se rotula así
+const ROTULO_RIESGO = "riesgo estimado: mapa previo orbital (≈80 % de detección) + sensores";
+const NOTA_NO_OBSERVADA = "Una celda roja no observada viene del mapa previo, no de lo que el sensor vio.";
+function avisoRiesgo(texto) {
+  const el = document.getElementById("riesgo-aviso");
+  if (el) el.textContent = texto;
+}
+
+// Pide /mapa (el riesgo estimado cambia con la partida) y redibuja la capa; si no hay dato, la apaga y lo dice
+async function actualizarCapaRiesgo() {
+  limpiarCapaRiesgo();
+  avisoRiesgo("");
+  if (leyendaIncertidumbre) leyendaIncertidumbre.hidden = true;
+  if (!capaRiesgoActiva) return;
+  const mp = mapa ? await llamar("GET", "/mapa") : null;
+  if (!capaRiesgoActiva) return;   // se apagó mientras llegaba la respuesta
+  aplicarModoRiesgo(mp);
+  if (mp && construirCapaRiesgo(mp)) {
+    const el = document.getElementById("riesgo-aviso");
+    if (el && !el.textContent) {
+      avisoRiesgo(modoCapaRiesgo === "incertidumbre" ? `${ROTULO_RIESGO}. ${NOTA_NO_OBSERVADA}` : ROTULO_RIESGO);
+    }
+  } else {
+    capaRiesgoActiva = false;
+    const caja = document.getElementById("riesgo-capa");
+    if (caja) caja.checked = false;
+    avisoRiesgo(mapa ? "sin datos de riesgo" : "sin partida: no hay riesgo que mostrar");
+  }
+}
+
+// Refresco por avance del rover con la capa encendida: una sola lectura de /mapa por paso, sin solapar y sin parpadeo
+let refrescoRiesgoEnVuelo = false;
+async function refrescarCapaRiesgoPorPaso() {
+  if (!capaRiesgoActiva || !mapa || refrescoRiesgoEnVuelo) return;
+  refrescoRiesgoEnVuelo = true;
+  try {
+    const mp = await llamar("GET", "/mapa");
+    if (capaRiesgoActiva && mp) construirCapaRiesgo(mp);
+  } finally {
+    refrescoRiesgoEnVuelo = false;
+  }
+}
+
+// Selector Riesgo / Incertidumbre: sin `observada` en /mapa, Incertidumbre se deshabilita con aviso
+const selectorModoRiesgo = document.getElementById("riesgo-modo");
+const leyendaIncertidumbre = document.getElementById("riesgo-leyenda");
+function aplicarModoRiesgo(mp) {
+  const hay = tieneObservada(mp);
+  if (selectorModoRiesgo) {
+    const opcion = selectorModoRiesgo.querySelector('option[value="incertidumbre"]');
+    if (opcion) opcion.disabled = !!mp && !hay;
+    if (mp && !hay && modoCapaRiesgo === "incertidumbre") {
+      modoCapaRiesgo = "riesgo";
+      selectorModoRiesgo.value = "riesgo";
+    }
+  }
+  if (leyendaIncertidumbre) leyendaIncertidumbre.hidden = !(capaRiesgoActiva && modoCapaRiesgo === "incertidumbre");
+  if (mp && !hay) avisoRiesgo(AVISO_SIN_OBSERVACION);
+}
+if (selectorModoRiesgo) {
+  selectorModoRiesgo.value = "riesgo";
+  selectorModoRiesgo.addEventListener("change", () => {
+    modoCapaRiesgo = MODOS.includes(selectorModoRiesgo.value) ? selectorModoRiesgo.value : "riesgo";
+    actualizarCapaRiesgo();
+  });
+}
+
+const cajaRiesgo = document.getElementById("riesgo-capa");
+if (cajaRiesgo) {
+  cajaRiesgo.checked = false;
+  cajaRiesgo.addEventListener("change", () => {
+    capaRiesgoActiva = cajaRiesgo.checked;
+    actualizarCapaRiesgo();
+  });
+}
+
+// ---------- evolución del AG en la escena (Paquete A) ----------
+// Apagada: no se crea nada en la escena ni se pide nada. Encendida: una lectura de /ag (la que ya calcula el laboratorio)
+let evolucion = null;                 // se crea al encender la casilla y se libera al apagarla
+let evolucionEnVuelo = false;
+
+function textoEvolucion(extra) {
+  const el = document.getElementById("evo-aviso");
+  if (el) {
+    el.textContent = extra ? `${ROTULO_EVOLUCION}. ${extra}` : ROTULO_EVOLUCION;
+    el.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function apagarEvolucion(motivo) {
+  if (evolucion) { evolucion.dispose(); evolucion = null; }
+  document.getElementById("evo-controles").classList.add("oculto");
+  const caja = document.getElementById("evo-capa");
+  if (caja) caja.checked = false;
+  const el = document.getElementById("evo-aviso");
+  if (el) el.textContent = motivo || "";
+}
+
+async function cargarEvolucion() {
+  if (!evolucion || evolucionEnVuelo) return;
+  evolucionEnVuelo = true;
+  const boton = document.getElementById("evo-recalc");
+  boton.disabled = true;
+  textoEvolucion("Calculando…");
+  try {
+    const posicion = estado && estado.posicion;
+    const ag = await llamar("GET", "/ag");
+    if (!evolucion) return;   // se apagó mientras llegaba la respuesta
+    const adaptado = adaptarAG(ag, posicion);
+    if (!adaptado) { apagarEvolucion(ag && ag.sin_sitios ? "no quedan sitios pendientes: no hay orden que mostrar" : "sin datos del AG"); return; }
+    evolucion.cargar(adaptado);
+    const sel = document.getElementById("evo-gen");
+    sel.replaceChildren();
+    adaptado.generaciones.forEach((g, i) => {
+      const o = document.createElement("option");
+      o.value = String(i);
+      o.textContent = `generación ${g.generacion}`;
+      sel.appendChild(o);
+    });
+    sel.value = String(adaptado.seleccionada);
+    textoEvolucion(`Calculado desde la posición actual (${posicion ? posicion.join(", ") : "—"}).`);
+  } finally {
+    evolucionEnVuelo = false;
+    boton.disabled = false;
+  }
+}
+
+const cajaEvolucion = document.getElementById("evo-capa");
+if (cajaEvolucion) {
+  cajaEvolucion.checked = false;
+  cajaEvolucion.addEventListener("change", () => {
+    if (!cajaEvolucion.checked) { apagarEvolucion(""); return; }
+    if (!mapa) { apagarEvolucion("sin partida: no hay AG que mostrar"); return; }
+    evolucion = crearEvolucion(scene, {
+      alturaTerreno,
+      alCambiar: (i, texto) => {
+        const sel = document.getElementById("evo-gen");
+        if (sel.options.length > i) sel.value = String(i);
+        document.getElementById("evo-generacion").textContent = texto;
+      },
+    });
+    document.getElementById("evo-controles").classList.remove("oculto");
+    cargarEvolucion();
+  });
+  document.getElementById("evo-play").addEventListener("click", () => { if (evolucion) evolucion.reproducir(); });
+  document.getElementById("evo-recalc").addEventListener("click", cargarEvolucion);
+  document.getElementById("evo-gen").addEventListener("change", (ev) => { if (evolucion) evolucion.irA(Number(ev.target.value)); });
+}
+
+// ---------- holograma de IA junto al rover (Paquete A) ----------
+// Apagado: no se crea nada ni se pide nada. Encendido: /rna y /difuso por paso (sin solapar); /estado ya lo pide el paso.
+// /ag (el costo más alto) solo se pide al cambiar el plan o cada HOLO_AG_CADA_N pasos; entre medias se reutiliza el último.
+// El plan cambia si cambia el siguiente sitio objetivo (/estado.objetivo, que cambia al visitar un sitio), si cambia el
+// último replanteo del AG (/estado.ultimo_replanteo) o si la misión pasa a REFUGIO (ya no quedan sitios pendientes).
+const HOLO_AG_CADA_N = 5;
+let holograma = null;
+let holoDatos = null;
+let holoEnVuelo = false;
+let holoAg = null;                 // último /ag recibido
+let holoFirmaPlan = null;          // firma del plan con el que se pidió holoAg
+let holoPasosDesdeAg = 0;
+
+function firmaPlanHolo(est) {
+  if (!est) return null;
+  return JSON.stringify([est.semilla, est.nivel, est.objetivo || null, est.ultimo_replanteo || null, est.estado === "REFUGIO"]);
+}
+
+async function refrescarHolo() {
+  if (!holograma || !mapa || holoEnVuelo) return;
+  holoEnVuelo = true;
+  try {
+    const firma = firmaPlanHolo(estado);
+    const pedirAg = holoAg === null || firma !== holoFirmaPlan || holoPasosDesdeAg >= HOLO_AG_CADA_N;
+    const [rna, difuso, ag] = await Promise.all([
+      llamar("GET", "/rna"), llamar("GET", "/difuso"), pedirAg ? llamar("GET", "/ag") : Promise.resolve(holoAg)]);
+    if (!holograma) return;
+    if (pedirAg) { holoAg = ag; holoFirmaPlan = firma; holoPasosDesdeAg = 0; } else holoPasosDesdeAg += 1;
+    holoDatos = adaptarHolo({ rna, difuso, ag, estado });
+    holograma.actualizar(holoDatos, grupoRover.position, camara);
+  } finally {
+    holoEnVuelo = false;
+  }
+}
+
+const cajaHolo = document.getElementById("holo-capa");
+if (cajaHolo) {
+  cajaHolo.checked = false;
+  cajaHolo.addEventListener("change", () => {
+    const aviso = document.getElementById("holo-aviso");
+    if (!cajaHolo.checked) {
+      if (holograma) { holograma.dispose(); holograma = null; holoDatos = null; }
+      holoAg = null; holoFirmaPlan = null; holoPasosDesdeAg = 0;
+      aviso.textContent = "";
+      return;
+    }
+    if (!mapa) { cajaHolo.checked = false; aviso.textContent = "sin partida: no hay nada que mostrar"; return; }
+    holograma = crearHolograma(scene, { alturaTerreno });
+    aviso.textContent = ROTULO_HOLO;
+    aviso.scrollIntoView({ block: "nearest" });
+    refrescarHolo();
+  });
 }
 
 // ---------- terreno ----------
@@ -1331,6 +1607,75 @@ function barra(id, valor) {
   document.getElementById(id).style.width = valor === null || valor === undefined ? "0%" : `${(valor * 100).toFixed(1)}%`;
 }
 
+// Las cuatro líneas del porqué de un paso (RNA, difuso, planificador, supervisor), solo con los datos de /paneles
+function decisionesDelPaso(p) {
+  const lineas = [];
+  const r = p.rna || {};
+  const probs = [["libre", r.p_libre], ["obstáculo", r.p_obstaculo], ["barranco", r.p_barranco]].filter(([, v]) => v != null);
+  if (probs.length) {
+    const [clase, valor] = probs.reduce((x, y) => (y[1] > x[1] ? y : x));
+    lineas.push(`RNA: predijo ${clase} (${pct(valor)})`);
+  } else lineas.push("RNA: sin dato");
+  const d = p.difuso || {};
+  if (d.usado === false) lineas.push("Difuso: no usado");
+  else if (d.velocidad == null && !(d.reglas && d.reglas.length)) lineas.push("Difuso: sin dato");
+  else {
+    const reglas = (d.reglas || []).map(x => (Array.isArray(x)
+      ? `${x[0]} (fuerza ${Number(x[1]).toFixed(2).replace(".", ",")})`
+      : String(x))).join(", ") || "sin regla";
+    const vel = d.velocidad == null ? "sin dato" : Number(d.velocidad).toFixed(3).replace(".", ",");
+    lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
+  }
+  const ruta = (p.ag || {}).ruta_planeada || [];
+  lineas.push(ruta.length ? `Planificador: ruta de ${ruta.length} celdas` : "Planificador: sin ruta");
+  const supv = p.supervisor || {};
+  const vetos = (supv.motivos || []).filter(m => String(m).startsWith("V-"));
+  lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto ${vetos.join(", ")}` : ""}`);
+  return lineas;
+}
+
+// ARX-36a: tira de decisiones, una fila por paso del automático (la más nueva arriba), con las mismas cuatro líneas
+const TIRA_MAX = 12;
+let tiraPasos = [];
+function registrarTira(p) {
+  const ultimo = tiraPasos.length ? tiraPasos[0].paso : null;
+  if (p.paso == null || (ultimo != null && p.paso < ultimo)) tiraPasos = [];   // otra misión: se vacía
+  if (p.paso != null && (!tiraPasos.length || tiraPasos[0].paso !== p.paso)) {
+    tiraPasos.unshift({ paso: p.paso, lineas: decisionesDelPaso(p) });
+    tiraPasos.length = Math.min(tiraPasos.length, TIRA_MAX);
+  }
+  pintarTira();
+}
+function pintarTira() {
+  const caja = document.getElementById("tira-caja");
+  if (!caja) return;
+  const visible = document.getElementById("modo").value === "automatico" && Boolean(estado);
+  caja.classList.toggle("oculto", !visible);
+  if (!visible) return;
+  const cuerpo = document.getElementById("tira-filas");
+  if (!tiraPasos.length) {
+    const vacio = document.createElement("div");
+    vacio.className = "ayuda";
+    vacio.textContent = "sin pasos todavía";
+    cuerpo.replaceChildren(vacio);
+    return;
+  }
+  cuerpo.replaceChildren(...tiraPasos.map((f) => {
+    const fila = document.createElement("div");
+    fila.className = "tira-fila";
+    const n = document.createElement("span");
+    n.className = "tira-paso";
+    n.textContent = `paso ${f.paso}`;
+    fila.appendChild(n);
+    for (const t of f.lineas) {
+      const c = document.createElement("span");
+      c.textContent = t;
+      fila.appendChild(c);
+    }
+    return fila;
+  }));
+}
+
 function pintarPaneles(p) {
   const rna = p.rna || {};
   document.getElementById("rna-libre").textContent = pct(rna.p_libre);
@@ -1380,30 +1725,9 @@ function pintarPaneles(p) {
   // ARX-88: el porqué del paso con datos reales (M17): RNA, difuso, planificador y supervisor
   const porque = document.getElementById("sup-porque");
   if (porque) {
-    const lineas = [];
-    const r = p.rna || {};
-    const probs = [["libre", r.p_libre], ["obstáculo", r.p_obstaculo], ["barranco", r.p_barranco]].filter(([, v]) => v != null);
-    if (probs.length) {
-      const [clase, valor] = probs.reduce((x, y) => (y[1] > x[1] ? y : x));
-      lineas.push(`RNA: predijo ${clase} (${pct(valor)})`);
-    } else lineas.push("RNA: sin dato");
-    const d = p.difuso || {};
-    if (d.usado === false) lineas.push("Difuso: no usado");
-    else if (d.velocidad == null && !(d.reglas && d.reglas.length)) lineas.push("Difuso: sin dato");
-    else {
-      const reglas = (d.reglas || []).map(x => (Array.isArray(x)
-        ? `${x[0]} (fuerza ${Number(x[1]).toFixed(2).replace(".", ",")})`
-        : String(x))).join(", ") || "sin regla";
-      const vel = d.velocidad == null ? "sin dato" : Number(d.velocidad).toFixed(3).replace(".", ",");
-      lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
-    }
-    const ruta = (p.ag || {}).ruta_planeada || [];
-    lineas.push(ruta.length ? `Planificador: ruta de ${ruta.length} celdas` : "Planificador: sin ruta");
-    const supv = p.supervisor || {};
-    const vetos = (supv.motivos || []).filter(m => String(m).startsWith("V-"));
-    lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto ${vetos.join(", ")}` : ""}`);
-    porque.replaceChildren(...lineas.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+    porque.replaceChildren(...decisionesDelPaso(p).map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
   }
+  registrarTira(p);
   // ARX-86: lecturas de los sensores en el rumbo actual y riesgo estimado de la celda de enfrente
   const sen = p.sensores;
   const indicador = document.getElementById("sup-sensores");
@@ -1643,6 +1967,8 @@ async function refrescarEstado() {
     actualizarControlEvento();
     aplicarEnlaceYSenal(datos);
   });
+  refrescarCapaRiesgoPorPaso();   // M15: apagada no pide nada
+  refrescarHolo();                // Paquete A: apagado no pide nada
 }
 
 // ARX-30d: lectura defensiva de /estado. Solo apaga si el campo existe y lo dice; sin campo (motor sin ARX-30b/30c) no hace nada.
@@ -1709,6 +2035,67 @@ function aplicarAspecto(planeta) {
 
 // Lo último que confirmó el motor: planeta y tipo de vehículo
 let vigente = { planeta: null, vehiculo: null };
+// Viaje entre planetas (solo cliente: no escribe nada en el motor). Preferencia en localStorage («ares.viaje»), activado por defecto
+let viaje = null;
+let viajePendiente = null;   // { desde, hacia } cuando la partida nueva cambió de planeta
+function viajeActivado() {
+  try { return localStorage.getItem("ares.viaje") !== "0"; } catch (e) { return true; }
+}
+function fijarViajeActivado(on) {
+  try { localStorage.setItem("ares.viaje", on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ }
+  document.querySelectorAll(".casilla-viaje").forEach((c) => { c.checked = on; });
+}
+document.querySelectorAll(".casilla-viaje").forEach((c) => {
+  c.checked = viajeActivado();
+  c.addEventListener("change", () => fijarViajeActivado(c.checked));
+});
+let tarjetaViaje = null;
+// Corre el viaje pendiente; si algo falla, la partida sigue igual (nunca lanza ni se queda colgado)
+async function correrViaje() {
+  const pend = viajePendiente; viajePendiente = null;
+  if (!pend || !viajeActivado()) return;
+  let guarda = null, liberar = null;
+  const hud = document.getElementById("hud");
+  const menu = document.getElementById("menu");   // el asistente de inicio tapa la escena: se oculta solo mientras dura el viaje
+  try {
+    // Carga perezosa: si un módulo del viaje no carga, la partida sigue igual (con import estático rompería toda la app)
+    const [{ DURACION_VIAJE_S, GUARDA_EXTRA_S, CIERRE_ESTATICO_S, debeViajar, datosTarjeta, modoMovimiento }, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
+      import("/static/viaje_datos.js?v=r14"), import("/static/viaje3d.js?v=r14"), import("/static/viaje_tarjeta.js?v=r14")]);
+    if (!debeViajar({ previo: pend.desde, nuevo: pend.hacia, activado: true })) return;
+    const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const modo = modoMovimiento(reducido, true);
+    if (modo === "ninguno") return;
+    if (!tarjetaViaje) tarjetaViaje = crearTarjetaViaje(document.body);
+    if (menu) menu.style.visibility = "hidden";
+    if (hud) hud.style.visibility = "hidden";
+    const datos = datosTarjeta(pend.desde, pend.hacia, planetasDatos);
+    await new Promise((resolver) => {
+      let hecho = false;
+      const fin = () => { if (hecho) return; hecho = true; resolver(); };
+      liberar = fin;
+      if (modo === "tarjeta") {
+        tarjetaViaje.mostrar(datos, { estatica: true, alOmitir: fin });
+        guarda = setTimeout(fin, CIERRE_ESTATICO_S * 1000);   // sin animación: se cierra a los 20 s o con «Continuar» / Escape
+        return;
+      }
+      try {
+        viaje = crearViaje({ THREE, renderer, camara, texturaPlaneta: texturaParaPlaneta, paleta: PALETAS_PLANETA });
+      } catch (e) { console.warn("viaje: no se pudo crear la escena; sigue la partida normal", e); fin(); return; }
+      tarjetaViaje.mostrar(datos, { duracion: DURACION_VIAJE_S, alOmitir: () => { if (viaje) viaje.omitir(); fin(); } });
+      viaje.iniciar(pend.desde, pend.hacia).then(fin, fin);
+      guarda = setTimeout(() => { console.warn("viaje: temporizador de guarda"); if (viaje) viaje.omitir(); fin(); }, (DURACION_VIAJE_S + GUARDA_EXTRA_S) * 1000);
+    });
+  } catch (e) {
+    console.warn("viaje: fallo, sigue la partida normal", e);
+  } finally {
+    clearTimeout(guarda);
+    if (menu) menu.style.visibility = "";
+    if (hud) hud.style.visibility = "";
+    try { if (tarjetaViaje) tarjetaViaje.ocultar(); } catch (e) { /* ya oculta */ }
+    try { if (viaje) viaje.dispose(); } catch (e) { /* ya liberado */ }
+    viaje = null;
+  }
+}
 // Configuración para crear o reiniciar una partida: el planeta y vehículo confirmados, y el modo de control del panel
 function configuracionVigente() {
   return {
@@ -1725,6 +2112,8 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
   reiniciarEventos();
   cargando = true;
   try {
+    const previo = vigente.planeta;   // para el viaje: el planeta de la partida anterior
+    viajePendiente = null;
     const cuerpo = { nivel, tamano, planeta: config.planeta, modo: config.vehiculo };
     if (semilla != null) cuerpo.semilla = semilla;
     if (bateria != null) cuerpo.bateria = bateria;   // ARX-87: solo llega desde el botón «Nueva» del panel
@@ -1733,6 +2122,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     if (!datos) return false;
     // Manda el motor: el planeta y el vehículo que responde son los que se muestran
     vigente = { planeta: datos.planeta, vehiculo: datos.modo_planeta };
+    if (previo && datos.planeta && datos.planeta !== previo) viajePendiente = { desde: previo, hacia: datos.planeta };
     planetaActivo = datos.planeta;
     modoPlanetaActivo = datos.modo_planeta;
     // Una partida nueva arranca en manual: se reaplica el modo de control elegido (si no es el manual simple)
@@ -1749,6 +2139,8 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     if (!mp) return false;
     mapa = mp;
     construirMapa(mapa);
+    if (capaRiesgoActiva) construirCapaRiesgo(mapa) || actualizarCapaRiesgo();   // M15: la capa sigue al mapa nuevo
+    if (evolucion) cargarEvolucion();   // Paquete A: el AG de la partida nueva
     aplicarAspecto(planetaActivo);
     construirRover();
     ubicarRover(datos.posicion, datos.rumbo_sugerido, true);
@@ -1830,7 +2222,10 @@ async function conCarga(fn, { transicion = false } = {}) {
   let ok = false;
   try {
     ok = await fn();
-    if (ok) await cuentaAtras(2100);
+    if (ok) {
+      if (viajePendiente) { caja.classList.add("oculto"); await correrViaje(); caja.classList.remove("oculto"); }
+      await cuentaAtras(2100);
+    }
   } catch (err) {
     ok = false;
     avisar("No se pudo iniciar la partida.");
@@ -2624,6 +3019,7 @@ document.getElementById("modo").addEventListener("change", async (ev) => {
     pintarHud(datos);
     avisar(`Modo ${datos.modo}.`);
     await refrescarPaneles();
+    pintarTira();   // H-7: la tira aparece u oculta según el modo, sin esperar un paso nuevo
     }
 });
 document.getElementById("veto").addEventListener("change", async (ev) => {
@@ -2734,6 +3130,8 @@ function animar() {
     const avance = grupoRover.position.distanceTo(antes);
     for (const eje of ruedasGiro) eje.rotation.z -= avance / 0.1;
   }
+  if (evolucion) evolucion.animar(dt);
+  if (holograma && holoDatos) holograma.anclar(grupoRover.position, camara);
   if (cabezaRover) cabezaRover.rotation.y = Math.sin(tiempo * 0.5) * 0.6;
 
   for (const cristal of animados) {
@@ -2774,7 +3172,7 @@ function animar() {
   camara.position.add(desplazamiento);
   efectos.actualizarMarcadores(tiempo, camara);
   efectos.actualizarMovibles(tiempo, dt);
-  renderer.render(scene, camara);
+  if (viaje && viaje.activo) viaje.render(); else renderer.render(scene, camara);   // durante el viaje no se dibuja la escena principal
   camara.position.sub(desplazamiento);
   requestAnimationFrame(animar);
 }

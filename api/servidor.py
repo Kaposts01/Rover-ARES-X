@@ -284,7 +284,7 @@ def _estado(sesion: Sesion) -> dict:
         "cooldown": sesion.combate.cooldown,
         "ultimo_replanteo": _ultimo_replanteo(p),    # ARX-31b: null si no hubo replanteo del AG
         "temperatura_interna": round(p.t_int, 2),    # ARX-83b: T_int en °C (modelo de PLAN_PLANETAS)
-        "tolerancia": termico.TOLERANCIA,
+        "tolerancia": p.termico.tolerancia,    # ev3-d88 B: la tolerancia del planeta de la partida
         "aborto_termico_activo": termico.ABORTO_TERMICO_ACTIVO,    # O2 de QA: la interfaz aclara si el aborto está apagado
         "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
         "sensores": _sensores(p),                    # ARX-86
@@ -802,6 +802,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             "sitios": [{"pos": _celda(p), "valor": int(v)} for p, v in mundo.sitios.items()],
             "estaciones": [[int(f), int(c)] for f, c in activa().partida.estaciones],   # ARX-59 (§14)
             "riesgo_estimado": np.round(np.asarray(activa().partida.mision.riesgo, dtype=float), 2).tolist(),   # ARX-86
+            "observada": np.asarray(activa().partida.mision.observadas, dtype=int).tolist(),   # Paquete A: solo registro
         }
 
     @app.get("/estado")

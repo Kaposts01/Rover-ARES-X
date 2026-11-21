@@ -2952,6 +2952,7 @@ document.getElementById("modo").addEventListener("change", async (ev) => {
     pintarHud(datos);
     avisar(`Modo ${datos.modo}.`);
     await refrescarPaneles();
+    pintarTira();   // H-7: la tira aparece u oculta según el modo, sin esperar un paso nuevo
     }
 });
 document.getElementById("veto").addEventListener("change", async (ev) => {

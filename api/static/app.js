@@ -1908,7 +1908,7 @@ document.getElementById("menu-usar-sonda").addEventListener("click", (ev) => {
   document.getElementById("menu-modo-planeta").value = ev.currentTarget.dataset.modo || "rover";
   validarPlaneta();
 });
-poblarPlanetas();
+const planetasListos = poblarPlanetas();   // la intro espera a /planetas para rellenar el asistente
 
 // Historial de decisiones (Panel D, ARX-15): una fila por acción, filtrable y exportable.
 function consultaHistorial() {
@@ -2096,6 +2096,89 @@ async function correrViaje() {
     viaje = null;
   }
 }
+// Introducción con el sistema solar (solo cliente: no escribe nada en el motor). Preferencia en localStorage («ares.intro», activada por defecto);
+// una vez por sesión del navegador (sessionStorage «ares.intro.visto»). Elegir un planeta solo rellena el asistente: la partida empieza con «Iniciar».
+let intro = null;
+let introCorriendo = false;
+let tarjetaIntro = null;
+function introActivada() {
+  try { return localStorage.getItem("ares.intro") !== "0"; } catch (e) { return true; }
+}
+function fijarIntroActivada(on) {
+  try { localStorage.setItem("ares.intro", on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ }
+  document.querySelectorAll(".casilla-intro").forEach((c) => { c.checked = on; });
+}
+function introVistaEnSesion() {
+  try { return sessionStorage.getItem("ares.intro.visto") === "1"; } catch (e) { return false; }
+}
+function marcarIntroVista() {
+  try { sessionStorage.setItem("ares.intro.visto", "1"); } catch (e) { /* sin almacenamiento */ }
+}
+document.querySelectorAll(".casilla-intro").forEach((c) => {
+  c.checked = introActivada();
+  c.addEventListener("change", () => fijarIntroActivada(c.checked));
+});
+// forzada: botón «Ver intro» (ignora la casilla y la marca de sesión). Si algo falla, el asistente sigue igual (nunca lanza ni se queda colgado).
+async function correrIntro({ forzada = false } = {}) {
+  if (introCorriendo) return;
+  let guarda = null, inactividad = null, limpiarActividad = null;
+  const controlesAntes = controles.enabled;
+  introCorriendo = true;
+  try {
+    const reducido = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const webgl = !!(renderer && renderer.getContext && renderer.getContext());
+    const { debeMostrarIntro, elegirCuerpo, datosCuerpo, GUARDA_PRIMER_CUADRO_S, CIERRE_INACTIVIDAD_S } = await import("/static/intro_datos.js?v=r14");
+    if (!forzada && !debeMostrarIntro({ activada: introActivada(), vistaEnSesion: introVistaEnSesion(), reducido, webgl })) return;
+    if (!webgl || !planetasDatos) return;
+    marcarIntroVista();   // una vez por sesión: también si falla o se omite
+    const [{ crearIntro }, { crearTarjetaIntro }] = await Promise.all([import("/static/intro3d.js?v=r14"), import("/static/intro_tarjeta.js?v=r14")]);
+    if (!tarjetaIntro) tarjetaIntro = crearTarjetaIntro(document.body);
+    controles.enabled = false;   // la cámara de la partida no se mueve mientras dura la intro
+    document.body.classList.add("intro-activa");   // oculta los paneles de la app mientras dura (CSS)
+    await new Promise((resolver) => {
+      let hecho = false;
+      const fin = () => { if (hecho) return; hecho = true; resolver(); };
+      try {
+        intro = crearIntro({
+          THREE, renderer, OrbitControls, texturaPlaneta: texturaParaPlaneta, paleta: PALETAS_PLANETA, reducido,
+          alElegir: (nombre) => {
+            const r = elegirCuerpo(nombre, planetasDatos);
+            if (r) {
+              document.getElementById("menu-planeta").value = r.planeta;
+              document.getElementById("menu-modo-planeta").value = r.modo;
+              validarPlaneta();
+            }
+          },
+          alPasar: (nombre) => tarjetaIntro.cuerpo(nombre ? datosCuerpo(nombre, planetasDatos) : null),
+        });
+      } catch (e) { console.warn("intro: no se pudo crear la escena; sigue el asistente", e); fin(); return; }
+      tarjetaIntro.mostrar({ activada: introActivada(), alOmitir: () => { if (intro) intro.omitir(); fin(); }, alCambiarCasilla: fijarIntroActivada });
+      intro.iniciar().then(fin, fin);
+      guarda = setTimeout(() => { if (intro && !intro.primerCuadro) { console.warn("intro: temporizador de guarda"); intro.omitir(); fin(); } }, GUARDA_PRIMER_CUADRO_S * 1000);
+      const reiniciarInactividad = () => {
+        clearTimeout(inactividad);
+        inactividad = setTimeout(() => { console.warn("intro: cierre por inactividad"); if (intro) intro.omitir(); fin(); }, CIERRE_INACTIVIDAD_S * 1000);
+      };
+      reiniciarInactividad();
+      window.addEventListener("pointermove", reiniciarInactividad); window.addEventListener("keydown", reiniciarInactividad);
+      limpiarActividad = () => { window.removeEventListener("pointermove", reiniciarInactividad); window.removeEventListener("keydown", reiniciarInactividad); };
+    });
+  } catch (e) {
+    console.warn("intro: fallo, sigue el asistente", e);
+  } finally {
+    clearTimeout(guarda); clearTimeout(inactividad);
+    if (limpiarActividad) limpiarActividad();
+    controles.enabled = controlesAntes;
+    document.body.classList.remove("intro-activa");
+    try { if (tarjetaIntro) tarjetaIntro.ocultar(); } catch (e) { /* ya oculta */ }
+    try { if (intro) intro.dispose(); } catch (e) { /* ya liberado */ }
+    intro = null;
+    introCorriendo = false;
+  }
+}
+const botonVerIntro = document.getElementById("menu-ver-intro");
+if (botonVerIntro) botonVerIntro.addEventListener("click", () => { correrIntro({ forzada: true }); });
+
 // Configuración para crear o reiniciar una partida: el planeta y vehículo confirmados, y el modo de control del panel
 function configuracionVigente() {
   return {
@@ -3172,12 +3255,15 @@ function animar() {
   camara.position.add(desplazamiento);
   efectos.actualizarMarcadores(tiempo, camara);
   efectos.actualizarMovibles(tiempo, dt);
-  if (viaje && viaje.activo) viaje.render(); else renderer.render(scene, camara);   // durante el viaje no se dibuja la escena principal
+  if (intro && intro.activo) intro.render(); else if (viaje && viaje.activo) viaje.render(); else renderer.render(scene, camara);   // durante la intro o el viaje no se dibuja la escena principal
   camara.position.sub(desplazamiento);
   requestAnimationFrame(animar);
 }
 animar();
 
 iniciarLaboratorios({ llamar, avisar });
+
+// Al abrir: la intro (una vez por sesión) cuando ya se conocen los planetas; si falla, el asistente queda tal cual
+planetasListos.then(() => correrIntro(), () => { /* sin /planetas no hay intro */ });
 
 // Arranque (ARX-14): sin partida; el menú pide semilla y nivel. No se crea nada hasta pulsar Iniciar.

@@ -272,7 +272,7 @@ def test_textos_prohibidos_ausentes():
     # nombres del ejemplo armados por partes para no dejar su rastro en el repositorio
     prohibidos = ["REC" + "-BOT", "Persever" + "ance", "/ho" + "me", "herramien" + "tas/", "ESTA" + "DO.md",
                   "C:\\" + "Users", "Down" + "loads", "vista" + "3d", "ares" + "-x\\", "http://", "https://", "cdn", "innerHTML",
-                  "__mod" + "Final", "__mod" + "Logros", "__mod" + "Iconos", "axf" + "-", "aresx" + ".logros"]
+                  "__mod" + "Final", "__mod" + "Logros", "__mod" + "Iconos", "axf" + "-", "ares" + "x.logros"]
     for nombre in ("final_datos.js", "final_iconos.js", "final_tarjeta.js", "final_logros.js", "final_momentos.js"):
         ruta = ESTATICOS / nombre
         if not ruta.exists():

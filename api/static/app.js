@@ -483,6 +483,9 @@ function construirCapaRiesgo(datos) {
   return true;
 }
 
+// H-1 (QA 21/11): el riesgo parte de un mapa previo parcial (genetico.mapa_estimado, ≈80 % de detección); se rotula así
+const ROTULO_RIESGO = "riesgo estimado: mapa previo orbital (≈80 % de detección) + sensores";
+const NOTA_NO_OBSERVADA = "Una celda roja no observada viene del mapa previo, no de lo que el sensor vio.";
 function avisoRiesgo(texto) {
   const el = document.getElementById("riesgo-aviso");
   if (el) el.textContent = texto;
@@ -497,7 +500,12 @@ async function actualizarCapaRiesgo() {
   const mp = mapa ? await llamar("GET", "/mapa") : null;
   if (!capaRiesgoActiva) return;   // se apagó mientras llegaba la respuesta
   aplicarModoRiesgo(mp);
-  if (!mp || !construirCapaRiesgo(mp)) {
+  if (mp && construirCapaRiesgo(mp)) {
+    const el = document.getElementById("riesgo-aviso");
+    if (el && !el.textContent) {
+      avisoRiesgo(modoCapaRiesgo === "incertidumbre" ? `${ROTULO_RIESGO}. ${NOTA_NO_OBSERVADA}` : ROTULO_RIESGO);
+    }
+  } else {
     capaRiesgoActiva = false;
     const caja = document.getElementById("riesgo-capa");
     if (caja) caja.checked = false;

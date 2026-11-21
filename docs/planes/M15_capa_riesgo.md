@@ -37,3 +37,6 @@ Base: a0bf109. Solo `api/static/` (index.html, app.js). La API no cambia.
 
 ## No comprobado
 Mapa mediano (30×45), otros planetas distintos de Marte, clic con ratón real sobre el interruptor (se usó `change` por script), aspecto visual (una captura quedó tapada por el diálogo de inicio).
+
+## Limitación declarada (QA 21/11, H-1)
+El rover parte de un mapa previo parcial: `mision.riesgo` nace de `genetico.mapa_estimado`, que marca con riesgo 1,0 cerca del 80 % de los peligros reales desde el paso 0 (ya estaba en `main`; no se toca el motor). Por eso la capa dibuja desde el primer cuadro peligros que el sensor aún no vio. Decisión: no filtrar, rotular. La casilla, la leyenda y el aviso dicen «riesgo estimado: mapa previo orbital (≈80 % de detección) + sensores». En el modo Incertidumbre, la leyenda aclara que una celda roja no observada viene del mapa previo (el riesgo gana sobre la observación). Se mantiene «no observada», nunca «entropía».

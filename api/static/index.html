@@ -242,6 +242,36 @@
     }
     /* ---------- laboratorios de los modelos ---------- */
     /* ---------- viaje entre planetas ---------- */
+    /* ---------- introducción del sistema solar ---------- */
+    .in-capa { position: fixed; inset: 0; z-index: 70; pointer-events: none; color: #e8eefc; }
+    .in-capa.oculto { display: none; }
+    body.intro-activa > :not(#escena):not(.in-capa):not(.in-etiquetas) { visibility: hidden !important; }
+    .in-capa > * { pointer-events: auto; }
+    .in-cabecera { position: absolute; top: 12px; left: 16px; right: 120px; max-width: 560px; padding: 8px 12px; border-radius: 10px; background: rgba(8, 12, 24, 0.7); }
+    .in-titulo { margin: 0 0 4px; font-size: 18px; }
+    .in-subtitulo { margin: 0; font-size: 13px; color: #c9d6f2; }
+    .in-omitir { position: absolute; top: 12px; right: 16px; min-height: 36px; padding: 6px 16px; }
+    .in-tarjeta { position: absolute; right: 16px; top: 72px; width: min(280px, calc(100% - 32px)); box-sizing: border-box; padding: 10px 12px; border-radius: 10px; background: rgba(8, 12, 24, 0.88); border: 1px solid rgba(160, 190, 255, 0.35); }
+    .in-tarjeta.vacia { opacity: 0.8; }
+    .in-fila { margin: 4px 0; font-size: 13px; overflow-wrap: anywhere; }
+    .in-sin_dato { opacity: 0.7; }
+    .in-pie { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 16px 12px; background: linear-gradient(transparent, rgba(2, 3, 10, 0.92) 40%); pointer-events: none; }
+    .in-pie > * { pointer-events: auto; }
+    .in-avisos p { margin: 2px 0; font-size: 12px; max-width: 760px; color: #d5def5; }
+    .in-rotulo, .in-aviso-terreno { font-weight: 600; }
+    .in-casilla { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: #c9d6f2; }
+    .in-casilla input { width: auto; margin: 0; accent-color: var(--acento); }
+    .in-etiquetas { position: fixed; inset: 0; z-index: 69; pointer-events: none; }
+    .in-etiqueta { position: absolute; left: 0; top: 0; pointer-events: auto; padding: 3px 9px; font-size: 12px; border-radius: 999px; cursor: pointer; color: #e8eefc; background: rgba(8, 12, 24, 0.72); border: 1px solid rgba(160, 190, 255, 0.4); min-height: 26px; }
+    .in-etiqueta:hover, .in-etiqueta:focus-visible { background: rgba(60, 90, 160, 0.85); outline: 2px solid var(--acento); }
+    @media (max-width: 480px) {
+      .in-cabecera { right: 100px; top: 8px; left: 8px; padding: 6px 8px; }
+      .in-subtitulo { display: none; }
+      .in-omitir { top: 8px; right: 8px; }
+      .in-tarjeta { right: 8px; top: 56px; width: 168px; padding: 6px 8px; }
+      .in-pie { padding: 6px 8px 8px; }
+      .in-nota { display: none; }
+    }
     .vj-capa { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-end; justify-content: center; padding: 16px; pointer-events: auto; background: transparent; }
     .vj-tarjeta { width: min(560px, 100%); max-height: 80vh; overflow: auto; box-sizing: border-box; padding: 14px 16px; border-radius: 12px; background: rgba(8, 12, 24, 0.88); border: 1px solid rgba(160, 190, 255, 0.35); color: #e8eefc; }
     .vj-titulo { margin: 0 0 8px; font-size: 18px; }
@@ -1110,6 +1140,10 @@
         <label class="veto" title="Muestra una animación al cambiar de planeta; no cambia la partida">
           <input type="checkbox" class="casilla-viaje" id="menu-viaje" checked> Animación de viaje entre planetas
         </label>
+        <label class="veto" title="Muestra el sistema solar al abrir la aplicación (una vez por sesión)">
+          <input type="checkbox" class="casilla-intro" id="menu-intro" checked> Mostrar la introducción al abrir
+        </label>
+        <button id="menu-ver-intro" class="secundario" type="button" title="Vuelve a mostrar el sistema solar; elegir un planeta solo lo deja seleccionado aquí">Ver intro</button>
         <div id="menu-planeta-aviso" class="aviso-planeta oculto" role="status">
           <span id="menu-planeta-motivo"></span>
           <button id="menu-usar-sonda" class="secundario" type="button">Usar sonda</button>

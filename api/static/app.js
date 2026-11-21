@@ -633,17 +633,33 @@ if (cajaEvolucion) {
 }
 
 // ---------- holograma de IA junto al rover (Paquete A) ----------
-// Apagado: no se crea nada ni se pide nada. Encendido: /rna, /difuso y /ag por paso (sin solapar); /estado ya lo pide el paso.
+// Apagado: no se crea nada ni se pide nada. Encendido: /rna y /difuso por paso (sin solapar); /estado ya lo pide el paso.
+// /ag (el costo más alto) solo se pide al cambiar el plan o cada HOLO_AG_CADA_N pasos; entre medias se reutiliza el último.
+// El plan cambia si cambia el siguiente sitio objetivo (/estado.objetivo, que cambia al visitar un sitio), si cambia el
+// último replanteo del AG (/estado.ultimo_replanteo) o si la misión pasa a REFUGIO (ya no quedan sitios pendientes).
+const HOLO_AG_CADA_N = 5;
 let holograma = null;
 let holoDatos = null;
 let holoEnVuelo = false;
+let holoAg = null;                 // último /ag recibido
+let holoFirmaPlan = null;          // firma del plan con el que se pidió holoAg
+let holoPasosDesdeAg = 0;
+
+function firmaPlanHolo(est) {
+  if (!est) return null;
+  return JSON.stringify([est.semilla, est.nivel, est.objetivo || null, est.ultimo_replanteo || null, est.estado === "REFUGIO"]);
+}
 
 async function refrescarHolo() {
   if (!holograma || !mapa || holoEnVuelo) return;
   holoEnVuelo = true;
   try {
-    const [rna, difuso, ag] = await Promise.all([llamar("GET", "/rna"), llamar("GET", "/difuso"), llamar("GET", "/ag")]);
+    const firma = firmaPlanHolo(estado);
+    const pedirAg = holoAg === null || firma !== holoFirmaPlan || holoPasosDesdeAg >= HOLO_AG_CADA_N;
+    const [rna, difuso, ag] = await Promise.all([
+      llamar("GET", "/rna"), llamar("GET", "/difuso"), pedirAg ? llamar("GET", "/ag") : Promise.resolve(holoAg)]);
     if (!holograma) return;
+    if (pedirAg) { holoAg = ag; holoFirmaPlan = firma; holoPasosDesdeAg = 0; } else holoPasosDesdeAg += 1;
     holoDatos = adaptarHolo({ rna, difuso, ag, estado });
     holograma.actualizar(holoDatos, grupoRover.position, camara);
   } finally {
@@ -658,6 +674,7 @@ if (cajaHolo) {
     const aviso = document.getElementById("holo-aviso");
     if (!cajaHolo.checked) {
       if (holograma) { holograma.dispose(); holograma = null; holoDatos = null; }
+      holoAg = null; holoFirmaPlan = null; holoPasosDesdeAg = 0;
       aviso.textContent = "";
       return;
     }

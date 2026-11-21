@@ -190,6 +190,9 @@ export function evaluarLogros(evento, memoria, ahora = "") {
     case "barranco":
       dar("arquitecto");
       break;
+    case "meteorito":
+      dar("impacto");
+      break;
     case "paso": {
       const r = ev.resultado && typeof ev.resultado === "object" ? ev.resultado : {};
       const amb = typeof ev.ambiente === "string" ? ev.ambiente : "normal";

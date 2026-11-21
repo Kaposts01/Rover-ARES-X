@@ -196,6 +196,7 @@ def test_logros_de_ambiente_y_eventos():
     assert _evaluar(_paso(base, ambiente="normal"), noche)["memoria"]["mision"]["ambiente"] == "normal"
     assert _evaluar(_paso(base, meteorito=True))["ids"] == ["impacto"]
     assert _evaluar(_paso(base, meteorito=False))["ids"] == []
+    assert _evaluar({"tipo": "meteorito"})["ids"] == ["impacto"]
     assert sorted(_evaluar(_paso(base, senalVisitada=True))["ids"]) == ["primer_contacto", "senal_anomala"]
 
 
@@ -262,7 +263,8 @@ def test_teclas_que_pasan_y_guardas_en_app():
     assert re.search(r"if \(!TECLAS_QUE_PASAN\.includes\(e\.key\)\) e\.stopPropagation\(\)", tarjeta)
     app = (ESTATICOS / "app.js").read_text(encoding="utf-8")
     for fn in ("disparar", "mover", "dispararEvento", "paso"):
-        assert re.search(rf"async function {fn}\([^)]*\) \{{\s*if \(finActiva\(\)\) return", app), f"falta la guarda en {fn}()"
+        patron = rf"async function {fn}\([^)]*\) \{{(?:\s*if \([^\n]*\) return;[^\n]*)*?\s*if \(finActiva\(\)\) return"
+        assert re.search(patron, app), f"falta la guarda en {fn}()"
     assert re.search(r"window\.addEventListener\(\"keydown\", \(ev\) => \{\s*if \(finActiva\(\)\) return;", app)
 
 
@@ -279,6 +281,16 @@ def test_textos_prohibidos_ausentes():
         for p in prohibidos:
             assert not re.search(re.escape(p), txt, re.I), f"{p} en {nombre}"
         assert not re.search(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\u2B50]", txt), f"emoji en {nombre}"
+
+
+@sin_node
+def test_los_iconos_de_los_logros_existen():
+    codigo = (f"import * as i from {json.dumps((ESTATICOS / 'final_iconos.js').as_uri())};"
+              f"import * as m from {json.dumps((ESTATICOS / 'final_datos.js').as_uri())};"
+              "console.log(JSON.stringify(m.LOGROS.map(l=>l.icono).filter(n=>!i.NOMBRES_ICONOS.includes(n))));")
+    r = subprocess.run([NODE, "--input-type=module", "-"], input=codigo, capture_output=True, text=True, encoding="utf-8", timeout=30)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == []
 
 
 def test_el_rotulo_de_ficcion_y_del_puntaje_estan_en_la_tarjeta():

@@ -241,6 +241,18 @@
       #intervencion-aviso { top: 110px; }
     }
     /* ---------- laboratorios de los modelos ---------- */
+    /* ---------- viaje entre planetas ---------- */
+    .vj-capa { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-end; justify-content: center; padding: 16px; pointer-events: auto; background: transparent; }
+    .vj-tarjeta { width: min(560px, 100%); max-height: 80vh; overflow: auto; box-sizing: border-box; padding: 14px 16px; border-radius: 12px; background: rgba(8, 12, 24, 0.88); border: 1px solid rgba(160, 190, 255, 0.35); color: #e8eefc; }
+    .vj-titulo { margin: 0 0 8px; font-size: 18px; }
+    .vj-cuerpo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .vj-col p, .vj-avisos p { margin: 4px 0; font-size: 13px; overflow-wrap: anywhere; }
+    .vj-sin_dato { opacity: 0.7; }
+    .vj-avisos { margin-top: 8px; border-top: 1px solid rgba(160, 190, 255, 0.2); padding-top: 6px; color: #c9d6f2; }
+    .vj-barra { height: 6px; margin: 10px 0; background: rgba(255, 255, 255, 0.15); border-radius: 3px; overflow: hidden; }
+    .vj-relleno { height: 100%; width: 0%; background: var(--acento); }
+    .vj-omitir { width: 100%; }
+    @media (max-width: 480px) { .vj-cuerpo { grid-template-columns: 1fr; } }
     .oculto { display: none !important; }
     #laboratorio {
       position: fixed; inset: 0; z-index: 60; padding: 16px;
@@ -1065,6 +1077,7 @@
           </select>
         </label>
         <label class="veto"><input type="checkbox" id="pausa-camara" checked> La cámara sigue al rover</label>
+        <label class="veto"><input type="checkbox" class="casilla-viaje" id="pausa-viaje" checked> Animación de viaje entre planetas</label>
       </div>
       <button id="pausa-salir" class="secundario" type="button">Salir al menú inicial</button>
     </div>
@@ -1093,6 +1106,9 @@
             <option value="rover">rover</option>
             <option value="sonda">sonda</option>
           </select>
+        </label>
+        <label class="veto" title="Muestra una animación al cambiar de planeta; no cambia la partida">
+          <input type="checkbox" class="casilla-viaje" id="menu-viaje" checked> Animación de viaje entre planetas
         </label>
         <div id="menu-planeta-aviso" class="aviso-planeta oculto" role="status">
           <span id="menu-planeta-motivo"></span>

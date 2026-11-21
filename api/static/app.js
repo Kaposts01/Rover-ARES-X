@@ -10,6 +10,9 @@ import { adaptarAG, ROTULO_EVOLUCION } from "/static/evolucion_datos.js?v=r14";
 import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
 import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
+import { DURACION_VIAJE_S, GUARDA_EXTRA_S, debeViajar, datosTarjeta, modoMovimiento } from "/static/viaje_datos.js?v=r14";
+import { crearViaje } from "/static/viaje3d.js?v=r14";
+import { crearTarjetaViaje } from "/static/viaje_tarjeta.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -2035,6 +2038,57 @@ function aplicarAspecto(planeta) {
 
 // Lo último que confirmó el motor: planeta y tipo de vehículo
 let vigente = { planeta: null, vehiculo: null };
+// Viaje entre planetas (solo cliente: no escribe nada en el motor). Preferencia en localStorage («ares.viaje»), activado por defecto
+let viaje = null;
+let viajePendiente = null;   // { desde, hacia } cuando la partida nueva cambió de planeta
+function viajeActivado() {
+  try { return localStorage.getItem("ares.viaje") !== "0"; } catch (e) { return true; }
+}
+function fijarViajeActivado(on) {
+  try { localStorage.setItem("ares.viaje", on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ }
+  document.querySelectorAll(".casilla-viaje").forEach((c) => { c.checked = on; });
+}
+document.querySelectorAll(".casilla-viaje").forEach((c) => {
+  c.checked = viajeActivado();
+  c.addEventListener("change", () => fijarViajeActivado(c.checked));
+});
+let tarjetaViaje = null;
+// Corre el viaje pendiente; si algo falla, la partida sigue igual (nunca lanza ni se queda colgado)
+async function correrViaje() {
+  const pend = viajePendiente; viajePendiente = null;
+  if (!pend || !debeViajar({ previo: pend.desde, nuevo: pend.hacia, activado: viajeActivado() })) return;
+  let guarda = null, liberar = null;
+  try {
+    const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const modo = modoMovimiento(reducido, true);
+    if (modo === "ninguno") return;
+    if (!tarjetaViaje) tarjetaViaje = crearTarjetaViaje(document.body);
+    const datos = datosTarjeta(pend.desde, pend.hacia, planetasDatos);
+    await new Promise((resolver) => {
+      let hecho = false;
+      const fin = () => { if (hecho) return; hecho = true; resolver(); };
+      liberar = fin;
+      if (modo === "tarjeta") {
+        tarjetaViaje.mostrar(datos, { estatica: true, alOmitir: fin });
+        guarda = setTimeout(fin, 5000);   // sin animación: se cierra a los 5 s o con «Continuar»
+        return;
+      }
+      try {
+        viaje = crearViaje({ THREE, renderer, camara, texturaPlaneta: texturaParaPlaneta, paleta: PALETAS_PLANETA });
+      } catch (e) { console.warn("viaje: no se pudo crear la escena; sigue la partida normal", e); fin(); return; }
+      tarjetaViaje.mostrar(datos, { duracion: DURACION_VIAJE_S, alOmitir: () => { if (viaje) viaje.omitir(); fin(); } });
+      viaje.iniciar(pend.desde, pend.hacia).then(fin, fin);
+      guarda = setTimeout(() => { console.warn("viaje: temporizador de guarda"); if (viaje) viaje.omitir(); fin(); }, (DURACION_VIAJE_S + GUARDA_EXTRA_S) * 1000);
+    });
+  } catch (e) {
+    console.warn("viaje: fallo, sigue la partida normal", e);
+  } finally {
+    clearTimeout(guarda);
+    try { if (tarjetaViaje) tarjetaViaje.ocultar(); } catch (e) { /* ya oculta */ }
+    try { if (viaje) viaje.dispose(); } catch (e) { /* ya liberado */ }
+    viaje = null;
+  }
+}
 // Configuración para crear o reiniciar una partida: el planeta y vehículo confirmados, y el modo de control del panel
 function configuracionVigente() {
   return {
@@ -2051,6 +2105,8 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
   reiniciarEventos();
   cargando = true;
   try {
+    const previo = vigente.planeta;   // para el viaje: el planeta de la partida anterior
+    viajePendiente = null;
     const cuerpo = { nivel, tamano, planeta: config.planeta, modo: config.vehiculo };
     if (semilla != null) cuerpo.semilla = semilla;
     if (bateria != null) cuerpo.bateria = bateria;   // ARX-87: solo llega desde el botón «Nueva» del panel
@@ -2059,6 +2115,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     if (!datos) return false;
     // Manda el motor: el planeta y el vehículo que responde son los que se muestran
     vigente = { planeta: datos.planeta, vehiculo: datos.modo_planeta };
+    if (previo && datos.planeta && datos.planeta !== previo) viajePendiente = { desde: previo, hacia: datos.planeta };
     planetaActivo = datos.planeta;
     modoPlanetaActivo = datos.modo_planeta;
     // Una partida nueva arranca en manual: se reaplica el modo de control elegido (si no es el manual simple)
@@ -2158,7 +2215,10 @@ async function conCarga(fn, { transicion = false } = {}) {
   let ok = false;
   try {
     ok = await fn();
-    if (ok) await cuentaAtras(2100);
+    if (ok) {
+      if (viajePendiente) { caja.classList.add("oculto"); await correrViaje(); caja.classList.remove("oculto"); }
+      await cuentaAtras(2100);
+    }
   } catch (err) {
     ok = false;
     avisar("No se pudo iniciar la partida.");
@@ -3105,7 +3165,7 @@ function animar() {
   camara.position.add(desplazamiento);
   efectos.actualizarMarcadores(tiempo, camara);
   efectos.actualizarMovibles(tiempo, dt);
-  renderer.render(scene, camara);
+  if (viaje && viaje.activo) viaje.render(); else renderer.render(scene, camara);   // durante el viaje no se dibuja la escena principal
   camara.position.sub(desplazamiento);
   requestAnimationFrame(animar);
 }

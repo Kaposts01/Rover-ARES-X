@@ -11,27 +11,66 @@ from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 
-from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, UMBRAL_DESNIVEL_BARRANCO_M, SensorSuite,
-                       generar_mundo)
+import contextlib
+
+import simulador
+from simulador import BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite, generar_mundo
 
 CLASES = {LIBRE: "libre", OBSTACULO: "obstáculo", BARRANCO: "barranco"}
-NOMBRES_RASGOS = ["proximidad_frontal_m", "borde_barranco", "gradiente_altura_m", "vibracion"]
-# ARX-93b (ev3-d78 A): modelo aparte, sin el rasgo de borde (que es la lectura del LIDAR del supervisor).
-# El modelo actual y NOMBRES_RASGOS no cambian; /rna y el panel usan la lista del modelo activo.
+# ARX-94d: modelo v2, entrenado con los sensores físicos del mundo v2. Ningún rasgo sale del tipo de celda:
+# la proximidad ve solo volúmenes, el desnivel y el contraste miden geometría de la celda siguiente y la
+# vibración (IMU) es de la celda ACTUAL. La etiqueta (tipo real de la celda siguiente) solo sirve para entrenar.
+NOMBRES_RASGOS_V2 = ["proximidad_frontal_m", "desnivel_frontal_m", "contraste_optico", "vibracion"]
+# Modelo v1 (entrega del 17/11): conservado con su dataset en el mundo v1 (`simulador.MUNDO_V1`), con el LIDAR
+# exacto de borde y la vibración por clase de la celda de enfrente. Es la referencia publicada, no el del juego.
+NOMBRES_RASGOS_V1 = ["proximidad_frontal_m", "borde_barranco", "gradiente_altura_m", "vibracion"]
+NOMBRES_RASGOS = NOMBRES_RASGOS_V2        # modelo por defecto
+# ARX-93b (ev3-d78 A): modelo aparte, sin el rasgo de borde (pista del mundo v1 con firma física).
 NOMBRES_RASGOS_TERRENO = ["proximidad_frontal_m", "gradiente_altura_m", "vibracion"]
-# ARX-93c: alerta temprana. Predice la celda a DOS pasos (con la de enfrente libre) y su altímetro frontal.
+# ARX-93c (descartada): predice la celda a DOS pasos. Solo evidencia, en el mundo v1.
 NOMBRES_RASGOS_ALERTA2 = ["proximidad_frontal_m", "desnivel_a_2_m", "gradiente_altura_m", "vibracion"]
-PERFILES_RASGOS = {"actual": NOMBRES_RASGOS, "terreno": NOMBRES_RASGOS_TERRENO,
-                   "alerta2": NOMBRES_RASGOS_ALERTA2}
-COLUMNAS_TERRENO = [0, 2, 3]      # de un vector del perfil "actual" a los rasgos del modelo terreno
+PERFILES_RASGOS = {"v2": NOMBRES_RASGOS_V2, "v1": NOMBRES_RASGOS_V1, "actual": NOMBRES_RASGOS_V1,
+                   "terreno": NOMBRES_RASGOS_TERRENO, "alerta2": NOMBRES_RASGOS_ALERTA2}
+COLUMNAS_TERRENO = [0, 2, 3]      # de un vector del perfil v1 a los rasgos del modelo terreno
 
-# Media de la vibración según lo que hay delante (supuesto de simulación: débil señal)
+# SOLO mundo v1: media de la vibración según lo que hay delante (supuesto de simulación del modelo v1).
+# El modelo v2 no la usa: su vibración es la de la celda actual.
 VIBRACION_MEDIA = {LIBRE: 0.2, OBSTACULO: 0.6, BARRANCO: 0.4}
 
 
-def _rasgos_celda(mundo, pos, rumbo, sensor, rng):
-    """Vector de rasgos para una celda observada desde pos mirando hacia rumbo."""
-    lectura = sensor.leer(mundo, pos, rumbo)
+@contextlib.contextmanager
+def _mundo_v1(activo: bool):
+    """Fija `simulador.MUNDO_V1` mientras se genera un dataset y lo restaura."""
+    anterior = simulador.MUNDO_V1
+    simulador.MUNDO_V1 = bool(activo)
+    try:
+        yield
+    finally:
+        simulador.MUNDO_V1 = anterior
+
+
+def _leer_v1(mundo, pos, rumbo, sensor):
+    """Sensor del esquema v1 (LIDAR exacto de borde, proximidad que cuenta barrancos). Mismo consumo de azar
+    que el `leer` anterior a ARX-94b: dos lecturas ruidosas (proximidad y altímetro)."""
+    df, dc = MOVIMIENTOS[rumbo]
+    distancia = 20
+    for paso in range(1, 21):
+        p = (pos[0] + df * paso, pos[1] + dc * paso)
+        if not mundo.dentro(p):
+            break
+        if mundo.tipo[p] != LIBRE:
+            distancia = paso
+            break
+    borde = any(mundo.dentro((pos[0] + a, pos[1] + b)) and mundo.tipo[(pos[0] + a, pos[1] + b)] == BARRANCO
+                for a, b in MOVIMIENTOS.values())
+    proximidad = sensor._ruidoso(distancia, 1.0)
+    sensor._ruidoso(mundo.elevacion[pos], 0.5)          # altímetro: consume azar igual que antes
+    return {"proximidad_frontal_m": proximidad, "borde_barranco": borde}
+
+
+def _rasgos_celda_v1(mundo, pos, rumbo, sensor, rng):
+    """Vector v1 [proximidad, borde, gradiente, vibración] (esquema de la entrega del 17/11)."""
+    lectura = _leer_v1(mundo, pos, rumbo, sensor)
     df, dc = MOVIMIENTOS[rumbo]
     delante = (pos[0] + df, pos[1] + dc)
     if mundo.dentro(delante):
@@ -41,21 +80,44 @@ def _rasgos_celda(mundo, pos, rumbo, sensor, rng):
         gradiente, clase = 0.0, LIBRE
     grad_ruidoso = gradiente + rng.normal(0, 0.05)
     vibracion = VIBRACION_MEDIA[clase] + rng.normal(0, 0.3)
-    # ARX-94c: la lectura `borde_barranco` ya no existe; el rasgo se deriva aquí del desnivel que mide el telémetro
-    # (misma semántica: 1 si < umbral, NaN si no hubo lectura). 94d lo reemplaza por los rasgos del modelo v2.
-    desnivel = lectura["desnivel_frontal_m"]
-    borde = float("nan") if desnivel != desnivel else float(desnivel < UMBRAL_DESNIVEL_BARRANCO_M)
-    return [
-        lectura["proximidad_frontal_m"],
-        borde,
-        grad_ruidoso,
-        vibracion,
-    ], int(clase)
+    return [lectura["proximidad_frontal_m"], 1.0 if lectura["borde_barranco"] else 0.0,
+            grad_ruidoso, vibracion], int(clase)
+
+
+def _rasgos_celda_v2(mundo, pos, rumbo, sensor, rng=None):
+    """Vector v2 [proximidad, desnivel frontal, contraste óptico, vibración] y la etiqueta de entrenamiento.
+
+    Los rasgos salen solo de `sensor.leer`; el tipo real de la celda siguiente se devuelve aparte como etiqueta
+    (fuera del mapa: libre, como antes). NaN (fuera del mapa o falla) se mantiene aquí; se trata al predecir.
+    """
+    lectura = sensor.leer(mundo, pos, rumbo)
+    df, dc = MOVIMIENTOS[rumbo]
+    delante = (pos[0] + df, pos[1] + dc)
+    clase = mundo.tipo[delante] if mundo.dentro(delante) else LIBRE
+    return [lectura["proximidad_frontal_m"], lectura["desnivel_frontal_m"],
+            lectura["contraste_optico"], lectura["vibracion"]], int(clase)
+
+
+def _rasgos_celda(mundo, pos, rumbo, sensor, rng=None):
+    """Rasgos del modelo activo: v1 si `simulador.MUNDO_V1`, v2 si no (ver `perfil_activo`)."""
+    if simulador.MUNDO_V1:
+        return _rasgos_celda_v1(mundo, pos, rumbo, sensor, rng)
+    return _rasgos_celda_v2(mundo, pos, rumbo, sensor, rng)
+
+
+def perfil_activo() -> str:
+    return "v1" if simulador.MUNDO_V1 else "v2"
+
+
+def inclinacion_de_rasgos(rasgos) -> float:
+    """Magnitud de la pendiente frontal (m) para el difuso: gradiente (v1) o desnivel medido (v2; NaN = 0)."""
+    valor = rasgos[2] if simulador.MUNDO_V1 else rasgos[1]
+    return 0.0 if valor != valor else abs(float(valor))
 
 
 def _rasgos_terreno(mundo, pos, rumbo, sensor, rng):
     """Como _rasgos_celda pero sin borde_barranco: la RNA solo ve proximidad, gradiente y vibración."""
-    rasgos, clase = _rasgos_celda(mundo, pos, rumbo, sensor, rng)
+    rasgos, clase = _rasgos_celda_v1(mundo, pos, rumbo, sensor, rng)
     return [rasgos[0], rasgos[2], rasgos[3]], clase
 
 
@@ -70,7 +132,7 @@ def _rasgos_alerta2(mundo, pos, rumbo, sensor, rng):
     c2 = (pos[0] + 2 * df, pos[1] + 2 * dc)
     if not mundo.dentro(c2):
         return None
-    lectura = sensor.leer(mundo, pos, rumbo)
+    lectura = _leer_v1(mundo, pos, rumbo, sensor)
     desnivel = sensor.leer_desnivel(mundo, pos, rumbo, 2)
     gradiente = mundo.elevacion[c1] - mundo.elevacion[pos] + rng.normal(0, 0.05)
     vibracion = VIBRACION_MEDIA[mundo.tipo[c2]] + rng.normal(0, 0.3)
@@ -85,16 +147,22 @@ def _rasgos_alerta2_entrenamiento(mundo, pos, rumbo, sensor, rng):
     return _rasgos_alerta2(mundo, pos, rumbo, sensor, rng)
 
 
-def generar_dataset(semillas, muestras_por_mapa=400, ruido=0.1, prob_fallo=0.0, perfil="actual"):
+def generar_dataset(semillas, muestras_por_mapa=400, ruido=0.1, prob_fallo=0.0, perfil="v2"):
     """Muestras etiquetadas a partir de mapas con las semillas indicadas.
 
-    perfil="actual" (por defecto) es el modelo entregable, con borde_barranco;
-    perfil="terreno" es el modelo de ARX-93, sin ese rasgo (mismo flujo de azar).
+    perfil="v2" (por defecto): sensores físicos sobre el mundo v2 (ARX-94d). perfil="v1" (alias "actual"):
+    el modelo de la entrega del 17/11, con su dataset en el mundo v1. "terreno" y "alerta2" son las pistas de
+    ARX-93 (mundo v1, mismo flujo de azar que entonces). Cada perfil fija el mundo que usa y lo restaura.
     """
     if perfil not in PERFILES_RASGOS:
         raise ValueError(f"Perfil de rasgos desconocido: {perfil}")
-    rasgos_de = {"actual": _rasgos_celda, "terreno": _rasgos_terreno,
-                 "alerta2": _rasgos_alerta2_entrenamiento}[perfil]
+    rasgos_de = {"v2": _rasgos_celda_v2, "v1": _rasgos_celda_v1, "actual": _rasgos_celda_v1,
+                 "terreno": _rasgos_terreno, "alerta2": _rasgos_alerta2_entrenamiento}[perfil]
+    with _mundo_v1(perfil != "v2"):
+        return _dataset(semillas, muestras_por_mapa, ruido, prob_fallo, rasgos_de)
+
+
+def _dataset(semillas, muestras_por_mapa, ruido, prob_fallo, rasgos_de):
     X, y = [], []
     for semilla in semillas:
         rng = np.random.default_rng(10_000 + semilla)
@@ -135,8 +203,9 @@ class ResultadoRNA:
 
 
 class NeuralPerception:
-    def __init__(self, semilla=42, nombres=None, columnas=None):
+    def __init__(self, semilla=42, nombres=None, columnas=None, perfil=None):
         self.nombres = list(nombres) if nombres is not None else list(NOMBRES_RASGOS)
+        self.perfil = perfil          # "v1", "v2" u otro; solo informa qué modelo es
         # Si el vector de entrada es el del perfil "actual" (4 rasgos, como lo arman partida y conduccion),
         # `columnas` elige los que usa este modelo; así el modelo terreno convive con esos llamadores.
         self.columnas = list(columnas) if columnas is not None else None
@@ -153,7 +222,7 @@ class NeuralPerception:
         return self
 
     def _seleccionar(self, X):
-        X = np.atleast_2d(np.asarray(X, dtype=float))
+        X = np.nan_to_num(np.atleast_2d(np.asarray(X, dtype=float)), nan=0.0)   # igual que al entrenar
         if self.columnas is not None and X.shape[1] == len(NOMBRES_RASGOS):
             X = X[:, self.columnas]
         return X

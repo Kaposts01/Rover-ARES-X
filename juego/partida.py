@@ -21,7 +21,7 @@ from integracion import (ESTADOS_TERMINALES, MARGEN_ENERGIA,  # noqa: E402
                          Decision, Mision, _rumbo, barrancos_medidos, camino_valido)
 from difuso import ResultadoDifuso, aplanar_membresias  # noqa: E402
 from juego import termico  # noqa: E402
-from rna import _rasgos_celda  # noqa: E402
+from rna import _rasgos_celda, inclinacion_de_rasgos  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
 
@@ -668,7 +668,7 @@ class Partida:
         sombra._actualizar_mapa_estimado(pos, rumbo, lectura["proximidad_frontal_m"])
         for celda in barrancos_medidos(lectura):
             sombra.riesgo[celda] = 1.0
-        inclinacion = min(45.0, abs(rasgos[2]) * GRADOS_POR_GRADIENTE)
+        inclinacion = min(45.0, inclinacion_de_rasgos(rasgos) * GRADOS_POR_GRADIENTE)
         fz = sombra.difuso.inferir(sombra._distancia_a_riesgo_en_ruta(), self.rover.bateria, inclinacion)
         if not m.usar_difuso:
             fz = ResultadoDifuso(velocidad=0.5, membresias={}, reglas_activadas=[],

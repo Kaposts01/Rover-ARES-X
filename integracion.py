@@ -16,8 +16,9 @@ import numpy as np
 from difuso import FuzzyController, ResultadoDifuso, aplanar_membresias
 from genetico import GeneticPlanner, camino_bfs, mapa_estimado
 import simulador
-from rna import (COLUMNAS_TERRENO, NOMBRES_RASGOS_ALERTA2, NOMBRES_RASGOS_TERRENO, NeuralPerception,
-                 _rasgos_alerta2, _rasgos_celda, generar_dataset, particion_por_mapas)
+from rna import (COLUMNAS_TERRENO, NOMBRES_RASGOS_ALERTA2, NOMBRES_RASGOS_TERRENO, PERFILES_RASGOS, NeuralPerception,
+                 _rasgos_alerta2, _rasgos_celda, generar_dataset, inclinacion_de_rasgos, particion_por_mapas,
+                 perfil_activo)
 from simulador import (BARRANCO, MOVIMIENTOS, UMBRAL_DESNIVEL_BARRANCO_M, MissionLogger, Rover, SensorSuite,
                        World, paso_fisico)
 
@@ -82,12 +83,22 @@ class SafetySupervisor:
         return Decision("avanzar", velocidad, ["OK"])
 
 
-@lru_cache(maxsize=1)
-def rna_entrenada(semilla: int = 42) -> NeuralPerception:
-    """RNA entrenada una sola vez por proceso (partición por mapas, tamaño reducido para rapidez)."""
+def rna_entrenada(semilla: int = 42, perfil: str = None) -> NeuralPerception:
+    """RNA del juego, entrenada una sola vez por proceso y perfil (partición por mapas, 30 mapas).
+
+    ARX-94d: `perfil` "v2" (sensores físicos, por defecto) o "v1" (entrega del 17/11, dataset del mundo v1).
+    Sin perfil, el que corresponde al mundo activo: v1 con `simulador.MUNDO_V1`, v2 si no.
+    """
+    return _rna_entrenada(semilla, perfil or perfil_activo())
+
+
+@lru_cache(maxsize=4)
+def _rna_entrenada(semilla: int, perfil: str) -> NeuralPerception:
+    if perfil not in ("v1", "v2"):
+        raise ValueError(f"Perfil de la RNA desconocido: {perfil!r} (v1 o v2)")
     tr, _, _ = particion_por_mapas(total_mapas=30)
-    X, y = generar_dataset(tr, muestras_por_mapa=300)
-    return NeuralPerception(semilla=semilla).entrenar(X, y)
+    X, y = generar_dataset(tr, muestras_por_mapa=300, perfil=perfil)
+    return NeuralPerception(semilla=semilla, nombres=PERFILES_RASGOS[perfil], perfil=perfil).entrenar(X, y)
 
 
 @lru_cache(maxsize=1)
@@ -126,12 +137,14 @@ def aporte_rna(activo: bool = True):
     Las banderas se leen al crear el mundo y la misión: úsese alrededor de `generar_mundo` y `Mision`.
     """
     global RNA_APORTE_ACTIVA
-    anterior = (RNA_APORTE_ACTIVA, simulador.FIRMA_BARRANCO_ACTIVA)
+    anterior = (RNA_APORTE_ACTIVA, simulador.FIRMA_BARRANCO_ACTIVA, simulador.MUNDO_V1)
     RNA_APORTE_ACTIVA = simulador.FIRMA_BARRANCO_ACTIVA = bool(activo)
+    if activo:
+        simulador.MUNDO_V1 = True      # ARX-94d: la pista de ARX-93 vive en el mundo v1 con firma física
     try:
         yield
     finally:
-        RNA_APORTE_ACTIVA, simulador.FIRMA_BARRANCO_ACTIVA = anterior
+        RNA_APORTE_ACTIVA, simulador.FIRMA_BARRANCO_ACTIVA, simulador.MUNDO_V1 = anterior
 
 
 class Mision:
@@ -259,7 +272,7 @@ class Mision:
         alerta = self._marcar_riesgo_rna(pos, rumbo, siguiente) if self.alerta_rna_2 and self.usar_rna else None
         # el desnivel frontal mide justo la celda siguiente de la ruta (rumbo = hacia `siguiente`)
         # inferir velocidad
-        inclinacion = min(45.0, abs(rasgos[2]) * GRADOS_POR_GRADIENTE)
+        inclinacion = min(45.0, inclinacion_de_rasgos(rasgos) * GRADOS_POR_GRADIENTE)
         # la velocidad depende de la distancia a lo largo de la ruta, no solo de lo que hay al frente
         fz = self.difuso.inferir(self._distancia_a_riesgo_en_ruta(), self.rover.bateria, inclinacion)
         if self.intervencion_difuso is not None and self.usar_difuso:

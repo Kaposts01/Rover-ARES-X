@@ -150,6 +150,7 @@ El modelo que usa la partida del juego se entrena con una partición más peque�
 - **La RNA es redundante en el escenario normal.** Con los sensores activos, la RNA y el difuso no cambian el resultado final. Su efecto solo se mide con la prueba causal (sección 4.1): cambian la decisión, pero no el éxito.
 - **Replanteo con BFS, sin optimizar.** Tras la decisión ev3-d07, el replanteo solo busca un camino válido, sin volver a optimizar la ruta con el AG.
 - **Supuestos de simulación.** Pesos del fitness, costos de batería, rangos de sensores y parámetros de los drones son supuestos, no datos de misión.
+- **El rover parte de un mapa previo parcial.** El riesgo estimado que dibuja la interfaz nace de un mapa previo orbital que ya marca cerca del 80 % de los peligros reales (`genetico.mapa_estimado`), y los sensores lo completan. Por eso una celda roja puede estar aún no observada. La capa lo rotula así; no cambia ninguna cifra de este informe.
 
 **De la capa 3D y del combate**
 - **El supervisor está congelado y no conoce a los drones.** La decisión de combate (disparar o evitar) vive en la capa de la API. Esa capa solo marca como peligrosa la celda exacta del dron al replanificar; no evita las celdas vecinas, porque hacerlo cortaba el único pasillo al refugio (SIN_RUTA).

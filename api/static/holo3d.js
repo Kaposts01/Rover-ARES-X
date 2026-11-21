@@ -136,8 +136,8 @@ export function crearHolograma(escena, { alturaTerreno } = {}) {
       }
       grupo.scale.setScalar(escala);
       grupo.position.copy(ancla);
-      grupo.position.y += 1.2 * escala;
-      if (camara) grupo.position.addScaledVector(new THREE.Vector3(1, 0, 0).applyQuaternion(camara.quaternion), 1.9 * escala);
+      grupo.position.y += 1.5 * escala;   // H-3 (QA 21/11): más arriba y a la derecha para que el panel no roce al rover con la cámara cerca
+      if (camara) grupo.position.addScaledVector(new THREE.Vector3(1, 0, 0).applyQuaternion(camara.quaternion), 2.3 * escala);
     },
     dispose() {
       if (!vivo) return;

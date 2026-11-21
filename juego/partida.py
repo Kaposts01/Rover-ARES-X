@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from genetico import GeneticPlanner, camino_bfs  # noqa: E402
 from integracion import (ESTADOS_TERMINALES, MARGEN_ENERGIA,  # noqa: E402
                          GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO,
-                         Decision, Mision, _rumbo, camino_valido)
+                         Decision, Mision, _rumbo, barrancos_medidos, camino_valido)
 from difuso import ResultadoDifuso, aplanar_membresias  # noqa: E402
 from juego import termico  # noqa: E402
 from rna import _rasgos_celda  # noqa: E402
@@ -666,9 +666,8 @@ class Partida:
         lectura = sombra.sensor.leer(self.mundo, pos, rumbo)
         probs = sombra.rna.explicar(rasgos)["probabilidades"] if m.usar_rna else {"libre": 1.0}
         sombra._actualizar_mapa_estimado(pos, rumbo, lectura["proximidad_frontal_m"])
-        for celda in lectura["celdas_barranco"]:
+        for celda in barrancos_medidos(lectura):
             sombra.riesgo[celda] = 1.0
-        lectura = dict(lectura, borde_barranco=siguiente in lectura["celdas_barranco"])
         inclinacion = min(45.0, abs(rasgos[2]) * GRADOS_POR_GRADIENTE)
         fz = sombra.difuso.inferir(sombra._distancia_a_riesgo_en_ruta(), self.rover.bateria, inclinacion)
         if not m.usar_difuso:
@@ -677,6 +676,7 @@ class Partida:
         dec = m.supervisor.decidir(probs, fz.velocidad, lectura, self.rover.bateria)
         if sombra.riesgo[siguiente] >= 0.5:
             dec = Decision("replanificar", 0.0, ["V-RUTA-CON-RIESGO"])
+        sombra._riesgo_por_rna(probs, siguiente, dec)      # ARX-94c, igual que Mision.paso_mision
         distancia = lectura["proximidad_frontal_m"]
         # incondicional desde ARX-91 (ab46b4a es donde nació la versión que dependía de la parada del difuso)
         if sombra._obstaculo_en_ruta(pos, rumbo, distancia):

@@ -204,13 +204,9 @@ CONTRASTE_ROCA = 0.8         # una roca se ve clara
 AMBIENTES = ("normal", "tormenta", "noche")
 
 
-# TRANSITORIO (ARX-94b): umbral del desnivel medido para «hay un barranco» (ev3-d83); se retira en 94c.
-UMBRAL_BORDE_M = -2.0
-
-
-def _bajo_umbral(desnivel) -> bool:
-    """True si el desnivel medido es menor que UMBRAL_BORDE_M (NaN: False)."""
-    return desnivel == desnivel and desnivel < UMBRAL_BORDE_M
+# Veto duro declarado (ev3-d83): desnivel medido por el telémetro inclinado menor que este valor = barranco.
+# Lo usan el supervisor, el mapa estimado de la misión y el rasgo de la RNA; el sensor solo entrega la medida.
+UMBRAL_DESNIVEL_BARRANCO_M = -2.0
 
 
 @dataclass
@@ -264,11 +260,6 @@ class SensorSuite:
             # IMU de la celda que se pisa: suelo uniforme, media 0 (sin terrenos distintos todavía)
             "vibracion": self._ruidoso(0.0, ESCALA_IMU, general),
         }
-        # TRANSITORIO (ARX-94b, opción 2 del Orquestador): lecturas DERIVADAS del desnivel medido, solo para no romper
-        # a los llamadores. Se retiran en 94c. Barranco = desnivel medido < -UMBRAL_BORDE_M (ev3-d83).
-        # sin lectura de desnivel (falla o fuera del mapa), borde_barranco queda NaN como antes de 94b
-        lectura["borde_barranco"] = float("nan") if desnivel_frontal != desnivel_frontal else _bajo_umbral(desnivel_frontal)
-        lectura["celdas_barranco"] = {c for c, d in desniveles_vecinos.items() if _bajo_umbral(d)}
         return lectura
 
     def _desnivel(self, mundo: World, pos, destino, general: float) -> float:

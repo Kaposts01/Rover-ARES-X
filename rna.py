@@ -11,7 +11,8 @@ from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 
-from simulador import BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite, generar_mundo
+from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, UMBRAL_DESNIVEL_BARRANCO_M, SensorSuite,
+                       generar_mundo)
 
 CLASES = {LIBRE: "libre", OBSTACULO: "obstáculo", BARRANCO: "barranco"}
 NOMBRES_RASGOS = ["proximidad_frontal_m", "borde_barranco", "gradiente_altura_m", "vibracion"]
@@ -40,9 +41,13 @@ def _rasgos_celda(mundo, pos, rumbo, sensor, rng):
         gradiente, clase = 0.0, LIBRE
     grad_ruidoso = gradiente + rng.normal(0, 0.05)
     vibracion = VIBRACION_MEDIA[clase] + rng.normal(0, 0.3)
+    # ARX-94c: la lectura `borde_barranco` ya no existe; el rasgo se deriva aquí del desnivel que mide el telémetro
+    # (misma semántica: 1 si < umbral, NaN si no hubo lectura). 94d lo reemplaza por los rasgos del modelo v2.
+    desnivel = lectura["desnivel_frontal_m"]
+    borde = float("nan") if desnivel != desnivel else float(desnivel < UMBRAL_DESNIVEL_BARRANCO_M)
     return [
         lectura["proximidad_frontal_m"],
-        float(lectura["borde_barranco"]),
+        borde,
         grad_ruidoso,
         vibracion,
     ], int(clase)

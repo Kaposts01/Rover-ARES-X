@@ -8,10 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import integracion  # noqa: E402
 from integracion import Mision, SafetySupervisor, aporte_rna  # noqa: E402
-from simulador import BARRANCO, LIBRE, generar_mundo  # noqa: E402
+from simulador import BARRANCO, LIBRE, OBSTACULO, generar_mundo  # noqa: E402
 
-LECTURA_OK = {"proximidad_frontal_m": 12.0, "borde_barranco": False,
-              "celdas_barranco": [], "altimetria_m": 0.5}
+LECTURA_OK = {"proximidad_frontal_m": 12.0, "desnivel_frontal_m": 0.0, "altimetria_m": 0.5}
 
 
 def test_supervisor_veta_sensor_nan():
@@ -141,3 +140,103 @@ def test_aporte_encendido_deja_la_alerta_a_dos_celdas_apagada():
     assert mision.aporte_rna is True and mision.alerta_rna_2 is False
     mision.paso_mision()
     assert not any("RNA-RIESGO-2" in str(m) for m in mision.log.a_dataframe()["motivos"])
+
+
+# ---------- ARX-94c: supervisor y mapa estimado con sensores físicos ----------
+
+def _mundo_llano(filas=5, columnas=12):
+    m = generar_mundo(semilla=5, filas=filas, columnas=columnas, n_obstaculos=0, n_barrancos=0, n_sitios=0)
+    m.tipo[:] = LIBRE
+    m.elevacion[:] = 0.0
+    m.profundidad[:] = 0.0
+    m.altura[:] = 0.0
+    return m
+
+
+def _mision_con_barranco_adelante(profundidad, p_rna):
+    """Rover en el inicio con un barranco de `profundidad` m justo en la celda siguiente de la ruta recta."""
+    m = _mundo_llano()
+    fila, col = m.inicio
+    m.tipo[fila, col + 1] = BARRANCO
+    m.elevacion[fila, col + 1] = -profundidad
+    m.profundidad[fila, col + 1] = profundidad
+    mision = Mision(m, semilla=5, rna=_RnaFalsa(p_rna), ruido=0.0)
+    mision.riesgo[:] = 0.0                      # el mapa orbital no conoce el barranco
+    mision.ruta = [m.inicio, (fila, col + 1), (fila, col + 2)]
+    return mision, (fila, col + 1)
+
+
+def test_supervisor_veta_por_el_desnivel_medido_y_no_por_el_tipo():
+    sup = SafetySupervisor()
+    d = sup.decidir({"libre": 1.0}, 0.8, dict(LECTURA_OK, desnivel_frontal_m=-3.0), 90)
+    assert d.accion == "replanificar" and d.motivos == ["V-BORDE-BARRANCO"]
+    # -1,5 m no alcanza el umbral de -2 m y NaN no es lectura: no hay veto duro
+    for desnivel in (-1.5, float("nan")):
+        d = sup.decidir({"libre": 1.0}, 0.8, dict(LECTURA_OK, desnivel_frontal_m=desnivel), 90)
+        assert d.accion == "avanzar"
+
+
+def test_barranco_de_3_m_contiguo_veta_por_el_sensor_aunque_la_rna_no_lo_vea():
+    mision, celda = _mision_con_barranco_adelante(3.0, p_rna=0.0)
+    mision.paso_mision()
+    fila = mision.log.a_dataframe().iloc[-1]
+    assert fila["accion"] == "replanificar" and mision.vetos == 1
+    assert mision.riesgo[celda] == 1.0          # el sensor lo marcó en el mapa estimado
+    assert mision.rover.posicion == mision.mundo.inicio and mision.colisiones == 0
+    assert celda not in mision.ruta
+
+
+def test_barranco_de_1_5_m_con_p_alta_veta_por_la_rna_y_sube_el_riesgo():
+    mision, celda = _mision_con_barranco_adelante(1.5, p_rna=0.9)
+    mision.paso_mision()
+    motivos = mision.log.a_dataframe().iloc[-1]["motivos"]
+    assert "V-RNA-BARRANCO" in motivos and f"RNA-RIESGO:{celda}:0.90" in motivos
+    assert "V-BORDE-BARRANCO" not in motivos    # el sensor (σ 0,5, umbral -2 m) no lo ve a 1,5 m
+    assert mision.riesgo[celda] == pytest.approx(0.9)
+    assert mision.colisiones == 0 and mision.rover.posicion == mision.mundo.inicio
+    assert celda not in mision.ruta
+
+
+def test_barranco_de_1_5_m_con_p_baja_la_fisica_lo_rechaza_y_nunca_cae():
+    mision, celda = _mision_con_barranco_adelante(1.5, p_rna=0.1)
+    mision.paso_mision()
+    fila = mision.log.a_dataframe().iloc[-1]
+    assert "V-CELDA-BLOQUEADA" in fila["motivos"] and "V-RNA-BARRANCO" not in fila["motivos"]
+    assert mision.colisiones == 1                # colisión +1 y replanificación
+    assert mision.rover.posicion == mision.mundo.inicio
+    assert mision.mundo.tipo[mision.rover.posicion] != BARRANCO
+
+
+def test_obstaculo_en_ruta_sigue_igual_que_antes():
+    m = _mundo_llano()
+    fila, col = m.inicio
+    m.tipo[fila, col + 3] = OBSTACULO
+    mision = Mision(m, semilla=5, rna=_RnaFalsa(0.0), ruido=0.0)
+    mision.riesgo[:] = 0.0
+    mision.ruta = [(fila, col + k) for k in range(6)]
+    mision.paso_mision()
+    assert "V-OBSTACULO-EN-RUTA" in mision.log.a_dataframe().iloc[-1]["motivos"]
+    assert mision.riesgo[fila, col + 3] == 1.0
+
+
+def test_rna_riesgo_no_se_anota_con_p_baja_y_sin_rna_no_toca_el_mapa():
+    mision, celda = _mision_con_barranco_adelante(1.5, p_rna=0.3)
+    mision.paso_mision()
+    assert "RNA-RIESGO" not in mision.log.a_dataframe().iloc[-1]["motivos"]
+    assert mision.riesgo[celda] == pytest.approx(0.3)      # max(riesgo, p) sin pasar de 0,5: no veta
+    mision, celda = _mision_con_barranco_adelante(1.5, p_rna=0.9)
+    mision.usar_rna = False
+    mision.paso_mision()
+    assert mision.riesgo[celda] == 0.0
+
+
+def test_nada_oculto_ni_la_decision_ni_las_lecturas_consultan_el_tipo():
+    """Revisión de código (regla de la meta): el supervisor y los pasos de decisión de la misión no leen
+    `mundo.tipo`; los llamadores solo ven lo que mide SensorSuite. El tipo real queda para la proximidad de
+    obstáculos (simulador), la física de pasos y el resumen/etiquetas."""
+    import inspect
+    import re
+    for f in (SafetySupervisor.decidir, integracion.barrancos_medidos, integracion._bajo_umbral,
+              Mision.paso_mision, Mision._riesgo_por_rna, Mision._actualizar_mapa_estimado,
+              Mision._distancia_a_riesgo_en_ruta, Mision._obstaculo_en_ruta):
+        assert not re.search(r"[.]tipo", inspect.getsource(f)), f.__qualname__

@@ -630,7 +630,7 @@ def _rna_entrada(sesion, proximidad, borde, gradiente, vibracion) -> dict:
     probs = e / e.sum()
     proba = {CLASES[c]: round(float(p), 4) for c, p in zip(nn.classes_, probs)}
     # altimetria_m no es entrada de la RNA: se pasa 0 para que el supervisor pueda decidir
-    lectura = {"proximidad_frontal_m": float(proximidad), "altimetria_m": 0.0, "borde_barranco": bool(borde >= 0.5)}
+    lectura = {"proximidad_frontal_m": float(proximidad), "altimetria_m": 0.0, "desnivel_frontal_m": -3.0 if borde >= 0.5 else 0.0}
     dec = m.supervisor.decidir({k: float(v) for k, v in zip(["libre", "obstáculo", "barranco"],
                                                              [proba.get("libre", 0), proba.get("obstáculo", 0),
                                                               proba.get("barranco", 0)])},

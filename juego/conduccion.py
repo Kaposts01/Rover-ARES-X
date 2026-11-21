@@ -19,7 +19,7 @@ import copy
 from dataclasses import dataclass
 
 from genetico import camino_bfs
-from integracion import camino_valido
+from integracion import barrancos_medidos, camino_valido
 from integracion import ESTADOS_TERMINALES, GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO, UMBRAL_RIESGO_RNA, \
     UMBRAL_VELOCIDAD_MINIMA, _rumbo
 from rna import _rasgos_celda
@@ -59,7 +59,7 @@ def _observar(partida) -> dict:
         lectura = sensor.leer(partida.mundo, pos, rumbo)
         df, dc = MOVIMIENTOS[rumbo]
         frente = (pos[0] + df, pos[1] + dc)
-        obs[rumbo] = {"rasgos": rasgos, "probs": probs, "borde": frente in lectura["celdas_barranco"]}
+        obs[rumbo] = {"rasgos": rasgos, "probs": probs, "borde": frente in barrancos_medidos(lectura)}
     return obs
 
 

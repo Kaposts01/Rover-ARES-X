@@ -18,8 +18,8 @@ from genetico import GeneticPlanner, camino_bfs, mapa_estimado
 import simulador
 from rna import (COLUMNAS_TERRENO, NOMBRES_RASGOS_ALERTA2, NOMBRES_RASGOS_TERRENO, NeuralPerception,
                  _rasgos_alerta2, _rasgos_celda, generar_dataset, particion_por_mapas)
-from simulador import (BARRANCO, MOVIMIENTOS, MissionLogger, Rover, SensorSuite, World,
-                       paso_fisico)
+from simulador import (BARRANCO, MOVIMIENTOS, UMBRAL_DESNIVEL_BARRANCO_M, MissionLogger, Rover, SensorSuite,
+                       World, paso_fisico)
 
 ESTADOS_TERMINALES = {"EXITO", "FRACASO", "MODO_SEGURO", "SIN_RUTA"}
 UMBRAL_RIESGO_RNA = 0.5           # probabilidad a partir de la cual la RNA veta
@@ -45,6 +45,16 @@ ALERTA_RNA_2_ACTIVA = False
 DISTANCIA_ALERTA_RNA = 2          # celdas por delante que mira la alerta temprana
 
 
+def _bajo_umbral(desnivel) -> bool:
+    """True si el desnivel medido es menor que el umbral del barranco (NaN: False)."""
+    return desnivel == desnivel and desnivel < UMBRAL_DESNIVEL_BARRANCO_M
+
+
+def barrancos_medidos(lectura: dict) -> set:
+    """Celdas vecinas cuyo desnivel medido supera el umbral del veto duro (ARX-94c). Solo mide: no consulta el tipo."""
+    return {c for c, d in lectura["desniveles_vecinos"].items() if _bajo_umbral(d)}
+
+
 @dataclass
 class Decision:
     accion: str                   # "avanzar", "detener", "replanificar" o "modo_seguro"
@@ -60,7 +70,8 @@ class SafetySupervisor:
             return Decision("modo_seguro", 0.0, ["V-SENSOR-NAN"])
         if bateria <= 0:
             return Decision("modo_seguro", 0.0, ["V-BATERIA-0"])
-        if lectura["borde_barranco"]:
+        # ARX-94c: el veto duro sale del desnivel que mide el telémetro inclinado, no del tipo real de la celda
+        if _bajo_umbral(lectura.get("desnivel_frontal_m", float("nan"))):
             return Decision("replanificar", 0.0, ["V-BORDE-BARRANCO"])
         if prob_clases.get("barranco", 0.0) > UMBRAL_RIESGO_RNA:
             return Decision("replanificar", 0.0, ["V-RNA-BARRANCO"])
@@ -243,11 +254,10 @@ class Mision:
             probs = self.intervencion_rna(probs)
         self._actualizar_mapa_estimado(pos, rumbo, lectura["proximidad_frontal_m"])
         self._registrar_observacion(pos, rumbo, lectura["proximidad_frontal_m"])   # solo registro, no decide nada
-        for celda in lectura["celdas_barranco"]:
+        for celda in barrancos_medidos(lectura):
             self.riesgo[celda] = 1.0
         alerta = self._marcar_riesgo_rna(pos, rumbo, siguiente) if self.alerta_rna_2 and self.usar_rna else None
-        # el borde de barranco solo veta si el precipicio está en la siguiente celda de la ruta
-        lectura = dict(lectura, borde_barranco=siguiente in lectura["celdas_barranco"])
+        # el desnivel frontal mide justo la celda siguiente de la ruta (rumbo = hacia `siguiente`)
         # inferir velocidad
         inclinacion = min(45.0, abs(rasgos[2]) * GRADOS_POR_GRADIENTE)
         # la velocidad depende de la distancia a lo largo de la ruta, no solo de lo que hay al frente
@@ -269,6 +279,10 @@ class Mision:
         # si la siguiente celda de la ruta ya es peligrosa, el plan está roto: replanificar
         if self.riesgo[siguiente] >= 0.5:
             dec = Decision("replanificar", 0.0, ["V-RUTA-CON-RIESGO"])
+        # ARX-94c: la p de la RNA sobre la celda mirada entra al mapa estimado (riesgo = max(riesgo, p)). Va después de
+        # las decisiones de arriba para que el motivo del veto (V-RNA-BARRANCO) no lo tape V-RUTA-CON-RIESGO; la
+        # replanificación que sigue ya usa el riesgo actualizado. Solo se anota cuando la RNA sube el riesgo a >= 0,5.
+        self._riesgo_por_rna(probs, siguiente, dec)
         # un obstáculo cercano en la ruta invalida el plan: se replanifica, no se espera.
         # Antes dependía de la parada del difuso (dec.accion == "detener"); ab46b4a es donde nació esa versión condicionada; desde ARX-91 es incondicional.
         distancia = lectura["proximidad_frontal_m"]
@@ -357,6 +371,15 @@ class Mision:
             if not self.mundo.dentro(celda):
                 break
             self.observadas[celda] = True
+
+    def _riesgo_por_rna(self, probs, celda, dec):
+        """riesgo[celda] = max(riesgo, p(barranco)) y, si la RNA lo sube a más de 0,5, anota `RNA-RIESGO:(celda):p`."""
+        if not self.usar_rna:
+            return
+        p = probs.get("barranco", 0.0)
+        if p > UMBRAL_RIESGO_RNA and p > self.riesgo[celda]:
+            dec.motivos.append(f"RNA-RIESGO:{celda}:{p:.2f}")
+        self.riesgo[celda] = max(self.riesgo[celda], p)
 
     def _marcar_riesgo_rna(self, pos, rumbo, siguiente):
         """Alerta temprana (ARX-93c, DESCARTADA: apagada y sin uso; ver ALERTA_RNA_2_ACTIVA). Marca en el mapa estimado la celda a dos pasos si la RNA la ve peligrosa.

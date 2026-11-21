@@ -10,9 +10,6 @@ import { adaptarAG, ROTULO_EVOLUCION } from "/static/evolucion_datos.js?v=r14";
 import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
 import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
-import { DURACION_VIAJE_S, GUARDA_EXTRA_S, debeViajar, datosTarjeta, modoMovimiento } from "/static/viaje_datos.js?v=r14";
-import { crearViaje } from "/static/viaje3d.js?v=r14";
-import { crearTarjetaViaje } from "/static/viaje_tarjeta.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -2056,15 +2053,21 @@ let tarjetaViaje = null;
 // Corre el viaje pendiente; si algo falla, la partida sigue igual (nunca lanza ni se queda colgado)
 async function correrViaje() {
   const pend = viajePendiente; viajePendiente = null;
-  if (!pend || !debeViajar({ previo: pend.desde, nuevo: pend.hacia, activado: viajeActivado() })) return;
+  if (!pend || !viajeActivado()) return;
   let guarda = null, liberar = null;
+  const hud = document.getElementById("hud");
   const menu = document.getElementById("menu");   // el asistente de inicio tapa la escena: se oculta solo mientras dura el viaje
   try {
+    // Carga perezosa: si un módulo del viaje no carga, la partida sigue igual (con import estático rompería toda la app)
+    const [{ DURACION_VIAJE_S, GUARDA_EXTRA_S, debeViajar, datosTarjeta, modoMovimiento }, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
+      import("/static/viaje_datos.js?v=r14"), import("/static/viaje3d.js?v=r14"), import("/static/viaje_tarjeta.js?v=r14")]);
+    if (!debeViajar({ previo: pend.desde, nuevo: pend.hacia, activado: true })) return;
     const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const modo = modoMovimiento(reducido, true);
     if (modo === "ninguno") return;
     if (!tarjetaViaje) tarjetaViaje = crearTarjetaViaje(document.body);
     if (menu) menu.style.visibility = "hidden";
+    if (hud) hud.style.visibility = "hidden";
     const datos = datosTarjeta(pend.desde, pend.hacia, planetasDatos);
     await new Promise((resolver) => {
       let hecho = false;
@@ -2087,6 +2090,7 @@ async function correrViaje() {
   } finally {
     clearTimeout(guarda);
     if (menu) menu.style.visibility = "";
+    if (hud) hud.style.visibility = "";
     try { if (tarjetaViaje) tarjetaViaje.ocultar(); } catch (e) { /* ya oculta */ }
     try { if (viaje) viaje.dispose(); } catch (e) { /* ya liberado */ }
     viaje = null;

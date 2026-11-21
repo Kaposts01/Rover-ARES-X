@@ -1,6 +1,6 @@
 # Paquete A · capas 3D de la IA (incertidumbre, evolución, holo)
 
-Rama `feat/paquete-a`, desde `feat/m15-capa-riesgo` (bea5ea6). Solo plan: todavía no hay código. Fuente de las piezas: el proyecto de ejemplo (`vista3d_incertidumbre.js`, `vista3d_evolucion.js`, `vista3d_holo.js`, escritas para three r170 y funciones globales). En el rover van como módulos ES en `api/static/`, con three r160 vendoreado, sin CDN y sin copiar rótulos ni rutas del ejemplo.
+Rama `feat/paquete-a`, desde `feat/m15-capa-riesgo` (bea5ea6). Solo plan: todavía no hay código. Fuente de las piezas: el proyecto de ejemplo del usuario (los módulos de incertidumbre, evolución y holograma, escritos para three r170 y funciones globales). En el rover van como módulos ES en `api/static/`, con three r160 vendoreado, sin CDN y sin copiar rótulos ni rutas del ejemplo.
 
 Regla de la meta que manda: nada que un rover real no podría saber, y ningún número se ajusta mirando quién gana.
 

@@ -5,6 +5,10 @@ import { iniciarLaboratorios } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
+import { crearEvolucion } from "/static/evolucion3d.js?v=r14";
+import { adaptarAG, ROTULO_EVOLUCION } from "/static/evolucion_datos.js?v=r14";
+import { crearHolograma } from "/static/holo3d.js?v=r14";
+import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -521,6 +525,116 @@ if (cajaRiesgo) {
   cajaRiesgo.addEventListener("change", () => {
     capaRiesgoActiva = cajaRiesgo.checked;
     actualizarCapaRiesgo();
+  });
+}
+
+// ---------- evolución del AG en la escena (Paquete A) ----------
+// Apagada: no se crea nada en la escena ni se pide nada. Encendida: una lectura de /ag (la que ya calcula el laboratorio)
+let evolucion = null;                 // se crea al encender la casilla y se libera al apagarla
+let evolucionEnVuelo = false;
+
+function textoEvolucion(extra) {
+  const el = document.getElementById("evo-aviso");
+  if (el) {
+    el.textContent = extra ? `${ROTULO_EVOLUCION}. ${extra}` : ROTULO_EVOLUCION;
+    el.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function apagarEvolucion(motivo) {
+  if (evolucion) { evolucion.dispose(); evolucion = null; }
+  document.getElementById("evo-controles").classList.add("oculto");
+  const caja = document.getElementById("evo-capa");
+  if (caja) caja.checked = false;
+  const el = document.getElementById("evo-aviso");
+  if (el) el.textContent = motivo || "";
+}
+
+async function cargarEvolucion() {
+  if (!evolucion || evolucionEnVuelo) return;
+  evolucionEnVuelo = true;
+  const boton = document.getElementById("evo-recalc");
+  boton.disabled = true;
+  textoEvolucion("Calculando…");
+  try {
+    const posicion = estado && estado.posicion;
+    const ag = await llamar("GET", "/ag");
+    if (!evolucion) return;   // se apagó mientras llegaba la respuesta
+    const adaptado = adaptarAG(ag, posicion);
+    if (!adaptado) { apagarEvolucion(ag && ag.sin_sitios ? "no quedan sitios pendientes: no hay orden que mostrar" : "sin datos del AG"); return; }
+    evolucion.cargar(adaptado);
+    const sel = document.getElementById("evo-gen");
+    sel.replaceChildren();
+    adaptado.generaciones.forEach((g, i) => {
+      const o = document.createElement("option");
+      o.value = String(i);
+      o.textContent = `generación ${g.generacion}`;
+      sel.appendChild(o);
+    });
+    sel.value = String(adaptado.seleccionada);
+    textoEvolucion(`Calculado desde la posición actual (${posicion ? posicion.join(", ") : "—"}).`);
+  } finally {
+    evolucionEnVuelo = false;
+    boton.disabled = false;
+  }
+}
+
+const cajaEvolucion = document.getElementById("evo-capa");
+if (cajaEvolucion) {
+  cajaEvolucion.checked = false;
+  cajaEvolucion.addEventListener("change", () => {
+    if (!cajaEvolucion.checked) { apagarEvolucion(""); return; }
+    if (!mapa) { apagarEvolucion("sin partida: no hay AG que mostrar"); return; }
+    evolucion = crearEvolucion(scene, {
+      alturaTerreno,
+      alCambiar: (i, texto) => {
+        const sel = document.getElementById("evo-gen");
+        if (sel.options.length > i) sel.value = String(i);
+        document.getElementById("evo-generacion").textContent = texto;
+      },
+    });
+    document.getElementById("evo-controles").classList.remove("oculto");
+    cargarEvolucion();
+  });
+  document.getElementById("evo-play").addEventListener("click", () => { if (evolucion) evolucion.reproducir(); });
+  document.getElementById("evo-recalc").addEventListener("click", cargarEvolucion);
+  document.getElementById("evo-gen").addEventListener("change", (ev) => { if (evolucion) evolucion.irA(Number(ev.target.value)); });
+}
+
+// ---------- holograma de IA junto al rover (Paquete A) ----------
+// Apagado: no se crea nada ni se pide nada. Encendido: /rna, /difuso y /ag por paso (sin solapar); /estado ya lo pide el paso.
+let holograma = null;
+let holoDatos = null;
+let holoEnVuelo = false;
+
+async function refrescarHolo() {
+  if (!holograma || !mapa || holoEnVuelo) return;
+  holoEnVuelo = true;
+  try {
+    const [rna, difuso, ag] = await Promise.all([llamar("GET", "/rna"), llamar("GET", "/difuso"), llamar("GET", "/ag")]);
+    if (!holograma) return;
+    holoDatos = adaptarHolo({ rna, difuso, ag, estado });
+    holograma.actualizar(holoDatos, grupoRover.position, camara);
+  } finally {
+    holoEnVuelo = false;
+  }
+}
+
+const cajaHolo = document.getElementById("holo-capa");
+if (cajaHolo) {
+  cajaHolo.checked = false;
+  cajaHolo.addEventListener("change", () => {
+    const aviso = document.getElementById("holo-aviso");
+    if (!cajaHolo.checked) {
+      if (holograma) { holograma.dispose(); holograma = null; holoDatos = null; }
+      aviso.textContent = "";
+      return;
+    }
+    if (!mapa) { cajaHolo.checked = false; aviso.textContent = "sin partida: no hay nada que mostrar"; return; }
+    holograma = crearHolograma(scene, { alturaTerreno });
+    aviso.textContent = ROTULO_HOLO;
+    aviso.scrollIntoView({ block: "nearest" });
+    refrescarHolo();
   });
 }
 
@@ -1806,6 +1920,7 @@ async function refrescarEstado() {
     aplicarEnlaceYSenal(datos);
   });
   refrescarCapaRiesgoPorPaso();   // M15: apagada no pide nada
+  refrescarHolo();                // Paquete A: apagado no pide nada
 }
 
 // ARX-30d: lectura defensiva de /estado. Solo apaga si el campo existe y lo dice; sin campo (motor sin ARX-30b/30c) no hace nada.
@@ -1913,6 +2028,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     mapa = mp;
     construirMapa(mapa);
     if (capaRiesgoActiva) construirCapaRiesgo(mapa) || actualizarCapaRiesgo();   // M15: la capa sigue al mapa nuevo
+    if (evolucion) cargarEvolucion();   // Paquete A: el AG de la partida nueva
     aplicarAspecto(planetaActivo);
     construirRover();
     ubicarRover(datos.posicion, datos.rumbo_sugerido, true);
@@ -2898,6 +3014,8 @@ function animar() {
     const avance = grupoRover.position.distanceTo(antes);
     for (const eje of ruedasGiro) eje.rotation.z -= avance / 0.1;
   }
+  if (evolucion) evolucion.animar(dt);
+  if (holograma && holoDatos) holograma.anclar(grupoRover.position, camara);
   if (cabezaRover) cabezaRover.rotation.y = Math.sin(tiempo * 0.5) * 0.6;
 
   for (const cristal of animados) {

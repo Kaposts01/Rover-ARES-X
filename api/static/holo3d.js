@@ -17,7 +17,7 @@ export function crearHolograma(escena, { alturaTerreno } = {}) {
   const matPanel = new THREE.MeshBasicMaterial({
     map: textura, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false, toneMapped: false, side: THREE.DoubleSide,
   });
-  const geoPanel = new THREE.PlaneGeometry(1.6, 1.6 * ALTO / ANCHO);
+  const geoPanel = new THREE.PlaneGeometry(2.6, 2.6 * ALTO / ANCHO);
   const panel = new THREE.Mesh(geoPanel, matPanel);
   panel.name = "holo-panel";
   panel.renderOrder = 999;
@@ -136,8 +136,8 @@ export function crearHolograma(escena, { alturaTerreno } = {}) {
       }
       grupo.scale.setScalar(escala);
       grupo.position.copy(ancla);
-      grupo.position.y += 1.1 * escala;
-      if (camara) grupo.position.addScaledVector(new THREE.Vector3(1, 0, 0).applyQuaternion(camara.quaternion), 1.3 * escala);
+      grupo.position.y += 1.2 * escala;
+      if (camara) grupo.position.addScaledVector(new THREE.Vector3(1, 0, 0).applyQuaternion(camara.quaternion), 1.9 * escala);
     },
     dispose() {
       if (!vivo) return;

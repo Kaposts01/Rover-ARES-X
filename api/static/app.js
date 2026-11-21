@@ -2741,6 +2741,7 @@ function eventosTexto(eventos) {
 
 // Disparo hacia donde mira el rover (tecla Espacio o botón)
 async function disparar() {
+  if (document.body.classList.contains("intro-activa")) return;   // la intro no dispara (QA ARX-97)
   if (!mapa || ocupado() || !estado) return;
   const rumbo = estado.rumbo || "N";
   const r = await llamar("POST", "/disparo", { rumbo });

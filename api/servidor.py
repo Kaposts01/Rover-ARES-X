@@ -288,7 +288,25 @@ def _estado(sesion: Sesion) -> dict:
         "aborto_termico_activo": termico.ABORTO_TERMICO_ACTIVO,    # O2 de QA: la interfaz aclara si el aborto está apagado
         "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
         "sensores": _sensores(p),                    # ARX-86
+        # Solo lectura, para la pantalla final (datos que el motor ya calcula)
+        "paso": int(p.mision.paso),
+        "vetos": int(p.mision.vetos),
+        "replanes": int(p.mision.replanes),
+        "sitios_visitados": int(res.get("sitios_visitados", 0)),
+        "sitios_totales": int(res.get("sitios_totales", 0)),
+        "distancia_recorrida": int(p.rover.distancia_recorrida),   # en celdas, sin escala en metros
+        "barrancos_evitados": _barrancos_evitados(p),
     }
+
+
+def _barrancos_evitados(p) -> int:
+    """Filas de la bitácora cuyo motivo es un veto por barranco (V-BORDE-BARRANCO o V-RNA-BARRANCO). Solo lectura."""
+    n = 0
+    for fila in p.mision.log.filas:
+        motivos = str(fila.get("motivos") or "")
+        if "V-BORDE-BARRANCO" in motivos or "V-RNA-BARRANCO" in motivos:
+            n += 1
+    return n
 
 
 def _ultimo_disparo(sesion: Sesion, motivos: list) -> dict:

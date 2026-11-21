@@ -20,8 +20,7 @@ Estado al 14/11/2026. Guía para levantar el servidor, no el informe de la entre
 
 ## Retomar la sesión
 
-- La sesión que trabaja en este proyecto es `Lider_Rover`, desde la carpeta `ares_x`. Los ids y cómo reabrirla están en
-  `00-Sistema-Agentico\REANUDAR_SESIONES.md`. La sesión antigua del motor, que se abría desde `Downloads`, ya no es la que trabaja.
+- La sesión que trabaja en este proyecto es `Lider_Rover`, desde la carpeta `ares_x`. Para retomar, abrir una sesión nueva en esa carpeta. Las sesiones antiguas del motor ya no trabajan aquí.
 - Antes de tocar nada, leer este documento y `docs/tareas_sprints.json` (tareas de la entrega; ARX-75 sigue asignada).
 
 ## Levantar el servidor 8765
@@ -190,7 +189,7 @@ Estado al 14/11 (noche). Sin publicar en 8765.
   - ARX-59: decidido ev3-d45 A y a medias. La duración está en 107–171 pasos frente a 300–500; la semilla 2018 queda
     parada. Se retoma al final del sprint (ev3-d47 B).
   - Veto del disparo en la interfaz: falta una semilla reproducible.
-- **Cómo retomar:** ver `00-Sistema-Agentico\REANUDAR_SESIONES.md` (sesión `Lider_Rover`). La sesión de `Downloads` de entonces ya no trabaja aquí.
+- **Cómo retomar:** abrir una sesión nueva en la carpeta `ares_x` (sesión `Lider_Rover`). Las sesiones anteriores ya no trabajan aquí.
 
 
 ## Estado al 15/11 (20:3x)

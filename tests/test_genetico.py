@@ -263,3 +263,38 @@ def test_orden_desempate_prefiere_la_mas_corta_dentro_del_umbral():
     ancho = gp.optimizar_orden(umbral_empate=10.0)           # todo empata: gana la ruta más corta
     largos = [len(gp._unir([m.inicio] + list(o) + [m.refugio])) for o in itertools.permutations(m.sitios)]
     assert len(ancho.mejor_ruta) == min(largos)
+
+
+# ---------- ARX-94c: mapa estimado por profundidad ----------
+
+def test_mapa_estimado_detecta_por_profundidad_y_es_reproducible():
+    import simulador
+    from genetico import P_DETECTAR_SOMERO, PROFUNDIDAD_ORBITAL_M
+    from simulador import BARRANCO, LIBRE, OBSTACULO
+    assert (PROFUNDIDAD_ORBITAL_M, P_DETECTAR_SOMERO) == (2.0, 0.3)
+    m = generar_mundo(semilla=1, filas=60, columnas=60, n_obstaculos=0, n_barrancos=0, n_sitios=0)
+    m.tipo[:] = LIBRE
+    m.profundidad[:] = 0.0
+    m.tipo[:, :20] = BARRANCO
+    m.profundidad[:, :20] = 1.5       # somero: p 0,3
+    m.tipo[:, 20:40] = BARRANCO
+    m.profundidad[:, 20:40] = 3.0     # profundo: p 0,8
+    m.tipo[:, 40:] = OBSTACULO        # obstáculo: p 0,8
+    a = mapa_estimado(m, np.random.default_rng(4))
+    assert np.array_equal(a, mapa_estimado(m, np.random.default_rng(4)))
+    assert (a[:, :20] == 1.0).mean() == pytest.approx(0.3, abs=0.05)
+    assert (a[:, 20:40] == 1.0).mean() == pytest.approx(0.8, abs=0.05)
+    assert (a[:, 40:] == 1.0).mean() == pytest.approx(0.8, abs=0.05)
+
+
+def test_mapa_estimado_con_mundo_v1_reproduce_el_mapa_anterior(monkeypatch):
+    import simulador
+    from simulador import LIBRE
+    monkeypatch.setattr(simulador, "MUNDO_V1", True)
+    m = generar_mundo(semilla=7)
+    rng = np.random.default_rng(11)
+    esperado = np.full(m.forma, 0.05)
+    for f, c in np.argwhere(m.tipo != LIBRE):       # la definición anterior, tal cual
+        if rng.random() < 0.8:
+            esperado[f, c] = 1.0
+    assert np.array_equal(mapa_estimado(m, np.random.default_rng(11)), esperado)

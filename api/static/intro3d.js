@@ -70,7 +70,9 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
     b.addEventListener("blur", () => pasar(null));
     k.etiqueta = b; capa.append(b);
   }
-  document.body.append(capa);
+  const dialogo = document.querySelector(".in-capa");   // las etiquetas viven dentro del diálogo aria-modal (foco y lectores de pantalla)
+  capa.setAttribute("aria-label", "Planetas del sistema solar");
+  (dialogo || document.body).append(capa);
 
   // Cámara y controles propios sobre el mismo canvas; los de la partida los deshabilita la app mientras dura
   const controles = new OrbitControls(cam, renderer.domElement);

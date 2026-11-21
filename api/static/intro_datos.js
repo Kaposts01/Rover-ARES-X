@@ -1,8 +1,8 @@
 // Introducción con el sistema solar: datos y funciones puras (sin DOM ni THREE). Se prueban con node.
 // Reutiliza las constantes del viaje entre planetas (sin duplicarlas).
-import { PLANETAS_VIAJE, DISTANCIA_SOL_MKM, datosTarjeta } from "./viaje_datos.js?v=r14";
+import { PLANETAS_VIAJE, DISTANCIA_SOL_MKM, AVISO_TERRENO, datosTarjeta } from "./viaje_datos.js?v=r14";
 
-export { PLANETAS_VIAJE, DISTANCIA_SOL_MKM };
+export { PLANETAS_VIAJE, DISTANCIA_SOL_MKM, AVISO_TERRENO };
 export const CLAVE_VISTA = "ares.intro.visto";   // sessionStorage: ya se mostró en esta sesión del navegador
 export const CLAVE_PREF = "ares.intro";          // localStorage: casilla «Mostrar intro» (activa por defecto)
 export const GUARDA_PRIMER_CUADRO_S = 3;         // si no hay primer cuadro en 3 s, se omite
@@ -11,6 +11,7 @@ export const DURACION_VUELO_S = 1.2;
 export const TITULO_INTRO = "ARES-X · sistema solar";
 export const SUBTITULO_INTRO = "Elige un planeta (pasa el puntero, usa Tab o pulsa) para dejarlo preparado en el asistente.";
 export const ROTULO_INTRO = "Ilustración, no a escala: tamaños, distancias y velocidades son solo ilustrativos.";
+// Versión corta de AVISO_TERRENO (viaje_datos.js) para la pantalla de la intro; la fuente larga sigue siendo AVISO_TERRENO. Una prueba exige que ambas digan que el terreno es el de Marte.
 export const AVISO_TERRENO_INTRO = "El terreno de la partida sigue siendo el de Marte en todos los planetas.";
 export const NOTA_ELEGIR = "Elegir un planeta solo lo deja seleccionado en el asistente; la partida empieza al pulsar Iniciar.";
 

@@ -53,3 +53,8 @@ Rama `feat/intro-sistema` (desde main d2250bf). Origen: el módulo de intro del 
 1. **¿Cuándo aparece?** A) Una vez por sesión del navegador al abrir, con casilla para apagarla y «Ver intro» (recomendada). B) Cada vez que se abre o recarga la página. C) Solo si se pulsa «Ver intro» (opt-in).
 2. **¿Elegir en la intro cambia el planeta del asistente?** A) Sí: rellena el asistente y espera «Iniciar» (recomendada: no lanza partidas por un clic y respeta la validación rover/sonda). B) Inicia la partida directamente. C) Es solo vista decorativa, sin elegir.
 3. **¿Cuánto del ejemplo se trae?** A) Solo el Sol y los 8 perfiles con órbitas (recomendada: coherente con el motor). B) A más cinturón de asteroides y la Luna, rotulados como ilustración. C) Lo anterior más el recorrido automático de cámara al abrir (más vistoso, más FPS y más tiempo hasta jugar).
+
+## 7. Notas de la implementación
+- El Sol no tiene etiqueta ni tarjeta a propósito: no es un perfil del rover (solo los 8 de `/planetas` son elegibles).
+- `AVISO_TERRENO_INTRO` es una versión corta del aviso para la pantalla; `AVISO_TERRENO` (viaje) es la fuente larga y una prueba exige que ambos digan que el terreno es el de Marte.
+- Mientras dura la intro, `body.intro-activa` oculta los paneles y `disparar()` sale temprano; el espacio no llega a la partida (solo Tab y Enter pasan la guarda de teclas) y activa el botón enfocado.

@@ -90,3 +90,19 @@ def test_textos_prohibidos_ausentes():
         txt = ruta.read_text(encoding="utf-8")
         for p in prohibidos:
             assert not re.search(re.escape(p), txt, re.I), f"{p} en {nombre}"
+
+
+def test_aviso_corto_coherente_con_la_fuente_unica():
+    assert "Marte" in _js("m.AVISO_TERRENO") and "Marte" in _js("m.AVISO_TERRENO_INTRO")
+
+
+def test_espacio_no_llega_a_la_partida_durante_intro_y_viaje():
+    # el espacio dispara en la partida: las capas modales solo dejan pasar Tab y Enter, y disparar() sale con la intro activa
+    for nombre in ("intro_tarjeta.js", "viaje_tarjeta.js"):
+        txt = (ESTATICOS / nombre).read_text(encoding="utf-8")
+        m = re.search(r'if \(!(\[[^\]]*\])\.includes\(e\.key\)\) e\.stopPropagation\(\)', txt)
+        assert m, nombre
+        assert json.loads(m.group(1)) == ["Tab", "Enter"], nombre
+    app = (ESTATICOS / "app.js").read_text(encoding="utf-8")
+    m = re.search(r"async function disparar\(\) \{\s*if \(document\.body\.classList\.contains\(\"intro-activa\"\)\) return;", app)
+    assert m, "falta la guarda de la intro en disparar()"

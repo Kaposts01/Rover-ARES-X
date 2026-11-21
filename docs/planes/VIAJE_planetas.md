@@ -1,16 +1,16 @@
 # VIAJE entre planetas: plan de adaptación (diseño, sin código)
 
-Rama `feat/viaje-planetas` (desde main f486fb0). Origen: `ARES-X_proyecto_2026-11-10/ares-x/ares_x/` (`vista3d.js` L439-672 y L585-661, `vista3d_tarjeta_viaje.js`, `vista3d_planetas.js`) más `INVENTARIO_EJEMPLO.md` §2.3.
+Rama `feat/viaje-planetas` (desde main f486fb0). Origen: el proyecto de ejemplo del usuario (el módulo principal del ejemplo (cinemática y escena de espacio), el módulo de tarjeta de viaje del ejemplo, el módulo de pintores de planetas del ejemplo) más el inventario del ejemplo §2.3.
 
 ## 1. Qué hace cada pieza del ejemplo
 
 | Pieza | Qué hace | Se trae |
 |---|---|---|
-| `vista3d.js` · cinemática (`iniciarViaje`, `FASES_VIAJE`, `animarViaje`) | 7 fases (aterriza una nave junto al robot, el robot sube, despega, espacio, llega, baja, la nave se va), 12,6 s en total. Mueve cámara, robot, polvo, sonido y velo. Se llama al iniciar una misión en otro cuerpo. | Solo la fase «espacio». El resto depende del robot, el sonido y el entorno del ejemplo. |
-| `vista3d.js` · escena de espacio (`prepararEspacio`, `planetaEspacio`, `animarEspacio`, `limpiarEspacio`) | Segunda `THREE.Scene` con 2500 estrellas, dos esferas de planeta (textura, halo, anillos de Saturno y Urano), nave en curva Bézier y estela de 160 puntos aditivos. Se dibuja en el mismo renderer en lugar de la escena principal. | Sí, reducida y reescrita. |
-| `vista3d_tarjeta_viaje.js` | Tarjeta DOM con título «Viajando de A a B», miniatura, gravedad, temperatura, presión, distancia al Sol, dato curioso y barra de 12 s. | Sí, con cambios de datos (§2). |
-| `vista3d_planetas.js` | 18 pintores procedurales de textura equirectangular y miniaturas por canvas. | No. Se reutiliza `texturaParaPlaneta` y `PALETAS_PLANETA` de `app.js`. Con datos de los 8 perfiles, no de 18 cuerpos. |
-| `vista3d_base.js`, `vista3d_senales.js`, `vista3d_cine.js` | Base de utilidades, señales de nave y director de cámara. | No hacen falta para el viaje; `cine` es otra decisión (inventario P1). |
+| Módulo principal del ejemplo · cinemática (`iniciarViaje`, `FASES_VIAJE`, `animarViaje`) | 7 fases (aterriza una nave junto al robot, el robot sube, despega, espacio, llega, baja, la nave se va), 12,6 s en total. Mueve cámara, robot, polvo, sonido y velo. Se llama al iniciar una misión en otro cuerpo. | Solo la fase «espacio». El resto depende del robot, el sonido y el entorno del ejemplo. |
+| Módulo principal del ejemplo · escena de espacio (`prepararEspacio`, `planetaEspacio`, `animarEspacio`, `limpiarEspacio`) | Segunda `THREE.Scene` con 2500 estrellas, dos esferas de planeta (textura, halo, anillos de Saturno y Urano), nave en curva Bézier y estela de 160 puntos aditivos. Se dibuja en el mismo renderer en lugar de la escena principal. | Sí, reducida y reescrita. |
+| el módulo de tarjeta de viaje del ejemplo | Tarjeta DOM con título «Viajando de A a B», miniatura, gravedad, temperatura, presión, distancia al Sol, dato curioso y barra de 12 s. | Sí, con cambios de datos (§2). |
+| el módulo de pintores de planetas del ejemplo | 18 pintores procedurales de textura equirectangular y miniaturas por canvas. | No. Se reutiliza `texturaParaPlaneta` y `PALETAS_PLANETA` de `app.js`. Con datos de los 8 perfiles, no de 18 cuerpos. |
+| módulos de base, señales y cine del ejemplo | Base de utilidades, señales de nave y director de cámara. | No hacen falta para el viaje; `cine` es otra decisión (inventario P1). |
 
 ## 2. Diseño de adaptación
 
@@ -49,7 +49,7 @@ Todo en `api/static/`, módulos ES, `three` por el import map (r160 vendoreado),
 **Cifras del ejemplo que el rover no puede sostener (y qué hacer):**
 | Cifra del ejemplo | Problema | Propuesta |
 |---|---|---|
-| Gravedad, temperatura día/noche, presión y `dato_curioso` (de `fichas_planetas.json`, 18 cuerpos, sin fuente) | `/planetas` no los devuelve; el catálogo del ejemplo no existe aquí. | No copiar el JSON. Mostrarlos solo si salen de `/planetas` ampliado (pregunta 3); si no, «Sin dato». Sin «dato curioso». |
+| Gravedad, temperatura día/noche, presión y `dato_curioso` (de el catálogo de fichas del ejemplo, 18 cuerpos, sin fuente) | `/planetas` no los devuelve; el catálogo del ejemplo no existe aquí. | No copiar el JSON. Mostrarlos solo si salen de `/planetas` ampliado (pregunta 3); si no, «Sin dato». Sin «dato curioso». |
 | Gravedad y temperatura de `docs/PLAN_PLANETAS.md` | Son «supuestos de simulación», no constantes. | Si se muestran, con rótulo «supuesto de simulación». Presión: no hay cifra, «Sin dato». |
 | `distanciaSol` (9 cuerpos, incluye Europa) | Valores con otra fuente; Europa no es perfil. | Solo los 8 perfiles, valores NASA, rotulados como constante real aproximada. |
 | 12 s de la barra, tiempos de fase (1,7 a 3,6 s) | Duración de cine, no un tiempo de viaje. | Nunca rotularlos como tiempo de viaje. Sin tiempos de viaje reales, sin distancia entre planetas (varía mucho). |
@@ -60,7 +60,7 @@ Todo en `api/static/`, módulos ES, `three` por el import map (r160 vendoreado),
 ## 3. Riesgos de FPS y cómo medir
 - Riesgos: segunda escena en el mismo renderer (sin segundo contexto WebGL, bien); texturas por CPU de los dos planetas (la primera vez); fugas de geometría o textura entre viajes; estela con `needsUpdate` por cuadro; la tarjeta DOM sobre WebGL.
 - Mitigaciones: sin dibujar la escena principal durante el viaje, esferas de 48×32, 1.200 estrellas, estela de 120 puntos, texturas de 256×128 en caché por planeta, `dispose` de geometrías, materiales y texturas al terminar, `renderer.setPixelRatio` sin tocar.
-- Cómo medir (skill `prueba-juego-chrome`, servidor del worktree): FPS con y sin viaje (mediana y p5 de `requestAnimationFrame`) en un viaje Marte→Venus y otro Marte→Neptuno; `renderer.info.memory` (geometrías, texturas) antes y después de tres viajes seguidos; tiempo de `iniciar()` hasta el primer cuadro con `performance.now()`.
+- Cómo medir (prueba de juego en Chrome, servidor del worktree): FPS con y sin viaje (mediana y p5 de `requestAnimationFrame`) en un viaje Marte→Venus y otro Marte→Neptuno; `renderer.info.memory` (geometrías, texturas) antes y después de tres viajes seguidos; tiempo de `iniciar()` hasta el primer cuadro con `performance.now()`.
 - Umbral: mediana ≥ 30 fps en el equipo de la defensa (y ≥ la del juego normal menos 15 %); `info.memory` vuelve al valor inicial ±0 tras el tercer viaje; primer cuadro < 150 ms.
 
 ## 4. Criterio de hecho y comprobaciones en Chrome

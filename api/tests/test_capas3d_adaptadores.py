@@ -76,3 +76,34 @@ def test_holo_sin_datos_no_inventa():
     r = _js("holo_datos.js", "m.adaptarHolo({rna: null, difuso: null, ag: null, estado: null})")
     assert r["hayRna"] is False and r["velocidad"] is None and r["metodo"] is None
     assert r["prediccion"] is None and r["mejorRuta"] == [] and r["vetos"] == []
+
+
+def _mapa_obs(riesgo, obs):
+    return {"filas": len(riesgo), "columnas": len(riesgo[0]), "riesgo_estimado": riesgo, "observada": obs}
+
+
+def test_incertidumbre_colores_por_estado():
+    mp = _mapa_obs([[0.05, 0.05, 0.9], [0.05, 0.3, 1.0]], [[0, 1, 0], [1, 0, 1]])
+    assert _js("incertidumbre_datos.js", f"m.contarEstados({json.dumps(mp)})") == {"noObservada": 1, "seguro": 2, "riesgo": 3}
+    # riesgo >= 0,3 gana sobre «no observada»
+    assert _js("incertidumbre_datos.js", "m.colorCeldaIncertidumbre(0.9, 0).estado") == "riesgo"
+    assert _js("incertidumbre_datos.js", "m.colorCeldaIncertidumbre(0.05, 0).estado") == "noObservada"
+    assert _js("incertidumbre_datos.js", "m.colorCeldaIncertidumbre(0.05, 1).estado") == "seguro"
+
+
+def test_incertidumbre_modo_riesgo_no_cambia_y_rotulos():
+    assert _js("incertidumbre_datos.js", "m.colorCelda('riesgo', 0.05, 0)") is None
+    assert _js("incertidumbre_datos.js", "m.colorCelda('riesgo', 1, 0)") == [1, 0, 0.1]
+    assert _js("incertidumbre_datos.js", "m.colorCelda('riesgo', 0.3, 0)") == [1, 0.9, 0.1]
+    assert _js("incertidumbre_datos.js", "m.colorCelda('incertidumbre', 0.05, 0)") is not None
+    r = _js("incertidumbre_datos.js", "m.ROTULOS")
+    assert r["noObservada"] == "no observada" and "entrop" not in json.dumps(r).lower()
+
+
+def test_incertidumbre_sin_observada_se_deshabilita():
+    sin = {"filas": 1, "columnas": 1, "riesgo_estimado": [[0.05]]}
+    assert _js("incertidumbre_datos.js", f"m.tieneObservada({json.dumps(sin)})") is False
+    malo = _mapa_obs([[0.05, 0.05]], [[1]])               # dimensiones distintas
+    assert _js("incertidumbre_datos.js", f"m.tieneObservada({json.dumps(malo)})") is False
+    assert _js("incertidumbre_datos.js", f"m.tieneObservada({json.dumps(_mapa_obs([[0.05]], [[1]]))})") is True
+    assert _js("incertidumbre_datos.js", "m.AVISO_SIN_OBSERVACION") == "sin datos de observación"

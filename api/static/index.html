@@ -356,6 +356,7 @@
     #evo-controles select { grid-column: 1 / span 2; }
     #evo-controles button { height: 30px; padding: 0; font-size: 12px; margin: 0; }
     #evo-controles .capa-nota { grid-column: 1 / span 2; }
+    #riesgo-leyenda:not([hidden]) { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--texto); }
     .capa-nota { font-size: 11px; line-height: 1.35; color: var(--texto-suave); margin-top: 4px; }   /* rótulo de cada capa; no usa .ayuda porque el dock la oculta */
     .manual-cabecera { width: 100%; display: flex; justify-content: space-between; background: transparent; border: 0;
       color: var(--texto-suave); font: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; padding: 2px 0 6px; cursor: pointer; }
@@ -772,7 +773,16 @@
       <label class="veto" title="Capa sobre el suelo: solo celdas con riesgo desde 0,3: amarillo a rojo según el riesgo estimado del mapa">
         <input type="checkbox" id="riesgo-capa"> Riesgo estimado
       </label>
-      <div id="riesgo-aviso" class="ayuda"></div>
+      <select id="riesgo-modo" aria-label="Modo de la capa de riesgo" title="Riesgo: solo celdas con riesgo desde 0,3. Incertidumbre: además marca lo que el sensor aún no observó.">
+        <option value="riesgo">Riesgo</option>
+        <option value="incertidumbre">Incertidumbre</option>
+      </select>
+      <div id="riesgo-leyenda" class="capa-nota" hidden>
+        <span><b style="color:#a78bfa">&#9632;</b> no observada</span>
+        <span><b style="color:#2fc773">&#9632;</b> observada y segura</span>
+        <span><b style="color:#ff4a1a">&#9632;</b> riesgo ≥ 0,3</span>
+      </div>
+      <div id="riesgo-aviso" class="capa-nota"></div>
       <label class="veto" title="Muestra, generación a generación, los mejores órdenes de visita de sitios que probó el algoritmo genético. No es el camino recorrido.">
         <input type="checkbox" id="evo-capa"> Evolución del AG
       </label>

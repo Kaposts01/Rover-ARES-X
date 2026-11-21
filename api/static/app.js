@@ -7,6 +7,7 @@ import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
 import { crearEvolucion } from "/static/evolucion3d.js?v=r14";
 import { adaptarAG, ROTULO_EVOLUCION } from "/static/evolucion_datos.js?v=r14";
+import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
 import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
 
@@ -418,15 +419,10 @@ function obtenerTexturaSolar() {
 }
 
 // ---------- capa de riesgo estimado (M15) ----------
-const UMBRAL_CAPA_RIESGO = 0.3;    // por debajo no se pinta la celda: la capa muestra peligro, no tiñe el mapa entero
 const RIESGO_OPACIDAD = 0.45;
 let capaRiesgoActiva = false;      // apagada por defecto
 
-// Amarillo (en el umbral) -> rojo (1)
-function colorRiesgo(r) {
-  const t = Math.min(1, Math.max(0, (r - UMBRAL_CAPA_RIESGO) / (1 - UMBRAL_CAPA_RIESGO)));
-  return [1, 0.9 * (1 - t), 0.1];
-}
+let modoCapaRiesgo = "riesgo";     // «riesgo» (M15) o «incertidumbre» (Paquete A): misma malla, mismo grupo
 
 function limpiarCapaRiesgo() {
   for (const o of grupoRiesgo.children) {
@@ -443,15 +439,16 @@ function construirCapaRiesgo(datos) {
   const valida = Array.isArray(rz) && rz.length === datos.filas
     && rz.every((fila) => Array.isArray(fila) && fila.length === datos.columnas);
   if (!valida) return false;
+  const modo = modoCapaRiesgo === "incertidumbre" && tieneObservada(datos) ? "incertidumbre" : "riesgo";
   const SUB = 2;   // cada celda en 2x2 trozos para seguir el relieve
   const pos = [];
   const col = [];
   const idx = [];
   for (let f = 0; f < datos.filas; f++) {
     for (let c = 0; c < datos.columnas; c++) {
-      const r = rz[f][c];
-      if (!(r >= UMBRAL_CAPA_RIESGO)) continue;
-      const [cr, cg, cb] = colorRiesgo(r);
+      const rgb = colorCelda(modo, rz[f][c], modo === "incertidumbre" ? datos.observada[f][c] : 0);
+      if (!rgb) continue;
+      const [cr, cg, cb] = rgb;
       const base = pos.length / 3;
       for (let j = 0; j <= SUB; j++) {
         for (let i = 0; i <= SUB; i++) {
@@ -480,7 +477,7 @@ function construirCapaRiesgo(datos) {
     vertexColors: true, transparent: true, opacity: RIESGO_OPACIDAD, depthWrite: false,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide,
   }));
-  malla.name = "capa-riesgo";
+  malla.name = modo === "incertidumbre" ? "capa-incertidumbre" : "capa-riesgo";
   malla.renderOrder = 2;
   grupoRiesgo.add(malla);
   return true;
@@ -495,9 +492,11 @@ function avisoRiesgo(texto) {
 async function actualizarCapaRiesgo() {
   limpiarCapaRiesgo();
   avisoRiesgo("");
+  if (leyendaIncertidumbre) leyendaIncertidumbre.hidden = true;
   if (!capaRiesgoActiva) return;
   const mp = mapa ? await llamar("GET", "/mapa") : null;
   if (!capaRiesgoActiva) return;   // se apagó mientras llegaba la respuesta
+  aplicarModoRiesgo(mp);
   if (!mp || !construirCapaRiesgo(mp)) {
     capaRiesgoActiva = false;
     const caja = document.getElementById("riesgo-capa");
@@ -517,6 +516,30 @@ async function refrescarCapaRiesgoPorPaso() {
   } finally {
     refrescoRiesgoEnVuelo = false;
   }
+}
+
+// Selector Riesgo / Incertidumbre: sin `observada` en /mapa, Incertidumbre se deshabilita con aviso
+const selectorModoRiesgo = document.getElementById("riesgo-modo");
+const leyendaIncertidumbre = document.getElementById("riesgo-leyenda");
+function aplicarModoRiesgo(mp) {
+  const hay = tieneObservada(mp);
+  if (selectorModoRiesgo) {
+    const opcion = selectorModoRiesgo.querySelector('option[value="incertidumbre"]');
+    if (opcion) opcion.disabled = !!mp && !hay;
+    if (mp && !hay && modoCapaRiesgo === "incertidumbre") {
+      modoCapaRiesgo = "riesgo";
+      selectorModoRiesgo.value = "riesgo";
+    }
+  }
+  if (leyendaIncertidumbre) leyendaIncertidumbre.hidden = !(capaRiesgoActiva && modoCapaRiesgo === "incertidumbre");
+  if (mp && !hay) avisoRiesgo(AVISO_SIN_OBSERVACION);
+}
+if (selectorModoRiesgo) {
+  selectorModoRiesgo.value = "riesgo";
+  selectorModoRiesgo.addEventListener("change", () => {
+    modoCapaRiesgo = MODOS.includes(selectorModoRiesgo.value) ? selectorModoRiesgo.value : "riesgo";
+    actualizarCapaRiesgo();
+  });
 }
 
 const cajaRiesgo = document.getElementById("riesgo-capa");

@@ -82,3 +82,11 @@ def test_sin_rumbo_se_rotula_como_tal():
     p = Partida(semilla=11, nivel=1, filas=20, columnas=30)
     p.rover.rumbo = None
     assert _sensores(p)["rumbo"] == "sin rumbo"
+
+
+def test_mapa_devuelve_observada_aditiva_paquete_a():
+    datos = _cliente().get("/mapa").json()
+    obs, tipo = datos["observada"], datos["tipo"]
+    assert len(obs) == len(tipo) and len(obs[0]) == len(tipo[0])
+    assert all(v in (0, 1) for fila in obs for v in fila)
+    assert sum(map(sum, obs)) <= len(tipo) * len(tipo[0])   # al inicio aún no se observó nada (se marca al avanzar)

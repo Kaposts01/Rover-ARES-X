@@ -802,6 +802,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             "sitios": [{"pos": _celda(p), "valor": int(v)} for p, v in mundo.sitios.items()],
             "estaciones": [[int(f), int(c)] for f, c in activa().partida.estaciones],   # ARX-59 (§14)
             "riesgo_estimado": np.round(np.asarray(activa().partida.mision.riesgo, dtype=float), 2).tolist(),   # ARX-86
+            "observada": np.asarray(activa().partida.mision.observadas, dtype=int).tolist(),   # Paquete A: solo registro
         }
 
     @app.get("/estado")

@@ -65,7 +65,7 @@ Ayuda a M17 (explicación por decisión) y M7 (entrada, probabilidades, acción)
 
 ## 5. Lo que no se trae
 
-`herramientas/`, `ESTADO.md`, rutas `/home/…`, los rótulos «REC-BOT» y «Perseverance», ni nada cargado por CDN.
+Del ejemplo no se trae nada más que las tres piezas adaptadas: ni sus herramientas de prueba, ni su documentación de estado, ni rutas ni rótulos propios, ni recursos cargados por CDN.
 
 ## 6. Riesgos y no comprobado
 

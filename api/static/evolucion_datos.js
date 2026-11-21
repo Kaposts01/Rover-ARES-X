@@ -2,7 +2,7 @@
 // Paquete A, pieza «evolución»: solo usa datos que el rover ya entrega en /ag.
 
 export const MAX_CANDIDATOS_POR_GENERACION = 8;   // tope de rutas dibujadas por generación (la población trae 30)
-export const ROTULO_EVOLUCION = "Evolución del AG · orden de visita de los sitios, no el camino recorrido";
+export const ROTULO_EVOLUCION = "Evolución del AG · orden de visita de los sitios, no el camino recorrido (la curva solo une los sitios en orden)";
 
 // Celda [fila, columna] a coordenadas de escena: misma convención que puntoRuta/construirCapaRiesgo (x = columna + 0,5; z = fila + 0,5)
 export function celdaAEscena(celda) {

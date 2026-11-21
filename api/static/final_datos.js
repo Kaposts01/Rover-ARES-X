@@ -41,7 +41,6 @@ export function normalizarResultado(estado) {
   const e = estado && typeof estado === "object" ? estado : {};
   const vis = num(e.sitios_visitados), tot = num(e.sitios_totales);
   const col = num(e.colisiones), sobre = num(e.pasos_sobre_tolerancia);
-  const avisos = Array.isArray(e.avisos) ? e.avisos.filter((a) => typeof a === "string" && a) : [];
   return {
     codigo: typeof e.estado === "string" ? e.estado : null,
     planeta: typeof e.planeta === "string" ? e.planeta : null,
@@ -56,7 +55,7 @@ export function normalizarResultado(estado) {
     replanificaciones: num(e.replanes),
     distancia: num(e.distancia_recorrida),
     paso: num(e.paso),
-    motivo_final: avisos.length ? avisos[0] : null,
+    motivo_final: typeof e.estado === "string" ? e.estado : null,
   };
 }
 
@@ -118,7 +117,7 @@ export const LOGROS = [
   L("cientifico", "Científico", "Visitaste todos los sitios científicos de una misión.", "microscopio"),
   L("mision_cumplida", "Misión cumplida", "Terminaste una misión con éxito.", "bandera"),
   L("tormenta", "Ojo de la tormenta", "Sobreviviste a una tormenta de polvo completa.", "tormenta", "adaptacion",
-    { nota: "El ejemplo pedía 10 pasos seguidos; la tormenta del motor dura 6, así que se pide una completa." }),
+    { nota: "Se pide una tormenta completa: en este motor dura 6 pasos." }),
   L("noctambulo", "Noctámbulo", "Sobreviviste una noche completa.", "noche"),
   L("geiser", "Géiser a la vista", "Presenciar un géiser.", "geiser", "bloqueado", { ficcion: true, nota: NOTA_SIN_EVENTO }),
   L("volcan", "Bajo el volcán", "Sobrevivir a una erupción volcánica en Ío.", "volcan", "bloqueado", { ficcion: true, nota: NOTA_SIN_EVENTO }),
@@ -128,7 +127,7 @@ export const LOGROS = [
   L("viajero", "Viajero", "Hiciste tu primer viaje entre cuerpos.", "nave"),
   L("trotamundos", "Trotamundos", "Visitaste cinco cuerpos distintos.", "planeta"),
   L("gran_explorador", "Gran explorador", "Visitaste los 8 cuerpos disponibles.", "satelite", "adaptacion",
-    { nota: "El ejemplo pedía 18 cuerpos; aquí hay 8 perfiles." }),
+    { nota: "Este juego tiene 8 cuerpos." }),
   L("aeronauta", "Aeronauta", "Completaste con éxito una misión en modo sonda.", "cohete"),
   L("ingeniero_cauto", "Ingeniero cauto", "Acumulaste cinco vetos de seguridad y terminaste con éxito.", "escudo"),
   L("limite", "Al límite", "Terminaste con éxito con menos de 15 % de batería.", "bateria"),

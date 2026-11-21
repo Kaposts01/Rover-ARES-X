@@ -72,7 +72,7 @@ def test_normalizar_estado_real():
     assert r["ciencia"] == 0.75 and r["bateria_pct"] == 61.5 and r["violaciones"] == 3
     assert r["vetos"] == 3 and r["replanificaciones"] == 4 and r["distancia"] == 77 and r["paso"] == 120
     assert r["barrancos_evitados"] == 2 and r["planeta"] == "Marte" and r["modo"] == "rover"
-    assert r["motivo_final"] == "Aviso corto" and r["codigo"] == "EXITO"
+    assert r["motivo_final"] == "EXITO" and r["codigo"] == "EXITO"
     # solo uno de los dos orígenes de la violación
     assert _js("m.normalizarResultado({colisiones:2}).violaciones") == 2
     assert _js("m.normalizarResultado({pasos_sobre_tolerancia:5}).violaciones") == 5

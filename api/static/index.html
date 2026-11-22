@@ -489,6 +489,18 @@
     /* ---------- modo cine (tecla H): la escena sin paneles ---------- */
     body.cine #registro, body.cine #columna, body.cine #controles, body.cine #graficos, body.cine #historial, body.cine #manual, body.cine #mensaje, body.cine #intervencion-aviso { display: none !important; }
 
+    /* ---------- cine: director de cámara y postproceso (cn-*) ---------- */
+    .cn-fps { font-size: 11px; color: #9fb0cc; min-height: 14px; }
+    .cn-aviso { font-size: 12px; color: #ffd27a; margin-top: 2px; }
+    .cn-cinta { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 31; display: flex; flex-wrap: wrap; gap: 8px;
+      align-items: center; justify-content: center; max-width: calc(100vw - 24px); padding: 6px 12px; border-radius: 10px; font-size: 12px;
+      background: rgba(10, 14, 24, 0.78); color: #e8eefc; }
+    .cn-cinta .oculto { display: none; }
+    .cn-cinta.oculto { display: none; }
+    .cn-cinta-rep { color: #ffb347; font-weight: 600; }
+    .cn-cinta-aviso { color: #ffd27a; }
+    .cn-cinta-boton { padding: 3px 10px; font-size: 12px; }
+
     /* ---------- franja inferior con pestañas y sección plegable de controles (vuelta 14) ---------- */
     .dock { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 25; display: grid;
       grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: end; }
@@ -1108,6 +1120,9 @@
         </label>
         <label class="veto"><input type="checkbox" id="pausa-camara" checked> La cámara sigue al rover</label>
         <label class="veto"><input type="checkbox" class="casilla-viaje" id="pausa-viaje" checked> Animación de viaje entre planetas</label>
+        <label class="veto" title="Cámara automática en conducción automática; la tecla H la activa y la desactiva"><input type="checkbox" id="cine-director"> Director de cámara</label>
+        <label class="veto" title="Efectos de imagen; si el equipo baja de 30 fps se apagan solos"><input type="checkbox" id="cine-post"> Postproceso (bloom y bokeh)</label>
+        <div id="cine-lecturas"></div>
       </div>
       <button id="pausa-salir" class="secundario" type="button">Salir al menú inicial</button>
     </div>

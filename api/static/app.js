@@ -2560,7 +2560,8 @@ document.getElementById("controles-toggle").addEventListener("click", (ev) => {
 
 // Mientras se crea una partida, las acciones se bloquean: la sesión del motor cambia al terminar.
 function ocupado() {
-  if (pausaActiva) return true;   // con la pausa abierta no se mueve nada
+  if (pausaActiva) return true;
+  if (cineRepitiendo) return true;   // repetición visual del cine: no se envía ningún paso al motor mientras dura   // con la pausa abierta no se mueve nada
   if (cargando) {
     avisar("Cargando partida, espera un momento…");
     return true;
@@ -2686,6 +2687,10 @@ async function paso() {
   registrarEvento(`paso ${pasoDe(r)}: ${r.accion} · ${motivos}`);
   mostrarAvisosNuevos(estado && estado.avisos);   // después del aviso del paso, para que no lo tape
   (r.eventos_combate || []).forEach((e) => registrarEvento(`combate: ${e}`));
+  if (cine && cineVivo() && !terminada && !fin) {
+    const tipoCine = cine.datos.tipoMomento({ motivos: r.motivos, eventos: r.eventos_combate, estado: r.estado });
+    if (tipoCine) cineMomento(tipoCine);
+  }
   if (terminada) {
     detenerReproduccion();
     avisar(`Fin de la partida: ${r.estado}.`);
@@ -3033,8 +3038,140 @@ lienzoGrafico.addEventListener("mouseleave", () => {
   marcarDesbordes();
 });
 
+// ---------- Cine: director de cámara y postproceso (solo cámara y render; no escribe en la partida ni en el motor) ----------
+// Módulos cargados con import() solo al marcar una casilla o pulsar H; si algo falla, la escena y la partida siguen igual.
+let cine = null;               // { datos, director, panel, cinta }
+let cineCarga = null;
+let cinePost = null;
+let cinePostCarga = null;
+let cineRepitiendo = false;
+let cineOcultoPorH = false;
+let cineFpsAcum = 0, cineFpsEma = 0;
+const cineReducido = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function cinePref(clave) { try { return localStorage.getItem(clave) === "1"; } catch (e) { return false; } }
+function cineFijarPref(clave, on) { try { localStorage.setItem(clave, on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ } }
+const cineVivo = () => Boolean(cine && cine.director.activo);
+function cineAvisar(texto) {
+  console.warn("cine:", texto);
+  try { if (cine) { cine.cinta.aviso(texto); cine.panel.aviso(texto); } else avisar(texto); } catch (e) { /* sin interfaz */ }
+}
+function cineCargar() {
+  if (!cineCarga) {
+    cineCarga = (async () => {
+      const [datos, { crearDirector }, ui] = await Promise.all([
+        import("/static/cine_datos.js?v=r14"), import("/static/cine3d.js?v=r14"), import("/static/cine_ui.js?v=r14")]);
+      const director = crearDirector({
+        THREE, escena: scene, camara, controles, sueloEn: alturaTerreno, reducido: cineReducido(),
+        celdas: () => limitesMapa || { columnas: 60, filas: 40 },
+        objetivo: () => ({ pos: grupoRover.position, rot: grupoRover.rotation.y }),
+      });
+      const panel = ui.crearPanelCine(document.getElementById("cine-lecturas"));
+      const cinta = ui.crearCintaCine(document.body, { alDesactivar: () => cineActivar(false) });
+      cine = { datos, director, panel, cinta };
+    })().catch((e) => { cineCarga = null; cine = null; console.warn("cine: no se pudo cargar; la partida sigue igual", e); throw e; });
+  }
+  return cineCarga;
+}
+// ¿Puede actuar el director ahora? Intro, viaje, pausa, pantalla final y conducción manual tienen preferencia.
+function cinePuede() {
+  if (!(estado && !estado.sin_partida && mapa) || !cine) return false;
+  const oculto = (id) => document.getElementById(id).classList.contains("oculto");
+  return cine.datos.debeActuar({
+    activado: true, enPartida: oculto("menu"), intro: Boolean(introCorriendo || (intro && intro.activo)), viaje: Boolean(viaje && viaje.activo),
+    pausa: pausaActiva, final: !oculto("meta") || !oculto("sin-resultado") || !oculto("error-motor"),
+    manual: document.getElementById("modo").value !== "automatico",
+  });
+}
+// Devuelve true si el director quedó en marcha
+async function cineActivar(on) {
+  if (!on) {
+    if (cine) { cine.director.activar(false); cine.cinta.director(false); cineRepitiendo = false; }
+    if (cineOcultoPorH) { document.body.classList.remove("cine"); cineOcultoPorH = false; }
+    return false;
+  }
+  try {
+    await cineCargar();
+    if (!cinePuede() || cine.director.activo) return cine.director.activo;
+    cine.director.reducido = cineReducido();
+    camaraSiguiendo = false;
+    cine.director.activar(true);
+    cine.cinta.director(true);
+    return true;
+  } catch (e) {
+    document.getElementById("cine-director").checked = false; cineFijarPref("ares.cine", false);
+    cineAvisar("Cine no disponible: la partida sigue igual");
+    return false;
+  }
+}
+async function cinePostActivar(on) {
+  const casilla = document.getElementById("cine-post");
+  if (!on) {
+    if (cinePost) { try { cinePost.dispose(); } catch (e) { /* ya liberado */ } cinePost = null; }
+    casilla.checked = false; cineFijarPref("ares.cine.post", false);
+    return;
+  }
+  try {
+    if (!cinePostCarga) {
+      const base = "/static/vendor/postprocessing/";
+      cinePostCarga = Promise.all([
+        import("/static/cine_post.js?v=r14"), import(base + "EffectComposer.js"), import(base + "RenderPass.js"), import(base + "UnrealBloomPass.js"),
+        import(base + "BokehPass.js"), import(base + "ShaderPass.js"), import(base + "OutputPass.js"), cineCargar()]).catch((e) => { cinePostCarga = null; throw e; });
+    }
+    const [{ crearPostproceso }, a, b, c, d, f, g] = await cinePostCarga;
+    if (!casilla.checked || cinePost) return;
+    const umbral = Number(localStorage.getItem("ares.cine.umbral")) || undefined;   // solo QA: umbral artificial
+    const ventana = Number(localStorage.getItem("ares.cine.ventana")) || undefined;
+    cinePost = crearPostproceso({
+      THREE, renderer, umbral, ventana,
+      clases: { EffectComposer: a.EffectComposer, RenderPass: b.RenderPass, UnrealBloomPass: c.UnrealBloomPass, BokehPass: d.BokehPass, ShaderPass: f.ShaderPass, OutputPass: g.OutputPass },
+      alApagarSolo: () => { cinePostActivar(false); cineAvisar(cine.datos.AVISO_POST_APAGADO); },
+    });
+    cinePost.setBokeh(true, scene, camara);
+    cineFijarPref("ares.cine.post", true);
+  } catch (e) {
+    console.warn("cine: no se pudo cargar el postproceso; sigue el render normal", e);
+    cinePost = null; casilla.checked = false; cineFijarPref("ares.cine.post", false);
+    cineAvisar("Cine no disponible: la partida sigue igual");
+  }
+}
+// Momento dramático: repetición visual lenta con la simulación en pausa (el cliente no envía ningún paso mientras dura)
+function cineMomento(tipo) {
+  if (!cineVivo() || cineRepitiendo || cineReducido()) return false;
+  cineRepitiendo = true;
+  const ok = cine.director.empezarRepeticion(tipo, () => { cineRepitiendo = false; cine.cinta.repeticion(false); });
+  if (ok) cine.cinta.repeticion(true); else cineRepitiendo = false;
+  return ok;
+}
+document.getElementById("cine-director").addEventListener("change", (ev) => {
+  cineFijarPref("ares.cine", ev.target.checked);
+  cineActivar(ev.target.checked);
+});
+document.getElementById("cine-post").addEventListener("change", (ev) => cinePostActivar(ev.target.checked));
+document.getElementById("cine-director").checked = cinePref("ares.cine");
+document.getElementById("cine-post").checked = cinePref("ares.cine.post");
+if (cinePref("ares.cine.post")) cinePostActivar(true);   // preferencia guardada: carga perezosa al abrir
+// Cualquier gesto del usuario sobre la escena le devuelve la cámara, sin salto
+for (const tipo of ["pointerdown", "wheel"]) {
+  window.addEventListener(tipo, (ev) => {
+    if (cineVivo() && ev.target === renderer.domElement) { cineActivar(false); camaraSiguiendo = false; }
+  }, { capture: true, passive: true });
+}
+window.__ares.cineQA = {   // QA del cine (no cambia la escena)
+  estado: () => ({ director: cineVivo(), post: Boolean(cinePost && cinePost.activo), repitiendo: cineRepitiendo, toma: cine ? cine.director.toma : -1 }),
+  momento: (tipo) => cineMomento(tipo),
+  memoria: () => ({ geometrias: renderer.info.memory.geometries, texturas: renderer.info.memory.textures }),
+};
+
 // ---------- entrada ----------
 window.addEventListener("keydown", (ev) => {
+  // Con el director en vivo solo valen Esc y H; el resto de atajos del juego (espacio, flechas, WASD, zoom) no hacen nada
+  if (cineVivo()) {
+    if (ev.key === "Escape") { cineActivar(false); return; }
+    if (!(ev.key === "h" || ev.key === "H") || ["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) {
+      if (ev.key === " " && ev.target === document.body) ev.preventDefault();
+      return;
+    }
+  }
   // Esc: pausa (si no hay un laboratorio abierto, que cierra con Esc por su cuenta)
   if (ev.key === "Escape") {
     if (!document.getElementById("laboratorio").classList.contains("oculto")) return;
@@ -3047,7 +3184,12 @@ window.addEventListener("keydown", (ev) => {
   if (pausaActiva) return;
   // H: modo cine, oculta los paneles y deja la escena (no actúa mientras se escribe en un campo)
   if ((ev.key === "h" || ev.key === "H") && !["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) {
+    if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); cineOcultoPorH = false; return; }   // H otra vez: el director se desactiva
     document.body.classList.toggle("cine");
+    if (document.body.classList.contains("cine") && document.getElementById("cine-director").checked) {
+      cineOcultoPorH = true;
+      cineActivar(true).then((actuo) => { if (!actuo) cineOcultoPorH = false; });   // sin casilla o en manual, H es solo el modo cine de paneles
+    }
     return;
   }
   if (ev.key === " ") {
@@ -3171,6 +3313,7 @@ window.addEventListener("resize", () => {
   camara.aspect = window.innerWidth / window.innerHeight;
   camara.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  if (cinePost) cinePost.ajustar(window.innerWidth, window.innerHeight);
   dibujarGrafico();
 });
 
@@ -3239,6 +3382,11 @@ function animar() {
     for (const r of d.rotores) r.rotation.y += dt * 14;
   }
 
+  const cineEnVivo = cineVivo();
+  if (cineEnVivo && !cinePuede()) cineActivar(false);   // intro, viaje, pausa, pantalla final o manual: el cine cede
+  if (cineEnVivo && cineVivo()) {
+    cine.director.actualizar(dt);   // el director escribe la cámara; OrbitControls y el seguimiento no actúan
+  } else {
   if (camaraSiguiendo && grupoRover.children.length) {
     const p = grupoRover.position;
     const delta = new THREE.Vector3(p.x, p.y + 0.25, p.z).sub(controles.target).multiplyScalar(1 - Math.exp(-dt * 5));
@@ -3251,13 +3399,23 @@ function animar() {
     t.z = Math.min(limitesMapa.filas + MARGEN_OBJETIVO, Math.max(-MARGEN_OBJETIVO, t.z));
   }
   controles.update();
+  }
   // Temblor de sismo (ev3-d41): se suma a la cámara solo para dibujar y se resta después
   const desplazamiento = efectos.desplazamientoTemblor(dt);
   camara.position.add(desplazamiento);
   efectos.actualizarMarcadores(tiempo, camara);
   efectos.actualizarMovibles(tiempo, dt);
-  if (intro && intro.activo) intro.render(); else if (viaje && viaje.activo) viaje.render(); else renderer.render(scene, camara);   // durante la intro o el viaje no se dibuja la escena principal
+  if (intro && intro.activo) intro.render(); else if (viaje && viaje.activo) viaje.render();
+  else if (cinePost && cinePost.activo) {
+    try { cinePost.render(scene, camara, camara.position.distanceTo(grupoRover.position)); }
+    catch (e) { console.warn("cine: fallo del postproceso; vuelve el render normal", e); cinePostActivar(false); renderer.render(scene, camara); }
+  } else renderer.render(scene, camara);   // durante la intro o el viaje no se dibuja la escena principal
   camara.position.sub(desplazamiento);
+  if (cine) {   // lectura de FPS del cine (media móvil, cada 0,5 s)
+    cineFpsEma = cineFpsEma ? cineFpsEma * 0.9 + (1 / Math.max(dt, 0.001)) * 0.1 : 1 / Math.max(dt, 0.001);
+    cineFpsAcum += dt;
+    if (cineFpsAcum >= 0.5) { cineFpsAcum = 0; cine.panel.fps(`FPS: ${Math.round(cineFpsEma)}${cinePost ? " (con postproceso)" : ""}`); }
+  }
   requestAnimationFrame(animar);
 }
 animar();

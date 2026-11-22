@@ -18,11 +18,14 @@ export function crearDirector({ THREE, escena, camara, controles, sueloEn, celda
   let fantasma = null;
   const recursos = [];
 
-  function crearFantasma() {
+  function crearFantasma() {   // marcador de la repetición: anillo en el suelo y baliza, sin tapar al rover
     const g = new THREE.Group();
-    const geo = new THREE.BoxGeometry(1.1, 0.5, 0.8), mat = new THREE.MeshBasicMaterial({ color: 0xffb347, transparent: true, opacity: 0.75 });
-    recursos.push(geo, mat);
-    g.add(new THREE.Mesh(geo, mat));
+    const geoA = new THREE.TorusGeometry(0.9, 0.05, 8, 32), geoB = new THREE.ConeGeometry(0.12, 0.5, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffb347 });
+    recursos.push(geoA, geoB, mat);
+    const anillo = new THREE.Mesh(geoA, mat); anillo.rotation.x = Math.PI / 2; anillo.position.y = -0.15;
+    const baliza = new THREE.Mesh(geoB, mat); baliza.rotation.x = Math.PI; baliza.position.y = 1.3;
+    g.add(anillo, baliza);
     escena.add(g);
     return g;
   }

@@ -492,7 +492,7 @@
     /* ---------- cine: director de cámara y postproceso (cn-*) ---------- */
     .cn-fps { font-size: 11px; color: #9fb0cc; min-height: 14px; }
     .cn-aviso { font-size: 12px; color: #ffd27a; margin-top: 2px; }
-    .cn-cinta { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 31; display: flex; flex-wrap: wrap; gap: 8px;
+    .cn-cinta { position: fixed; top: 52px; left: 50%; transform: translateX(-50%); z-index: 31; display: flex; flex-wrap: wrap; gap: 8px;
       align-items: center; justify-content: center; max-width: calc(100vw - 24px); padding: 6px 12px; border-radius: 10px; font-size: 12px;
       background: rgba(10, 14, 24, 0.78); color: #e8eefc; }
     .cn-cinta .oculto { display: none; }
@@ -500,6 +500,7 @@
     .cn-cinta-rep { color: #ffb347; font-weight: 600; }
     .cn-cinta-aviso { color: #ffd27a; }
     .cn-cinta-boton { padding: 3px 10px; font-size: 12px; }
+    @media (max-width: 700px) { .cn-cinta { top: auto; bottom: 100px; } }
 
     /* ---------- franja inferior con pestañas y sección plegable de controles (vuelta 14) ---------- */
     .dock { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 25; display: grid;

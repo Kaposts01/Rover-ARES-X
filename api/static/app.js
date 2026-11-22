@@ -2856,18 +2856,13 @@ function formatoValor(v) {
   return Number(v).toFixed(cfg.decimales).replace(".", ",");
 }
 
-// Series por paso desde /serie (contrato CONTRATOS_GRAFICOS.md, §6). Ese endpoint no trae
-// p_libre ni p_obstaculo: se completan desde /historial por número de paso.
+// Series por paso desde /serie (contrato CONTRATOS_GRAFICOS.md, §6). /serie ya trae p_libre y p_obstaculo
+// (auditoría 22/11: antes se pedía además /historial en cada refresco solo para completarlos).
 async function refrescarGraficos() {
   if (!estado || estado.sin_partida) return;
-  const [serie, historial] = await Promise.all([llamar("GET", "/serie"), llamar("GET", "/historial")]);
+  const serie = await llamar("GET", "/serie");
   if (!serie) return;
-  const extra = new Map((historial ? historial.filas : []).map((f) => [f.n, f]));
-  filasGraficos = serie.filas.map((f) => ({
-    ...f,
-    p_libre: extra.get(f.n)?.p_libre ?? null,
-    p_obstaculo: extra.get(f.n)?.p_obstaculo ?? null,
-  }));
+  filasGraficos = serie.filas.map((f) => ({ ...f, p_libre: f.p_libre ?? null, p_obstaculo: f.p_obstaculo ?? null }));
   dibujarGrafico();
 }
 

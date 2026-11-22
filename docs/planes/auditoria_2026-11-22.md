@@ -33,10 +33,10 @@ El ejemplo lo resuelve con «seguir la misión en vivo»: recarga los controles 
 | 3 | El aviso de aborto térmico del laboratorio difuso usaba la tolerancia general, no la del planeta (`servidor.py`, `_difuso_datos`) | corregido |
 | 4 | `/ag` recalculaba el AG del laboratorio y su caché nunca acertaba, porque la clave incluye la posición del rover | el panel ya no lo usa; el laboratorio lo sigue usando a propósito |
 | 5 | Modo «Solo difuso» con el perfil v2: la inclinación salía del rasgo 2, que en v2 es el contraste óptico (`conduccion.py`) | corregido: usa `inclinacion_de_rasgos`, como el modo híbrido |
-| 6 | `/paneles`: tras un paso las reglas llegan solo como id y sin pasos como tuplas, así que la columna izquierda pierde la fuerza de cada regla | pendiente |
-| 7 | `_paneles` llama a `sugerencia()` en cada refresco, y eso incluye un AG de evaluación: cómputo de sobra | pendiente |
+| 6 | `/paneles`: tras un paso las reglas llegan solo como id y sin pasos como tuplas, así que la columna izquierda pierde la fuerza de cada regla | corregido: con las entradas reales del paso se devuelven (id, fuerza, motivo) |
+| 7 | `_paneles` llama a `sugerencia()` en cada refresco, y eso incluye un AG de evaluación: cómputo de sobra | descartado: medido en 1,8 ms por llamada. En cambio las curvas fijas del difuso costaban unos 35 ms por consulta y ahora se calculan una vez (`/ia/paso` pasa de 61 a 26 ms y `/difuso` a 5 ms) |
 | 8 | `partida.py`: la rama `"meteorito" in EVENTOS_GRAVES` nunca se cumple (documentado así) | pendiente: decidir si se elimina |
-| 9 | `app.js`: un comentario dice que `/serie` no trae `p_libre` ni `p_obstaculo`, y sí los trae | pendiente (menor) |
+| 9 | `app.js`: un comentario dice que `/serie` no trae `p_libre` ni `p_obstaculo`, y sí los trae | corregido, junto con la petición extra a `/historial` que se hacía por ese motivo |
 | 10 | `_sensores` devuelve las claves `borde` y `gradiente` también en v2, y el frontend lo compensa | pendiente (menor) |
 
 ## 3. Funciones del ejemplo que aquí faltan o son más pobres
@@ -45,12 +45,12 @@ Lo que tenemos igual: evolución del AG en 3D, hologramas, cine y postproceso, l
 
 | Función | En el ejemplo | Aquí |
 |---|---|---|
-| Laboratorios que siguen la misión en vivo | sí | el panel ya sigue el paso; el laboratorio modal todavía no |
+| Laboratorios que siguen la misión en vivo | sí | hecho: panel y laboratorio (casilla «Seguir la misión en vivo») |
 | Modos de cámara (seguir, persecución, primera persona, cenital) | 5 modos | órbita más director de cine |
 | Eventos | 19 (géiser, erupción, desprendimiento, ráfaga, corrosión, restauración de sensores, forzar día…) | 9 |
 | Dron compañero | sí | falta |
 | Defensa oral guiada | sí | falta |
-| Reporte HTML descargable y narrador de pasos | sí | solo `/historial.csv` |
+| Reporte HTML descargable y narrador de pasos | sí | reporte hecho (`/reporte.html`); el narrador falta |
 | Sonido | sí | falta |
 | Maqueta 3D en miniatura | sí | falta |
 | Comparar políticas en vivo | sí | desde JSON precalculado |

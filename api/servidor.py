@@ -7,6 +7,7 @@ Ninguna respuesta de error expone un traceback.
 Ejecutar en desarrollo (desde ares_x/):  uvicorn api.servidor:app --reload
 """
 import csv
+import functools
 import json
 import io
 import math
@@ -357,7 +358,20 @@ def _difuso_del_paso(ultimo, sesion, base) -> dict:
         usado = sesion.modo not in ("rna", "ag")
     if not usado:
         return {"usado": False, "velocidad": None, "reglas": None}
-    return {"usado": True, "velocidad": fuente.get("velocidad"), "reglas": fuente.get("reglas")}
+    reglas = fuente.get("reglas")
+    # auditoría 22/11: la bitácora solo guarda el id de cada regla; con las entradas reales del paso (ultima_ia) se
+    # devuelve el mismo formato que sin pasos, (id, fuerza, motivo), para que el panel no pierda la fuerza
+    u = getattr(sesion.partida.mision, "ultima_ia", None)
+    if ultimo and u and u.get("paso") == ultimo.get("paso") and u.get("usar_difuso") and not u.get("difuso_intervenido"):
+        try:
+            e = u["difuso"]
+            res = sesion.partida.mision.difuso.inferir(e["distancia"], e["bateria"], e["inclinacion"], e["temperatura"])
+            completas = [(r[0], round(float(r[1]), 4), r[2]) for r in res.reglas_activadas]
+            if [r[0] for r in completas] == list(reglas or []):
+                reglas = completas
+        except Exception:   # si no se puede recalcular, quedan los id de la bitácora
+            pass
+    return {"usado": True, "velocidad": fuente.get("velocidad"), "reglas": reglas}
 
 
 def _paneles(sesion: Sesion) -> dict:
@@ -558,14 +572,11 @@ def _valor_entrada(texto, nombre: str, minimo: float, maximo: float):
     return v
 
 
-def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, temperatura: float = 0.0) -> dict:
-    """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2)."""
-    from difuso import CONJUNTOS, REGLAS, SALIDA, TEMPERATURA_TOLERANCIA, _rango
-    m = sesion.partida.mision
-    # auditoría 22/11: la tolerancia es la del planeta de la partida (la misma que /estado), no la constante general
-    termico_p = getattr(sesion.partida, "termico", None)
-    tolerancia = float(getattr(termico_p, "tolerancia", TEMPERATURA_TOLERANCIA) or TEMPERATURA_TOLERANCIA)
-    res = m.difuso.inferir(distancia, bateria, inclinacion, temperatura)
+@functools.lru_cache(maxsize=1)
+def _curvas_difuso_fijas():
+    """Universos y curvas de pertenencia (entradas y salida): no dependen del paso, se calculan una vez por proceso.
+    Antes se recalculaban en cada consulta (16 000 evaluaciones de trapecio, ~35 ms por llamada)."""
+    from difuso import CONJUNTOS, SALIDA, _rango
     universos, curvas = {}, {}
     for var, conjuntos in CONJUNTOS.items():
         lo, hi = _rango(var)
@@ -574,6 +585,20 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
         curvas[var] = {"x": [round(float(x), 3) for x in xs],
                        "conjuntos": {nombre: [round(float(f(x)), 4) for x in xs] for nombre, f in conjuntos.items()}}
     ys = np.linspace(0.0, 1.0, 101)
+    salida_universo = [round(float(y), 3) for y in ys]
+    salida_conjuntos = {nombre: [round(float(f(y)), 4) for y in ys] for nombre, f in SALIDA.items()}
+    return universos, curvas, salida_universo, salida_conjuntos
+
+
+def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, temperatura: float = 0.0) -> dict:
+    """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2)."""
+    from difuso import REGLAS, TEMPERATURA_TOLERANCIA
+    m = sesion.partida.mision
+    # auditoría 22/11: la tolerancia es la del planeta de la partida (la misma que /estado), no la constante general
+    termico_p = getattr(sesion.partida, "termico", None)
+    tolerancia = float(getattr(termico_p, "tolerancia", TEMPERATURA_TOLERANCIA) or TEMPERATURA_TOLERANCIA)
+    res = m.difuso.inferir(distancia, bateria, inclinacion, temperatura)
+    universos, curvas, salida_universo, salida_conjuntos = _curvas_difuso_fijas()
     return {
         "entradas": {"distancia": float(distancia), "bateria": float(bateria), "inclinacion": float(inclinacion),
                      "temperatura": float(temperatura)},
@@ -589,8 +614,8 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
         "reglas": [{"id": r["id"], "si": [list(c) for c in r["si"]], "entonces": r["entonces"],
                     "motivo": r["motivo"]} for r in REGLAS],
         "salida": {"velocidad": round(float(res.velocidad), 4), "fallback": bool(res.fallback),
-                   "universo": [round(float(y), 3) for y in ys],
-                   "conjuntos": {nombre: [round(float(f(y)), 4) for y in ys] for nombre, f in SALIDA.items()},
+                   "universo": salida_universo,
+                   "conjuntos": salida_conjuntos,
                    "agregado": [round(float(a), 4) for a in res.agregado] if res.agregado is not None else None},
     }
 

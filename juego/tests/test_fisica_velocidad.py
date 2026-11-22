@@ -19,7 +19,8 @@ def _motivos(p):
     return ";".join(str(x) for x in p.bitacora()["motivos"]) if len(p.mision.log.filas) else ""
 
 
-def _correr(escenario, velocidad, pasos=50, semilla=1):
+# ARX-94f: semilla 5 (con el mundo v2 la ruta de la 1 no pisa ninguna pendiente > 20°; la 5 sí, y despacio no resbala)
+def _correr(escenario, velocidad, pasos=50, semilla=5):
     p = comparacion.partida_variante(semilla, "hibrido", escenario)
     p.mision.intervencion_difuso = velocidad
     for _ in range(pasos):
@@ -48,7 +49,7 @@ def test_sin_resbalon_a_velocidad_baja():
 
 
 def test_resbalon_vuelve_a_la_celda_anterior_y_gasta_bateria():
-    p = comparacion.partida_variante(1, "hibrido", "exigente")
+    p = comparacion.partida_variante(5, "hibrido", "exigente")   # ARX-94f: semilla 5, ver _correr
     p.mision.intervencion_difuso = 1.0
     for _ in range(60):
         antes, bat = p.rover.posicion, p.rover.bateria

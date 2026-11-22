@@ -931,7 +931,7 @@ function construirMapa(datos) {
   limitesMapa = { columnas: datos.columnas, filas: datos.filas };
   liberarMapa();
   limpiarEnergia();
-  marcasEvento.limpiar(); encuadreEvento = null;   // las marcas de eventos de la partida anterior no pasan a la nueva
+  marcasEvento.limpiar(); marcasRNA.limpiar(); encuadreEvento = null;   // las marcas de eventos de la partida anterior no pasan a la nueva
   grupoMapa.clear();
   animados = [];
   halos = [];
@@ -1776,7 +1776,7 @@ function pintarPaneles(p) {
   document.getElementById("h-paso").textContent = p.paso ?? "-";
   const sup = p.supervisor || {};
   document.getElementById("sup-accion").textContent = sup.accion || "-";
-  document.getElementById("res-rna").textContent = `libre ${pct(rna.p_libre)}`;
+  document.getElementById("res-rna").textContent = `libre ${pct(rna.p_libre)} · celda de enfrente`;   // el panel de IA añade las coordenadas cuando llega /ia/paso
   document.getElementById("res-dif").textContent = dif.usado === false ? "no usado" : `velocidad ${dif.velocidad == null ? "-" : Number(dif.velocidad).toFixed(3).replace(".", ",")}`;
   document.getElementById("res-sup").textContent = sup.accion || "-";
   const motivos = document.getElementById("sup-motivos");
@@ -2075,6 +2075,17 @@ function actualizarControlEvento() {
 // Todo evento lanzado deja: una marca en la celda afectada (o sobre el vehículo si es global), un aviso con su ubicación y, si
 // queda fuera de cuadro, una flecha en el borde del hueco libre y un breve encuadre de la cámara.
 const marcasEvento = crearMarcasEvento({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z) });
+// Celdas que clasificó la RNA (panel «Red neuronal»): otra instancia, sin rótulo flotante ni flecha de evento
+const marcasRNA = crearMarcasEvento({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z) });
+function marcarCeldasRNA(lista) {
+  marcasRNA.limpiar();
+  const validas = (lista || []).filter((x) => x && Array.isArray(x.celda));
+  const dura = validas.some((x) => x.destacada) ? 3 : 2.5;
+  for (const riesgo of [false, true]) {
+    const celdas = validas.filter((x) => !!x.riesgo === riesgo).map((x) => x.celda);
+    if (celdas.length) marcasRNA.marcar({ celdas, rotulo: riesgo ? "rna-riesgo" : "rna-libre", color: riesgo ? 0xff5d6c : 0x5fe6ff, dura });
+  }
+}
 const etiquetaEvento = document.getElementById("evento-etiqueta");
 let textoEtiquetaEvento = "";
 let encuadreEvento = null;   // { punto, hasta }: mientras dura, la cámara sigue este punto y no al vehículo
@@ -3945,6 +3956,7 @@ try {
     },
     alMaximizar: () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "h" })),   // lo mismo que la tecla H
     alNarrar: (texto) => mostrarSubtitulo(texto),                                         // subtítulos en el modo cine
+    alMarcarCeldas: marcarCeldasRNA, vehiculo: vehiculoActual,
   });
   if (!document.getElementById("menu").classList.contains("oculto")) panelIA.mostrar(false);
 } catch (e) { console.warn("panel de IA: no se pudo crear; la partida sigue sin él", e); panelIA = null; }
@@ -4172,6 +4184,7 @@ function animar() {
   efectos.actualizarMarcadores(tiempo, camara);
   efectos.actualizarMovibles(tiempo, dt);
   marcasEvento.actualizar(tiempo);
+  marcasRNA.actualizar(tiempo);
   actualizarEtiquetaEvento();
   if (mapa && grupoRover.children.length) ambientePlaneta.actualizar(dt, tiempo, grupoRover.position);
   if (intro && intro.activo) intro.render(); else if (viaje && viaje.activo) viaje.render();

@@ -1111,3 +1111,14 @@ body.cine .ia-conduce { display: none; }
   #menu .asistente > .paso:nth-of-type(2) { grid-column: 2; grid-row: 4; }
   #menu .asistente > .paso-final { grid-column: 2; grid-row: 5; }
 }
+
+/* ---- R23: tramo de la ruta que clasificó la RNA (una fila por celda) ---- */
+.pia-tramo { margin: 0 0 10px; }
+.pia-tramo-fila { padding: 6px 8px; margin-bottom: 5px; border-left: 3px solid var(--holo-suave, rgba(95, 230, 255, 0.4)); background: rgba(95, 230, 255, 0.05); border-radius: 4px; font-size: 12px; cursor: default; }
+.pia-tramo-fila.riesgo { border-left-color: var(--peligro); background: rgba(255, 93, 108, 0.08); }
+.pia-tramo-fila:hover, .pia-tramo-fila:focus-visible { background: rgba(95, 230, 255, 0.12); outline: none; }
+.pia-tramo-cab strong { color: var(--texto); }
+.pia-tramo-cab span { color: var(--texto-suave); }
+.pia-tramo-barra { display: flex; height: 6px; margin: 4px 0 3px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, 0.08); }
+.pia-tramo-barra i { display: block; height: 100%; }
+.pia-tramo-texto { font-size: 11px; color: var(--texto-suave); font-variant-numeric: tabular-nums; }

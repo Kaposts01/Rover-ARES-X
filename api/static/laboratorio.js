@@ -481,8 +481,7 @@ function adaptarControlesRNA(modelo) {
   }
   cont.style.display = v2 ? "" : "none";
   selBorde.style.display = v2 ? "none" : "";
-  selBorde.parentNode.childNodes[0].nodeValue = v2 ? "Contraste óptico " : "Borde de barranco
-            ";
+  selBorde.parentNode.childNodes[0].nodeValue = v2 ? "Contraste óptico " : "Borde de barranco ";
   $("rna-gradiente").parentNode.childNodes[0].nodeValue = v2 ? "Desnivel frontal (m) " : "Gradiente de altura (m) ";
 }
 

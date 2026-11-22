@@ -28,7 +28,11 @@ export function crearTarjetaIntro(contenedor) {
   const casilla = document.createElement("input"); casilla.type = "checkbox"; casilla.className = "casilla-intro"; casilla.checked = true;
   etiquetaCasilla.append(casilla, document.createTextNode(" Mostrar la introducción al abrir"));
   pie.append(avisos, etiquetaCasilla);
-  raiz.append(cabecera, omitir, tarjeta, pie); contenedor.append(raiz);
+  // Marco de consola: cuatro esquinas y una línea de estado (decorativo, oculto a lectores de pantalla)
+  const marco = el("div", "in-marco"); marco.setAttribute("aria-hidden", "true");
+  for (const k of ["si", "sd", "ii", "id"]) marco.append(el("span", `in-esquina in-esquina-${k}`));
+  marco.append(el("span", "in-estado", "CENTRO DE CONTROL · ENLACE ACTIVO · 8 CUERPOS EN ESCANEO"));
+  raiz.append(marco, cabecera, omitir, tarjeta, pie); contenedor.append(raiz);
 
   let alOmitir = null, foco = null;
   const onTecla = (e) => {
@@ -54,7 +58,11 @@ export function crearTarjetaIntro(contenedor) {
     if (!datos) { tarjeta.classList.add("vacia"); tTitulo.textContent = "Sistema solar"; tFilas.replaceChildren(el("p", "in-fila", "Señala un planeta para ver su ficha.")); return; }
     tarjeta.classList.remove("vacia");
     tTitulo.textContent = datos.titulo;
-    tFilas.replaceChildren(...datos.filas.map((f) => el("p", `in-fila in-${f.tipo}`, `${f.etiqueta}: ${f.valor}`)));
+    tFilas.replaceChildren(...datos.filas.map((f) => {
+      const fila = el("p", `in-fila in-${f.tipo}`);
+      fila.append(el("span", "in-fila-etiqueta", f.etiqueta), el("span", "in-fila-valor", String(f.valor)));
+      return fila;
+    }));
   }
   function ocultar() {
     raiz.classList.add("oculto"); alOmitir = null;

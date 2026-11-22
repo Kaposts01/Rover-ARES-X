@@ -1,8 +1,10 @@
-// Introducción: sistema solar (Sol y los 8 perfiles) dibujado en el mismo renderer de la partida. Ilustración, no a escala.
+// Introducción: sistema solar en estilo «sala de control» (holograma) dibujado en el mismo renderer de la partida. Ilustración, no a escala.
 // No toca la partida ni el motor: al elegir un cuerpo solo avisa con alElegir(nombre).
 import { CUERPOS_INTRO, RADIO_SOL_ESCENA, DURACION_VUELO_S, fasesVuelo, pasoVuelo, posicionOrbital, modoIntro } from "./intro_datos.js?v=r14";
+import { CIAN_HOLO, materialPlanetaHolo, materialHaloHolo, materialSolHolo, materialOrbitaHolo, geometriaOrbita,
+  materialBarridoHolo, materialEstrellasHolo, geometriaEstrellas, crearReticula } from "./holo_material.js?v=r14";
 
-const N_ESTRELLAS = 1200;
+const N_ESTRELLAS_CERCA = 900, N_ESTRELLAS_LEJOS = 1800;
 const CON_ANILLOS = new Set(["Saturno", "Urano"]);
 
 // opciones: THREE, renderer, OrbitControls, texturaPlaneta(nombre), paleta, alElegir(nombre), alPasar(nombre|null), reducido
@@ -10,49 +12,102 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
   const modo = modoIntro(reducido);
   const animado = modo === "animado";
   const escena = new THREE.Scene();
-  escena.background = new THREE.Color(0x02030a);
-  const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+  escena.background = new THREE.Color(0x020611);
+  const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
   const recursos = [];   // geometrías y materiales propios (las texturas son de la app y quedan en su caché: no se liberan aquí)
   const propio = (r) => { recursos.push(r); return r; };
-  escena.add(new THREE.AmbientLight(0x8899bb, 0.55));
-  const luzSol = new THREE.PointLight(0xfff2d0, 3.2, 0, 0); escena.add(luzSol);
+  const animables = [];  // materiales con uTiempo
 
-  // Estrellas
-  const pe = new Float32Array(N_ESTRELLAS * 3);
-  for (let i = 0; i < N_ESTRELLAS; i++) {
-    const r = 200 + Math.random() * 80, a = Math.random() * Math.PI * 2, b = Math.acos(2 * Math.random() - 1);
-    pe.set([r * Math.sin(b) * Math.cos(a), r * Math.cos(b), r * Math.sin(b) * Math.sin(a)], i * 3);
-  }
-  const gEst = propio(new THREE.BufferGeometry()); gEst.setAttribute("position", new THREE.BufferAttribute(pe, 3));
-  escena.add(new THREE.Points(gEst, propio(new THREE.PointsMaterial({ color: 0xffffff, size: 0.9, sizeAttenuation: false }))));
+  // Estrellas en dos capas (la cercana gira un poco más rápido: da profundidad)
+  const matCerca = propio(materialEstrellasHolo(THREE, { tam: 2.2, color: 0xd8f4ff }));
+  const matLejos = propio(materialEstrellasHolo(THREE, { tam: 1.4, color: 0x8fb4ff }));
+  const estrellasCerca = new THREE.Points(propio(geometriaEstrellas(THREE, N_ESTRELLAS_CERCA, 120, 170)), matCerca);
+  const estrellasLejos = new THREE.Points(propio(geometriaEstrellas(THREE, N_ESTRELLAS_LEJOS, 260, 320)), matLejos);
+  escena.add(estrellasCerca, estrellasLejos);
+  animables.push(matCerca, matLejos);
 
-  // Sol: esfera emisiva con un halo aditivo
-  const gSol = propio(new THREE.SphereGeometry(RADIO_SOL_ESCENA, 32, 24));
-  const sol = new THREE.Mesh(gSol, propio(new THREE.MeshBasicMaterial({ color: 0xffd36a })));
-  const halo = new THREE.Mesh(propio(new THREE.SphereGeometry(RADIO_SOL_ESCENA * 1.35, 24, 16)),
-    propio(new THREE.MeshBasicMaterial({ color: 0xffa530, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false })));
+  // Plano orbital: rejilla polar tenue y barrido de radar
+  const radioSistema = CUERPOS_INTRO[CUERPOS_INTRO.length - 1].distanciaEscena + 8;
+  const rejilla = new THREE.PolarGridHelper(radioSistema, 24, 10, 128, 0x1d4f66, 0x0f2c3d);
+  for (const m of [].concat(rejilla.material)) { m.transparent = true; m.opacity = 0.35; m.depthWrite = false; propio(m); }
+  propio(rejilla.geometry);
+  rejilla.position.y = -0.05;
+  escena.add(rejilla);
+  const matBarrido = propio(materialBarridoHolo(THREE));
+  const barrido = new THREE.Mesh(propio(new THREE.CircleGeometry(radioSistema, 96)), matBarrido);
+  barrido.rotation.x = -Math.PI / 2; barrido.position.y = -0.02;
+  escena.add(barrido);
+
+  // Sol: plasma animado, halo y anillos de escaneo que se expanden
+  const matSol = propio(materialSolHolo(THREE)); animables.push(matSol);
+  const sol = new THREE.Mesh(propio(new THREE.SphereGeometry(RADIO_SOL_ESCENA, 48, 32)), matSol);
+  const halo = new THREE.Mesh(propio(new THREE.SphereGeometry(RADIO_SOL_ESCENA * 1.5, 32, 24)), propio(materialHaloHolo(THREE, 0xffb347, 1.1)));
   escena.add(sol, halo);
+  const ondas = [];
+  const geoOnda = propio(new THREE.RingGeometry(0.97, 1, 96));
+  for (let i = 0; i < 3; i++) {
+    const m = propio(new THREE.MeshBasicMaterial({ color: CIAN_HOLO, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    const o = new THREE.Mesh(geoOnda, m); o.rotation.x = -Math.PI / 2; o.userData.fase = i / 3;
+    ondas.push(o); escena.add(o);
+  }
 
-  // Planetas y órbitas
-  const geoEsfera = propio(new THREE.SphereGeometry(1, 32, 24));
-  const cuerpos = [];   // { datos, grupo, malla, material, etiqueta }
+  // Planetas holográficos, halo de borde y órbitas discontinuas
+  const geoEsfera = propio(new THREE.SphereGeometry(1, 48, 32));
+  const geoHalo = propio(new THREE.SphereGeometry(1.18, 32, 24));
+  const cuerpos = [];   // { datos, grupo, malla, material, orbita, etiqueta }
   for (const c of CUERPOS_INTRO) {
     const hor = paleta && paleta[c.nombre] && paleta[c.nombre].horizonte;
     const color = hor ? new THREE.Color(hor[0], hor[1], hor[2]) : new THREE.Color(0x888888);
-    const material = propio(new THREE.MeshLambertMaterial({ color }));
+    const material = propio(materialPlanetaHolo(THREE, { color })); animables.push(material);
     const malla = new THREE.Mesh(geoEsfera, material); malla.scale.setScalar(c.radioEscena); malla.userData.nombre = c.nombre;
-    const grupo = new THREE.Group(); grupo.add(malla);
+    const haloP = new THREE.Mesh(geoHalo, propio(materialHaloHolo(THREE, CIAN_HOLO, 0.55))); haloP.scale.setScalar(c.radioEscena);
+    const grupo = new THREE.Group(); grupo.add(malla, haloP);
     if (CON_ANILLOS.has(c.nombre)) {
-      const ga = propio(new THREE.RingGeometry(c.radioEscena * 1.35, c.radioEscena * 2.1, 64));
-      const ma = propio(new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }));
+      const ga = propio(new THREE.RingGeometry(c.radioEscena * 1.35, c.radioEscena * 2.1, 96, 4));
+      const ma = propio(new THREE.MeshBasicMaterial({ color: color.clone().lerp(new THREE.Color(CIAN_HOLO), 0.45), side: THREE.DoubleSide, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
       const anillo = new THREE.Mesh(ga, ma); anillo.rotation.x = Math.PI / 2.3; grupo.add(anillo);
+      const ma2 = propio(new THREE.MeshBasicMaterial({ color: CIAN_HOLO, wireframe: true, transparent: true, opacity: 0.18, depthWrite: false }));
+      const trama = new THREE.Mesh(ga, ma2); trama.rotation.x = Math.PI / 2.3; grupo.add(trama);
     }
     const p = posicionOrbital(0, c); grupo.position.set(p[0], p[1], p[2]);
     escena.add(grupo);
-    const pts = []; for (let i = 0; i < 128; i++) { const a = (i / 128) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * c.distanciaEscena, 0, Math.sin(a) * c.distanciaEscena)); }
-    escena.add(new THREE.LineLoop(propio(new THREE.BufferGeometry().setFromPoints(pts)),
-      propio(new THREE.LineBasicMaterial({ color: 0x5a6a90, transparent: true, opacity: 0.4 }))));
-    cuerpos.push({ datos: c, grupo, malla, material, etiqueta: null });
+    const matOrbita = propio(materialOrbitaHolo(THREE)); animables.push(matOrbita);
+    matOrbita.uniforms.uTramos.value = Math.round(c.distanciaEscena * 3);
+    const orbita = new THREE.LineLoop(propio(geometriaOrbita(THREE, c.distanciaEscena)), matOrbita);
+    escena.add(orbita);
+    cuerpos.push({ datos: c, grupo, malla, material, orbita, etiqueta: null });
+  }
+
+  // Retícula sobre el planeta señalado
+  const reticula = crearReticula(THREE);
+  for (const r of reticula.userData.recursos) propio(r);
+  escena.add(reticula);
+  function actualizarResaltes(t) {
+    const k = hover ? cuerpos.find((x) => x.datos.nombre === hover) : null;
+    for (const x of cuerpos) {
+      const u = x.material.uniforms.uResalte;
+      u.value += ((x === k ? 1 : 0) - u.value) * 0.15;
+      x.orbita.material.uniforms.uResalte.value = u.value;
+    }
+    reticula.visible = !!k;
+    if (k) {
+      k.grupo.getWorldPosition(reticula.position);
+      reticula.scale.setScalar(k.datos.radioEscena * (1.25 + 0.05 * Math.sin(t * 4)));
+      reticula.quaternion.copy(cam.quaternion);
+      reticula.rotateZ(t * 0.8);
+    }
+  }
+  function animarDecorado(t) {
+    for (const m of animables) m.uniforms.uTiempo.value = t;
+    matBarrido.uniforms.uAngulo.value = animado ? t * 0.6 : 0.8;
+    for (const o of ondas) {
+      const f = animado ? (t * 0.18 + o.userData.fase) % 1 : o.userData.fase;
+      o.scale.setScalar(RADIO_SOL_ESCENA * 1.3 + f * radioSistema * 0.9);
+      o.material.opacity = 0.35 * (1 - f) * (1 - f);
+    }
+    if (animado) { estrellasCerca.rotation.y = t * 0.004; estrellasLejos.rotation.y = t * 0.0015; }
+    const escala = renderer.getPixelRatio ? renderer.getPixelRatio() : 1;
+    matCerca.uniforms.uEscala.value = escala; matLejos.uniforms.uEscala.value = escala;
   }
 
   // Etiquetas DOM (botones: Tab recorre los planetas, Intro elige). Solo textContent.
@@ -161,7 +216,7 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
       if (liberado || !activo) return;
       try {
         const mapa = texturaPlaneta ? texturaPlaneta(k.datos.nombre) : null;
-        if (mapa) { k.material.map = mapa; k.material.color.set(0xffffff); k.material.needsUpdate = true; }
+        if (mapa) { k.material.uniforms.uMapa.value = mapa; k.material.uniforms.uConMapa.value = 1; }
       } catch (e) { console.warn("intro: textura no disponible", e); }
     }
   }
@@ -209,6 +264,8 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
         cam.lookAt(controles.target);
         if ((performance.now() - vuelo.t0) / 1000 >= vuelo.fases.total) { const f = vuelo.finalizar; vuelo = null; f(); return; }
       } else if (animado) controles.update();
+      animarDecorado(t);
+      actualizarResaltes(t);
       posicionarEtiquetas();
       renderer.render(escena, cam);
       primerCuadro = true;

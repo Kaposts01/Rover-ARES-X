@@ -1,4 +1,4 @@
-"""Uso (desde ares_x/):  python scripts/medicion_94d.py
+"""Uso (desde ares_x/):  python scripts/medicion_94d.py [desde hasta]   (por defecto mapas 100-119; 200 220 para mapas nuevos)
 Medición 94d (umbrales de docs/planes/ARX-94_umbrales.md): una sola corrida, sin ajustes.
 Entrena v2 con la partición de 60 mapas (42 de entrenamiento, 400 muestras por mapa) y evalúa en 20 mapas no vistos (100-119).
 FP = celdas libres predichas como barranco / celdas libres."""
@@ -13,7 +13,8 @@ from simulador import BARRANCO, LIBRE
 
 t = time.time()
 tr, _, _ = particion_por_mapas(total_mapas=60)
-te = np.arange(100, 120)
+desde, hasta = (int(sys.argv[1]), int(sys.argv[2])) if len(sys.argv) >= 3 else (100, 120)   # mapas de prueba; sin argumentos, los 100-119 de la medición oficial de 94d
+te = np.arange(desde, hasta)
 Xtr, ytr = generar_dataset(tr, muestras_por_mapa=400, perfil="v2")
 Xte, yte = generar_dataset(te, muestras_por_mapa=400, perfil="v2")
 res = NeuralPerception(42, nombres=NOMBRES_RASGOS_V2, perfil="v2").entrenar(Xtr, ytr).evaluar(Xte, yte)

@@ -3,7 +3,7 @@
 Uso (desde la raíz del repositorio):
     OMP_NUM_THREADS=1 python scripts/medicion_94e.py                 # completa: 20 semillas, congelado y exigente
     OMP_NUM_THREADS=1 python scripts/medicion_94e.py --rapido        # verificación: 3 semillas, mapa chico
-    opciones: --semillas N  --escenarios congelado,exigente  --salida DIR
+    opciones: --semillas N  --desde S  --escenarios congelado,exigente  --salida DIR
 
 Escribe en DIR (por defecto docs/planes/mediciones; en --rapido, un directorio aparte que se indica o el temporal):
     medicion_94e_<escenario>.json   cifras por semilla y por variante
@@ -226,6 +226,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--rapido", action="store_true", help="3 semillas y mapa chico (verificación del script)")
     ap.add_argument("--semillas", type=int, default=None)
+    ap.add_argument("--desde", type=int, default=1, help="primera semilla (por defecto 1; 101 para semillas nuevas, no vistas)")
     ap.add_argument("--escenarios", default="congelado,exigente")
     ap.add_argument("--salida", default=None)
     a = ap.parse_args(argv)
@@ -244,7 +245,7 @@ def main(argv=None):
         escenarios, n, modo = [e for e in a.escenarios.split(",") if e], a.semillas or 20, "completo"
         salida = a.salida or os.path.join(RAIZ, "docs", "planes", "mediciones")
     os.makedirs(salida, exist_ok=True)
-    semillas = list(range(1, n + 1))
+    semillas = list(range(a.desde, a.desde + n))
 
     resultados = {}
     try:

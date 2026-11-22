@@ -648,3 +648,9 @@ body.cine #registro, body.cine #columna, body.cine #controles, body.cine #grafic
   #decision { max-height: calc(100vh - 290px); }
   #decision .lista li { line-height: 1.35; }
 }
+
+/* Volver al sistema solar: acción secundaria bajo «Iniciar misión» */
+#menu .paso-final { display: flex; flex-direction: column; gap: 8px; }
+#menu button.volver { background: transparent; border: 1px solid transparent; box-shadow: none; color: var(--texto-suave, #9fb0c8); font-weight: 500; min-height: 34px; cursor: pointer; border-radius: 8px; }
+#menu button.volver:hover, #menu button.volver:focus-visible { color: var(--texto, #e6edf7); border-color: rgba(160, 200, 255, 0.25); background: rgba(255, 255, 255, 0.05); }
+#menu .fila-compacta { margin-top: 10px; }

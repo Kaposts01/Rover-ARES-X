@@ -13,6 +13,9 @@
 <body>
   <div id="escena"></div>
 
+  <div id="ambiente-velo" aria-hidden="true"></div>
+  <button id="evento-etiqueta" class="evento-etiqueta oculto" type="button" title="Centrar la cámara en el evento"><span class="ev-flecha" aria-hidden="true">➤</span><span class="ev-texto"></span></button>
+
   <div id="columna">
     <div id="hud" class="caja">
       <h1>ARES-X · Marte</h1>
@@ -646,7 +649,7 @@
     </div>
   </div>
 
-  <div id="mensaje" class="caja" style="padding:8px 16px;">Configura la misión y pulsa Iniciar misión.</div>
+  <div id="mensaje" class="caja" role="status" aria-live="polite" style="padding:8px 16px;">Configura la misión y pulsa Iniciar misión.</div>
   <ul id="registro" class="registro" aria-live="polite"></ul>
 
   <script type="module" src="/static/app.js?v=r14"></script>

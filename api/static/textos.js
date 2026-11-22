@@ -151,3 +151,57 @@ export function resumenMeta(e) {
     ["Batería", `${f1(x.bateria_pct ?? x.bateria)} %`],
   ];
 }
+
+// ---------- eventos: dónde pasó y qué se ve (ronda 23) ----------
+// Direcciones entre dos celdas [fila, columna]; la fila crece hacia el sur y la columna hacia el este (como el motor).
+const PUNTOS_CARDINALES = ["este", "sureste", "sur", "suroeste", "oeste", "noroeste", "norte", "noreste"];
+export function direccionEntre(desde, hasta) {
+  const df = Number(hasta[0]) - Number(desde[0]), dc = Number(hasta[1]) - Number(desde[1]);
+  if (df === 0 && dc === 0) return null;
+  const angulo = Math.atan2(df, dc);                           // 0 = este, π/2 = sur
+  return PUNTOS_CARDINALES[(Math.round(angulo / (Math.PI / 4)) + 8) % 8];
+}
+// «fila 19, columna 2 · a 2 celdas al este de la sonda»; sin vehículo, solo la celda
+export function ubicacionEvento(celda, vehiculoCelda, vehiculo = "rover") {
+  if (!Array.isArray(celda) || celda.length < 2) return "";
+  const base = `fila ${celda[0]}, columna ${celda[1]}`;
+  if (!Array.isArray(vehiculoCelda) || vehiculoCelda.length < 2) return base;
+  const dist = Math.max(Math.abs(celda[0] - vehiculoCelda[0]), Math.abs(celda[1] - vehiculoCelda[1]));
+  const dir = direccionEntre(vehiculoCelda, celda);
+  const de = vehiculoDe(vehiculo) === "sonda" ? "de la sonda" : "del rover";
+  if (dist === 0 || !dir) return `${base} · justo donde está ${vehiculoDe(vehiculo) === "sonda" ? "la sonda" : "el rover"}`;
+  return `${base} · a ${plural(dist, "celda", "celdas")} al ${dir} ${de}`;
+}
+// Cómo se marca cada evento en la escena: rótulo corto, color y si va sobre una celda o sobre el vehículo
+export const MARCA_EVENTO = {
+  barranco: { rotulo: "Barranco", color: 0xff5d6c, sobre: "celda" },
+  meteorito: { rotulo: "Impacto de meteorito", color: 0xff8a3c, sobre: "celda" },
+  sismo: { rotulo: "Sismo: grietas", color: 0xffb454, sobre: "celda" },
+  senal_biologica: { rotulo: "Señal biológica", color: 0x6ee7a8, sobre: "celda" },
+  falla_sensor: { rotulo: "Falla de sensor", color: 0xffb454, sobre: "vehiculo" },
+  bateria_baja: { rotulo: "Batería baja", color: 0xff5d6c, sobre: "vehiculo" },
+  tormenta: { rotulo: "Tormenta", color: 0xb4bfd3, sobre: "vehiculo" },
+  noche: { rotulo: "Noche", color: 0x7f9bff, sobre: "vehiculo" },
+  baja_conectividad: { rotulo: "Sin enlace", color: 0xa78bfa, sobre: "vehiculo" },
+};
+// Celdas afectadas según la respuesta de POST /evento
+export function celdasDeEvento(nombre, r) {
+  if (!r || typeof r !== "object") return [];
+  const lista = [];
+  const una = (c) => { if (Array.isArray(c) && c.length === 2 && c.every((n) => Number.isFinite(Number(n)))) lista.push([Number(c[0]), Number(c[1])]); };
+  if (Array.isArray(r.celdas)) r.celdas.forEach(una);
+  if (Array.isArray(r.grietas)) r.grietas.forEach(una);
+  if (r.impacto) una(r.impacto);
+  if (r.celda) una(r.celda);
+  return lista;
+}
+// Frase del aviso: qué pasó y dónde. Un evento sin efecto lo dice claro.
+export function avisoEvento(nombre, rotulo, r, vehiculoCelda, vehiculo = "rover") {
+  const detalle = (r && r.detalle) || (r && r.ok ? "hecho" : "sin efecto");
+  if (!r || !r.ok) return `Evento ${rotulo} sin efecto: ${detalle}`;
+  const celdas = celdasDeEvento(nombre, r);
+  let donde = celdas.length ? ubicacionEvento(celdas[0], vehiculoCelda, vehiculo) : "";
+  // el detalle del motor ya dice «en (19, 2)»: no se repite fila y columna
+  if (donde && String(detalle).includes(`(${celdas[0][0]}, ${celdas[0][1]})`)) donde = donde.replace(/^fila \d+, columna \d+( · )?/, "");
+  return donde ? `Evento ${rotulo}: ${detalle} · ${donde}` : `Evento ${rotulo}: ${detalle}`;
+}

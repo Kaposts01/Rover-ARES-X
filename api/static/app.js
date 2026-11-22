@@ -15,8 +15,9 @@ import { crearSonido } from "/static/sonido.js?v=r14";
 import { crearDefensa } from "/static/defensa.js?v=r14";
 import {
   reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
-  textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural,
+  textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
 } from "/static/textos.js?v=r14";
+import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
@@ -873,13 +874,13 @@ function animarBarranco(celdas) {
       for (let i = 0; i < pos.count; i++) if (Math.hypot(pos.getX(i) - cx, pos.getZ(i) - cz) < 1.6) cerca.push(i);
     }
     // polvo y rocas
-    const N = 70, pp = new Float32Array(N * 3), vel = [];
+    const N = 110, pp = new Float32Array(N * 3), vel = [];
     for (let i = 0; i < N; i++) {
       pp.set([cx + (Math.random() - 0.5) * 0.6, y0 + 0.05, cz + (Math.random() - 0.5) * 0.6], i * 3);
       vel.push([(Math.random() - 0.5) * 1.6, 0.8 + Math.random() * 1.6, (Math.random() - 0.5) * 1.6]);
     }
     const gPolvo = new THREE.BufferGeometry(); gPolvo.setAttribute("position", new THREE.BufferAttribute(pp, 3));
-    const mPolvo = new THREE.PointsMaterial({ color: 0xc9a27e, size: 0.16, transparent: true, opacity: 0.85, depthWrite: false });
+    const mPolvo = new THREE.PointsMaterial({ color: 0xe6d2b4, size: 0.24, transparent: true, opacity: 0.95, depthWrite: false });   // claro: se ve también sobre suelos oscuros o azules
     const polvo = new THREE.Points(gPolvo, mPolvo); scene.add(polvo);
     const rocas = [];
     for (let k = 0; k < 5; k++) {
@@ -900,7 +901,7 @@ function animarBarranco(celdas) {
       }
       const dt = 1 / 60;
       for (let i = 0; i < N; i++) { pp[i * 3] += vel[i][0] * dt; pp[i * 3 + 1] += vel[i][1] * dt; pp[i * 3 + 2] += vel[i][2] * dt; vel[i][1] -= 1.6 * dt; }
-      gPolvo.attributes.position.needsUpdate = true; mPolvo.opacity = 0.85 * (1 - u);
+      gPolvo.attributes.position.needsUpdate = true; mPolvo.opacity = 0.95 * (1 - u);
       for (const r of rocas) { r.userData.v.y -= 4 * dt; r.position.addScaledVector(r.userData.v, dt); r.rotation.x += 0.2; }
       if (u < 1) { requestAnimationFrame(cuadro); return; }
       scene.remove(polvo); gPolvo.dispose(); mPolvo.dispose();
@@ -916,6 +917,7 @@ function construirMapa(datos) {
   limitesMapa = { columnas: datos.columnas, filas: datos.filas };
   liberarMapa();
   limpiarEnergia();
+  marcasEvento.limpiar(); encuadreEvento = null;   // las marcas de eventos de la partida anterior no pasan a la nueva
   grupoMapa.clear();
   animados = [];
   halos = [];
@@ -1601,6 +1603,8 @@ function pintarHud(e) {
     document.getElementById("sonda-sobre").textContent = e.pasos_sobre_tolerancia ?? "-";
     document.getElementById("sonda-estado").textContent = nombreEstado(e.estado);
   }
+  const velo = document.getElementById("ambiente-velo");   // noche o tormenta en curso: el velo de la escena (el motor cuenta los pasos que quedan)
+  if (velo) { velo.className = e.ambiente === "noche" || e.ambiente === "tormenta" ? e.ambiente : ""; }
   document.getElementById("h-semilla").textContent = e.semilla;
   document.getElementById("h-estado").textContent = nombreEstado(e.estado);
   // 22/11: porcentaje de la capacidad del rover (nunca más de 100 %); el motor sigue en sus unidades
@@ -1858,6 +1862,7 @@ async function refrescarMovilesYEscenario() {
   const datos = await adaptador.moviles();
   if (datos && Array.isArray(datos.eventos_del_paso) && datos.eventos_del_paso.some((x) => x && x.nombre === "meteorito")) revisarLogro({ tipo: "meteorito" });
   aplicarMoviles(datos, scene, alturaTerreno, (texto) => avisar(texto), agregarGrietas);
+  señalarEventosDelPaso(datos);
   aplicarEnlaceYSenal(estado);
   await refrescarEscenarios();
 }
@@ -2032,20 +2037,120 @@ function actualizarControlEvento() {
   if (!boton) return;
   boton.disabled = !mapa || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado);
 }
+// ---------- señal visible de cada evento (ronda 23) ----------
+// Todo evento lanzado deja: una marca en la celda afectada (o sobre el vehículo si es global), un aviso con su ubicación y, si
+// queda fuera de cuadro, una flecha en el borde del hueco libre y un breve encuadre de la cámara.
+const marcasEvento = crearMarcasEvento({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z) });
+const etiquetaEvento = document.getElementById("evento-etiqueta");
+let textoEtiquetaEvento = "";
+let encuadreEvento = null;   // { punto, hasta }: mientras dura, la cámara sigue este punto y no al vehículo
+const _vEvento = new THREE.Vector3();
+function celdaVehiculo() { return estado && Array.isArray(estado.posicion) ? estado.posicion : null; }
+// Zona de la pantalla que dejan libre la columna, el panel de IA y la franja inferior (la misma que usa encuadrarVista)
+function huecoLibre() {
+  const W = window.innerWidth, H = window.innerHeight;
+  let l = 8, r = W - 8, t = 60, b = H - 8;
+  if (!document.body.classList.contains("cine")) {
+    const col = document.getElementById("columna"), dock = document.getElementById("dock");
+    if (col && col.getClientRects().length > 0 && W > 760) l = col.getBoundingClientRect().right + 8;
+    if (panelIA && !panelIA.elemento.classList.contains("oculto") && W > 760) r = W - panelIA.ancho - 20;
+    if (dock && dock.getClientRects().length > 0) b = Math.min(b, dock.getBoundingClientRect().top - 8);
+  }
+  if (r - l < 120 || b - t < 120) return { l: 8, r: W - 8, t: 8, b: H - 8 };
+  return { l, r, t, b };
+}
+// Posición en pantalla de un punto del mundo y si queda fuera del hueco libre (o detrás de la cámara)
+function proyectarEvento(pos) {
+  _vEvento.copy(pos).project(camara);
+  const W = window.innerWidth, H = window.innerHeight, h = huecoLibre();
+  const x = ((_vEvento.x + 1) / 2) * W, y = ((1 - _vEvento.y) / 2) * H, detras = _vEvento.z > 1;
+  return { x, y, detras, h, fuera: detras || x < h.l || x > h.r || y < h.t || y > h.b };
+}
+function encuadrarEventoEn(punto, ms) {
+  if (modoCamara !== "orbita" || cineVivo()) return;   // los modos con el vehículo y el director mandan sobre la cámara
+  encuadreEvento = { punto: punto.clone(), hasta: performance.now() + ms };
+  camaraSiguiendo = true;
+}
+// Marca el evento en la escena. celdas: [[fila, columna]]; sin celdas, sobre el vehículo
+function señalarEvento(nombre, celdas, { encuadrar = true, renovar = true } = {}) {
+  const info = MARCA_EVENTO[nombre];
+  if (!info) return;
+  const enCelda = info.sobre === "celda" && celdas.length > 0;
+  const n = marcasEvento.marcar({ celdas: enCelda ? celdas : [], puntos: enCelda ? [] : [grupoRover.position], rotulo: info.rotulo, color: info.color, renovar });
+  if (!n) return;
+  const donde = enCelda ? ubicacionEvento(celdas[0], celdaVehiculo(), vehiculoDe(estado && estado.modo_planeta)) : "";
+  textoEtiquetaEvento = donde ? `${info.rotulo} · ${donde.replace(/^fila \d+, columna \d+ · /, "")}` : info.rotulo;
+  const m = marcasEvento.principal();
+  if (encuadrar && enCelda && m && proyectarEvento(m.base).fuera) encuadrarEventoEn(m.base.clone().lerp(grupoRover.position, 0.35), 2600);
+}
+// Rótulo y flecha: sobre la marca si se ve; en el borde del hueco libre apuntando hacia ella si queda fuera de cuadro
+function actualizarEtiquetaEvento() {
+  if (!etiquetaEvento) return;
+  const m = marcasEvento.principal();
+  if (!m || document.body.classList.contains("cine")) { if (!etiquetaEvento.classList.contains("oculto")) etiquetaEvento.classList.add("oculto"); return; }
+  const base = proyectarEvento(m.base), arriba = proyectarEvento(m.pos);
+  const p = base.fuera ? base : arriba;
+  let x = p.x, y = p.y, ang = 0;
+  if (base.fuera) {
+    const h = base.h, cx = (h.l + h.r) / 2, cy = (h.t + h.b) / 2;
+    let dx = base.x - cx, dy = base.y - cy;
+    if (base.detras) { dx = -dx; dy = -dy; }
+    if (Math.abs(dx) < 1e-3 && Math.abs(dy) < 1e-3) dy = 1;
+    const k = Math.min(((h.r - h.l) / 2 - 70) / Math.max(Math.abs(dx), 1e-3), ((h.b - h.t) / 2 - 18) / Math.max(Math.abs(dy), 1e-3));
+    x = cx + dx * k; y = cy + dy * k; ang = Math.atan2(dy, dx);
+  }
+  etiquetaEvento.classList.remove("oculto");
+  etiquetaEvento.classList.toggle("fuera", base.fuera);
+  etiquetaEvento.style.setProperty("--ang", `${ang}rad`);
+  etiquetaEvento.style.setProperty("--color", `#${m.color.toString(16).padStart(6, "0")}`);
+  etiquetaEvento.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, ${base.fuera ? "-50%" : "-100%"})`;
+  const texto = etiquetaEvento.querySelector(".ev-texto");
+  if (texto.textContent !== textoEtiquetaEvento) texto.textContent = textoEtiquetaEvento;
+}
+etiquetaEvento.addEventListener("click", () => {
+  const m = marcasEvento.principal();
+  if (m) encuadrarEventoEn(m.base, 3500);
+});
+// Meteorito y sismo que genera la propia partida (no solo los del panel): también llevan marca
+function señalarEventosDelPaso(datos) {
+  if (!datos || !Array.isArray(datos.eventos_del_paso)) return;
+  for (const ev of datos.eventos_del_paso) {
+    const nombre = ev && typeof ev.nombre === "string" ? ev.nombre : "";
+    if ((nombre === "meteorito" || nombre === "sismo") && MARCA_EVENTO[nombre]) {
+      const celdas = celdasDeEvento(nombre, { celdas: ev.celdas });
+      if (celdas.length) señalarEvento(nombre, celdas, { encuadrar: false, renovar: false });
+    }
+  }
+}
+function destellarBateria() {
+  const b = document.getElementById("h-bateria-barra");
+  if (!b) return;
+  b.classList.remove("destello"); void b.offsetWidth; b.classList.add("destello");
+}
+
 async function dispararEvento(nombreForzado = null) {
   if (finActiva()) return;
-  if (!mapa || ocupado() || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado)) return;
   const nombre = typeof nombreForzado === "string" ? nombreForzado : document.getElementById("evento-nombre").value;
-  const r = await llamar("POST", "/evento", { nombre });
-  if (!r) return;
-  const detalle = r.detalle || (r.ok ? "hecho" : "sin efecto");
-  if (nombre === "barranco" && r.ok) revisarLogro({ tipo: "barranco" });
-  if (nombre === "barranco" && r.ok && Array.isArray(r.celdas)) animarBarranco(r.celdas);
   const opcion = [...document.getElementById("evento-nombre").options].find((o) => o.value === nombre);
   const rotuloEvento = opcion ? opcion.textContent : nombre;   // «falla de sensor», no «falla_sensor»
-  avisar(`Evento ${rotuloEvento}: ${detalle}`);
-  registrarEvento(`evento ${rotuloEvento}: ${detalle}`);
+  // Antes un evento ignorado no decía nada: ahora se explica por qué no se lanzó
+  if (!mapa || !estado || estado.sin_partida) { avisar(`Evento ${rotuloEvento} sin efecto: no hay una partida en curso.`); return; }
+  if (ESTADOS_TERMINALES.includes(estado.estado)) { avisar(`Evento ${rotuloEvento} sin efecto: la misión ya terminó.`); return; }
+  if (ocupado()) { avisar(`Evento ${rotuloEvento} sin efecto: ${pausaActiva ? "la partida está en pausa" : "hay una operación en curso"}; inténtalo de nuevo.`); return; }
+  const r = await llamar("POST", "/evento", { nombre });
+  if (!r) return;
+  const texto = avisoEvento(nombre, rotuloEvento, r, celdaVehiculo(), vehiculoDe(estado.modo_planeta));
+  if (nombre === "barranco" && r.ok) revisarLogro({ tipo: "barranco" });
+  if (r.ok) {
+    const celdas = celdasDeEvento(nombre, r);
+    if (nombre === "barranco" && celdas.length) animarBarranco(celdas);
+    if (nombre !== "senal_biologica") señalarEvento(nombre, celdas);   // la señal se marca con su celda real al refrescar el estado
+    if (nombre === "bateria_baja") destellarBateria();
+  }
+  avisar(texto);
+  registrarEvento(texto.charAt(0).toLowerCase() + texto.slice(1));
   await refrescarEstado();
+  if (r.ok && nombre === "senal_biologica" && estado && Array.isArray(estado.senal)) señalarEvento(nombre, [estado.senal]);
   await refrescarPaneles();
 }
 document.getElementById("evento-disparar").addEventListener("click", () => dispararEvento());
@@ -3832,7 +3937,8 @@ function animar() {
     camaraDeModo(dt);               // persecución, primera persona o cenital: la cámara va con el rover
   } else {
   if (camaraSiguiendo && grupoRover.children.length) {
-    const p = grupoRover.position;
+    if (encuadreEvento && performance.now() > encuadreEvento.hasta) encuadreEvento = null;
+    const p = encuadreEvento ? encuadreEvento.punto : grupoRover.position;   // breve encuadre de un evento fuera de cuadro
     const delta = new THREE.Vector3(p.x, p.y + 0.25, p.z).sub(controles.target).multiplyScalar(1 - Math.exp(-dt * 5));
     controles.target.add(delta);
     camara.position.add(delta);
@@ -3849,6 +3955,8 @@ function animar() {
   camara.position.add(desplazamiento);
   efectos.actualizarMarcadores(tiempo, camara);
   efectos.actualizarMovibles(tiempo, dt);
+  marcasEvento.actualizar(tiempo);
+  actualizarEtiquetaEvento();
   if (intro && intro.activo) intro.render(); else if (viaje && viaje.activo) viaje.render();
   else if (cinePost && cinePost.activo) {
     try { cinePost.render(scene, camara, camara.position.distanceTo(grupoRover.position)); }

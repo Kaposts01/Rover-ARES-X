@@ -1,0 +1,498 @@
+{
+ "version": 1,
+ "planetas": {
+  "Marte": {
+   "difuso": {
+    "variables": {
+     "distancia": {
+      "etiquetas": {
+       "cerca": [
+        0,
+        0,
+        3.1159,
+        6.2314
+       ],
+       "lejos": [
+        10.8166,
+        15.7091,
+        20,
+        20
+       ]
+      }
+     },
+     "inclinacion": {
+      "etiquetas": {
+       "plana": [
+        0,
+        0,
+        5.7571,
+        13.5434
+       ],
+       "fuerte": [
+        20.8587,
+        29.8079,
+        45,
+        45
+       ]
+      }
+     },
+     "bateria": {
+      "etiquetas": {
+       "critica": [
+        0,
+        0,
+        15.7711,
+        29.667
+       ],
+       "alta": [
+        50.1607,
+        61.7061,
+        100,
+        100
+       ]
+      }
+     }
+    },
+    "salida": {
+     "etiquetas": {
+      "rapida": [
+       0.6496,
+       0.8496,
+       1.0,
+       1.0
+      ],
+      "moderada": [
+       0.3097,
+       0.4597,
+       0.6097
+      ]
+     }
+    },
+    "reglas": [
+     {
+      "id": "R1",
+      "peso": 1.0
+     },
+     {
+      "id": "R2",
+      "peso": 1.0
+     },
+     {
+      "id": "R3",
+      "peso": 0.8209
+     },
+     {
+      "id": "R4",
+      "peso": 1.0
+     },
+     {
+      "id": "R5",
+      "peso": 0.7558
+     },
+     {
+      "id": "R6",
+      "peso": 0.7754
+     },
+     {
+      "id": "R7",
+      "peso": 0.9031
+     },
+     {
+      "id": "R8",
+      "peso": 0.8129
+     },
+     {
+      "id": "R10",
+      "peso": 0.9552
+     },
+     {
+      "id": "R11",
+      "peso": 0.9191
+     },
+     {
+      "id": "R9",
+      "peso": 0.8902
+     }
+    ]
+   },
+   "conduccion": {
+    "v_hielo": 1.0,
+    "v_viento": 0.8768,
+    "v_pendiente": 1.0,
+    "factor_desvio": 1.2866,
+    "umbral_desvio": 0.6247
+   },
+   "vector": {
+    "dist_cerca_c": 3.1159,
+    "dist_cerca_gap": 3.1155,
+    "dist_lejos_a": 10.8166,
+    "dist_lejos_gap": 4.8925,
+    "incl_plana_c": 5.7571,
+    "incl_plana_gap": 7.7863,
+    "incl_fuerte_a": 20.8587,
+    "incl_fuerte_gap": 8.9491,
+    "bat_critica_c": 15.7711,
+    "bat_critica_gap": 13.896,
+    "bat_alta_a": 50.1607,
+    "bat_alta_gap": 11.5455,
+    "sal_rapida_a": 0.6496,
+    "sal_moderada_c": 0.4597,
+    "peso_R1": 1.0,
+    "peso_R2": 1.0,
+    "peso_R3": 0.8209,
+    "peso_R4": 1.0,
+    "peso_R5": 0.7558,
+    "peso_R6": 0.7754,
+    "peso_R7": 0.9031,
+    "peso_R8": 0.8129,
+    "peso_R10": 0.9552,
+    "peso_R11": 0.9191,
+    "peso_R9": 0.8902,
+    "v_hielo": 1.0,
+    "v_viento": 0.8768,
+    "v_pendiente": 1.0,
+    "factor_desvio": 1.2866,
+    "umbral_desvio": 0.6247
+   },
+   "entrenamiento": {
+    "nivel": 4,
+    "sitios": 11,
+    "semilla": 2026,
+    "poblacion": 12,
+    "generaciones": 7,
+    "historial": [
+     {
+      "generacion": 0,
+      "mejor": 1.5573835235003766,
+      "media": 1.5181025791289773,
+      "peor": 1.4021719379918838
+     },
+     {
+      "generacion": 1,
+      "mejor": 1.5573835235003766,
+      "media": 1.5461908717436714,
+      "peor": 1.5337855810923386
+     },
+     {
+      "generacion": 2,
+      "mejor": 1.5597013214396138,
+      "media": 1.5552538854630857,
+      "peor": 1.5515351323009656
+     },
+     {
+      "generacion": 3,
+      "mejor": 1.5719910632342735,
+      "media": 1.5580081176777105,
+      "peor": 1.551643269672989
+     },
+     {
+      "generacion": 4,
+      "mejor": 1.5719910632342735,
+      "media": 1.558226799816408,
+      "peor": 1.5539461609711116
+     },
+     {
+      "generacion": 5,
+      "mejor": 1.5719910632342735,
+      "media": 1.5585420514405042,
+      "peor": 1.5270954481891472
+     },
+     {
+      "generacion": 6,
+      "mejor": 1.5719910632342735,
+      "media": 1.5582682847743554,
+      "peor": 1.5410649588708631
+     }
+    ],
+    "evaluaciones": 71
+   },
+   "resultados": {
+    "entrenamiento": {
+     "semillas": [
+      301,
+      308
+     ],
+     "defecto": {
+      "fitness": 1.5545045939808904,
+      "exito": 1.0,
+      "ciencia": 0.8868750000000001,
+      "pasos": 129.375,
+      "n": 8
+     },
+     "evolucionado": {
+      "fitness": 1.5719910632342735,
+      "exito": 1.0,
+      "ciencia": 0.8756625,
+      "pasos": 124.375,
+      "n": 8
+     }
+    },
+    "validacion": {
+     "semillas": [
+      401,
+      420
+     ],
+     "defecto": {
+      "fitness": 1.2970623665443295,
+      "exito": 0.8,
+      "ciencia": 0.78521,
+      "pasos": 147.35,
+      "n": 20
+     },
+     "evolucionado": {
+      "fitness": 1.41858898669977,
+      "exito": 0.9,
+      "ciencia": 0.81776,
+      "pasos": 157.3,
+      "n": 20
+     }
+    }
+   },
+   "generado": "2026-11-22"
+  },
+  "Neptuno": {
+   "difuso": {
+    "variables": {
+     "distancia": {
+      "etiquetas": {
+       "cerca": [
+        0,
+        0,
+        3.247,
+        5.3076
+       ],
+       "lejos": [
+        10.4836,
+        14.8684,
+        20,
+        20
+       ]
+      }
+     },
+     "inclinacion": {
+      "etiquetas": {
+       "plana": [
+        0,
+        0,
+        5.1126,
+        13.8204
+       ],
+       "fuerte": [
+        23.2659,
+        31.5065,
+        45,
+        45
+       ]
+      }
+     },
+     "bateria": {
+      "etiquetas": {
+       "critica": [
+        0,
+        0,
+        12.1934,
+        25.0578
+       ],
+       "alta": [
+        42.954,
+        62.8689,
+        100,
+        100
+       ]
+      }
+     }
+    },
+    "salida": {
+     "etiquetas": {
+      "rapida": [
+       0.6341,
+       0.8341,
+       1.0,
+       1.0
+      ],
+      "moderada": [
+       0.3414,
+       0.4914,
+       0.6414
+      ]
+     }
+    },
+    "reglas": [
+     {
+      "id": "R1",
+      "peso": 1.0
+     },
+     {
+      "id": "R2",
+      "peso": 1.0
+     },
+     {
+      "id": "R3",
+      "peso": 0.9965
+     },
+     {
+      "id": "R4",
+      "peso": 1.0
+     },
+     {
+      "id": "R5",
+      "peso": 1.0
+     },
+     {
+      "id": "R6",
+      "peso": 1.0
+     },
+     {
+      "id": "R7",
+      "peso": 0.923
+     },
+     {
+      "id": "R8",
+      "peso": 0.7803
+     },
+     {
+      "id": "R10",
+      "peso": 1.0
+     },
+     {
+      "id": "R11",
+      "peso": 0.9413
+     },
+     {
+      "id": "R9",
+      "peso": 0.9974
+     }
+    ]
+   },
+   "conduccion": {
+    "v_hielo": 1.0,
+    "v_viento": 0.9007,
+    "v_pendiente": 1.0,
+    "factor_desvio": 1.3795,
+    "umbral_desvio": 0.6332
+   },
+   "vector": {
+    "dist_cerca_c": 3.247,
+    "dist_cerca_gap": 2.0606,
+    "dist_lejos_a": 10.4836,
+    "dist_lejos_gap": 4.3848,
+    "incl_plana_c": 5.1126,
+    "incl_plana_gap": 8.7079,
+    "incl_fuerte_a": 23.2659,
+    "incl_fuerte_gap": 8.2406,
+    "bat_critica_c": 12.1934,
+    "bat_critica_gap": 12.8645,
+    "bat_alta_a": 42.954,
+    "bat_alta_gap": 19.915,
+    "sal_rapida_a": 0.6341,
+    "sal_moderada_c": 0.4914,
+    "peso_R1": 1.0,
+    "peso_R2": 1.0,
+    "peso_R3": 0.9965,
+    "peso_R4": 1.0,
+    "peso_R5": 1.0,
+    "peso_R6": 1.0,
+    "peso_R7": 0.923,
+    "peso_R8": 0.7803,
+    "peso_R10": 1.0,
+    "peso_R11": 0.9413,
+    "peso_R9": 0.9974,
+    "v_hielo": 1.0,
+    "v_viento": 0.9007,
+    "v_pendiente": 1.0,
+    "factor_desvio": 1.3795,
+    "umbral_desvio": 0.6332
+   },
+   "entrenamiento": {
+    "nivel": 4,
+    "sitios": 11,
+    "semilla": 2026,
+    "poblacion": 12,
+    "generaciones": 6,
+    "semillas_entrenamiento": 16,
+    "historial": [
+     {
+      "generacion": 0,
+      "mejor": 1.504815168609027,
+      "media": 1.3648346768941826,
+      "peor": 1.2468454068712234
+     },
+     {
+      "generacion": 1,
+      "mejor": 1.504815168609027,
+      "media": 1.401490819262558,
+      "peor": 1.2933834382605438
+     },
+     {
+      "generacion": 2,
+      "mejor": 1.504815168609027,
+      "media": 1.4428572558343766,
+      "peor": 1.3496074153678976
+     },
+     {
+      "generacion": 3,
+      "mejor": 1.504815168609027,
+      "media": 1.4656560695529102,
+      "peor": 1.3478406342136036
+     },
+     {
+      "generacion": 4,
+      "mejor": 1.504815168609027,
+      "media": 1.4831406350475882,
+      "peor": 1.419952586764226
+     },
+     {
+      "generacion": 5,
+      "mejor": 1.504815168609027,
+      "media": 1.4727997818244143,
+      "peor": 1.4239734862238573
+     }
+    ],
+    "evaluaciones": 60
+   },
+   "resultados": {
+    "entrenamiento": {
+     "semillas": [
+      301,
+      316
+     ],
+     "defecto": {
+      "fitness": 1.3523785263844008,
+      "exito": 0.875,
+      "ciencia": 0.79443125,
+      "pasos": 144.5,
+      "n": 16
+     },
+     "evolucionado": {
+      "fitness": 1.504815168609027,
+      "exito": 1.0,
+      "ciencia": 0.7986375,
+      "pasos": 147.6875,
+      "n": 16
+     }
+    },
+    "validacion": {
+     "semillas": [
+      401,
+      420
+     ],
+     "defecto": {
+      "fitness": 1.3917113416270679,
+      "exito": 0.9,
+      "ciencia": 0.8115100000000002,
+      "pasos": 145.4,
+      "n": 20
+     },
+     "evolucionado": {
+      "fitness": 1.3753524394828185,
+      "exito": 0.9,
+      "ciencia": 0.7863600000000001,
+      "pasos": 148.75,
+      "n": 20
+     }
+    }
+   },
+   "generado": "2026-11-22"
+  }
+ }
+}

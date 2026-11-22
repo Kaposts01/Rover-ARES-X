@@ -266,11 +266,13 @@ def test_el_difuso_recibe_la_bateria_en_porcentaje_en_el_mapa_grande():
     assert 0 <= visto <= 100
     assert visto == pytest.approx(100.0 * p.rover.bateria / p.capacidad_bateria, abs=3.0)
     ui = p.mision.ultima_ia
-    assert ui["difuso"]["bateria"] == pytest.approx(visto)         # /ia/paso muestra lo que el difuso recibió
+    assert ui["difuso"]["bateria_pct"] == pytest.approx(visto)     # /ia/paso muestra lo que el difuso recibió (en %)
+    assert ui["difuso"]["bateria"] > 100                           # y la batería en unidades del motor aparte
 
 
 def test_el_laboratorio_del_difuso_no_convierte_la_bateria():
-    p = Partida(semilla=3, nivel=2, filas=40, columnas=60, planeta="Marte", eventos_activos=())
+    # R23: sin los parámetros evolucionados del planeta (con ellos el difuso de Marte ya no es el de defecto)
+    p = Partida(semilla=3, nivel=2, filas=40, columnas=60, planeta="Marte", eventos_activos=(), difuso_evolucionado=False)
     a = p.mision.difuso.inferir(20.0, 80.0, 5.0)
     from difuso import FuzzyController
     b = FuzzyController().inferir(20.0, 80.0, 5.0)

@@ -22,7 +22,8 @@ SEMILLAS = range(1, int(os.environ.get("ARX92_SEMILLAS", "4")) + 1)
 
 
 def _partida(semilla, nivel=1, garantia=False):
-    return Partida(semilla=semilla, nivel=nivel, filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=garantia)
+    return Partida(semilla=semilla, nivel=nivel, filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=garantia,
+                   plan_restringido=False)    # R23: estas pruebas son del envoltorio de orden (92c), no del plan con restricciones
 
 
 def _referencia_exhaustiva(p):
@@ -99,6 +100,12 @@ def test_la_ruta_jugada_es_viable(semilla, nivel):
     ruta = m.ruta
     assert ruta and tuple(ruta[0]) == tuple(m.mundo.inicio) and tuple(ruta[-1]) == tuple(m.mundo.refugio)
     assert camino_valido(ruta, m.riesgo)
+    if p.estaciones and not all(s in ruta for s in m.mundo.sitios):
+        # R23: con la dificultad nueva la garantía cuenta con las bases de recarga, pero el planificador de orden (92c) no
+        # planifica paradas: si la ruta completa no cabe sin recargar, Mision._planear descarta los sitios y va al refugio
+        # (el plan con recargas es planificacion.py). Aun así la ruta es válida y cabe en la batería.
+        assert (len(ruta) - 1) * m.factor_ambiente <= m.rover.bateria
+        return
     assert all(s in ruta for s in m.mundo.sitios)
     o = m._optimizar_ag
     assert o.fallbacks == [] or all(a == AVISO_FALLBACK for a in o.fallbacks)

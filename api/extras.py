@@ -83,7 +83,14 @@ def _aplicar_variante(partida, variante: str) -> None:
     if variante == "sin_difuso":
         m.usar_difuso = False
         return
-    if variante == "sin_ag_vecino":
+    if getattr(partida, "plan_activo", False) and variante in ("sin_ag_vecino", "sin_ag_2opt", "sin_ag_mas_corta"):
+        # R23: en la partida jugable el plan lleva ventanas y recargas: la «sin AG» es la heurística con la misma ejecución del plan
+        from juego.partida import _ag_restringido
+        m._optimizar_ag = _ag_restringido(partida, heuristica="2opt" if variante == "sin_ag_2opt" else "vecino",
+                                          anotar=partida._avisar)
+        partida._wp = []
+        partida._plan_inicial_pendiente = False
+    elif variante == "sin_ag_vecino":
         m._optimizar_ag = cmp._orden_voraz(m)
     elif variante == "sin_ag_2opt":
         m._optimizar_ag = cmp._orden_2opt(m)

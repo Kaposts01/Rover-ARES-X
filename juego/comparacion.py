@@ -27,6 +27,9 @@ from integracion import ESTADOS_TERMINALES, Mision
 VARIANTES_ABLACION = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_mas_corta", "sin_ag_2opt")   # ARX-28, 92d y 92c
 VARIANTES_BASE = ("ruta_corta", "ag_puro")                              # ARX-45 (M19)
 VARIANTES = VARIANTES_ABLACION + VARIANTES_BASE
+# R23: variantes del escenario jugable difícil (partida con plan restringido). `sin_ag_*` usan la heurística en vez del AG, con el
+# mismo ejecutor y la misma reparación de recargas; `difuso_base` es el difuso por defecto (sin evolucionar) con todo lo demás igual.
+VARIANTES_JUGABLE = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_2opt", "sin_ag_ventanas", "difuso_base")
 MAX_PASOS = 400
 
 # Escenarios de evaluación (ARX-28b). "congelado" es la evaluación del informe: 20x30, nivel 1, parámetros por defecto.
@@ -40,6 +43,12 @@ ESCENARIOS = {
     # ARX-92c (ev3-d73 A): 10 sitios y batería = ⌈L_ref × 1,15⌉ por semilla (criterio en ARX-92_ag_decide.md §12)
     "exigente10": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None, "fisica_velocidad": True,
                    "n_sitios": 10, "margen_bateria": 0.15},
+    # R23: la partida jugable difícil (garantia=True): 11 sitios con ventanas de tiempo, recarga obligatoria, sitios opcionales y las
+    # mecánicas del planeta (viento, hielo, gravedad). Un escenario por planeta; el híbrido usa el difuso evolucionado del planeta.
+    "jugable_dificil": {"nivel": 4, "ruido": None, "p_detectar": None, "prob_fallo": None, "jugable": True,
+                        "planeta": "Marte", "n_sitios": 11, "variantes": VARIANTES_JUGABLE},
+    "jugable_dificil_neptuno": {"nivel": 4, "ruido": None, "p_detectar": None, "prob_fallo": None, "jugable": True,
+                                "planeta": "Neptuno", "n_sitios": 11, "variantes": VARIANTES_JUGABLE},
 }
 
 
@@ -108,7 +117,7 @@ def _parametros_escenario(escenario: str) -> dict:
     if escenario not in ESCENARIOS:
         raise ValueError(f"escenario desconocido: {escenario!r}")
     par = ESCENARIOS[escenario]
-    if escenario != "congelado" and (par["ruido"] is None or par["p_detectar"] is None):
+    if escenario != "congelado" and not par.get("jugable") and (par["ruido"] is None or par["p_detectar"] is None):
         raise ValueError(f"escenario {escenario} pendiente de ARX-28a (ruido y p_detectar sin fijar)")
     return par
 
@@ -137,10 +146,12 @@ def _bateria_referencia(semilla: int, par: dict) -> float:
 def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
     """Partida de la capa de juego con el escenario y, después, la variante aplicados antes de empezar."""
     from juego.partida import Partida
-    if variante not in VARIANTES:
-        raise ValueError(f"variante desconocida: {variante!r}")
     par = _parametros_escenario(escenario)
+    if variante not in VARIANTES and variante not in par.get("variantes", ()):
+        raise ValueError(f"variante desconocida: {variante!r}")
     from juego.partida import FILAS_BASE, COLUMNAS_BASE
+    if par.get("jugable"):
+        return _partida_jugable(semilla, variante, par)
     if "n_sitios" in par:
         p = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=False,
                     n_sitios=par["n_sitios"], bateria=_bateria_referencia(semilla, par))
@@ -193,6 +204,28 @@ def partida_variante(semilla: int, variante: str, escenario: str = "congelado"):
     return p
 
 
+def _partida_jugable(semilla: int, variante: str, par: dict):
+    """R23: partida jugable (garantia=True, plan restringido) con la variante aplicada antes de empezar."""
+    from juego.partida import FILAS_BASE, COLUMNAS_BASE, Partida, _ag_restringido
+    p = Partida(semilla=semilla, nivel=par["nivel"], filas=FILAS_BASE, columnas=COLUMNAS_BASE, garantia=True,
+                planeta=par["planeta"], n_sitios=par.get("n_sitios"), difuso_evolucionado=(variante != "difuso_base"))
+    m = p.mision
+    if variante == "sin_rna":
+        m.usar_rna = False
+    elif variante == "sin_difuso":
+        m.usar_difuso = False
+    elif variante.startswith("sin_ag_"):
+        heuristica = {"sin_ag_vecino": "vecino", "sin_ag_2opt": "2opt", "sin_ag_ventanas": "ventanas"}[variante]
+        m._optimizar_ag = _ag_restringido(p, heuristica=heuristica, anotar=p._avisar)
+        m.objetivos = []
+        p._wp = []
+        p._plan_inicial_pendiente = False
+        m._planear()
+    elif variante not in ("hibrido", "difuso_base"):
+        raise ValueError(f"variante desconocida: {variante!r}")
+    return p
+
+
 def _congelar_riesgo(m: Mision):
     """Mapa de riesgo fijo: tras cada paso_mision se restaura el snapshot tomado al empezar (ver docstring, ag_puro)."""
     snapshot = m.riesgo.copy()
@@ -213,10 +246,15 @@ def correr(semilla: int, variante: str, escenario: str = "congelado") -> dict:
     while p.estado not in ESTADOS_TERMINALES and pasos < MAX_PASOS:
         p.avanzar_ia()
         pasos += 1
-    return {"semilla": semilla, "variante": variante, "estado": p.estado, "exito": p.estado == "EXITO",
+    fila = {"semilla": semilla, "variante": variante, "estado": p.estado, "exito": p.estado == "EXITO",
             "pasos": pasos, "colisiones": int(p.mision.colisiones),
             "bateria_final": round(float(p.rover.bateria), 2),
             "sitios_visitados": len(p.mision.visitados)}
+    if p.plan_activo:      # R23: ciencia recogida (valor por la calidad de la ventana) y puntaje de la partida jugable
+        fila["ciencia"] = p.ciencia()["fraccion"]
+        fila["puntaje"] = p.puntaje() if p.estado == "EXITO" else int(round(100 * fila["ciencia"]))
+        fila["recargas"] = int(p.recargas_hechas)
+    return fila
 
 
 def _resumen(valores) -> dict:
@@ -227,13 +265,25 @@ def _resumen(valores) -> dict:
             "rango_intercuartil": round(float(q3 - q1), 3)}
 
 
+def _wilson(k: int, n: int, z: float = 1.96) -> list:
+    """Intervalo de Wilson del 95 % para una proporción, en % (éxitos k de n)."""
+    if n == 0:
+        return [0.0, 100.0]
+    p = k / n
+    den = 1 + z * z / n
+    centro = (p + z * z / (2 * n)) / den
+    mitad = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
+    return [round(100 * max(0.0, centro - mitad), 1), round(100 * min(1.0, centro + mitad), 1)]
+
+
 def comparar(semillas, escenario: str = "congelado") -> dict:
     """Ejecuta todas las variantes con las mismas semillas y resume cada una."""
-    _parametros_escenario(escenario)          # falla pronto si el escenario no existe o está pendiente
+    par = _parametros_escenario(escenario)          # falla pronto si el escenario no existe o está pendiente
+    variantes = tuple(par.get("variantes", VARIANTES))
     semillas = [int(s) for s in semillas]
-    filas = [correr(s, v, escenario) for v in VARIANTES for s in semillas]
+    filas = [correr(s, v, escenario) for v in variantes for s in semillas]
     politicas = {}
-    for v in VARIANTES:
+    for v in variantes:
         grupo = [f for f in filas if f["variante"] == v]
         politicas[v] = {
             "exitos": sum(f["exito"] for f in grupo),
@@ -244,6 +294,12 @@ def comparar(semillas, escenario: str = "congelado") -> dict:
             "bateria_final": _resumen([f["bateria_final"] for f in grupo]),
             "sitios_visitados": _resumen([f["sitios_visitados"] for f in grupo]),
         }
+        if "ciencia" in grupo[0]:
+            politicas[v]["ic95_exito"] = _wilson(sum(f["exito"] for f in grupo), len(grupo))
+            for clave in ("ciencia", "puntaje", "recargas"):
+                politicas[v][clave] = {**_resumen([f[clave] for f in grupo]),
+                                       "error_estandar": round(float(np.std([f[clave] for f in grupo], ddof=1) / np.sqrt(len(grupo))), 4)
+                                       if len(grupo) > 1 else 0.0}
     return {"escenario": escenario, "semillas": semillas, "variantes": politicas, "filas": filas,
             "nota": "Arnés: capa de juego (juego/partida.py), misma semilla por variante. Sin atribución causal fuera "
                     "de estas condiciones (§14). Los intentos a barranco no se miden en el híbrido."}

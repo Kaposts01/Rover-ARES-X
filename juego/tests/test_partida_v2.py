@@ -34,7 +34,8 @@ def _forzar_libre(p, celda):
 @pytest.mark.parametrize("nivel", [1, 2, 3, 4, 5])
 def test_nivel_genera_el_mundo_del_contrato(nivel):
     p = Partida(semilla=11, nivel=nivel)
-    sitios_esperados = 3 if nivel <= 2 else 4
+    from juego import dificultad          # R23: la partida jugable tiene 8 a 12 sitios (plan con restricciones)
+    sitios_esperados = dificultad.n_sitios(nivel, 20, 30)
     # ARX-66: la garantía de ganabilidad puede usar una variante del mismo mapa (semilla_mundo != semilla);
     # el contrato se comprueba contra la semilla con que se generó el mundo realmente.
     esperado = generar_mundo(p.semilla_mundo, n_obstaculos=20 + 2 * nivel, n_barrancos=4 + nivel,

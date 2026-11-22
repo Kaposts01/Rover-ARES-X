@@ -38,10 +38,21 @@ def aplicar_politica(partida, politica: str) -> None:
         m.usar_rna = False
     elif politica == "sin_difuso":
         m.usar_difuso = False
-    elif politica == "sin_ag":
-        m._optimizar_ag = _orden_voraz(m)
+    elif politica in ("sin_ag", "sin_ag_2opt", "sin_ag_ventanas"):
+        if partida.plan_activo:      # R23: la misma ejecución del plan restringido con una heurística en vez del AG
+            from juego.partida import _ag_restringido
+            m._optimizar_ag = _ag_restringido(partida, heuristica={"sin_ag": "vecino", "sin_ag_2opt": "2opt",
+                                                                    "sin_ag_ventanas": "ventanas"}[politica])
+            partida._wp = []
+            partida._plan_inicial_pendiente = False
+        else:
+            m._optimizar_ag = _orden_voraz(m)
         m.objetivos = []
         m._planear()
+    elif politica == "difuso_base":
+        from difuso import FuzzyController
+        partida.poner_difuso(FuzzyController())
+        partida.conduccion = {}
     elif politica != "hibrido":
         raise SystemExit(f"política desconocida: {politica}")
 

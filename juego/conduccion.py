@@ -36,6 +36,8 @@ def _cheb(a, b) -> int:
 def _objetivo(partida):
     """Siguiente sitio pendiente en el orden del AG; el refugio cuando no quedan."""
     m = partida.mision
+    if getattr(partida, "plan_activo", False) and getattr(partida, "_comprometido", None) is not None:
+        return partida._comprometido          # R23: va a recargar a la base comprometida
     pendientes = [o for o in m.objetivos if o not in m.visitados]
     return pendientes[0] if pendientes else partida.mundo.refugio
 
@@ -262,7 +264,10 @@ def avanzar(partida, modo: str, veto: bool = True) -> dict:
         entrada = getattr(partida, "_entrada_difuso", None) or {
             "distancia": float(m._distancia_a_riesgo_en_ruta()), "bateria": float(partida.rover.bateria),
             "inclinacion": float(inclinacion), "temperatura": 0.0}
-        _guardar_ia(partida, pos, rumbo, obs[rumbo], usar_rna=False, usar_difuso=True, entrada_difuso=dict(entrada))
+        entrada = dict(entrada)
+        if getattr(partida, "_entrada_difuso", None):      # R23: el difuso recibió el % de la capacidad; se guarda aparte de las unidades
+            entrada["bateria_pct"], entrada["bateria"] = entrada["bateria"], float(partida.rover.bateria)
+        _guardar_ia(partida, pos, rumbo, obs[rumbo], usar_rna=False, usar_difuso=True, entrada_difuso=entrada)
         v = float(fz.velocidad)
         if m.intervencion_difuso is not None:        # prueba causal (ARX-10) también en el modo difuso (ARX-18.2)
             v = float(m.intervencion_difuso)

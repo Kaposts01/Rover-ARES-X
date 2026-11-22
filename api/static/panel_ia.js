@@ -344,7 +344,9 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     agResumen.replaceChildren(
       el("strong", null, `faltan ${d.celdas_restantes} celdas · sitios ${d.visitados}/${d.sitios}`),
       document.createTextNode(gens.length ? ` · mejor fitness ${coma(ult.mejor, 2)}${d.viable === false ? " · orden no viable (respaldo)" : ""}` : " · sin ejecución del AG todavía"));
-    agTituloCurva.textContent = rep ? `fitness por generación · última ejecución (replanteo en el paso ${rep.paso}: ${rep.motivo})` : "fitness por generación · plan inicial";
+    // ultimo_replanteo solo anota los replanteos por eventos (sismo, meteorito…); los de rutina (sitio visitado, veto) no
+    agTituloCurva.textContent = rep ? `fitness por generación · última ejecución (replanteo por evento en el paso ${rep.paso}: ${rep.motivo})`
+      : (d.replanes ? `fitness por generación · última ejecución del AG (${d.replanes} replanteos en la misión)` : "fitness por generación · plan inicial");
     if (gens.length) {
       const ys = gens.flatMap((g) => [g.mejor, g.media, g.peor]).filter((v) => v != null);
       const lo = Math.min(...ys), hi = Math.max(...ys), m = (hi - lo) * 0.08 || 0.1;

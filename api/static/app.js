@@ -1857,51 +1857,81 @@ document.querySelectorAll(".casilla-viaje").forEach((c) => {
   c.addEventListener("change", () => fijarViajeActivado(c.checked));
 });
 let tarjetaViaje = null;
-// Corre el viaje pendiente; si algo falla, la partida sigue igual (nunca lanza ni se queda colgado)
-async function correrViaje() {
-  const pend = viajePendiente; viajePendiente = null;
-  if (!pend || !viajeActivado()) return;
-  let guarda = null, liberar = null;
-  const hud = document.getElementById("hud");
-  const menu = document.getElementById("menu");   // el asistente de inicio tapa la escena: se oculta solo mientras dura el viaje
+// Vuelo de carga: el cohete despega antes de pedir la partida y aterriza cuando el motor responde (avance ligado a la carga real).
+// Devuelve un control { terminar(ok) } o null si la animación está apagada o no se pudo preparar (la carga sigue con la barra simple).
+// Nunca lanza: si algo falla, la partida sigue igual.
+async function abrirVuelo(destino, { alOmitir = null } = {}) {
+  if (!viajeActivado()) return null;
   try {
-    // Carga perezosa: si un módulo del viaje no carga, la partida sigue igual (con import estático rompería toda la app)
-    const [{ DURACION_VIAJE_S, GUARDA_EXTRA_S, CIERRE_ESTATICO_S, debeViajar, datosTarjeta, modoMovimiento }, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
+    // Carga perezosa: si un módulo del vuelo no carga, la partida sigue igual (con import estático rompería toda la app)
+    const [datosV, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
       import("/static/viaje_datos.js?v=r14"), import("/static/viaje3d.js?v=r14"), import("/static/viaje_tarjeta.js?v=r14")]);
-    if (!debeViajar({ previo: pend.desde, nuevo: pend.hacia, activado: true })) return;
-    revisarLogro({ tipo: "viaje", desde: pend.desde, hacia: pend.hacia });
+    const { datosTarjeta, modoMovimiento, origenVuelo, pasoCarga, etapaCarga, textoEtapa, CIERRE_ESTATICO_S } = datosV;
     const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const modo = modoMovimiento(reducido, true);
-    if (modo === "ninguno") return;
+    if (modo === "ninguno") return null;
+    const desde = origenVuelo(vigente.planeta, destino);
     if (!tarjetaViaje) tarjetaViaje = crearTarjetaViaje(document.body);
-    if (menu) menu.style.visibility = "hidden";
-    if (hud) hud.style.visibility = "hidden";
-    const datos = datosTarjeta(pend.desde, pend.hacia, planetasDatos);
-    await new Promise((resolver) => {
-      let hecho = false;
-      const fin = () => { if (hecho) return; hecho = true; resolver(); };
-      liberar = fin;
-      if (modo === "tarjeta") {
-        tarjetaViaje.mostrar(datos, { estatica: true, alOmitir: fin });
-        guarda = setTimeout(fin, CIERRE_ESTATICO_S * 1000);   // sin animación: se cierra a los 20 s o con «Continuar» / Escape
-        return;
-      }
-      try {
-        viaje = crearViaje({ THREE, renderer, camara, texturaPlaneta: texturaParaPlaneta, paleta: PALETAS_PLANETA });
-      } catch (e) { console.warn("viaje: no se pudo crear la escena; sigue la partida normal", e); fin(); return; }
-      tarjetaViaje.mostrar(datos, { duracion: DURACION_VIAJE_S, alOmitir: () => { if (viaje) viaje.omitir(); fin(); } });
-      viaje.iniciar(pend.desde, pend.hacia).then(fin, fin);
-      guarda = setTimeout(() => { console.warn("viaje: temporizador de guarda"); if (viaje) viaje.omitir(); fin(); }, (DURACION_VIAJE_S + GUARDA_EXTRA_S) * 1000);
-    });
+    const datos = datosTarjeta(desde, destino, planetasDatos);
+    let omitido = false, aterrizaje = null, intervalo = null, listoReducido = false;
+    const alProgreso = (d, etapa) => tarjetaViaje.progreso(d, textoEtapa(etapa, desde, destino));
+    document.body.classList.add("vuelo-activo");
+    if (modo === "tarjeta") {
+      // Movimiento reducido: sin 3D; la barra sigue la carga real y la tarjeta se cierra al terminar
+      tarjetaViaje.mostrar(datos, { manual: true, alOmitir: () => omitir() });
+      const t0 = performance.now(); let d = 0, tPrev = t0;
+      intervalo = setInterval(() => {
+        const ahora = performance.now(); d = pasoCarga(d, (ahora - t0) / 1000, listoReducido, (ahora - tPrev) / 1000); tPrev = ahora;
+        alProgreso(d, etapaCarga(d));
+      }, 100);
+    } else {
+      viaje = crearViaje({ THREE, renderer, texturaPlaneta: texturaParaPlaneta, paleta: PALETAS_PLANETA, alProgreso });
+      tarjetaViaje.mostrar(datos, { manual: true, alOmitir: () => omitir() });
+      aterrizaje = viaje.iniciar(desde, destino);
+    }
+    // Omitir: se cierra el vuelo enseguida y la app muestra la barra simple hasta que el motor responda
+    function omitir() {
+      if (omitido) return;
+      omitido = true;
+      try { if (viaje) viaje.omitir(); } catch (e) { /* ya terminado */ }
+      cerrar();
+      try { if (alOmitir) alOmitir(); } catch (e) { /* sin barra */ }
+    }
+    function cerrar() {
+      clearInterval(intervalo);
+      document.body.classList.remove("vuelo-activo");
+      try { tarjetaViaje.ocultar(); } catch (e) { /* ya oculta */ }
+      try { if (viaje) viaje.dispose(); } catch (e) { /* ya liberado */ }
+      viaje = null;
+    }
+    return {
+      get omitido() { return omitido; },
+      async terminar(ok) {
+        try {
+          if (!ok || omitido) return;
+          revisarLogro({ tipo: "viaje", desde, hacia: vigente.planeta || destino });
+          if (aterrizaje && viaje) {
+            viaje.listo();
+            let guarda = null;
+            await Promise.race([aterrizaje, new Promise((r) => { guarda = setTimeout(() => { console.warn("viaje: temporizador de guarda"); r(); }, 8000); })]);
+            clearTimeout(guarda);
+          } else if (modo === "tarjeta") {
+            listoReducido = true;
+            await new Promise((r) => { const fin = setTimeout(r, Math.min(CIERRE_ESTATICO_S * 1000, 1200)); tarjetaViaje.mostrar(datos, { manual: true, alOmitir: () => { clearTimeout(fin); r(); } }); tarjetaViaje.progreso(1, textoEtapa("aterrizado", desde, destino)); });
+          }
+        } catch (e) {
+          console.warn("viaje: fallo al aterrizar, sigue la partida", e);
+        } finally {
+          cerrar();
+        }
+      },
+    };
   } catch (e) {
     console.warn("viaje: fallo, sigue la partida normal", e);
-  } finally {
-    clearTimeout(guarda);
-    if (menu) menu.style.visibility = "";
-    if (hud) hud.style.visibility = "";
-    try { if (tarjetaViaje) tarjetaViaje.ocultar(); } catch (e) { /* ya oculta */ }
-    try { if (viaje) viaje.dispose(); } catch (e) { /* ya liberado */ }
+    document.body.classList.remove("vuelo-activo");
+    try { if (viaje) viaje.dispose(); } catch (e2) { /* ya liberado */ }
     viaje = null;
+    return null;
   }
 }
 // Introducción con el sistema solar = pantalla de inicio (solo cliente: no escribe nada en el motor). Aparece al abrir la app, al volver al inicio
@@ -2213,7 +2243,7 @@ document.getElementById("manual-toggle").addEventListener("click", (ev) => {
   ev.currentTarget.setAttribute("aria-expanded", String(!manual.classList.contains("plegado")));
 });
 
-// Pantalla de carga (ARX-60): cuenta 3-2-1 y barra; con transición del vehículo al pulsar «Nueva» o reiniciar
+// Pantalla de carga (ARX-60): vuelo del cohete ligado a la carga real; sin animación, una barra simple. Con transición del vehículo al pulsar «Nueva» o reiniciar
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 function escalarRover(desde, hasta, ms) {
   return new Promise((resolver) => {
@@ -2226,52 +2256,29 @@ function escalarRover(desde, hasta, ms) {
     requestAnimationFrame(paso);
   });
 }
-async function conCarga(fn, { transicion = false } = {}) {
+// destino: planeta pedido (el del asistente); sin él, el de la partida en curso
+async function conCarga(fn, { transicion = false, destino = null } = {}) {
   cerrarAvisos();
   const caja = document.getElementById("carga");
   const texto = document.getElementById("carga-texto");
-  const numero = document.getElementById("carga-numero");
   const relleno = document.getElementById("carga-relleno");
-  caja.classList.remove("oculto");
-  texto.textContent = "Preparando el mapa…";
-  numero.textContent = "…";
-  relleno.style.width = "30%";
   if (transicion && grupoRover.children.length) await escalarRover(1, 0, 400);   // el vehículo se encoge
+  const barraSimple = () => { texto.textContent = "Preparando la misión…"; relleno.style.width = "45%"; caja.classList.remove("oculto"); };
+  const vuelo = await abrirVuelo(destino || vigente.planeta || "Marte", { alOmitir: barraSimple });
+  if (!vuelo) barraSimple();
   let ok = false;
   try {
     ok = await fn();
-    if (ok) {
-      if (viajePendiente) { caja.classList.add("oculto"); await correrViaje(); caja.classList.remove("oculto"); }
-      await cuentaAtras(2100);
-    }
   } catch (err) {
     ok = false;
     avisar("No se pudo iniciar la partida.");
   } finally {
+    viajePendiente = null;   // el vuelo de la carga ya mostró el cambio de planeta
+    if (vuelo) await vuelo.terminar(ok);
     caja.classList.add("oculto");   // siempre se cierra, también si POST /partida falla
   }
   if (transicion && ok && grupoRover.children.length) await escalarRover(0, 1, 400);   // el nuevo vehículo crece
   return ok;
-}
-// Cuenta atrás 3-2-1 y «¡Comenzamos!» solo cuando el motor ya ha respondido
-async function cuentaAtras(TOTAL) {
-  const texto = document.getElementById("carga-texto");
-  const numero = document.getElementById("carga-numero");
-  const relleno = document.getElementById("carga-relleno");
-  const cuenta = ["3", "2", "1"];
-  texto.textContent = "Comenzamos en";
-  const inicio = performance.now();
-  const timer = setInterval(() => {
-    const t = performance.now() - inicio;
-    numero.textContent = t < TOTAL ? cuenta[Math.min(2, Math.floor(t / 700))] : "¡Comenzamos!";
-    relleno.style.width = `${Math.min(100, (t / TOTAL) * 100)}%`;
-  }, 50);
-  try {
-    await esperar(TOTAL);
-  } finally {
-    clearInterval(timer);
-    numero.textContent = "¡Comenzamos!";
-  }
 }
 
 // Pantalla de meta (ARX-64) y encadenado del automático (ARX-65)
@@ -2321,7 +2328,7 @@ async function alFinDeMision(codigo) {
     const { nivel, veto } = cadenaAutomatica;
     // Misma configuración con la que se arrancó la cadena, no la que muestre el panel en ese momento
     const config = { planeta: vigente.planeta, vehiculo: vigente.vehiculo, control: "automatico", veto };
-    const ok = await conCarga(() => cargarPartida(null, nivel, undefined, config));
+    const ok = await conCarga(() => cargarPartida(null, nivel, undefined, config), { destino: config.planeta });
     if (ok) {
       mostrarMision(estado.semilla, nivel);
       alternarReproduccion();
@@ -2450,7 +2457,7 @@ document.getElementById("iniciar").addEventListener("click", async () => {
     veto: document.getElementById("menu-veto").checked,
   };
   document.getElementById("tamano").value = tamano;
-  const ok = await conCarga(() => cargarPartida(semilla, nivel, tamano, config));
+  const ok = await conCarga(() => cargarPartida(semilla, nivel, tamano, config), { destino: config.planeta });
   if (!ok) return;
   // El panel queda con la partida que acaba de crearse, para que «Nueva» no cambie la configuración en silencio
   document.getElementById("nivel").value = String(nivel);

@@ -77,3 +77,45 @@ export function modoMovimiento(reducido, activado) {
   if (!activado) return "ninguno";
   return reducido ? "tarjeta" : "animado";
 }
+
+// ---------- Carga con cohete: el avance sigue a la carga real ----------
+// Mientras el motor no responde, el avance tiende a TOPE_ESPERA sin llegar nunca; al responder sube a 1.
+// La subida está limitada (VELOCIDAD_MAX por segundo) para que el aterrizaje siempre se vea, y hay una duración mínima.
+export const TOPE_ESPERA = 0.85;
+export const CONSTANTE_ESPERA_S = 1.8;
+export const VELOCIDAD_MAX = 0.7;
+export const DURACION_MIN_CARGA_S = 2.4;
+export const GUARDA_CARGA_S = 30;   // si el motor no responde en 30 s, el cohete deja de esperar (la carga sigue su curso)
+
+export function objetivoCarga(t, listo) {
+  if (listo) return 1;
+  return TOPE_ESPERA * (1 - Math.exp(-Math.max(0, t) / CONSTANTE_ESPERA_S));
+}
+// Un paso del avance mostrado d hacia el objetivo, con dt en segundos. Nunca retrocede ni pasa de 1.
+export function pasoCarga(d, t, listo, dt) {
+  const obj = objetivoCarga(t, listo);
+  if (obj <= d) return d;
+  let nd = d + Math.min((obj - d) * Math.min(1, dt * 5), VELOCIDAD_MAX * dt);
+  if (listo && t < DURACION_MIN_CARGA_S) nd = Math.min(nd, t / DURACION_MIN_CARGA_S);   // el aterrizaje no se salta aunque el motor sea rápido
+  if (listo && obj - nd < 0.01) nd = 1;
+  return Math.min(1, Math.max(d, nd));
+}
+export function etapaCarga(d) {
+  if (d >= 0.999) return "aterrizado";
+  if (d < 0.14) return "despegue";
+  if (d < TOPE_ESPERA) return "crucero";
+  return "aterrizaje";
+}
+export function textoEtapa(etapa, desde, hacia) {
+  return {
+    despegue: `Despegue desde ${desde}`,
+    crucero: `Crucero hacia ${hacia} · esperando al motor`,
+    aterrizaje: `Aproximación y aterrizaje en ${hacia}`,
+    aterrizado: `En superficie de ${hacia} · misión lista`,
+  }[etapa] || "";
+}
+// Origen del vuelo: el planeta anterior; si no hay o es el mismo, se sale de la Tierra (o de Marte si el destino es la Tierra).
+export function origenVuelo(previo, destino) {
+  if (esPerfil(previo) && previo !== destino) return previo;
+  return destino === "Tierra" ? "Marte" : "Tierra";
+}

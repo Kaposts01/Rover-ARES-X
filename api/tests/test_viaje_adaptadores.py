@@ -79,3 +79,40 @@ def test_textos_prohibidos_ausentes():
         txt = ruta.read_text(encoding="utf-8")
         for p in prohibidos:
             assert not re.search(re.escape(p), txt, re.I), f"{p} en {nombre}"
+
+
+# ---------- Carga con cohete: el avance sigue a la carga real ----------
+def _simular(listo_en, segundos=12.0, dt=1 / 60):
+    """Avance mostrado a lo largo del tiempo con el motor respondiendo en listo_en (None = nunca)."""
+    listo = "false" if listo_en is None else f"t>={listo_en}"
+    return _js(f"(()=>{{let d=0,t=0,h=[];while(t<{segundos}){{t+={dt};const n=m.pasoCarga(d,t,{listo},{dt});h.push([t,n,n>=d]);d=n;}}return h;}})()")
+
+
+def test_sin_respuesta_del_motor_el_cohete_no_llega():
+    h = _simular(None)
+    tope = _js("m.TOPE_ESPERA")
+    assert all(d < tope for _, d, _ in h)
+    assert h[-1][1] > 0.8 * tope            # pero sigue avanzando: no se ve congelado
+    assert _js("m.etapaCarga(0.5)") == "crucero"
+
+
+def test_al_responder_aterriza_y_nunca_retrocede():
+    h = _simular(3.0)
+    assert all(sube for _, _, sube in h)
+    fin = next(t for t, d, _ in h if d >= 1)
+    assert 3.0 < fin < 3.0 + 3.0
+    assert _js("m.etapaCarga(1)") == "aterrizado"
+
+
+def test_motor_inmediato_respeta_la_duracion_minima():
+    h = _simular(0.0)
+    fin = next(t for t, d, _ in h if d >= 1)
+    assert fin >= _js("m.DURACION_MIN_CARGA_S")
+
+
+def test_origen_del_vuelo():
+    f = lambda p, d: _js(f"m.origenVuelo({json.dumps(p)},{json.dumps(d)})")
+    assert f("Marte", "Venus") == "Marte"
+    assert f(None, "Venus") == "Tierra"
+    assert f("Venus", "Venus") == "Tierra"
+    assert f(None, "Tierra") == "Marte"

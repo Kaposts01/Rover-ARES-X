@@ -686,3 +686,26 @@ body.cine #registro, body.cine #columna, body.cine #controles, body.cine #grafic
 .in-etiqueta:hover, .in-etiqueta:focus-visible { background: rgba(95, 230, 255, 0.2); color: #fff; outline: 1px solid #5fe6ff; box-shadow: 0 0 12px rgba(95, 230, 255, 0.5); }
 @media (prefers-reduced-motion: reduce) { .in-estado { animation: none; } }
 @media (max-width: 640px) { .in-marco, .in-estado { display: none; } .in-cabecera { left: 8px; top: 8px; } .in-tarjeta { right: 8px; top: 56px; width: 180px; } .in-omitir { right: 8px; top: 8px; } }
+
+/* ---------- Carga con cohete (estilo sala de control) ---------- */
+body.vuelo-activo > :not(#escena):not(.vj-capa) { visibility: hidden !important; }
+.vj-capa { --holo: #5fe6ff; --holo-suave: rgba(95, 230, 255, 0.35); align-items: flex-end; justify-content: flex-start; padding: 26px; pointer-events: none; font-family: "Cascadia Mono", "Consolas", ui-monospace, monospace; }
+.vj-capa > * { pointer-events: auto; }
+.vj-tarjeta { width: min(460px, 100%); border-radius: 4px; background: rgba(2, 10, 22, 0.74); border: 1px solid var(--holo-suave); border-left: 3px solid var(--holo); box-shadow: inset 0 0 24px rgba(95, 230, 255, 0.08); backdrop-filter: blur(4px);
+  background-image: repeating-linear-gradient(0deg, rgba(95, 230, 255, 0.04) 0 1px, transparent 1px 3px); }
+.vj-titulo { font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--holo); text-shadow: 0 0 10px var(--holo-suave); }
+.vj-estado { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 12px; color: #d9f6ff; }
+.vj-etapa::before { content: "● "; color: var(--holo); animation: in-latido 1.2s ease-in-out infinite; }
+.vj-porcentaje { font-size: 22px; font-weight: 700; color: var(--holo); font-variant-numeric: tabular-nums; }
+.vj-barra { height: 4px; border-radius: 0; background: rgba(95, 230, 255, 0.12); }
+.vj-relleno { background: linear-gradient(90deg, rgba(95, 230, 255, 0.4), var(--holo)); box-shadow: 0 0 10px var(--holo); transition: width 0.12s linear; }
+.vj-col strong { color: var(--holo); text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; }
+.vj-col p, .vj-avisos p { font-size: 11px; color: #a9c6d8; }
+.vj-avisos { border-top: 1px dashed var(--holo-suave); }
+.vj-omitir { margin-top: 6px; background: rgba(2, 10, 22, 0.6) !important; border: 1px solid var(--holo-suave) !important; color: var(--holo) !important; text-transform: uppercase; letter-spacing: 0.12em; font-family: inherit; border-radius: 4px; }
+.vj-omitir:hover, .vj-omitir:focus-visible { background: rgba(95, 230, 255, 0.15) !important; }
+@media (max-width: 640px) { .vj-capa { padding: 8px; justify-content: center; } .vj-avisos { display: none; } }
+/* Barra simple (sin animación de cohete): avance indeterminado */
+#carga-relleno { animation: carga-ida 1.4s ease-in-out infinite alternate; }
+@keyframes carga-ida { from { margin-left: 0; } to { margin-left: 55%; } }
+@media (prefers-reduced-motion: reduce) { #carga-relleno { animation: none; } .vj-etapa::before { animation: none; } }

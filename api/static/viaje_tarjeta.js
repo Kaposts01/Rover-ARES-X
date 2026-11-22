@@ -15,8 +15,12 @@ export function crearTarjetaViaje(contenedor) {
   barra.setAttribute("role", "progressbar"); barra.setAttribute("aria-valuemin", "0"); barra.setAttribute("aria-valuemax", "100");
   barra.setAttribute("aria-label", "Progreso de la animación (ilustrativo, no es un tiempo de viaje)");
   const relleno = document.createElement("div"); relleno.className = "vj-relleno"; barra.append(relleno);
+  const estado = document.createElement("div"); estado.className = "vj-estado";
+  const etapa = document.createElement("span"); etapa.className = "vj-etapa";
+  const porcentaje = document.createElement("span"); porcentaje.className = "vj-porcentaje";
+  estado.append(etapa, porcentaje);
   const omitir = document.createElement("button"); omitir.type = "button"; omitir.className = "secundario vj-omitir"; omitir.textContent = "Omitir viaje";
-  tarjeta.append(titulo, cuerpo, avisos, barra, omitir); raiz.append(tarjeta); contenedor.append(raiz);
+  tarjeta.append(titulo, estado, barra, cuerpo, avisos, omitir); raiz.append(tarjeta); contenedor.append(raiz);
 
   let alOmitir = null, intervalo = null, foco = null;
   const onTecla = (e) => {
@@ -37,8 +41,10 @@ export function crearTarjetaViaje(contenedor) {
     return c;
   }
 
-  // opciones: { duracion, estatica, alOmitir }. En modo estático (movimiento reducido) la barra no se anima y el botón dice «Continuar».
-  function mostrar(datos, { duracion = DURACION_VIAJE_S, estatica = false, alOmitir: cb = null } = {}) {
+  // opciones: { duracion, estatica, manual, alOmitir }. En modo estático (movimiento reducido) la barra no se anima y el botón dice «Continuar».
+  // Con manual, la barra no avanza sola: la app la mueve con progreso() según la carga real.
+  function mostrar(datos, { duracion = DURACION_VIAJE_S, estatica = false, manual = false, alOmitir: cb = null } = {}) {
+    barra.setAttribute("aria-label", manual ? "Progreso de la carga de la misión" : "Progreso de la animación (ilustrativo, no es un tiempo de viaje)");
     try { if (!foco) foco = document.activeElement; } catch (e) { foco = null; }   // para devolver el foco al cerrar
     alOmitir = cb;
     titulo.textContent = datos.titulo;
@@ -49,7 +55,9 @@ export function crearTarjetaViaje(contenedor) {
     relleno.style.width = "0%";
     raiz.classList.remove("oculto");
     clearInterval(intervalo);
-    if (!estatica) {
+    etapa.textContent = ""; porcentaje.textContent = "";
+    estado.hidden = !manual;
+    if (!estatica && !manual) {
       const ini = performance.now();
       intervalo = setInterval(() => {
         const pct = Math.min(100, ((performance.now() - ini) / (duracion * 1000)) * 100);
@@ -58,11 +66,18 @@ export function crearTarjetaViaje(contenedor) {
     }
     omitir.focus({ preventScroll: true });
   }
+  // avance 0..1 de la carga real y texto de la etapa del vuelo
+  function progreso(avance, texto) {
+    const pct = Math.round(Math.min(1, Math.max(0, avance)) * 100);
+    relleno.style.width = `${pct}%`; barra.setAttribute("aria-valuenow", String(pct));
+    porcentaje.textContent = `${pct} %`;
+    if (texto != null && etapa.textContent !== texto) etapa.textContent = texto;
+  }
   function ocultar() {
     clearInterval(intervalo); intervalo = null; raiz.classList.add("oculto"); alOmitir = null;
     try { if (foco && foco.isConnected && typeof foco.focus === "function") foco.focus({ preventScroll: true }); } catch (e) { /* el foco ya no existe */ }
     foco = null;
   }
   function dispose() { ocultar(); window.removeEventListener("keydown", onTecla, true); raiz.remove(); }
-  return { mostrar, ocultar, dispose };
+  return { mostrar, progreso, ocultar, dispose };
 }

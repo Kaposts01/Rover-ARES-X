@@ -147,15 +147,17 @@
     </section>
 
     <section class="paso">
-      <div class="titulo-seccion">4 · Intervención (prueba causal)</div>
-      <label>Técnica
+      <div class="titulo-seccion">4 · Experimento: forzar una técnica</div>
+      <p class="ayuda">Sirve para demostrar que cada técnica influye de verdad: fuerzas su salida y miras si cambia la decisión del rover. Los pasos quedan marcados como intervenidos en la bitácora.</p>
+      <label>Qué forzar
         <select id="int-tecnica">
-          <option value="ninguna">ninguna</option>
-          <option value="rna-barranco">RNA forzada a barranco</option>
-          <option value="rna-libre">RNA forzada a libre</option>
-          <option value="difuso">Solo difuso</option>
+          <option value="ninguna">nada (la IA decide sola)</option>
+          <option value="rna-barranco">la RNA dice «barranco» siempre</option>
+          <option value="rna-libre">la RNA dice «libre» siempre</option>
+          <option value="difuso">el difuso fija una velocidad</option>
         </select>
       </label>
+      <p id="int-explicacion" class="ayuda"></p>
       <label id="int-valor-fila" style="display:none">Velocidad (0 a 1)
         <input id="int-valor" type="number" min="0" max="1" step="0.1" value="0">
       </label>
@@ -515,17 +517,17 @@
       <div class="meta-grupo" role="group" aria-labelledby="meta-dificultad-titulo">
         <div class="kicker" id="meta-dificultad-titulo">Dificultad</div>
         <div id="meta-dificultad" class="meta-opciones">
-          <button type="button" class="meta-opcion" data-nivel="1" aria-pressed="false">▁ Muy fácil</button>
-          <button type="button" class="meta-opcion" data-nivel="2" aria-pressed="false">▂ Fácil</button>
-          <button type="button" class="meta-opcion" data-nivel="3" aria-pressed="false">▃ Medio</button>
-          <button type="button" class="meta-opcion" data-nivel="4" aria-pressed="false">▅ Difícil</button>
-          <button type="button" class="meta-opcion" data-nivel="5" aria-pressed="false">▇ Hardcore</button>
+          <button type="button" class="meta-opcion" data-nivel="1" aria-pressed="false">Muy fácil</button>
+          <button type="button" class="meta-opcion" data-nivel="2" aria-pressed="false">Fácil</button>
+          <button type="button" class="meta-opcion" data-nivel="3" aria-pressed="false">Medio</button>
+          <button type="button" class="meta-opcion" data-nivel="4" aria-pressed="false">Difícil</button>
+          <button type="button" class="meta-opcion" data-nivel="5" aria-pressed="false">Hardcore</button>
         </div>
       </div>
       <div class="meta-acciones">
         <button id="meta-confirmar" class="boton-confirmar" type="button">Confirmar</button>
         <button id="meta-salir" class="boton-salir" type="button">Salir al menú inicial</button>
-        <a id="meta-reporte" class="boton-reporte" href="/reporte.html?descargar=1" download>⬇ Descargar reporte de la misión</a>
+        <a id="meta-reporte" class="boton-reporte" href="/reporte.html?descargar=1" download>Descargar reporte</a>
       </div>
     </div>
   </div>

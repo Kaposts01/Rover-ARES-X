@@ -8,7 +8,7 @@ export const GUARDA_PRIMER_CUADRO_S = 3;         // si no hay primer cuadro en 3
 export const CIERRE_INACTIVIDAD_S = 90;          // sin interacción, se cierra sola y deja el asistente
 export const DURACION_VUELO_S = 1.2;
 export const TITULO_INTRO = "ARES-X · sistema solar";
-export const SUBTITULO_INTRO = "Elige un planeta (pasa el puntero, usa Tab o pulsa) para dejarlo preparado en el asistente.";
+export const SUBTITULO_INTRO = "Elige un planeta para dejarlo preparado en el asistente · Esc para ir directo al menú.";
 export const ROTULO_INTRO = "Ilustración, no a escala: tamaños, distancias y velocidades son solo ilustrativos.";
 // Versión corta de AVISO_TERRENO (viaje_datos.js) para la pantalla de la intro; la fuente larga sigue siendo AVISO_TERRENO. Una prueba exige que ambas digan que el terreno es el de Marte.
 export const AVISO_TERRENO_INTRO = "El terreno de la partida sigue siendo el de Marte en todos los planetas.";

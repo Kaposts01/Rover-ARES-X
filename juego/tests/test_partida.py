@@ -71,17 +71,20 @@ def test_mover_jugador_gasta_bateria_solo_si_se_mueve():
         assert res["bateria"] == bateria
 
 
-def test_disparar_barranco_deja_celda_adyacente_y_nunca_inicio_ni_refugio():
+def test_disparar_barranco_cae_enfrente_sobre_la_ruta_y_nunca_inicio_ni_refugio():
+    # 22/11: el barranco aparece 2 a 4 celdas por delante sobre la ruta (sin aislar refugio ni sitios); si no, adyacente
     p = Partida(semilla=11)
+    p.avanzar_ia()
+    ruta = [tuple(x) for x in p.mision.ruta]
     antes = int(np.sum(p.mundo.tipo == BARRANCO))
     res = p.disparar_evento("barranco")
     assert res["ok"] is True
     assert int(np.sum(p.mundo.tipo == BARRANCO)) == antes + 1
+    celda = tuple(res["celdas"][0])
+    assert p.mundo.tipo[celda] == BARRANCO and celda not in (p.mundo.inicio, p.mundo.refugio)
     f, c = p.rover.posicion
-    adyacentes = [(f + df, c + dc) for df, dc in MOVIMIENTOS.values()]
-    marcadas = [a for a in adyacentes if p.mundo.dentro(a) and p.mundo.tipo[a] == BARRANCO]
-    assert len(marcadas) == 1
-    assert marcadas[0] not in (p.mundo.inicio, p.mundo.refugio)
+    adyacente = max(abs(celda[0] - f), abs(celda[1] - c)) == 1
+    assert celda in ruta[2:5] or adyacente
 
 
 def test_evento_desconocido_devuelve_ok_false():

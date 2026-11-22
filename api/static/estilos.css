@@ -893,3 +893,19 @@ body.cine #subtitulo-ia { display: block; }
 .def-siguiente { margin-left: auto; background: #7c5cf0; border-color: #7c5cf0; color: #fff; font-weight: 600; }
 .def-resaltado { outline: 2px solid #a78bfa !important; outline-offset: 3px; box-shadow: 0 0 0 6px rgba(167, 139, 250, 0.18) !important; transition: outline-color 0.3s; }
 @media (max-width: 760px) { .def-capa { left: 16px; top: auto; bottom: 140px; } }
+/* Pantalla de fin: dificultad sin íconos (franja de color por nivel) y acciones del mismo tamaño (22/11) */
+#meta-dificultad { display: grid; grid-template-columns: 1fr; gap: 6px; }
+#meta-dificultad .meta-opcion { position: relative; text-align: left; padding-left: 16px; }
+#meta-dificultad .meta-opcion::before { content: ""; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 4px; border-radius: 2px; background: var(--nivel-color, #5fd3ff); }
+#meta-dificultad .meta-opcion[data-nivel="1"] { --nivel-color: #6ee7a8; }
+#meta-dificultad .meta-opcion[data-nivel="2"] { --nivel-color: #b5e36e; }
+#meta-dificultad .meta-opcion[data-nivel="3"] { --nivel-color: #ffd166; }
+#meta-dificultad .meta-opcion[data-nivel="4"] { --nivel-color: #ff9f5a; }
+#meta-dificultad .meta-opcion[data-nivel="5"] { --nivel-color: #ff5d6c; }
+#meta .meta-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+#meta .meta-acciones > * { box-sizing: border-box; height: 44px; margin: 0; padding: 0 10px; display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; font: inherit; font-size: 13.5px; font-weight: 600; text-align: center; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#meta .meta-acciones #meta-confirmar { grid-column: 1 / -1; }
+#meta .meta-acciones #meta-salir { background: transparent; color: #ff8a95; border: 1px solid rgba(255, 93, 108, 0.6); }
+#meta .meta-acciones #meta-salir:hover { background: rgba(255, 93, 108, 0.12); }
+#meta .meta-acciones .boton-reporte { color: #5fe6ff; border: 1px solid rgba(95, 230, 255, 0.45); text-decoration: none; }

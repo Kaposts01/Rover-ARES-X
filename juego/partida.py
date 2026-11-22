@@ -1685,19 +1685,39 @@ class Partida:
         return {"ok": True, "detalle": f"señal anómala en {celda}; no confirma vida", "celda": celda,
                 "afirma_vida": False}
 
-    def _evento_barranco(self) -> dict:
+    def celda_para_barranco(self):
+        """Dónde aparece el barranco del evento (22/11: «enfrente, cerca de la ruta»). Primero una celda de la ruta 2 a 4
+        pasos por delante que no aísle el refugio ni los sitios pendientes; si no hay, la regla anterior (primera
+        celda adyacente libre). Nunca un sitio, el inicio ni el refugio. None si no hay ninguna."""
+        def valida(celda):
+            return (self.mundo.dentro(celda) and self.mundo.tipo[celda] == LIBRE and celda not in self.mundo.sitios
+                    and celda not in (self.mundo.inicio, self.mundo.refugio) and celda != tuple(self.rover.posicion))
+        ruta = [tuple(int(v) for v in x) for x in (self.mision.ruta or [])]
+        pendientes = [tuple(s_) for s_ in self.mundo.sitios if s_ not in self.mision.visitados]
+        for celda in ruta[2:5]:
+            if not valida(celda):
+                continue
+            previo = self.mundo.tipo[celda]
+            self.mundo.tipo[celda] = BARRANCO             # prueba sin efectos: se restaura enseguida
+            alcanzables = _alcanzables(self.mundo, tuple(self.rover.posicion))
+            self.mundo.tipo[celda] = previo
+            if tuple(self.mundo.refugio) in alcanzables and all(s_ in alcanzables for s_ in pendientes):
+                return celda
         f, c = self.rover.posicion
         for df, dc in MOVIMIENTOS.values():
-            celda = (f + df, c + dc)
-            if (self.mundo.dentro(celda) and self.mundo.tipo[celda] == LIBRE
-                    and celda not in self.mundo.sitios
-                    and celda not in (self.mundo.inicio, self.mundo.refugio)):
-                self.mundo.marcar_barranco(celda)
-                self.mision.riesgo[celda] = 1.0
-                if "barranco" in EVENTOS_GRAVES and celda in {tuple(x) for x in (self.mision.ruta or [])}:
-                    self._replanear_ag("barranco")
-                return {"ok": True, "detalle": f"barranco en {celda}"}
-        return {"ok": False, "detalle": "sin celda libre adyacente al rover"}
+            if valida((f + df, c + dc)):
+                return (f + df, c + dc)
+        return None
+
+    def _evento_barranco(self) -> dict:
+        celda = self.celda_para_barranco()
+        if celda is None:
+            return {"ok": False, "detalle": "sin celda libre cerca del rover"}
+        self.mundo.marcar_barranco(celda)
+        self.mision.riesgo[celda] = 1.0
+        if "barranco" in EVENTOS_GRAVES and celda in {tuple(x) for x in (self.mision.ruta or [])}:
+            self._replanear_ag("barranco")
+        return {"ok": True, "detalle": f"barranco en {celda}", "celdas": [[int(celda[0]), int(celda[1])]]}
 
     def _evento_falla_sensor(self) -> dict:
         """La IA se detiene PASOS_FALLA_SENSOR pasos (ev3-d23 B). No usa el modo seguro.

@@ -548,8 +548,8 @@ let pozos = [];                  // [x, z] de los barrancos
 
 function influenciaPozos(x, z) {
   let s = 0;
-  for (const [px, pz] of pozos) {
-    s += Math.exp(-((x - px) ** 2 + (z - pz) ** 2) / (2 * RADIO_POZO * RADIO_POZO));
+  for (const [px, pz, peso = 1] of pozos) {   // peso < 1: barranco que se está hundiendo (animación del evento)
+    s += peso * Math.exp(-((x - px) ** 2 + (z - pz) ** 2) / (2 * RADIO_POZO * RADIO_POZO));
   }
   return Math.min(s, 1);
 }
@@ -787,6 +787,60 @@ function agregarGrietas(celdas) {
     grupoMapa.remove(rejilla);
     rejilla.geometry.dispose();
     grupoMapa.add(construirCuadricula(limitesMapa.columnas, limitesMapa.filas));
+  }
+}
+
+// 22/11: el barranco del evento se hunde a la vista (1,2 s) con polvo y rocas, y luego queda como las grietas del sismo
+function animarBarranco(celdas) {
+  const suelo = grupoMapa.children[0];
+  for (const [f, c] of celdas) {
+    if (!mapa || !mapa.tipo[f] || mapa.tipo[f][c] === TIPO_BARRANCO) continue;
+    const cx = c + 0.5, cz = f + 0.5, y0 = alturaTerreno(cx, cz);
+    const pozo = [cx, cz, 0];
+    pozos.push(pozo);
+    // vértices del suelo cerca del hoyo (los únicos que se recalculan cada cuadro)
+    const cerca = [];
+    if (suelo && suelo.geometry) {
+      const pos = suelo.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) if (Math.hypot(pos.getX(i) - cx, pos.getZ(i) - cz) < 1.6) cerca.push(i);
+    }
+    // polvo y rocas
+    const N = 70, pp = new Float32Array(N * 3), vel = [];
+    for (let i = 0; i < N; i++) {
+      pp.set([cx + (Math.random() - 0.5) * 0.6, y0 + 0.05, cz + (Math.random() - 0.5) * 0.6], i * 3);
+      vel.push([(Math.random() - 0.5) * 1.6, 0.8 + Math.random() * 1.6, (Math.random() - 0.5) * 1.6]);
+    }
+    const gPolvo = new THREE.BufferGeometry(); gPolvo.setAttribute("position", new THREE.BufferAttribute(pp, 3));
+    const mPolvo = new THREE.PointsMaterial({ color: 0xc9a27e, size: 0.16, transparent: true, opacity: 0.85, depthWrite: false });
+    const polvo = new THREE.Points(gPolvo, mPolvo); scene.add(polvo);
+    const rocas = [];
+    for (let k = 0; k < 5; k++) {
+      const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.05 + Math.random() * 0.05, 0), materiales.borde);
+      r.position.set(cx + (Math.random() - 0.5) * 0.5, y0 + 0.1, cz + (Math.random() - 0.5) * 0.5);
+      r.userData.v = new THREE.Vector3((cx - r.position.x) * 0.8, 0.6, (cz - r.position.z) * 0.8);
+      scene.add(r); rocas.push(r);
+    }
+    efectos.sacudir(0.06, 0.8);
+    const t0 = performance.now(), DURA = 1200;
+    const cuadro = () => {
+      const u = Math.min(1, (performance.now() - t0) / DURA);
+      pozo[2] = u * u * (3 - 2 * u);
+      if (suelo && cerca.length) {
+        const pos = suelo.geometry.attributes.position;
+        for (const i of cerca) pos.setY(i, alturaTerreno(pos.getX(i), pos.getZ(i)));
+        pos.needsUpdate = true;
+      }
+      const dt = 1 / 60;
+      for (let i = 0; i < N; i++) { pp[i * 3] += vel[i][0] * dt; pp[i * 3 + 1] += vel[i][1] * dt; pp[i * 3 + 2] += vel[i][2] * dt; vel[i][1] -= 1.6 * dt; }
+      gPolvo.attributes.position.needsUpdate = true; mPolvo.opacity = 0.85 * (1 - u);
+      for (const r of rocas) { r.userData.v.y -= 4 * dt; r.position.addScaledVector(r.userData.v, dt); r.rotation.x += 0.2; }
+      if (u < 1) { requestAnimationFrame(cuadro); return; }
+      scene.remove(polvo); gPolvo.dispose(); mPolvo.dispose();
+      for (const r of rocas) { scene.remove(r); r.geometry.dispose(); }
+      pozos.splice(pozos.indexOf(pozo), 1);
+      agregarGrietas([[f, c]]);       // estado final: barranco con piedras de borde y la cuadrícula rehecha
+    };
+    requestAnimationFrame(cuadro);
   }
 }
 
@@ -1885,6 +1939,7 @@ async function dispararEvento(nombreForzado = null) {
   if (!r) return;
   const detalle = r.detalle || (r.ok ? "hecho" : "sin efecto");
   if (nombre === "barranco" && r.ok) revisarLogro({ tipo: "barranco" });
+  if (nombre === "barranco" && r.ok && Array.isArray(r.celdas)) animarBarranco(r.celdas);
   avisar(`Evento ${nombre}: ${detalle}`);
   registrarEvento(`evento ${nombre}: ${detalle}`);
   await refrescarEstado();
@@ -2804,9 +2859,18 @@ function alternarReproduccion() {
 }
 
 // ---------- intervención (ARX-10) ----------
+// Qué se espera ver con cada intervención (22/11: la sección se explicaba mal)
+const EXPLICACION_INTERVENCION = {
+  ninguna: "",
+  "rna-barranco": "Qué mirar: aunque el terreno esté libre, el supervisor vetará el avance (V-RNA-BARRANCO) y el rover replanificará. Prueba que la RNA puede frenar al rover.",
+  "rna-libre": "Qué mirar: la RNA ya no avisa de barrancos; si el rover se sigue frenando ante uno, es el telémetro del supervisor (V-BORDE-BARRANCO). Prueba qué protección depende de la RNA y cuál no.",
+  difuso: "Qué mirar: la velocidad queda fija en el valor elegido (0 = el rover se detiene). Prueba que el difuso es quien decide la velocidad.",
+};
 function actualizarCampoIntervencion() {
   const tecnica = document.getElementById("int-tecnica").value;
   document.getElementById("int-valor-fila").style.display = tecnica === "difuso" ? "block" : "none";
+  const ex = document.getElementById("int-explicacion");
+  if (ex) ex.textContent = EXPLICACION_INTERVENCION[tecnica] || "";
 }
 
 async function aplicarIntervencion() {

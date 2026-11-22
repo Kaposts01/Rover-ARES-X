@@ -32,7 +32,9 @@ export function crearTarjetaIntro(contenedor) {
   const marco = el("div", "in-marco"); marco.setAttribute("aria-hidden", "true");
   for (const k of ["si", "sd", "ii", "id"]) marco.append(el("span", `in-esquina in-esquina-${k}`));
   marco.append(el("span", "in-estado", "CENTRO DE CONTROL · ENLACE ACTIVO · 8 CUERPOS EN ESCANEO"));
-  raiz.append(marco, cabecera, omitir, tarjeta, pie); contenedor.append(raiz);
+  // 22/11 (pedido del usuario): sin botón «Omitir» ni pie de avisos en pantalla; Escape sigue saltando la intro y la
+  // casilla «Mostrar la introducción al abrir» queda en el menú de inicio. Los textos siguen en intro_datos.js.
+  raiz.append(marco, cabecera, tarjeta); contenedor.append(raiz);
 
   let alOmitir = null, foco = null;
   const onTecla = (e) => {
@@ -51,7 +53,7 @@ export function crearTarjetaIntro(contenedor) {
     casilla.onchange = () => { if (alCambiarCasilla) alCambiarCasilla(casilla.checked); };
     cuerpo(null);
     raiz.classList.remove("oculto");
-    omitir.focus({ preventScroll: true });
+    tarjeta.setAttribute("tabindex", "-1"); tarjeta.focus({ preventScroll: true });   // el foco queda dentro del diálogo
   }
   // datos: { titulo, filas:[{etiqueta, valor, tipo}] } o null (sin cuerpo señalado)
   function cuerpo(datos) {

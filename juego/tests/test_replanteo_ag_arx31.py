@@ -23,14 +23,8 @@ def _partida(semilla=11, nivel=1):
 
 
 def _celda_barranco(p):
-    """La celda que elegirá _evento_barranco (misma regla: primera adyacente libre que no sea sitio, inicio ni refugio)."""
-    f, c = p.rover.posicion
-    for df, dc in MOVIMIENTOS.values():
-        celda = (f + df, c + dc)
-        if (p.mundo.dentro(celda) and p.mundo.tipo[celda] == LIBRE and celda not in p.mundo.sitios
-                and celda not in (p.mundo.inicio, p.mundo.refugio)):
-            return celda
-    return None
+    """La celda que elegirá _evento_barranco (la misma regla, expuesta por la partida)."""
+    return p.celda_para_barranco()
 
 
 def test_eventos_graves_declarados():

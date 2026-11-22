@@ -2,6 +2,7 @@
 // Solo lee del motor (GET /rna/red, /rna, /difuso, /ag) y solo pide los datos de la pestaña abierta.
 // Todo con textContent (sin innerHTML). Si algo falla, el panel lo dice y la partida sigue igual.
 import { dibujarLineas, preparar } from "/static/laboratorio.js?v=r14";
+import { adaptarTramoRNA, titularRNA, celdasAMarcar, NOTA_SIN_TRAMO } from "/static/rna_tramo_datos.js?v=r14";
 import { reglasActivadas, plural, nombresMotivos, textoBateriaDifuso, ETIQUETA_BATERIA_UNIVERSO } from "/static/textos.js?v=r14";
 
 const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "-" : Number(v).toFixed(d).replace(".", ","));
@@ -25,7 +26,8 @@ async function obtener(ruta) {
 }
 
 // opciones: controles (nodo a llevar a la pestaña Misión), alCambiarAncho(px), alAmpliar(laboratorio), alMaximizar()
-export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmpliar = null, alMaximizar = null, alNarrar = null } = {}) {
+// alMarcarCeldas([{celda, riesgo}]) pinta en la escena las celdas que clasificó la RNA; vehiculo() = «rover» | «sonda»
+export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmpliar = null, alMaximizar = null, alNarrar = null, alMarcarCeldas = null, vehiculo = null, alEditarReglas = null } = {}) {
   const raiz = el("aside", "pia oculto"); raiz.id = "panel-ia"; raiz.setAttribute("aria-label", "Panel de IA");
   const asa = el("div", "pia-asa"); asa.title = "Arrastra para cambiar el ancho"; asa.setAttribute("aria-hidden", "true");
   const cabecera = el("div", "pia-cabecera");
@@ -67,7 +69,8 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   const rnaProbs = el("div", "pia-barras");
   const rnaRepetir = el("button", "pia-secundario", "↻ Ver pensar otra vez"); rnaRepetir.type = "button";
   const rnaHist = historial("últimos pasos · p(barranco) y confianza");
-  secciones.rna.append(rnaDecision, el("div", "pia-lienzo-caja pia-lienzo-red", null), rnaProbs, rnaHist.caja, rnaLeyenda, rnaRepetir);
+  const rnaTramo = el("div", "pia-tramo"); rnaTramo.setAttribute("aria-label", "Celdas de la ruta que clasificó la RNA");
+  secciones.rna.append(rnaDecision, rnaTramo, el("div", "pia-lienzo-caja pia-lienzo-red", null), rnaProbs, rnaHist.caja, rnaLeyenda, rnaRepetir);
   secciones.rna.querySelector(".pia-lienzo-red").append(rnaLienzo);
 
   // Difuso
@@ -84,7 +87,13 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   const difLienzoSalida = el("canvas", "pia-lienzo"); const difCajaSalida = el("div", "pia-lienzo-caja"); difCajaSalida.append(difLienzoSalida);
   const difReglas = el("ol", "pia-reglas");
   const difHist = historial("últimos pasos · velocidad del difuso");
-  secciones.difuso.append(difSalida, difHist.caja, difRejilla, difTituloSalida, difCajaSalida, el("div", "pia-subtitulo", "Reglas activadas"), difReglas);
+  // Enlace a la edición de reglas (Laboratorios → Difuso) y aviso de que hay reglas propias en juego
+  const difEdicion = el("div", "pia-edicion");
+  const difAviso = el("span", "pia-badge-reglas oculto", "Reglas personalizadas activas"); difAviso.id = "dif-aviso-panel";
+  const difEditar = el("button", "pia-secundario", "Editar las reglas y ver el efecto"); difEditar.type = "button"; difEditar.title = "Abre Laboratorios → Difuso: reglas, pesos y funciones de pertenencia editables";
+  difEditar.addEventListener("click", () => { if (alEditarReglas) alEditarReglas(); });
+  difEdicion.append(difEditar, difAviso);
+  secciones.difuso.append(difEdicion, difSalida, difHist.caja, difRejilla, difTituloSalida, difCajaSalida, el("div", "pia-subtitulo", "Reglas activadas"), difReglas);
 
   // Genético
   const agResumen = el("div", "pia-decision", "Esperando el primer paso…");
@@ -118,10 +127,10 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     document.documentElement.style.setProperty("--ancho-panel-ia", `${anchoReal()}px`);
     avisarAncho();
   }
-  function aplicarPlegado() {
+  function aplicarPlegado(persistir = true) {
     raiz.classList.toggle("plegado", plegado);
     bPlegar.textContent = plegado ? "«" : "»"; bPlegar.title = plegado ? "Abrir el panel" : "Plegar el panel";
-    guardar(CLAVE_PLEGADO, plegado ? "1" : "0");
+    if (persistir) guardar(CLAVE_PLEGADO, plegado ? "1" : "0");
     aplicarAncho();
     if (!plegado) redibujar();
   }
@@ -175,7 +184,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
       if (!rnaDatos) rnaDecision.textContent = "La RNA no actuó en este paso (modo sin RNA o sin paso de la IA).";
       if (!difDatos) difSalida.textContent = "El difuso no actuó en este paso (modo sin difuso o sin paso de la IA).";
       pintarRNA(); pintarDifuso(); pintarAG(); pintarHistoriales();
-      if (nuevo || forzar) pulsar();
+      if (nuevo || forzar) { pulsar(); if (d.rna) marcar(celdasAMarcar(tramoActual())); }
     } finally { enVuelo = false; }
   }
 
@@ -303,14 +312,45 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
       b.append(r); f.append(n, v, b); return f;
     }));
   }
+  function marcar(lista) { try { if (alMarcarCeldas) alMarcarCeldas(lista); } catch (e) { /* sin marcas en la escena */ } }
+  function tramoActual() { return adaptarTramoRNA(iaUlt, vehiculo ? vehiculo() : "rover"); }
   function pintarRNA() {
     if (!rnaDatos) return;
     const probs = rnaDatos.probabilidades || {};
     const clases = Object.keys(probs);
     const mejor = clases.reduce((a, b) => (probs[b] > probs[a] ? b : a), clases[0]);
-    rnaDecision.replaceChildren(el("strong", null, `${mejor} · ${pct(probs[mejor])}`), document.createTextNode(` → acción ${rnaDatos.accion || "-"}`));
+    const tramo = tramoActual();
+    const f0 = tramo && tramo.filas[0];
+    // la cabecera siempre dice de qué celda habla (la clasificación de la celda de enfrente), no solo «libre 100 %»
+    rnaDecision.replaceChildren(el("strong", null, f0 ? titularRNA(f0) : `${mejor} · ${pct(probs[mejor])}`), document.createTextNode(` → acción ${rnaDatos.accion || "-"}`));
     rnaDecision.style.setProperty("--c", COLOR_CLASE[mejor] || CIAN);
     barras(rnaProbs, clases.map((c) => [c, probs[c], COLOR_CLASE[c]]));
+    pintarTramo(tramo);
+    // el resumen de la columna izquierda también dice de qué celda habla
+    const rs = document.getElementById("res-rna"), rc = document.getElementById("rna-celda");
+    if (f0 && rs) rs.textContent = titularRNA(f0);
+    if (f0 && rc) rc.textContent = `(${f0.celda[0]}, ${f0.celda[1]})`;
+  }
+  function pintarTramo(tramo) {
+    if (!tramo) { rnaTramo.replaceChildren(); return; }
+    const filas = tramo.filas.map((f) => {
+      const fila = el("div", "pia-tramo-fila" + (f.clase !== "libre" ? " riesgo" : ""));
+      fila.tabIndex = 0;
+      const [, donde] = f.lugar.split(" · ");
+      const cab = el("div", "pia-tramo-cab"); cab.append(el("strong", null, `Celda (${f.celda[0]}, ${f.celda[1]})`), el("span", null, donde ? ` · ${donde}` : ""));
+      const barra = el("div", "pia-tramo-barra");
+      const rotulos = [];
+      for (const c of ["libre", "obstáculo", "barranco"]) {
+        const seg = el("i"); seg.style.width = `${(f.probabilidades[c] * 100).toFixed(1)}%`; seg.style.background = COLOR_CLASE[c]; barra.append(seg);
+        rotulos.push(`${c} ${pct(f.probabilidades[c])}`);
+      }
+      fila.append(cab, barra, el("div", "pia-tramo-texto", rotulos.join(" · ")));
+      const resaltar = () => marcar([{ celda: f.celda, riesgo: f.clase !== "libre", destacada: true }]);
+      fila.addEventListener("mouseenter", resaltar); fila.addEventListener("focus", resaltar);
+      return fila;
+    });
+    rnaTramo.replaceChildren(el("div", "pia-mini-titulo", tramo.real ? "ruta por delante · lo que clasificó la RNA, celda por celda" : "celda que clasificó la RNA en este paso"), ...filas,
+      ...(tramo.real ? [] : [el("p", "pia-nota", NOTA_SIN_TRAMO)]));
   }
 
   // ---------- dibujo: difuso ----------
@@ -419,5 +459,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   document.body.append(raiz);
   aplicarPlegado();
   abrir(pestana);
-  return { actualizar, mostrar, abrir, reiniciar, get ancho() { return anchoReal(); }, elemento: raiz };
+  // Ancho angosto: el panel se pliega solo a su tira lateral sin tocar la preferencia guardada; al volver a un ancho normal se restaura
+  function plegarPorAncho(si) { plegado = si ? true : leer(CLAVE_PLEGADO, "0") === "1"; aplicarPlegado(false); if (!plegado) { redibujar(); actualizar({ forzar: true }); } }
+  return { actualizar, mostrar, abrir, reiniciar, plegarPorAncho, seccion: (id) => secciones[id] || null, reglasPersonalizadas: (si) => difAviso.classList.toggle("oculto", !si), redibujar, get ancho() { return anchoReal(); }, elemento: raiz };
 }

@@ -701,6 +701,8 @@ body.cine .cn-cinta-boton { display: none; }   /* ya existe «Salir» */
 .in-fila { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 12px; font-size: 12px; }
 .in-fila-etiqueta { color: #8fb0c4; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.08em; }
 .in-fila-valor { color: #e9fbff; text-align: right; white-space: nowrap; }
+.in-fila.in-mecanica-nota { display: block; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(143, 176, 196, 0.25); }
+.in-mecanica-nota .in-fila-valor { display: block; white-space: normal; text-align: left; margin-top: 3px; line-height: 1.4; color: #cfe9f3; }
 .in-tarjeta.vacia .in-fila { display: block; color: #8fb0c4; }
 .in-pie { padding-left: 26px; padding-bottom: 22px; background: linear-gradient(transparent, rgba(2, 6, 17, 0.9) 45%); }
 .in-avisos p { font-size: 11px; color: #9cb8c9; }
@@ -973,6 +975,7 @@ body.cine .evento-etiqueta { display: none !important; }
 .cond-titulo { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--acento); margin: 0 0 4px; }
 .cond-filas .fila { font-size: 12px; padding: 2px 0; }
 .cond-ref { font-size: 10px; font-weight: 400; color: var(--texto-suave); letter-spacing: 0.04em; }
+.condiciones .cond-alerta .valor { color: var(--acento-calido); font-weight: 600; }
 .cond-firma { font-size: 11px; line-height: 1.4; color: var(--texto-suave); margin-top: 4px; font-style: italic; }
 body.cine .condiciones { display: none; }
 
@@ -1096,3 +1099,132 @@ body.cine .ia-conduce { display: none; }
 .tt-tarjeta .vx-boton, .tt-oferta .vx-boton { padding: 6px 12px; min-height: 32px; font-size: 12px; }
 .tt-tarjeta .vx-boton.oculto { display: none; }
 @media (prefers-reduced-motion: reduce) { .tt-foco { transition: none; } }
+
+/* ---- R23: menú en dos columnas (sin desplazar «Iniciar misión» ni las herramientas en 1366×768) y ficha del planeta ---- */
+#menu p.ficha-planeta { margin: 8px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--texto-suave); }
+#menu p.ficha-planeta:empty { display: none; }
+@media (min-width: 760px) {
+  #menu .caja.asistente { width: min(800px, calc(100vw - 32px)); display: grid; grid-template-columns: 1fr 1fr; column-gap: 30px; align-content: start; padding: 22px 28px 16px; }
+  #menu .asistente > .kicker, #menu .asistente > h1, #menu .asistente > p { grid-column: 1 / -1; }
+  #menu .asistente > p { margin-bottom: 6px; }
+  #menu .asistente > .paso:nth-of-type(1) { grid-column: 1; grid-row: 4 / span 2; border-bottom: 0; }
+  #menu .asistente > .paso:nth-of-type(2) { grid-column: 2; grid-row: 4; }
+  #menu .asistente > .paso-final { grid-column: 2; grid-row: 5; }
+}
+
+/* ---- R23: tramo de la ruta que clasificó la RNA (una fila por celda) ---- */
+.pia-tramo { margin: 0 0 10px; }
+.pia-tramo-fila { padding: 6px 8px; margin-bottom: 5px; border-left: 3px solid var(--holo-suave, rgba(95, 230, 255, 0.4)); background: rgba(95, 230, 255, 0.05); border-radius: 4px; font-size: 12px; cursor: default; }
+.pia-tramo-fila.riesgo { border-left-color: var(--peligro); background: rgba(255, 93, 108, 0.08); }
+.pia-tramo-fila:hover, .pia-tramo-fila:focus-visible { background: rgba(95, 230, 255, 0.12); outline: none; }
+.pia-tramo-cab strong { color: var(--texto); }
+.pia-tramo-cab span { color: var(--texto-suave); }
+.pia-tramo-barra { display: flex; height: 6px; margin: 4px 0 3px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, 0.08); }
+.pia-tramo-barra i { display: block; height: 100%; }
+.pia-tramo-texto { font-size: 11px; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+
+/* ---- R23: evolución del AG en el mapa (controles en la pestaña Genético) ---- */
+.evo-ui { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--holo-suave, rgba(95, 230, 255, 0.35)); border-radius: 8px; background: rgba(95, 230, 255, 0.04); }
+.evo-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.evo-cab .pia-mini-titulo { margin: 0; }
+.evo-ui .evo-interruptor { width: auto; margin: 0; padding: 5px 10px; white-space: nowrap; }
+.evo-ui .evo-interruptor[aria-pressed="true"] { background: rgba(255, 207, 99, 0.14); border-color: rgba(255, 207, 99, 0.6); color: #ffcf63; }
+.evo-estado { font-size: 11.5px; color: var(--texto-suave); margin: 6px 0; line-height: 1.4; }
+.evo-fila { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 8px; }
+.evo-ui .evo-play { width: 36px; margin: 0; padding: 5px 0; font-size: 14px; }
+.evo-velocidad { background: rgba(255, 255, 255, 0.06); color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 4px; font-size: 12px; }
+.evo-deslizador { width: 100%; accent-color: #ffcf63; }
+.evo-gen { font-size: 12px; margin: 6px 0 2px; color: var(--texto); font-variant-numeric: tabular-nums; }
+.evo-leyenda { display: grid; gap: 2px; margin: 6px 0; font-size: 11px; color: var(--texto-suave); }
+.evo-ley::before { content: ""; display: inline-block; width: 18px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; background: var(--c); }
+.evo-ley-mejor { --c: #ffcf63; } .evo-ley-resto { --c: #42d9f2; } .evo-ley-sitio { --c: #ffb454; } .evo-ley-base { --c: #6ee7a8; }
+.evo-ley-sitio::before, .evo-ley-base::before { height: 8px; width: 8px; border-radius: 50%; margin-right: 10px; margin-left: 5px; }
+.evo-ley-base::before { border-radius: 1px; transform: rotate(45deg); }
+.evo-lectura { padding: 6px 8px; border-left: 3px solid #ffcf63; background: rgba(255, 207, 99, 0.06); border-radius: 4px; font-size: 12px; min-height: 40px; }
+.evo-lectura-titulo, .evo-tip strong { display: block; font-weight: 700; color: #ffe9b8; margin-bottom: 3px; }
+.evo-lectura-fila { display: grid; grid-template-columns: 92px 1fr; gap: 6px; margin: 2px 0; }
+.evo-lectura-clave { color: var(--texto-suave); }
+.evo-lectura-valor { color: var(--texto); overflow-wrap: anywhere; }
+.evo-lectura-fila.mal .evo-lectura-valor, .evo-tip .mal { color: var(--peligro); }
+.evo-lectura-fila.bien .evo-lectura-valor, .evo-tip .bien { color: var(--exito); }
+.evo-difuso { margin: 8px 0; font-size: 12px; }
+.evo-difuso summary { cursor: pointer; color: var(--texto-suave); }
+.evo-tip { position: fixed; z-index: 60; max-width: 340px; padding: 8px 10px; font-size: 12px; line-height: 1.4; border-radius: 8px; background: rgba(8, 14, 26, 0.94); border: 1px solid rgba(255, 207, 99, 0.55); color: var(--texto); pointer-events: none; }
+.evo-tip.oculto, .evo-ui .oculto { display: none; }
+.evo-abrir { width: auto; margin: 4px 0 0; padding: 4px 8px; font-size: 12px; }
+.pia-edicion { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+.pia-edicion .pia-secundario { width: auto; margin: 0; padding: 6px 10px; }
+.pia-badge-reglas, .badge-reglas { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: #1a1205; background: var(--acento-calido); }
+.pia-badge-reglas.oculto, .badge-reglas.oculto { display: none; }
+
+/* ---- R23: edición de reglas difusas ---- */
+button.badge-reglas { border: 0; cursor: pointer; margin: 6px 0 0; width: auto; }
+.badge-reglas.inactiva { background: rgba(255, 255, 255, 0.14); color: var(--texto-suave); }
+.lab-subtabs { margin: 0 0 10px; }
+.dedit-barra { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 8px 0; }
+.dedit-barra button { width: auto; margin: 0; }
+.dedit-mensaje { margin: 0; }
+.dedit-avisos { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.dedit-aviso { padding: 5px 9px; border-radius: 6px; font-size: 12px; line-height: 1.4; }
+.dedit-aviso.error { background: rgba(255, 93, 108, 0.14); border-left: 3px solid var(--peligro); color: #ffd2d6; }
+.dedit-aviso.aviso { background: rgba(255, 180, 84, 0.12); border-left: 3px solid var(--acento-calido); color: #ffe2b8; }
+.dedit-resumen { font-size: 15px; margin: 4px 0 8px; }
+.dedit-clave { color: var(--texto-suave); margin-right: 8px; }
+.dedit-antes { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.dedit-despues { font-variant-numeric: tabular-nums; }
+.dedit-despues.cambio { color: var(--acento-calido); }
+.dedit-tabla-reglas td { vertical-align: top; }
+.dedit-regla.apagada .dedit-celda-regla { opacity: 0.45; }
+.dedit-regla.activa td:first-child { box-shadow: inset 3px 0 0 var(--acento); }
+.dedit-regla.cambio .dedit-despues { color: var(--acento-calido); }
+.dedit-sel { width: auto; max-width: 130px; margin: 0 2px; padding: 3px 4px; font-size: 12px; }
+.dedit-num { width: 64px; margin: 0 3px; padding: 3px 4px; font-size: 12px; }
+.dedit-celda-peso { white-space: nowrap; }
+.dedit-celda-peso input[type="range"] { width: 90px; vertical-align: middle; }
+.dedit-mini { width: auto; margin: 0 2px; padding: 1px 7px; font-size: 11px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--borde); border-radius: 6px; color: var(--texto); cursor: pointer; }
+.dedit-texto { margin-top: 3px; }
+.dedit-viable.mal { color: var(--peligro); font-weight: 700; }
+.dedit-fuerza { min-width: 130px; }
+.dedit-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.dedit-lienzo { height: 150px; }
+.dedit-campos { display: grid; gap: 4px; margin-top: 4px; }
+.dedit-campo { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; font-size: 12px; }
+.dedit-etq { min-width: 74px; color: var(--c); font-weight: 600; }
+
+/* ---- R23: anchos angostos (hasta 900 px): paneles plegables en cajón para que el vehículo no quede tapado.
+   Por encima de 900 px nada de esto se aplica: 1366×768 y superiores quedan igual. ---- */
+.cajon-asa { display: none; }
+@media (max-width: 900px) {
+  :root { --ancho-izq: 0px; }
+  /* columna izquierda: cajón que se abre sobre la escena y se cierra con el mismo botón */
+  #columna { top: 0; left: 0; bottom: 0; width: min(300px, 86vw); max-width: none; max-height: none; height: 100%; border-radius: 0 var(--radio) var(--radio) 0;
+    z-index: 42; transform: translateX(-104%); transition: transform 0.2s ease; visibility: hidden; }
+  body.cajon-izq #columna { transform: none; visibility: visible; }
+  #columna #decision { max-height: none; }
+  .cajon-asa { display: inline-flex; align-items: center; gap: 6px; position: fixed; left: 0; top: 42%; z-index: 43; margin: 0; padding: 8px 12px 8px 8px; width: auto;
+    background: var(--cristal-solido); color: var(--acento); border: 1px solid var(--borde); border-left: 0; border-radius: 0 10px 10px 0; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: left 0.2s ease; }
+  body.cajon-izq .cajon-asa { left: min(300px, 86vw); }
+  body.cajon-izq .cajon-asa .cajon-flecha { transform: rotate(180deg); }
+  body:has(#menu:not(.oculto)) .cajon-asa, body.cine .cajon-asa, body.intro-activa .cajon-asa { display: none; }
+  /* panel de IA: tira lateral plegada (46 px); abierto, cubre casi todo el ancho sin empujar la escena */
+  #panel-ia { top: 12px; bottom: 12px; left: auto; right: 12px; height: auto; width: min(var(--ancho-panel, 400px), calc(100vw - 24px)); z-index: 41; }
+  #panel-ia.plegado { width: 46px; height: auto; }
+  #panel-ia.plegado .pia-cabecera { flex-direction: column-reverse; }
+  #panel-ia.plegado .pia-tabs { flex-direction: column; }
+  #panel-ia.plegado .pia-tab { writing-mode: vertical-rl; }
+  /* la franja inferior ocupa el ancho libre, sin pasar por debajo de la tira del panel */
+  .dock { left: 12px; right: 70px; bottom: 12px; }
+  .dock > .zona-vista { width: min(224px, 100%); }
+  .registro { left: 24px; width: min(340px, calc(100vw - 130px)); }
+  #mensaje { left: 50%; transform: translateX(-50%); max-width: calc(100vw - 150px); top: 12px; right: auto; font-size: 12px; }
+  #intervencion-aviso { left: 50%; }
+  /* controles de vista: una chip plegada; el cuerpo solo se despliega al pulsar */
+  #manual { padding: 6px 8px; }
+}
+@media (max-width: 760px) {
+  #mensaje { max-width: calc(100vw - 100px); }
+  #controles { top: auto; }
+  .dock { right: 66px; }
+  .barra-mision button { padding: 6px 9px; font-size: 12px; }
+  .barra-mision #reproducir { min-width: 0; }
+}

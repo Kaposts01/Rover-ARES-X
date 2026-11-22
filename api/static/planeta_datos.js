@@ -1,36 +1,38 @@
 // Condiciones y aspecto de cada planeta: datos y funciones puras (sin DOM ni THREE). Se prueban con node (api/tests/test_textos_ui.py).
 //
-// ADAPTADOR ÚNICO de las mecánicas del planeta (gravedad, viento, hielo). El motor las está incorporando en otra rama; la interfaz
-// las lee de /estado SI EXISTEN y, si no, usa los valores de referencia de aquí. Para conectar el motor basta con que /estado traiga:
+// ADAPTADOR ÚNICO de las mecánicas del planeta. El motor (juego/planetas.py) las entrega de dos maneras y aquí se leen las dos:
 //
-//   estado.planeta_mecanicas = {
-//     gravedad: 0.38,                                   // número, en g terrestres (también vale { g: 0.38 })
-//     viento:   { fuerza: 0.6, direccion: "NE" },       // fuerza 0..1 (también vale un número solo); dirección: punto cardinal
-//                                                       //   ("N","NE","E","SE","S","SO","O","NO") o grados (0 = norte, 90 = este)
-//     hielo:    { nivel: 0.8 },                         // nivel 0..1 (también vale un número, o true/false)
-//   }
+//   GET /estado  ->  planeta_mecanicas = {
+//     perfil: { gravedad_g, viento (0..1, base), rumbo_viento ("N","NE","E","SE","S","SO","O","NO": hacia dónde sopla),
+//               rafaga_prob, hielo_fraccion (0..1 del mapa), fragilidad_hielo, factor_pendiente, arrastre (% por paso),
+//               prob_tormenta_x, resumen, intensidad (del nivel), activa, sobrecosto_medio (% por paso) },
+//     estado: { activa, intensidad, viento (actual, ya con ráfaga), rumbo_viento, rafaga (bool), rafaga_restante (pasos),
+//               celdas_hielo, resbalones_hielo, desvios_viento, energia_extra (% acumulado en la partida) } }
+//   GET /planetas -> planetas[].mecanicas = el mismo `perfil` plano (sin estado vivo): sirve para la ficha del planeta antes de jugar.
 //
-// Cualquier clave ausente o inválida cae al valor de referencia del planeta; la fuente de cada una («motor» o «referencia») viaja en
-// el resultado para rotularla en el HUD. Nada de la interfaz depende de que el motor las mande.
+// Cualquier clave ausente o inválida se tolera: la condición cae al valor de referencia del planeta (solo cuando el motor no manda
+// NADA de esa condición) y la fuente («motor» o «referencia») viaja en el resultado. El motor es la fuente de todo lo demás.
 
 const CARDINALES = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SO: 225, O: 270, NO: 315 };
 const NOMBRES_CARDINALES = ["norte", "noreste", "este", "sureste", "sur", "suroeste", "oeste", "noroeste"];
 
-// Valores de referencia (aproximados y solo ilustrativos) cuando el motor no manda nada
+// Referencia mínima SOLO para cuando no hay respuesta del motor (sin partida y sin /planetas). Son los mismos supuestos del motor.
 export const MECANICAS_REFERENCIA = {
-  Mercurio: { gravedad: 0.38, viento: { fuerza: 0, direccion: 90 }, hielo: { nivel: 0.05 } },
-  Venus: { gravedad: 0.9, viento: { fuerza: 0.2, direccion: 270 }, hielo: { nivel: 0 } },
-  Tierra: { gravedad: 1.0, viento: { fuerza: 0.3, direccion: 225 }, hielo: { nivel: 0.1 } },
-  Marte: { gravedad: 0.38, viento: { fuerza: 0.4, direccion: 45 }, hielo: { nivel: 0.1 } },
-  "Júpiter": { gravedad: 2.53, viento: { fuerza: 0.9, direccion: 90 }, hielo: { nivel: 0 } },
-  Saturno: { gravedad: 1.07, viento: { fuerza: 0.8, direccion: 90 }, hielo: { nivel: 0.15 } },
-  Urano: { gravedad: 0.89, viento: { fuerza: 0.55, direccion: 135 }, hielo: { nivel: 0.8 } },
-  Neptuno: { gravedad: 1.14, viento: { fuerza: 1, direccion: 270 }, hielo: { nivel: 0.9 } },
+  Mercurio: { gravedad_g: 0.38, viento: 0, rumbo_viento: "E", hielo_fraccion: 0 },
+  Venus: { gravedad_g: 0.91, viento: 0.2, rumbo_viento: "NO", hielo_fraccion: 0 },
+  Tierra: { gravedad_g: 1.0, viento: 0.3, rumbo_viento: "O", hielo_fraccion: 0.08 },
+  Marte: { gravedad_g: 0.38, viento: 0.4, rumbo_viento: "E", hielo_fraccion: 0.05 },
+  "Júpiter": { gravedad_g: 2.53, viento: 0.9, rumbo_viento: "O", hielo_fraccion: 0 },
+  Saturno: { gravedad_g: 1.07, viento: 0.8, rumbo_viento: "NO", hielo_fraccion: 0 },
+  Urano: { gravedad_g: 0.89, viento: 0.55, rumbo_viento: "SO", hielo_fraccion: 0.3 },
+  Neptuno: { gravedad_g: 1.14, viento: 0.85, rumbo_viento: "SO", hielo_fraccion: 0.3 },
 };
-const SIN_DATOS = { gravedad: 1, viento: { fuerza: 0.2, direccion: 90 }, hielo: { nivel: 0 } };
+const SIN_DATOS = { gravedad_g: 1, viento: 0.2, rumbo_viento: "E", hielo_fraccion: 0 };
+export const HIELO_FRACCION_MAXIMA = 0.3;   // la mayor del motor: el brillo del suelo escala contra ella
 
 const acotar = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const esNumero = (v) => typeof v === "number" && Number.isFinite(v);
+const numero = (v, defecto) => (esNumero(v) ? v : defecto);
 
 // Dirección a grados (0 = norte, 90 = este) desde un punto cardinal o un número; null si no se entiende
 export function gradosDeDireccion(d) {
@@ -53,45 +55,126 @@ export function nombreHielo(n) {
   if (n < 0.65) return "bastante";
   return "mucho";
 }
+const f2 = (v) => v.toFixed(2).replace(".", ",");
+const f1 = (v) => v.toFixed(1).replace(".", ",");
+const pct0 = (v) => `${Math.round(v * 100)} %`;
+const veces = (v) => f1(v).replace(",0", "");
 
-// planeta: nombre; estado: lo último de /estado (puede ser null). Devuelve las tres condiciones normalizadas.
-export function condicionesPlaneta(estado, planeta) {
-  const ref = MECANICAS_REFERENCIA[planeta] || SIN_DATOS;
-  const m = estado && typeof estado === "object" && estado.planeta_mecanicas && typeof estado.planeta_mecanicas === "object" ? estado.planeta_mecanicas : {};
-  // gravedad
-  let g = esNumero(m.gravedad) ? m.gravedad : (m.gravedad && esNumero(m.gravedad.g) ? m.gravedad.g : null);
-  const gravedad = g != null && g > 0 ? { g: acotar(g, 0.01, 20), fuente: "motor" } : { g: ref.gravedad, fuente: "referencia" };
-  // viento
-  let fuerza = null, grados = null;
-  if (esNumero(m.viento)) fuerza = m.viento;
-  else if (m.viento && typeof m.viento === "object") {
-    if (esNumero(m.viento.fuerza)) fuerza = m.viento.fuerza;
-    else if (esNumero(m.viento.velocidad)) fuerza = m.viento.velocidad;
-    grados = gradosDeDireccion(m.viento.direccion);
-  }
-  const viento = {
-    fuerza: fuerza != null ? acotar(fuerza, 0, 1) : ref.viento.fuerza,
-    grados: grados != null ? grados : ref.viento.direccion,
-    fuente: fuerza != null ? "motor" : "referencia",
-  };
-  // hielo
-  let nivel = null;
-  if (esNumero(m.hielo)) nivel = m.hielo;
-  else if (typeof m.hielo === "boolean") nivel = m.hielo ? 0.8 : 0;
-  else if (m.hielo && typeof m.hielo === "object" && esNumero(m.hielo.nivel)) nivel = m.hielo.nivel;
-  const hielo = { nivel: nivel != null ? acotar(nivel, 0, 1) : ref.hielo.nivel, fuente: nivel != null ? "motor" : "referencia" };
-  return { gravedad, viento, hielo };
+// Saca el perfil y el estado vivo de lo que haya: estado.planeta_mecanicas (con perfil/estado), el perfil plano de /planetas o nada.
+function leerMecanicas(origen) {
+  const o = origen && typeof origen === "object" ? origen : {};
+  const m = o.planeta_mecanicas && typeof o.planeta_mecanicas === "object" ? o.planeta_mecanicas : o;
+  const perfil = m.perfil && typeof m.perfil === "object" ? m.perfil : (("gravedad_g" in m || "viento" in m || "hielo_fraccion" in m) ? m : {});
+  const vivo = m.estado && typeof m.estado === "object" ? m.estado : {};
+  return { perfil, vivo };
 }
 
-// Filas del bloque «Condiciones del planeta» del HUD: [etiqueta, valor, fuente]
-export function filasCondiciones(c) {
-  const f1 = (v) => v.toFixed(2).replace(".", ",");
-  const calma = c.viento.fuerza < 0.05;
-  return [
-    ["Gravedad", `${f1(c.gravedad.g)} g`, c.gravedad.fuente],
-    ["Viento", calma ? "en calma" : `${nombreFuerza(c.viento.fuerza)} · hacia el ${nombreDireccion(c.viento.grados)}`, c.viento.fuente],
-    ["Hielo", nombreHielo(c.hielo.nivel), c.hielo.fuente],
+// origen: lo último de /estado, o el `mecanicas` de un elemento de /planetas, o null. planeta: nombre (para la referencia).
+export function condicionesPlaneta(origen, planeta) {
+  const ref = MECANICAS_REFERENCIA[planeta] || SIN_DATOS;
+  const { perfil: p, vivo } = leerMecanicas(origen);
+  const intensidad = numero(vivo.intensidad, numero(p.intensidad, 1));
+  // gravedad
+  const tieneG = esNumero(p.gravedad_g) && p.gravedad_g > 0;
+  const gravedad = { g: acotar(tieneG ? p.gravedad_g : ref.gravedad_g, 0.01, 20), fuente: tieneG ? "motor" : "referencia" };
+  // viento: el actual (con ráfaga) si lo manda el motor; si no, la base del planeta por la intensidad del nivel
+  const base = esNumero(p.viento) ? p.viento : null;
+  const actual = esNumero(vivo.viento) ? vivo.viento : (base != null ? base * intensidad : null);
+  const gr = gradosDeDireccion(vivo.rumbo_viento != null ? vivo.rumbo_viento : p.rumbo_viento);
+  const tieneV = actual != null;
+  const viento = {
+    fuerza: acotar(tieneV ? actual : ref.viento, 0, 1),               // para las partículas: nunca más de 1
+    actual: tieneV ? actual : ref.viento,                              // sin acotar (la ráfaga puede pasar de 1)
+    base: base != null ? base * intensidad : ref.viento,
+    grados: gr != null ? gr : gradosDeDireccion(ref.rumbo_viento),
+    rafaga: vivo.rafaga === true,
+    rafagaPasos: Math.max(0, Math.round(numero(vivo.rafaga_restante, 0))),
+    rafagaProb: numero(p.rafaga_prob, null),
+    fuente: tieneV ? "motor" : "referencia",
+  };
+  // hielo: fracción del mapa cubierta (la mide el motor); el brillo del suelo escala contra la mayor fracción de los planetas
+  const tieneH = esNumero(p.hielo_fraccion);
+  const fraccion = acotar(tieneH ? p.hielo_fraccion : ref.hielo_fraccion, 0, 1);
+  const hielo = {
+    nivel: acotar(fraccion / HIELO_FRACCION_MAXIMA, 0, 1), fraccion, celdas: Math.max(0, Math.round(numero(vivo.celdas_hielo, 0))),
+    fragilidad: numero(p.fragilidad_hielo, 1), fuente: tieneH ? "motor" : "referencia",
+  };
+  const terreno = { pendiente: numero(p.factor_pendiente, 1), arrastre: numero(p.arrastre, 0), polvo: numero(p.prob_tormenta_x, 1), fuente: esNumero(p.factor_pendiente) ? "motor" : "referencia" };
+  const vida = {
+    hay: Object.keys(vivo).length > 0, activa: vivo.activa !== false,
+    resbalones: Math.max(0, Math.round(numero(vivo.resbalones_hielo, 0))), desvios: Math.max(0, Math.round(numero(vivo.desvios_viento, 0))),
+    energiaExtra: numero(vivo.energia_extra, null), intensidad,
+  };
+  const resumen = typeof p.resumen === "string" ? p.resumen : "";
+  return { gravedad, viento, hielo, terreno, vivo: vida, sobrecostoMedio: numero(p.sobrecosto_medio, null), resumen };
+}
+
+// Qué cambia al jugar en ese planeta: frases cortas a partir de los datos del motor (ficha del planeta, sin estado vivo).
+export function queCambia(origen, planeta) {
+  const c = condicionesPlaneta(origen, planeta);
+  const frases = [];
+  const g = c.gravedad.g;
+  if (g >= 1.5) frases.push(`gravedad enorme (${f2(g)} g): todo cuesta mucha más batería`);
+  else if (g > 0.5) frases.push(`gravedad de ${f2(g)} g: se gasta más batería por paso y al subir`);
+  else frases.push(`gravedad baja (${f2(g)} g): subir cuesta poco`);
+  if (c.viento.base < 0.05) frases.push("sin viento");
+  else frases.push(`viento ${nombreFuerza(c.viento.base)} hacia el ${nombreDireccion(c.viento.grados)}${c.viento.rafagaProb ? ", con ráfagas" : ""}: de cara gasta más batería y de costado puede desviar`);
+  if (c.hielo.fraccion > 0) frases.push(`hielo en el ${pct0(c.hielo.fraccion)} del mapa${c.hielo.fragilidad > 1.05 ? " (muy resbaladizo)" : ""}: a velocidad alta el vehículo resbala`);
+  if (c.terreno.pendiente > 1.05) frases.push("regolito suelto: las subidas cuestan más");
+  if (c.terreno.arrastre > 0) frases.push("atmósfera densa: frena en cada paso");
+  if (c.terreno.polvo > 1.05) frases.push(`tormentas de polvo ${veces(c.terreno.polvo)} veces más frecuentes`);
+  return frases;
+}
+export const textoQueCambia = (origen, planeta) => `Al jugar aquí: ${queCambia(origen, planeta).join("; ")}.`;
+
+// Filas de la ficha del planeta (sistema solar de inicio): datos cortos del motor y, al final, la frase «qué cambia al jugar aquí».
+// Sin datos del motor (catálogo sin `mecanicas`) devuelve [] y la ficha queda como estaba.
+export function filasFicha(mecanicas, planeta) {
+  if (!mecanicas || typeof mecanicas !== "object" || !esNumero(mecanicas.gravedad_g)) return [];
+  const c = condicionesPlaneta(mecanicas, planeta);
+  const filas = [
+    { etiqueta: "Gravedad", valor: `${f2(c.gravedad.g)} g`, tipo: "mecanica" },
+    { etiqueta: "Viento", valor: c.viento.base < 0.05 ? "en calma" : `${nombreFuerza(c.viento.base)} · ${nombreDireccion(c.viento.grados)}`, tipo: "mecanica" },
+    { etiqueta: "Hielo", valor: c.hielo.fraccion > 0 ? `${pct0(c.hielo.fraccion)} del mapa` : "sin hielo", tipo: "mecanica" },
   ];
+  filas.push({ etiqueta: "Al jugar aquí", valor: queCambia(mecanicas, planeta).join("; ") + ".", tipo: "mecanica-nota" });
+  return filas;
+}
+
+// Filas del bloque «Condiciones del planeta» del HUD: [etiqueta, valor, fuente]. `paso` = { extra, resbalo } del último paso (opcional).
+export function filasCondiciones(c, paso) {
+  const calma = c.viento.base < 0.05 && !c.viento.rafaga;
+  const dir = nombreDireccion(c.viento.grados);
+  let textoViento = calma ? "en calma" : `${nombreFuerza(c.viento.fuerza)} · hacia el ${dir}`;
+  if (c.viento.rafaga) textoViento = `ráfaga ${textoViento}${c.viento.rafagaPasos ? ` (${c.viento.rafagaPasos} ${c.viento.rafagaPasos === 1 ? "paso" : "pasos"})` : ""}`;
+  const filas = [
+    ["Gravedad", `${f2(c.gravedad.g)} g`, c.gravedad.fuente],
+    ["Viento", textoViento, c.viento.fuente],
+    ["Hielo", c.hielo.fraccion > 0 ? `${pct0(c.hielo.fraccion)} del mapa${c.hielo.fragilidad > 1.05 ? " · muy resbaladizo" : ""}` : "sin hielo", c.hielo.fuente],
+  ];
+  if (c.terreno.pendiente > 1.05) filas.push(["Pendiente", `las subidas cuestan ×${veces(c.terreno.pendiente)}`, c.terreno.fuente]);
+  if (c.terreno.arrastre > 0) filas.push(["Atmósfera", `frena +${f2(c.terreno.arrastre)} % por paso`, c.terreno.fuente]);
+  if (c.terreno.polvo > 1.05) filas.push(["Polvo", `tormentas ×${veces(c.terreno.polvo)}`, c.terreno.fuente]);
+  if (c.vivo.hay) {
+    if (c.vivo.energiaExtra != null) {
+      const extra = paso && esNumero(paso.extra) && paso.extra > 0.004 ? ` · este paso +${f2(paso.extra)} %` : "";
+      filas.push(["Batería extra", `+${f2(c.vivo.energiaExtra)} % en la partida${extra}`, "motor"]);
+    }
+    if (c.vivo.resbalones || c.vivo.desvios || (paso && paso.resbalo)) {
+      const partes = [];
+      if (c.vivo.resbalones) partes.push(`${c.vivo.resbalones} ${c.vivo.resbalones === 1 ? "resbalón" : "resbalones"}`);
+      if (c.vivo.desvios) partes.push(`${c.vivo.desvios} ${c.vivo.desvios === 1 ? "desvío" : "desvíos"} por viento`);
+      filas.push([paso && paso.resbalo ? "¡Resbaló!" : "Incidentes", partes.join(" · ") || "este paso", "motor"]);
+    }
+  }
+  return filas;
+}
+
+// Qué pasó en el último paso comparando dos lecturas vivas consecutivas (aviso de resbalón y sobrecoste del paso)
+export function deltaPaso(antes, ahora) {
+  if (!antes || !ahora || !antes.vivo.hay || !ahora.vivo.hay) return { extra: 0, resbalo: false, desvio: false };
+  const extra = ahora.vivo.energiaExtra != null && antes.vivo.energiaExtra != null ? Math.max(0, ahora.vivo.energiaExtra - antes.vivo.energiaExtra) : 0;
+  return { extra, resbalo: ahora.vivo.resbalones > antes.vivo.resbalones, desvio: ahora.vivo.desvios > antes.vivo.desvios };
 }
 
 // Aspecto de escena por planeta: colores del cielo, niebla y luz, y los rasgos propios (partículas, centelleos, obstáculos).

@@ -115,8 +115,9 @@ export function crearAmbientePlaneta({ THREE, escena, altura, camara, renderer }
   }
 
   // planeta: nombre; cond: condicionesPlaneta(...). Se llama al cargar la partida y cuando cambian las condiciones.
-  function configurar(planeta, cond) {
-    colocado = false;   // el mapa cambió: los brillos se reparten de nuevo sobre el suelo nuevo
+  // opciones.conservar: solo cambió el estado vivo (ráfaga, etc.) del mismo mapa: no se reparten de nuevo las partículas (sin saltos).
+  function configurar(planeta, cond, opciones) {
+    if (!(opciones && opciones.conservar)) colocado = false;   // el mapa cambió: los brillos se reparten de nuevo sobre el suelo nuevo
     const p = perfilPlaneta(planeta), rv = p.rasgos.viento, rc = p.rasgos.centelleo;
     fuerza = cond.viento.fuerza;
     const rad = (cond.viento.grados * Math.PI) / 180;   // 0 = norte (−z), 90 = este (+x)

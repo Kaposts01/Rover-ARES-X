@@ -386,21 +386,71 @@ def test_todo_evento_de_la_lista_tiene_marca_en_la_escena():
 
 
 @sin_node
-def test_las_condiciones_del_planeta_usan_el_motor_si_existe_y_si_no_la_referencia():
+def test_las_condiciones_del_planeta_leen_la_forma_real_del_motor_y_toleran_su_ausencia():
     sin = _js_modulo("planeta_datos.js", 'm.condicionesPlaneta(null, "Neptuno")')
     assert sin["gravedad"]["fuente"] == "referencia" and sin["viento"]["fuente"] == "referencia" and sin["hielo"]["fuente"] == "referencia"
-    assert sin["viento"]["fuerza"] == 1 and sin["hielo"]["nivel"] > 0.5
-    est = {"planeta_mecanicas": {"gravedad": 0.5, "viento": {"fuerza": 0.25, "direccion": "NE"}, "hielo": {"nivel": 0.4}}}
-    con = _js_modulo("planeta_datos.js", f'm.condicionesPlaneta({json.dumps(est)}, "Marte")')
-    assert con["gravedad"] == {"g": 0.5, "fuente": "motor"}
-    assert con["viento"] == {"fuerza": 0.25, "grados": 45, "fuente": "motor"} and con["hielo"] == {"nivel": 0.4, "fuente": "motor"}
+    assert sin["viento"]["fuerza"] > 0.8 and sin["hielo"]["nivel"] == 1
+    perfil = {"gravedad_g": 0.38, "viento": 0.4, "rumbo_viento": "E", "rafaga_prob": 0.04, "hielo_fraccion": 0.05, "fragilidad_hielo": 1.0,
+              "factor_pendiente": 1.0, "arrastre": 0.0, "prob_tormenta_x": 2.0, "resumen": "x", "intensidad": 1.0, "sobrecosto_medio": 0.3}
+    vivo = {"activa": True, "intensidad": 1.0, "viento": 0.8, "rumbo_viento": "NO", "rafaga": True, "rafaga_restante": 3,
+            "celdas_hielo": 120, "resbalones_hielo": 2, "desvios_viento": 1, "energia_extra": 1.5}
+    est = {"planeta_mecanicas": {"perfil": perfil, "estado": vivo}}
+    c = _js_modulo("planeta_datos.js", f'm.condicionesPlaneta({json.dumps(est)}, "Marte")')
+    assert c["gravedad"] == {"g": 0.38, "fuente": "motor"}
+    assert c["viento"]["fuente"] == "motor" and c["viento"]["fuerza"] == 0.8 and c["viento"]["grados"] == 315 and c["viento"]["rafaga"] is True
+    assert c["viento"]["rafagaPasos"] == 3 and c["hielo"]["celdas"] == 120 and c["hielo"]["fraccion"] == 0.05
+    assert c["vivo"]["resbalones"] == 2 and c["vivo"]["energiaExtra"] == 1.5 and c["sobrecostoMedio"] == 0.3
+    # sin estado vivo (solo perfil): el viento es el base por la intensidad del nivel
+    sv = _js_modulo("planeta_datos.js", f'm.condicionesPlaneta({json.dumps({"planeta_mecanicas": {"perfil": perfil}})}, "Marte")')
+    assert sv["viento"]["fuerza"] == 0.4 and sv["viento"]["fuente"] == "motor" and sv["vivo"]["hay"] is False
+    # perfil plano de /planetas
+    plano = _js_modulo("planeta_datos.js", f'm.condicionesPlaneta({json.dumps(perfil)}, "Marte")')
+    assert plano["gravedad"]["fuente"] == "motor"
     # claves a medias o inválidas: cada una cae a su referencia sin romper las demás
-    raro = {"planeta_mecanicas": {"gravedad": "mucha", "viento": 7, "hielo": True}}
-    c = _js_modulo("planeta_datos.js", f'm.condicionesPlaneta({json.dumps(raro)}, "Tierra")')
-    assert c["gravedad"]["fuente"] == "referencia" and c["viento"]["fuerza"] == 1 and c["hielo"]["nivel"] == 0.8
+    raro = {"planeta_mecanicas": {"perfil": {"gravedad_g": "mucha", "viento": 7, "hielo_fraccion": True}, "estado": 5}}
+    r = _js_modulo("planeta_datos.js", f'm.condicionesPlaneta({json.dumps(raro)}, "Tierra")')
+    assert r["gravedad"]["fuente"] == "referencia" and r["viento"]["fuerza"] == 1 and r["hielo"]["fuente"] == "referencia"
     assert _js_modulo("planeta_datos.js", 'm.condicionesPlaneta({}, "Plutón").gravedad.g') == 1
     filas = _js_modulo("planeta_datos.js", 'm.filasCondiciones(m.condicionesPlaneta(null, "Mercurio"))')
-    assert [f[0] for f in filas] == ["Gravedad", "Viento", "Hielo"] and filas[1][1] == "en calma"
+    assert [f[0] for f in filas][:3] == ["Gravedad", "Viento", "Hielo"] and filas[1][1] == "en calma" and filas[2][1] == "sin hielo"
+
+
+@sin_node
+def test_las_filas_vivas_muestran_rafaga_resbalon_y_sobrecoste_del_paso():
+    perfil = {"gravedad_g": 0.38, "viento": 0.4, "rumbo_viento": "E", "rafaga_prob": 0.04, "hielo_fraccion": 0.05, "fragilidad_hielo": 1.0,
+              "factor_pendiente": 1.0, "arrastre": 0.0, "prob_tormenta_x": 2.0}
+    antes = {"planeta_mecanicas": {"perfil": perfil, "estado": {"viento": 0.4, "rumbo_viento": "E", "energia_extra": 1.0, "resbalones_hielo": 0}}}
+    ahora = {"planeta_mecanicas": {"perfil": perfil, "estado": {"viento": 0.8, "rumbo_viento": "E", "rafaga": True, "rafaga_restante": 2,
+                                                                  "energia_extra": 1.4, "resbalones_hielo": 1}}}
+    expr = (f'(() => {{ const a = m.condicionesPlaneta({json.dumps(antes)}, "Marte"), b = m.condicionesPlaneta({json.dumps(ahora)}, "Marte");'
+            f' const d = m.deltaPaso(a, b); return {{ d, filas: m.filasCondiciones(b, d) }}; }})()')
+    r = _js_modulo("planeta_datos.js", expr)
+    assert r["d"]["resbalo"] is True and abs(r["d"]["extra"] - 0.4) < 1e-9
+    textos = {f[0]: f[1] for f in r["filas"]}
+    assert textos["Viento"] == "ráfaga fuerte · hacia el este (2 pasos)" and "este paso +0,40 %" in textos["Batería extra"]
+    assert "¡Resbaló!" in textos and "1 resbalón" in textos["¡Resbaló!"]
+    # sin lecturas vivas no hay delta ni filas vivas
+    assert _js_modulo("planeta_datos.js", 'm.deltaPaso(null, null)') == {"extra": 0, "resbalo": False, "desvio": False}
+
+
+@sin_node
+def test_la_ficha_del_planeta_dice_que_cambia_al_jugar_con_los_datos_del_motor():
+    marte = {"gravedad_g": 0.38, "viento": 0.4, "rumbo_viento": "E", "rafaga_prob": 0.04, "hielo_fraccion": 0.05, "fragilidad_hielo": 1.0,
+             "factor_pendiente": 1.0, "arrastre": 0.0, "prob_tormenta_x": 2.0}
+    frase = _js_modulo("planeta_datos.js", f'm.textoQueCambia({json.dumps(marte)}, "Marte")')
+    assert frase.startswith("Al jugar aquí:") and "0,38 g" in frase and "hacia el este" in frase and "5 % del mapa" in frase
+    venus = {"gravedad_g": 0.91, "viento": 0.2, "rumbo_viento": "NO", "rafaga_prob": 0.02, "hielo_fraccion": 0.0, "fragilidad_hielo": 1.0,
+             "factor_pendiente": 1.0, "arrastre": 0.25, "prob_tormenta_x": 1.0}
+    assert "atmósfera densa" in _js_modulo("planeta_datos.js", f'm.textoQueCambia({json.dumps(venus)}, "Venus")')
+    filas = _js_modulo("planeta_datos.js", f'm.filasFicha({json.dumps(marte)}, "Marte")')
+    assert [f["etiqueta"] for f in filas] == ["Gravedad", "Viento", "Hielo", "Al jugar aquí"]
+    assert _js_modulo("planeta_datos.js", 'm.filasFicha(null, "Marte")') == [] and _js_modulo("planeta_datos.js", 'm.filasFicha({}, "Marte")') == []
+    # la tarjeta de la intro suma esas filas solo si el catálogo trae `mecanicas`
+    cat = {"planetas": [{"nombre": "Marte", "modo": "rover", "mecanicas": marte}]}
+    con = _js_modulo("intro_datos.js", f'm.datosCuerpo("Marte", {json.dumps(cat)}).filas.map((f) => f.etiqueta)')
+    assert "Al jugar aquí" in con
+    sin = _js_modulo("intro_datos.js", 'm.datosCuerpo("Marte", {planetas: [{nombre: "Marte", modo: "rover"}]}).filas.map((f) => f.etiqueta)')
+    assert "Al jugar aquí" not in sin
 
 
 @sin_node

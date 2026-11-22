@@ -3,6 +3,7 @@ import {
   VARIANTES_POLITICA, nombreVariante, notaVariantes, NOTA_POLITICAS, textoCandidatoAG, textoEvaluacionRNA, textoBateriaDifuso,
   ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural,
 } from "/static/textos.js?v=r14";
+import { crearEditorDifuso } from "/static/difuso_editor.js?v=r14";
 // Laboratorios de los modelos: genético, difuso y RNA, más la comparación de políticas.
 // Datos de los endpoints de docs/CONTRATOS_GRAFICOS.md. Este módulo solo dibuja; el motor está en Python.
 
@@ -343,6 +344,7 @@ async function consultarDifuso() {
   const prueba = !datos.curvas.temperatura && adaptador.TEMPERATURA_PRUEBA && demo;
   if (prueba) adaptador.inyectarTemperaturaPrueba(datos, Number($("dif-temperatura").value));
   $("dif-estado").textContent = prueba ? "temperatura: datos de prueba (solo con ?demo)" : "";
+  if (editorDifuso && datos.entradas) editorDifuso.entradas({ distancia: datos.entradas.distancia, bateria: datos.entradas.bateria, inclinacion: datos.entradas.inclinacion, temperatura: datos.entradas.temperatura });
   for (const k of UNIVERSOS) {
     const e = datos.entradas;
     $(`${CONTROL_DIF[k]}-v`).textContent = k === "bateria" && e.bateria_pct != null ? `${coma(e.bateria_pct, 1)} %` : coma(e[k], k === "distancia" ? 1 : 0);
@@ -636,6 +638,21 @@ async function cargarEvaluacion() {
 
 // ---------- overlay y arranque ----------
 const deps = { llamar: null, avisar: null };
+let editorDifuso = null;
+// Explorar (consultas al motor) o Editar reglas (vista previa local y aplicación a la partida)
+export function modoDifuso(modo) {
+  const editar = modo === "editar";
+  $("dif-explorar").classList.toggle("oculto", editar);
+  $("dif-edicion").classList.toggle("oculto", !editar);
+  for (const [id, activo] of [["dif-modo-explorar", !editar], ["dif-modo-editar", editar]]) { const b = $(id); b.classList.toggle("activa", activo); b.setAttribute("aria-selected", String(activo)); }
+  requestAnimationFrame(() => { if (editar && editorDifuso) editorDifuso.abrir(); else if (!editar) consultarDifuso(); });
+}
+// Abre el laboratorio directamente en la edición de reglas (desde el panel de IA o el aviso del HUD)
+export function abrirEdicionDifuso() {
+  $("laboratorio").classList.remove("oculto");
+  mostrarSeccion("difuso");
+  modoDifuso("editar");
+}
 let cargaEvaluacion = false;
 
 function mostrarSeccion(nombre) {
@@ -645,7 +662,8 @@ function mostrarSeccion(nombre) {
   for (const b of document.querySelectorAll(".lab-tab")) b.classList.toggle("activa", b.dataset.lab === nombre);
   const vivo = $("lab-vivo") && $("lab-vivo").checked && estadoPartidaConPaso;   // en vivo: lo carga seguirPasoLaboratorio
   requestAnimationFrame(() => {
-    if (nombre === "difuso" && !vivo) consultarDifuso();
+    if (nombre === "difuso" && !$("dif-edicion").classList.contains("oculto")) { if (editorDifuso) editorDifuso.abrir(); if (!vivo) consultarDifuso(); }
+    else if (nombre === "difuso" && !vivo) consultarDifuso();
     if (nombre === "rna") { if (!vivo) consultarRNA(); if (!cargaEvaluacion) { cargaEvaluacion = true; cargarEvaluacion(); } }
     if (nombre === "ag" && agDatos) pintarAG();
     if (nombre === "politicas") { if (polDatos) pintarPoliticas(); else cargarPoliticas(); }
@@ -682,6 +700,13 @@ export function iniciarLaboratorios(dependencias) {
   const reconsultarDif = conRetardo(consultarDifuso, 200);
   for (const k of UNIVERSOS) $(CONTROL_DIF[k]).addEventListener("input", () => { dejarDeSeguir(); reconsultarDif(); });
   $("dif-barrido").addEventListener("click", barridoDifuso);
+  // Editar reglas: tabla, funciones de pertenencia y efecto en vivo (difuso_editor.js); Explorar es el laboratorio de siempre
+  editorDifuso = crearEditorDifuso({
+    contenedor: $("dif-edicion"), dibujarLineas, preparar,
+    alEstado: (e) => { $("dif-modo-marca").classList.toggle("oculto", !e.personalizadas); if (dependencias.alReglas) dependencias.alReglas(e); },
+  });
+  $("dif-modo-explorar").addEventListener("click", () => modoDifuso("explorar"));
+  $("dif-modo-editar").addEventListener("click", () => modoDifuso("editar"));
 
   const reconsultarRNA = conRetardo(() => { rnaUsoRover = false; consultarRNA(); }, 200);
   for (const r of RASGOS) $(r.id).addEventListener("input", () => { dejarDeSeguir(); reconsultarRNA(); });
@@ -695,6 +720,7 @@ export function reiniciarLaboratorios() {
   for (const id of ["ag-poblacion", "ag-candidatos", "ag-desglose", "ag-generacion"]) { const e = $(id); if (e) e.replaceChildren(); }
   for (const id of ["ag-resumen", "ag-estado"]) { const e = $(id); if (e) e.textContent = ""; }
   rnaUsoRover = true; estadoPartidaConPaso = false; siguiendo = false;
+  if (editorDifuso) editorDifuso.reiniciar();
   const c = $("lab-vivo"); if (c) c.checked = true;
 }
 

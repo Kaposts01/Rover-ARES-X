@@ -1,12 +1,13 @@
 // ARES-X · escena 3D del rover (ARX-04, ARX-05 y ARX-20: diseño realista). El motor está en Python; aquí solo se dibuja y se envían acciones.
 import * as THREE from "three";
 import { OrbitControls } from "/static/vendor/OrbitControls.js";
-import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios } from "/static/laboratorio.js?v=r14";
+import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios, abrirEdicionDifuso } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
 import { crearEvolucion } from "/static/evolucion3d.js?v=r14";
-import { adaptarAG, ROTULO_EVOLUCION } from "/static/evolucion_datos.js?v=r14";
+import { crearEvolucionUI } from "/static/evolucion_ui.js?v=r14";
+import { adaptarEvolucion, desdeLaboratorio } from "/static/ag_evolucion_datos.js?v=r14";
 import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
 import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
@@ -14,7 +15,7 @@ import { crearPanelIA } from "/static/panel_ia.js?v=r14";
 import { crearSonido } from "/static/sonido.js?v=r14";
 import { crearDefensa } from "/static/defensa.js?v=r14";
 import {
-  reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
+  EVO, reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
   textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
 } from "/static/textos.js?v=r14";
 import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
@@ -23,7 +24,7 @@ import { textoNuevoRecord } from "/static/records_datos.js?v=r14";
 import { crearComparar } from "/static/comparar.js?v=r14";
 import { crearTutorial } from "/static/tutorial.js?v=r14";
 import { TEXTO_CAMBIO_MODO } from "/static/tutorial_datos.js?v=r14";
-import { condicionesPlaneta, filasCondiciones, perfilPlaneta } from "/static/planeta_datos.js?v=r14";
+import { condicionesPlaneta, filasCondiciones, deltaPaso, perfilPlaneta, textoQueCambia } from "/static/planeta_datos.js?v=r14";
 import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
@@ -426,77 +427,97 @@ if (cajaRiesgo) {
   });
 }
 
-// ---------- evolución del AG en la escena (Paquete A) ----------
-// Apagada: no se crea nada en la escena ni se pide nada. Encendida: una lectura de /ag (la que ya calcula el laboratorio)
-let evolucion = null;                 // se crea al encender la casilla y se libera al apagarla
+// ---------- evolución del AG en el mapa ----------
+// Apagada: no se crea nada en la escena ni se pide nada. Encendida (casilla de «Capas de la escena», interruptor de la pestaña
+// «Genético» o Laboratorios → Genético): una lectura de GET /ag/evolucion; si el motor aún no la publica (404), el respaldo es la
+// población del laboratorio genético (GET /ag). Los controles viven en la pestaña «Genético» (evolucion_ui.js).
+let evolucion = null;                 // capa 3D: se crea al encender y se libera al apagar
 let evolucionEnVuelo = false;
+let evoUI = null;                     // controles de la pestaña Genético
+let evoReplanes = null;               // replanteos de la misión cuando se cargó: si cambian, el plan es otro
+const cajaEvolucion = document.getElementById("evo-capa");
 
-function textoEvolucion(extra) {
-  const el = document.getElementById("evo-aviso");
-  if (el) {
-    el.textContent = extra ? `${ROTULO_EVOLUCION}. ${extra}` : ROTULO_EVOLUCION;
-    el.scrollIntoView({ block: "nearest" });
-  }
+async function pedirSinAviso(ruta) {   // endpoints opcionales: un 404 no es un error que avisar al jugador
+  try {
+    const r = await fetch(ruta);
+    return { ok: r.ok, status: r.status, cuerpo: await r.json().catch(() => null) };
+  } catch (err) { return { ok: false, status: 0, cuerpo: null }; }
 }
-
+// Lo que el respaldo necesita de /mapa y /estado: sitios, bases de recarga, refugio y desde dónde planifica el AG
+function contextoEvolucion() {
+  const m = mapa || {};
+  return { planeta: planetaActivo, inicio: (estado && estado.posicion) || m.inicio, refugio: m.refugio, sitios: m.sitios || [], bases: m.estaciones || (estado && estado.estaciones) || [] };
+}
+async function obtenerEvolucion() {
+  const r = await pedirSinAviso("/ag/evolucion");
+  if (r.ok) return adaptarEvolucion(r.cuerpo, { fuente: "motor" });
+  if (r.cuerpo && r.cuerpo.hay_plan === false) return adaptarEvolucion({ hay_plan: false });
+  if (new URLSearchParams(location.search).has("demo")) {   // ?demo: simulacro con ventanas y recargas, mientras el motor no publique el endpoint
+    const { simularEvolucion } = await import("/static/ag_evolucion_simulacro.js?v=r14");
+    return adaptarEvolucion(simularEvolucion(contextoEvolucion(), { autonomia: 16 }), { fuente: "motor" });
+  }
+  const ag = await pedirSinAviso("/ag");   // respaldo: el laboratorio genético
+  if (!ag.ok) return adaptarEvolucion(null);
+  return desdeLaboratorio(ag.cuerpo, contextoEvolucion());
+}
 function apagarEvolucion(motivo) {
   if (evolucion) { evolucion.dispose(); evolucion = null; }
-  document.getElementById("evo-controles").classList.add("oculto");
-  const caja = document.getElementById("evo-capa");
-  if (caja) caja.checked = false;
-  const el = document.getElementById("evo-aviso");
-  if (el) el.textContent = motivo || "";
+  if (evoUI) { evoUI.activa(false); if (motivo) evoUI.mensaje(motivo); }
+  if (cajaEvolucion) cajaEvolucion.checked = false;
 }
-
-async function cargarEvolucion() {
+async function cargarEvolucion({ reproducir = true } = {}) {
   if (!evolucion || evolucionEnVuelo) return;
   evolucionEnVuelo = true;
-  const boton = document.getElementById("evo-recalc");
-  boton.disabled = true;
-  textoEvolucion("Calculando…");
+  if (evoUI) evoUI.mensaje(EVO.calculando);
   try {
-    const posicion = estado && estado.posicion;
-    const ag = await llamar("GET", "/ag");
+    const datos = await obtenerEvolucion();
     if (!evolucion) return;   // se apagó mientras llegaba la respuesta
-    const adaptado = adaptarAG(ag, posicion);
-    if (!adaptado) { apagarEvolucion(ag && ag.sin_sitios ? "no quedan sitios pendientes: no hay orden que mostrar" : "sin datos del AG"); return; }
-    evolucion.cargar(adaptado);
-    const sel = document.getElementById("evo-gen");
-    sel.replaceChildren();
-    adaptado.generaciones.forEach((g, i) => {
-      const o = document.createElement("option");
-      o.value = String(i);
-      o.textContent = `generación ${g.generacion}`;
-      sel.appendChild(o);
-    });
-    sel.value = String(adaptado.seleccionada);
-    textoEvolucion(`Calculado desde la posición actual (${posicion ? posicion.join(", ") : "—"}).`);
-  } finally {
-    evolucionEnVuelo = false;
-    boton.disabled = false;
-  }
+    evoReplanes = estado ? estado.replanes ?? null : null;
+    if (datos.estado !== "ok") { evolucion.cargar(null); if (evoUI) { evoUI.datos(null); evoUI.mensaje(datos.motivo); } return; }
+    evolucion.cargar(datos);
+    if (evoUI) { evoUI.datos(datos); evoUI.reproduciendo(false); }
+    if (reproducir && datos.generaciones.length > 1) { evolucion.irA(0); evolucion.reproducir(); if (evoUI) evoUI.reproduciendo(true); }   // arranca mostrando cómo evolucionó
+  } finally { evolucionEnVuelo = false; }
 }
-
-const cajaEvolucion = document.getElementById("evo-capa");
+function activarEvolucion(si) {
+  if (!si) { apagarEvolucion(""); return; }
+  if (!mapa) { apagarEvolucion(EVO.sinPlan); return; }
+  if (!evolucion) {
+    evolucion = crearEvolucion(scene, {
+      alturaTerreno, camara, elemento: renderer.domElement,
+      alCambiar: (i, g) => { if (evoUI) { evoUI.generacion(i, g); evoUI.reproduciendo(!!(evolucion && evolucion.reproduciendo)); } },
+      alPuntero: (c, g, ev) => { if (evoUI) evoUI.puntero(c, g, ev); },
+    });
+  }
+  if (evoUI) evoUI.activa(true);
+  if (cajaEvolucion) cajaEvolucion.checked = true;
+  cargarEvolucion();
+}
+// Si el plan cambió después de cargar (sitio visitado, sismo, meteorito…), se avisa; no se recalcula solo (puede tardar)
+function vigenciaEvolucion(e) {
+  if (!evolucion || !evoUI || evoReplanes === null || !e || e.replanes === undefined || e.replanes === evoReplanes) return;
+  evoUI.mensaje(EVO.planCambio);
+}
+// Reglas difusas editadas por el jugador: aviso persistente en el HUD y en la pestaña Difuso mientras estén en juego
+function marcarReglasPersonalizadas(si) {
+  const b = document.getElementById("hud-reglas"); if (b) b.classList.toggle("oculto", !si);
+  if (panelIA) panelIA.reglasPersonalizadas(!!si);
+}
+async function refrescarReglasPersonalizadas() {
+  const r = await pedirSinAviso("/difuso/reglas");   // sin soporte en el motor (404) = reglas del planeta
+  marcarReglasPersonalizadas(!!(r.ok && r.cuerpo && r.cuerpo.personalizadas === true));
+}
+function abrirEdicionReglas() { abrirEdicionDifuso(); }
+const botonHudReglas = document.getElementById("hud-reglas");
+if (botonHudReglas) botonHudReglas.addEventListener("click", abrirEdicionReglas);
+// Laboratorios → Genético → «Ver la evolución en el mapa»: cierra el laboratorio, abre la pestaña y enciende la capa
+const botonVerMapa = document.getElementById("ag-ver-mapa");
+if (botonVerMapa) botonVerMapa.addEventListener("click", () => { document.getElementById("cerrar-laboratorio").click(); if (panelIA) panelIA.abrir("ag"); activarEvolucion(true); });
 if (cajaEvolucion) {
   cajaEvolucion.checked = false;
-  cajaEvolucion.addEventListener("change", () => {
-    if (!cajaEvolucion.checked) { apagarEvolucion(""); return; }
-    if (!mapa) { apagarEvolucion("sin partida: no hay AG que mostrar"); return; }
-    evolucion = crearEvolucion(scene, {
-      alturaTerreno,
-      alCambiar: (i, texto) => {
-        const sel = document.getElementById("evo-gen");
-        if (sel.options.length > i) sel.value = String(i);
-        document.getElementById("evo-generacion").textContent = texto;
-      },
-    });
-    document.getElementById("evo-controles").classList.remove("oculto");
-    cargarEvolucion();
-  });
-  document.getElementById("evo-play").addEventListener("click", () => { if (evolucion) evolucion.reproducir(); });
-  document.getElementById("evo-recalc").addEventListener("click", cargarEvolucion);
-  document.getElementById("evo-gen").addEventListener("change", (ev) => { if (evolucion) evolucion.irA(Number(ev.target.value)); });
+  cajaEvolucion.addEventListener("change", () => activarEvolucion(cajaEvolucion.checked));
+  const abrirControles = document.getElementById("evo-abrir-controles");
+  if (abrirControles) abrirControles.addEventListener("click", () => { if (panelIA) panelIA.abrir("ag"); });
 }
 
 // ---------- holograma de IA junto al rover (Paquete A) ----------
@@ -927,10 +948,11 @@ function animarBarranco(celdas) {
 }
 
 function construirMapa(datos) {
+  reiniciarCondiciones();   // mapa nuevo: las condiciones vivas y las celdas de hielo se leen de nuevo
   limitesMapa = { columnas: datos.columnas, filas: datos.filas };
   liberarMapa();
   limpiarEnergia();
-  marcasEvento.limpiar(); encuadreEvento = null;   // las marcas de eventos de la partida anterior no pasan a la nueva
+  marcasEvento.limpiar(); marcasRNA.limpiar(); encuadreEvento = null;   // las marcas de eventos de la partida anterior no pasan a la nueva
   grupoMapa.clear();
   animados = [];
   halos = [];
@@ -1635,6 +1657,7 @@ function pintarHud(e) {
   if (velo) { velo.className = e.ambiente === "noche" || e.ambiente === "tormenta" ? e.ambiente : ""; }
   ambientePlaneta.reforzar(e.ambiente === "tormenta" ? 2.2 : 1);   // la tormenta levanta el viento mientras dura
   aplicarCondiciones(e);
+  vigenciaEvolucion(e);
   document.getElementById("h-semilla").textContent = e.semilla;
   document.getElementById("h-estado").textContent = nombreEstado(e.estado);
   // 22/11: porcentaje de la capacidad del rover (nunca más de 100 %); el motor sigue en sus unidades
@@ -1775,7 +1798,7 @@ function pintarPaneles(p) {
   document.getElementById("h-paso").textContent = p.paso ?? "-";
   const sup = p.supervisor || {};
   document.getElementById("sup-accion").textContent = sup.accion || "-";
-  document.getElementById("res-rna").textContent = `libre ${pct(rna.p_libre)}`;
+  document.getElementById("res-rna").textContent = `libre ${pct(rna.p_libre)} · celda de enfrente`;   // el panel de IA añade las coordenadas cuando llega /ia/paso
   document.getElementById("res-dif").textContent = dif.usado === false ? "no usado" : `velocidad ${dif.velocidad == null ? "-" : Number(dif.velocidad).toFixed(3).replace(".", ",")}`;
   document.getElementById("res-sup").textContent = sup.accion || "-";
   const motivos = document.getElementById("sup-motivos");
@@ -1969,6 +1992,9 @@ function validarPlaneta() {
   boton.textContent = p && p.modo === "sonda" ? "Usar sonda" : "Usar rover";
   boton.dataset.modo = p ? p.modo : "rover";
   document.getElementById("iniciar").disabled = bloqueado;
+  // «qué cambia al jugar aquí»: los datos del motor de este planeta (GET /planetas → mecanicas)
+  const ficha = document.getElementById("menu-planeta-ficha");
+  if (ficha) ficha.textContent = p && p.mecanicas ? textoQueCambia(p.mecanicas, p.nombre) : "";
 }
 document.getElementById("menu-planeta").addEventListener("change", () => {
   const p = planetaElegido();
@@ -2071,6 +2097,17 @@ function actualizarControlEvento() {
 // Todo evento lanzado deja: una marca en la celda afectada (o sobre el vehículo si es global), un aviso con su ubicación y, si
 // queda fuera de cuadro, una flecha en el borde del hueco libre y un breve encuadre de la cámara.
 const marcasEvento = crearMarcasEvento({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z) });
+// Celdas que clasificó la RNA (panel «Red neuronal»): otra instancia, sin rótulo flotante ni flecha de evento
+const marcasRNA = crearMarcasEvento({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z) });
+function marcarCeldasRNA(lista) {
+  marcasRNA.limpiar();
+  const validas = (lista || []).filter((x) => x && Array.isArray(x.celda));
+  const dura = validas.some((x) => x.destacada) ? 3 : 2.5;
+  for (const riesgo of [false, true]) {
+    const celdas = validas.filter((x) => !!x.riesgo === riesgo).map((x) => x.celda);
+    if (celdas.length) marcasRNA.marcar({ celdas, rotulo: riesgo ? "rna-riesgo" : "rna-libre", color: riesgo ? 0xff5d6c : 0x5fe6ff, dura });
+  }
+}
 const etiquetaEvento = document.getElementById("evento-etiqueta");
 let textoEtiquetaEvento = "";
 let encuadreEvento = null;   // { punto, hasta }: mientras dura, la cámara sigue este punto y no al vehículo
@@ -2082,8 +2119,8 @@ function huecoLibre() {
   let l = 8, r = W - 8, t = 60, b = H - 8;
   if (!document.body.classList.contains("cine")) {
     const col = document.getElementById("columna"), dock = document.getElementById("dock");
-    if (col && col.getClientRects().length > 0 && W > 760) l = col.getBoundingClientRect().right + 8;
-    if (panelIA && !panelIA.elemento.classList.contains("oculto") && W > 760) r = W - panelIA.ancho - 20;
+    if (col && col.getClientRects().length > 0 && W > 900) l = col.getBoundingClientRect().right + 8;
+    if (panelIA && !panelIA.elemento.classList.contains("oculto") && W > 900) r = W - panelIA.ancho - 20;
     if (dock && dock.getClientRects().length > 0) b = Math.min(b, dock.getBoundingClientRect().top - 8);
   }
   if (r - l < 120 || b - t < 120) return { l: 8, r: W - 8, t: 8, b: H - 8 };
@@ -2224,32 +2261,64 @@ function aplicarAspecto(planeta) {
 }
 
 // ---------- condiciones del planeta (gravedad, viento, hielo) ----------
-// Único punto donde se leen: planeta_datos.condicionesPlaneta(estado.planeta_mecanicas, con valores de referencia si el motor no las manda).
-// De aquí salen el bloque del HUD, las partículas de viento, los centelleos y el brillo del hielo en el suelo.
+// Único punto donde se leen: planeta_datos.condicionesPlaneta(/estado.planeta_mecanicas: perfil + estado vivo del motor).
+// De aquí salen el bloque del HUD (ráfaga actual, dirección, resbalones, batería extra), las partículas de viento, los
+// centelleos y las celdas de hielo reales (GET /hielo) pintadas sobre el suelo.
 const ambientePlaneta = crearAmbientePlaneta({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z), camara, renderer });
-let condicionesActuales = null, firmaCondiciones = "";
+let condicionesActuales = null, firmaCondiciones = "", planetaCondiciones = "";
+let capaHielo = null, claveHielo = "", hieloEnVuelo = false;
+function reiniciarCondiciones() { firmaCondiciones = ""; planetaCondiciones = ""; condicionesActuales = null; claveHielo = ""; }
+function liberarCapaHielo() {
+  if (!capaHielo) return;
+  scene.remove(capaHielo); capaHielo.geometry.dispose(); capaHielo.material.dispose(); capaHielo.dispose(); capaHielo = null;
+}
+// Celdas de hielo del motor (parches fijos por partida) como baldosas translúcidas sobre el suelo
+async function cargarCapaHielo(clave) {
+  if (hieloEnVuelo || clave === claveHielo) return;
+  hieloEnVuelo = true; claveHielo = clave;
+  try {
+    const h = await llamar("GET", "/hielo");
+    if (clave !== claveHielo) return;
+    liberarCapaHielo();
+    const celdas = h && Array.isArray(h.celdas) ? h.celdas.filter((c) => Array.isArray(c) && c.length >= 2) : [];
+    if (!celdas.length) return;
+    const geo = new THREE.PlaneGeometry(0.94, 0.94); geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xcdf3ff, transparent: true, opacity: 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false });
+    const malla = new THREE.InstancedMesh(geo, mat, celdas.length);
+    const m4 = new THREE.Matrix4();
+    celdas.forEach(([f, c], i) => { const x = c + 0.5, z = f + 0.5; m4.makeTranslation(x, alturaTerreno(x, z) + 0.07, z); malla.setMatrixAt(i, m4); });
+    malla.instanceMatrix.needsUpdate = true; malla.renderOrder = 2; malla.name = "capa-hielo"; malla.frustumCulled = false;
+    capaHielo = malla; scene.add(malla);
+  } catch (err) { console.warn("hielo: no se pudieron dibujar las celdas", err); }
+  finally { hieloEnVuelo = false; if (clave !== claveHielo) cargarCapaHielo(claveHielo); }
+}
 function aplicarCondiciones(e, forzar = false) {
   const planeta = (e && e.planeta) || planetaActivo;
   const c = condicionesPlaneta(e, planeta);
-  const firma = `${planeta}|${JSON.stringify(c)}`;
+  const firma = `${planeta}|${e && e.paso}|${JSON.stringify(c)}`;   // el paso entra en la firma: «este paso +x %» no queda viejo
   if (!forzar && firma === firmaCondiciones) return;
-  firmaCondiciones = firma; condicionesActuales = c;
-  ambientePlaneta.configurar(planeta, c);
+  const delta = deltaPaso(planeta === planetaCondiciones ? condicionesActuales : null, c);   // sobrecoste del paso y resbalón: dos lecturas del mismo mapa
+  const mismoMapa = planeta === planetaCondiciones && !forzar;
+  firmaCondiciones = firma; condicionesActuales = c; planetaCondiciones = planeta;
+  ambientePlaneta.configurar(planeta, c, { conservar: mismoMapa });
   const suelo = grupoMapa.children[0];   // hielo: el suelo se vuelve más liso y brilla bajo el sol
   if (suelo && suelo.material && suelo.material.isMeshStandardMaterial) {
     suelo.material.roughness = 0.95 - 0.5 * c.hielo.nivel;
     suelo.material.metalness = 0.12 * c.hielo.nivel;
   }
+  if (mapa && c.vivo.hay) cargarCapaHielo(`${e && e.semilla}|${planeta}|${mapa.filas}x${mapa.columnas}|${c.hielo.fraccion}`);
+  if (capaHielo) capaHielo.visible = c.hielo.fraccion > 0;
   const caja = document.getElementById("condiciones");
   if (!caja) return;
   const filas = caja.querySelector(".cond-filas");
-  filas.replaceChildren(...filasCondiciones(c).map(([etiqueta, valor, fuente]) => {
+  filas.replaceChildren(...filasCondiciones(c, delta).map(([etiqueta, valor, fuente]) => {
     const f = document.createElement("div"); f.className = "fila";
     const a = document.createElement("span"); a.textContent = etiqueta;
     const v = document.createElement("span"); v.className = "valor"; v.textContent = valor;
-    v.title = fuente === "motor" ? "Dato del motor" : "Valor de referencia del cliente: el motor aún no manda esta condición";
+    v.title = fuente === "motor" ? "Dato del motor" : "Valor aproximado: todavía no hay partida que lo confirme";
     f.append(a, v);
-    if (fuente !== "motor") { const r = document.createElement("small"); r.className = "cond-ref"; r.textContent = "ref."; v.append(" ", r); }
+    if (etiqueta === "¡Resbaló!") f.classList.add("cond-alerta");
+    if (fuente !== "motor") { const r = document.createElement("small"); r.className = "cond-ref"; r.textContent = "aprox."; v.append(" ", r); }
     return f;
   }));
   const firma2 = caja.querySelector(".cond-firma");
@@ -2626,8 +2695,9 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     if (!mp) return false;
     mapa = mp;
     construirMapa(mapa);
+    refrescarReglasPersonalizadas();   // las reglas difusas de la partida nueva (¿hay editadas?)
     if (capaRiesgoActiva) construirCapaRiesgo(mapa) || actualizarCapaRiesgo();   // M15: la capa sigue al mapa nuevo
-    if (evolucion) cargarEvolucion();   // Paquete A: el AG de la partida nueva
+    if (evolucion) { evolucion.cargar(null); if (evoUI) evoUI.datos(null); cargarEvolucion(); }   // el AG de la partida nueva
     aplicarAspecto(planetaActivo);
     construirRover();
     ubicarRover(datos.posicion, datos.rumbo_sugerido, true);
@@ -2680,6 +2750,28 @@ document.getElementById("manual-toggle").addEventListener("click", (ev) => {
   manual.classList.toggle("abierto");
   ev.currentTarget.setAttribute("aria-expanded", String(!manual.classList.contains("plegado")));
 });
+
+// Ancho angosto (hasta 900 px): la columna izquierda es un cajón, el panel de IA una tira plegada y los controles de vista una chip
+const anchoAngosto = window.matchMedia("(max-width: 900px)");
+function fijarCajonIzquierdo(abierto) {
+  document.body.classList.toggle("cajon-izq", abierto);
+  const asa = document.getElementById("cajon-izq"); if (asa) asa.setAttribute("aria-expanded", String(abierto));
+}
+let manualPlegadoPorAncho = false;
+function ajustarAnchoAngosto() {
+  const angosto = anchoAngosto.matches;
+  if (!angosto) fijarCajonIzquierdo(false);
+  const manual = document.getElementById("manual"), toggle = document.getElementById("manual-toggle");
+  if (angosto && manual && !manual.classList.contains("plegado")) { toggle.click(); manualPlegadoPorAncho = true; }   // los controles de vista empiezan plegados
+  else if (!angosto && manualPlegadoPorAncho && manual && manual.classList.contains("plegado")) { toggle.click(); manualPlegadoPorAncho = false; }   // y se abren al volver a un ancho normal
+  if (panelIA) panelIA.plegarPorAncho(angosto);
+  try { encuadrarVista(); } catch (e) { /* aún sin cámara */ }
+}
+document.getElementById("cajon-izq").addEventListener("click", () => fijarCajonIzquierdo(!document.body.classList.contains("cajon-izq")));
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && document.body.classList.contains("cajon-izq") && anchoAngosto.matches) fijarCajonIzquierdo(false); });
+anchoAngosto.addEventListener("change", ajustarAnchoAngosto);
+// Tocar la escena cierra el cajón
+renderer.domElement.addEventListener("pointerdown", () => { if (anchoAngosto.matches && document.body.classList.contains("cajon-izq")) fijarCajonIzquierdo(false); });
 
 // Pantalla de carga (ARX-60): vuelo del cohete ligado a la carga real; sin animación, una barra simple. Con transición del vehículo al pulsar «Nueva» o reiniciar
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -3886,7 +3978,7 @@ function mostrarSubtitulo(texto) {
 function encuadrarVista() {
   const W = window.innerWidth, H = window.innerHeight;
   let izq = 0, der = 0;
-  if (!document.body.classList.contains("cine") && W > 760) {
+  if (!document.body.classList.contains("cine") && W > 900) {
     const col = document.getElementById("columna");
     // (offsetParent es siempre null en elementos fixed: con él la columna nunca contaba y el vehículo quedaba detrás de ella)
     if (col && col.getClientRects().length > 0) izq = col.getBoundingClientRect().right;
@@ -3909,8 +4001,20 @@ try {
     },
     alMaximizar: () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "h" })),   // lo mismo que la tecla H
     alNarrar: (texto) => mostrarSubtitulo(texto),                                         // subtítulos en el modo cine
+    alMarcarCeldas: marcarCeldasRNA, vehiculo: vehiculoActual,
+    alEditarReglas: () => abrirEdicionReglas(),
   });
+  evoUI = crearEvolucionUI({
+    alActivar: (si) => activarEvolucion(si),
+    alRecalcular: () => cargarEvolucion({ reproducir: false }),
+    alReproducir: () => { if (evolucion) { evolucion.reproducir(); evoUI.reproduciendo(evolucion.reproduciendo); } },
+    alPausar: () => { if (evolucion) { evolucion.pausar(); evoUI.reproduciendo(false); } },
+    alIr: (i) => { if (evolucion) { evolucion.pausar(); evoUI.reproduciendo(false); evolucion.irA(i); } },
+    alVelocidad: (k) => { if (evolucion) evolucion.velocidad(k); },
+  });
+  panelIA.seccion("ag").prepend(evoUI.elemento);
   if (!document.getElementById("menu").classList.contains("oculto")) panelIA.mostrar(false);
+  ajustarAnchoAngosto();
 } catch (e) { console.warn("panel de IA: no se pudo crear; la partida sigue sin él", e); panelIA = null; }
 // Barra de control fija (Reproducir, Un paso, velocidad): siempre a la vista durante la partida, sea cual sea la pestaña del panel
 function montarBarraMision() {
@@ -4136,6 +4240,7 @@ function animar() {
   efectos.actualizarMarcadores(tiempo, camara);
   efectos.actualizarMovibles(tiempo, dt);
   marcasEvento.actualizar(tiempo);
+  marcasRNA.actualizar(tiempo);
   actualizarEtiquetaEvento();
   if (mapa && grupoRover.children.length) ambientePlaneta.actualizar(dt, tiempo, grupoRover.position);
   if (intro && intro.activo) intro.render(); else if (viaje && viaje.activo) viaje.render();
@@ -4153,7 +4258,7 @@ function animar() {
 }
 animar();
 
-iniciarLaboratorios({ llamar, avisar });
+iniciarLaboratorios({ llamar, avisar, alReglas: (e) => marcarReglasPersonalizadas(e.personalizadas && !e.soloPrevia) });
 
 // Al abrir: la intro (pantalla de inicio) cuando ya se conocen los planetas; si falla, el asistente queda tal cual
 planetasListos.then(() => correrIntro({ motivo: "abrir" }), () => { /* sin /planetas no hay intro */ });

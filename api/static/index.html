@@ -16,6 +16,7 @@
   <div id="ambiente-velo" aria-hidden="true"></div>
   <button id="evento-etiqueta" class="evento-etiqueta oculto" type="button" title="Centrar la cámara en el evento"><span class="ev-flecha" aria-hidden="true">➤</span><span class="ev-texto"></span></button>
 
+  <button id="cajon-izq" class="cajon-asa" type="button" aria-expanded="false" aria-controls="columna" title="Datos de la misión: estado, batería, condiciones y decisión de la IA"><span class="cajon-flecha" aria-hidden="true">▸</span> Datos</button>
   <div id="columna">
     <div id="hud" class="caja">
       <h1>ARES-X · Marte</h1>
@@ -34,6 +35,7 @@
         <div class="fila ancha" id="fila-calor"><span>Temperatura interna</span><span class="valor" id="h-calor">-</span></div>
         <div class="barra-mini ancha" id="barra-calor-caja"><div id="h-calor-barra"></div></div>
       </div>
+      <button id="hud-reglas" class="badge-reglas oculto" type="button" title="Hay reglas difusas editadas en esta partida. Pulsa para verlas o restaurar las del planeta.">Reglas personalizadas activas</button>
       <div id="objetivos" class="objetivos oculto"></div>
       <div id="condiciones" class="condiciones" aria-label="Condiciones del planeta">
         <div class="cond-titulo">Condiciones del planeta</div>
@@ -47,6 +49,7 @@
       <div id="decision-cuerpo">
         <details class="det" id="det-rna">
           <summary>RNA · <span id="res-rna">-</span></summary>
+          <div class="ayuda" id="rna-celda-nota">Clasificación de la celda de enfrente <span id="rna-celda"></span></div>
           <div>libre <span id="rna-libre">-</span></div><div class="barra"><div id="barra-libre"></div></div>
           <div>obstáculo <span id="rna-obstaculo">-</span></div><div class="barra"><div id="barra-obstaculo"></div></div>
           <div>barranco <span id="rna-barranco">-</span></div><div class="barra"><div id="barra-barranco"></div></div>
@@ -294,16 +297,10 @@
           <span>Una celda roja no observada viene del mapa previo.</span>
         </div>
         <div id="riesgo-aviso" class="capa-nota" aria-live="polite"></div>
-        <label class="veto" title="Muestra, generación a generación, los mejores órdenes de visita de sitios que probó el algoritmo genético. No es el camino recorrido.">
+        <label class="veto" title="Dibuja sobre el mapa las rutas candidatas que probó el algoritmo genético, generación por generación, con las ventanas de tiempo de los sitios y las bases de recarga.">
           <input type="checkbox" id="evo-capa"> Evolución del AG
         </label>
-        <div id="evo-aviso" class="capa-nota" aria-live="polite"></div>
-        <div id="evo-controles" class="oculto">
-          <button id="evo-play" class="secundario" type="button" title="Reproducir las generaciones">▶ Reproducir</button>
-          <button id="evo-recalc" class="secundario" type="button" title="Volver a calcular desde la posición actual">Recalcular</button>
-          <select id="evo-gen" aria-label="Generación"></select>
-          <div id="evo-generacion" class="capa-nota"></div>
-        </div>
+        <div class="capa-nota">Los controles (reproducir, generación, curvas y lectura de cada ruta) están en la pestaña «Genético» del panel de IA. <button id="evo-abrir-controles" class="secundario evo-abrir" type="button">Abrir controles</button></div>
         <label class="veto" title="Panel junto al vehículo con lo que ven la RNA, el difuso y el AG en este paso">
           <input type="checkbox" id="holo-capa"> Holograma de IA
         </label>
@@ -343,6 +340,7 @@
             </select>
           </label>
           <button id="ag-ejecutar" class="boton" type="button">Ejecutar AG</button>
+          <button id="ag-ver-mapa" class="secundario" type="button" title="Cierra el laboratorio y dibuja las rutas candidatas de cada generación sobre el mapa">Ver la evolución en el mapa</button>
           <span id="ag-estado" class="ayuda"></span>
         </div>
         <div class="lab-barra">
@@ -373,6 +371,10 @@
 
       <!-- Difuso (CA-05) -->
       <section id="lab-difuso" class="lab-seccion oculto">
+        <div class="tabs lab-subtabs" role="tablist" aria-label="Modo del laboratorio difuso">
+          <button id="dif-modo-explorar" class="tab activa" type="button" role="tab" aria-selected="true">Explorar</button>
+          <button id="dif-modo-editar" class="tab" type="button" role="tab" aria-selected="false">Editar reglas <span id="dif-modo-marca" class="badge-reglas oculto">personalizadas</span></button>
+        </div>
         <div class="lab-barra">
           <label>Distancia (m) <input id="dif-distancia" type="range" min="0" max="20" step="0.1" value="1"> <output id="dif-distancia-v"></output></label>
           <label>Batería (% de la capacidad) <input id="dif-bateria" type="range" min="0" max="100" step="1" value="90"> <output id="dif-bateria-v"></output></label>
@@ -381,6 +383,7 @@
           <button id="dif-barrido" class="boton" type="button">Barrido 10 → 1 m</button>
           <span id="dif-estado" class="ayuda"></span>
         </div>
+        <div id="dif-explorar">
         <div class="lab-grid-3">
           <div class="lab-bloque">
             <div class="titulo-seccion">Pertenencia · distancia</div>
@@ -425,6 +428,8 @@
           <div id="dif-barrido-tip" class="tip"></div>
           <div id="dif-barrido-tabla" class="lab-scroll"></div>
         </div>
+        </div>
+        <div id="dif-edicion" class="oculto"></div>
       </section>
 
       <!-- RNA (CA-06) -->
@@ -603,6 +608,7 @@
         <label title="Gigante: se usa modo sonda. Marte, Mercurio y el resto admiten rover o sonda.">Planeta
           <select id="menu-planeta"></select>
         </label>
+        <p id="menu-planeta-ficha" class="ficha-planeta" aria-live="polite"></p>
         <label>Tamaño del mapa
           <select id="menu-tamano">
             <option value="pequeno">Pequeño (20×30)</option>

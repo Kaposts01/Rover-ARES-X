@@ -214,3 +214,34 @@ export const NOMBRE_ACCION = {
   cazar: "persiguió a un dron", recargar: "recargó batería", fin: "terminó", error: "no pudo decidir",
 };
 export const nombreAccion = (a) => NOMBRE_ACCION[a] || String(a ?? "—").replace(/_/g, " ");
+
+// ---------- Evolución del AG en el mapa (ronda 23) ----------
+export const EVO = {
+  titulo: "Evolución del AG en el mapa",
+  mostrar: "Mostrar en el mapa", ocultar: "Ocultar del mapa",
+  ayudaMostrar: "Dibuja sobre el mapa las rutas candidatas que probó el algoritmo genético, generación por generación.",
+  apagada: "Apagada: no se dibuja nada en el mapa ni se pide nada al motor.",
+  calculando: "Calculando la evolución del AG… puede tardar unos segundos.",
+  reproducir: "Reproducir la evolución", pausar: "Pausar", velocidad: "Velocidad de reproducción", generacion: "Generación",
+  generaciones: "generaciones", calculadoEn: "calculado en",
+  curvaFitness: "fitness por generación · mejor y media", curvaDiversidad: "diversidad de la población (0 = todas iguales, 1 = todas distintas)",
+  mejor: "mejor", media: "media",
+  leyMejor: "Línea amarilla: la mejor ruta", leyResto: "Líneas cian: otras candidatas", leySitio: "Anillo naranja: sitio y su ventana de tiempo", leyBase: "Rombo verde: base de recarga",
+  lecturaTitulo: "lectura del candidato bajo el puntero",
+  lecturaVacia: "Pasa el puntero sobre una ruta del mapa para ver su orden de visita, su fitness y si cumple las restricciones.",
+  rectas: "La línea une los sitios en el orden de visita: no es el camino que recorrería el vehículo celda a celda.",
+  parametrosDifuso: "Parámetros del difuso que eligió el AG", recalcular: "Volver a calcular desde la posición actual",
+  fuenteLab: "El motor todavía no publica la evolución completa: se usan las poblaciones del laboratorio genético. No traen ventanas de tiempo, paradas de recarga ni si cada candidato es factible.",
+  candidato: "Candidato", orden: "Orden", recargas: "Recargas", recarga: "recarga", antesDe: "antes de", sinRecargas: "ninguna",
+  fitness: "Fitness", mejorDeLaGeneracion: "la mejor de la generación", factible: "Factible", si: "sí", no: "no", sinDato: "sin dato",
+  restriccion: "Restricción que viola", sinDetalle: "el motor no detalla cuál", ventanas: "Ventanas",
+  sinRespuesta: "El motor no respondió con la evolución del AG. Revisa que haya partida y vuelve a intentarlo.",
+  sinPlan: "Todavía no hay un plan del AG: inicia la misión y deja que la IA planifique.",
+  sinSitios: "No quedan sitios pendientes: no hay orden de visita que evolucionar.",
+  sinSitiosEnDatos: "La respuesta del motor no trae sitios que dibujar.",
+  sinGeneraciones: "La respuesta del motor no trae generaciones con rutas candidatas.",
+  inviableLab: "el orden no es viable con la batería disponible",
+  accesoGenetico: "Ver la evolución en el mapa",
+  copias: (n) => `${n} individuos de la población tienen este mismo orden`,
+  planCambio: "El plan cambió después de calcular esta evolución: pulsa «Volver a calcular desde la posición actual».",
+};

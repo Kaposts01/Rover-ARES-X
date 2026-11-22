@@ -295,16 +295,10 @@
           <span>Una celda roja no observada viene del mapa previo.</span>
         </div>
         <div id="riesgo-aviso" class="capa-nota" aria-live="polite"></div>
-        <label class="veto" title="Muestra, generación a generación, los mejores órdenes de visita de sitios que probó el algoritmo genético. No es el camino recorrido.">
+        <label class="veto" title="Dibuja sobre el mapa las rutas candidatas que probó el algoritmo genético, generación por generación, con las ventanas de tiempo de los sitios y las bases de recarga.">
           <input type="checkbox" id="evo-capa"> Evolución del AG
         </label>
-        <div id="evo-aviso" class="capa-nota" aria-live="polite"></div>
-        <div id="evo-controles" class="oculto">
-          <button id="evo-play" class="secundario" type="button" title="Reproducir las generaciones">▶ Reproducir</button>
-          <button id="evo-recalc" class="secundario" type="button" title="Volver a calcular desde la posición actual">Recalcular</button>
-          <select id="evo-gen" aria-label="Generación"></select>
-          <div id="evo-generacion" class="capa-nota"></div>
-        </div>
+        <div class="capa-nota">Los controles (reproducir, generación, curvas y lectura de cada ruta) están en la pestaña «Genético» del panel de IA. <button id="evo-abrir-controles" class="secundario evo-abrir" type="button">Abrir controles</button></div>
         <label class="veto" title="Panel junto al vehículo con lo que ven la RNA, el difuso y el AG en este paso">
           <input type="checkbox" id="holo-capa"> Holograma de IA
         </label>
@@ -344,6 +338,7 @@
             </select>
           </label>
           <button id="ag-ejecutar" class="boton" type="button">Ejecutar AG</button>
+          <button id="ag-ver-mapa" class="secundario" type="button" title="Cierra el laboratorio y dibuja las rutas candidatas de cada generación sobre el mapa">Ver la evolución en el mapa</button>
           <span id="ag-estado" class="ayuda"></span>
         </div>
         <div class="lab-barra">

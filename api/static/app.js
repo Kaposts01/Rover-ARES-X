@@ -6,7 +6,8 @@ import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
 import { crearEvolucion } from "/static/evolucion3d.js?v=r14";
-import { adaptarAG, ROTULO_EVOLUCION } from "/static/evolucion_datos.js?v=r14";
+import { crearEvolucionUI } from "/static/evolucion_ui.js?v=r14";
+import { adaptarEvolucion, desdeLaboratorio } from "/static/ag_evolucion_datos.js?v=r14";
 import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
 import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
@@ -14,7 +15,7 @@ import { crearPanelIA } from "/static/panel_ia.js?v=r14";
 import { crearSonido } from "/static/sonido.js?v=r14";
 import { crearDefensa } from "/static/defensa.js?v=r14";
 import {
-  reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
+  EVO, reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
   textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
 } from "/static/textos.js?v=r14";
 import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
@@ -426,77 +427,86 @@ if (cajaRiesgo) {
   });
 }
 
-// ---------- evolución del AG en la escena (Paquete A) ----------
-// Apagada: no se crea nada en la escena ni se pide nada. Encendida: una lectura de /ag (la que ya calcula el laboratorio)
-let evolucion = null;                 // se crea al encender la casilla y se libera al apagarla
+// ---------- evolución del AG en el mapa ----------
+// Apagada: no se crea nada en la escena ni se pide nada. Encendida (casilla de «Capas de la escena», interruptor de la pestaña
+// «Genético» o Laboratorios → Genético): una lectura de GET /ag/evolucion; si el motor aún no la publica (404), el respaldo es la
+// población del laboratorio genético (GET /ag). Los controles viven en la pestaña «Genético» (evolucion_ui.js).
+let evolucion = null;                 // capa 3D: se crea al encender y se libera al apagar
 let evolucionEnVuelo = false;
+let evoUI = null;                     // controles de la pestaña Genético
+let evoReplanes = null;               // replanteos de la misión cuando se cargó: si cambian, el plan es otro
+const cajaEvolucion = document.getElementById("evo-capa");
 
-function textoEvolucion(extra) {
-  const el = document.getElementById("evo-aviso");
-  if (el) {
-    el.textContent = extra ? `${ROTULO_EVOLUCION}. ${extra}` : ROTULO_EVOLUCION;
-    el.scrollIntoView({ block: "nearest" });
-  }
+async function pedirSinAviso(ruta) {   // endpoints opcionales: un 404 no es un error que avisar al jugador
+  try {
+    const r = await fetch(ruta);
+    return { ok: r.ok, status: r.status, cuerpo: await r.json().catch(() => null) };
+  } catch (err) { return { ok: false, status: 0, cuerpo: null }; }
 }
-
+// Lo que el respaldo necesita de /mapa y /estado: sitios, bases de recarga, refugio y desde dónde planifica el AG
+function contextoEvolucion() {
+  const m = mapa || {};
+  return { planeta: planetaActivo, inicio: (estado && estado.posicion) || m.inicio, refugio: m.refugio, sitios: m.sitios || [], bases: m.estaciones || (estado && estado.estaciones) || [] };
+}
+async function obtenerEvolucion() {
+  const r = await pedirSinAviso("/ag/evolucion");
+  if (r.ok) return adaptarEvolucion(r.cuerpo, { fuente: "motor" });
+  if (r.cuerpo && r.cuerpo.hay_plan === false) return adaptarEvolucion({ hay_plan: false });
+  if (new URLSearchParams(location.search).has("demo")) {   // ?demo: simulacro con ventanas y recargas, mientras el motor no publique el endpoint
+    const { simularEvolucion } = await import("/static/ag_evolucion_simulacro.js?v=r14");
+    return adaptarEvolucion(simularEvolucion(contextoEvolucion(), { autonomia: 16 }), { fuente: "motor" });
+  }
+  const ag = await pedirSinAviso("/ag");   // respaldo: el laboratorio genético
+  if (!ag.ok) return adaptarEvolucion(null);
+  return desdeLaboratorio(ag.cuerpo, contextoEvolucion());
+}
 function apagarEvolucion(motivo) {
   if (evolucion) { evolucion.dispose(); evolucion = null; }
-  document.getElementById("evo-controles").classList.add("oculto");
-  const caja = document.getElementById("evo-capa");
-  if (caja) caja.checked = false;
-  const el = document.getElementById("evo-aviso");
-  if (el) el.textContent = motivo || "";
+  if (evoUI) { evoUI.activa(false); if (motivo) evoUI.mensaje(motivo); }
+  if (cajaEvolucion) cajaEvolucion.checked = false;
 }
-
-async function cargarEvolucion() {
+async function cargarEvolucion({ reproducir = true } = {}) {
   if (!evolucion || evolucionEnVuelo) return;
   evolucionEnVuelo = true;
-  const boton = document.getElementById("evo-recalc");
-  boton.disabled = true;
-  textoEvolucion("Calculando…");
+  if (evoUI) evoUI.mensaje(EVO.calculando);
   try {
-    const posicion = estado && estado.posicion;
-    const ag = await llamar("GET", "/ag");
+    const datos = await obtenerEvolucion();
     if (!evolucion) return;   // se apagó mientras llegaba la respuesta
-    const adaptado = adaptarAG(ag, posicion);
-    if (!adaptado) { apagarEvolucion(ag && ag.sin_sitios ? "no quedan sitios pendientes: no hay orden que mostrar" : "sin datos del AG"); return; }
-    evolucion.cargar(adaptado);
-    const sel = document.getElementById("evo-gen");
-    sel.replaceChildren();
-    adaptado.generaciones.forEach((g, i) => {
-      const o = document.createElement("option");
-      o.value = String(i);
-      o.textContent = `generación ${g.generacion}`;
-      sel.appendChild(o);
-    });
-    sel.value = String(adaptado.seleccionada);
-    textoEvolucion(`Calculado desde la posición actual (${posicion ? posicion.join(", ") : "—"}).`);
-  } finally {
-    evolucionEnVuelo = false;
-    boton.disabled = false;
-  }
+    evoReplanes = estado ? estado.replanes ?? null : null;
+    if (datos.estado !== "ok") { evolucion.cargar(null); if (evoUI) { evoUI.datos(null); evoUI.mensaje(datos.motivo); } return; }
+    evolucion.cargar(datos);
+    if (evoUI) { evoUI.datos(datos); evoUI.reproduciendo(false); }
+    if (reproducir && datos.generaciones.length > 1) { evolucion.irA(0); evolucion.reproducir(); if (evoUI) evoUI.reproduciendo(true); }   // arranca mostrando cómo evolucionó
+  } finally { evolucionEnVuelo = false; }
 }
-
-const cajaEvolucion = document.getElementById("evo-capa");
+function activarEvolucion(si) {
+  if (!si) { apagarEvolucion(""); return; }
+  if (!mapa) { apagarEvolucion(EVO.sinPlan); return; }
+  if (!evolucion) {
+    evolucion = crearEvolucion(scene, {
+      alturaTerreno, camara, elemento: renderer.domElement,
+      alCambiar: (i, g) => { if (evoUI) { evoUI.generacion(i, g); evoUI.reproduciendo(!!(evolucion && evolucion.reproduciendo)); } },
+      alPuntero: (c, g, ev) => { if (evoUI) evoUI.puntero(c, g, ev); },
+    });
+  }
+  if (evoUI) evoUI.activa(true);
+  if (cajaEvolucion) cajaEvolucion.checked = true;
+  cargarEvolucion();
+}
+// Si el plan cambió después de cargar (sitio visitado, sismo, meteorito…), se avisa; no se recalcula solo (puede tardar)
+function vigenciaEvolucion(e) {
+  if (!evolucion || !evoUI || evoReplanes === null || !e || e.replanes === undefined || e.replanes === evoReplanes) return;
+  evoUI.mensaje(EVO.planCambio);
+}
+function abrirEdicionReglas() { document.getElementById("abrir-laboratorio").click(); const b = document.querySelector('.lab-tab[data-lab="difuso"]'); if (b) b.click(); }
+// Laboratorios → Genético → «Ver la evolución en el mapa»: cierra el laboratorio, abre la pestaña y enciende la capa
+const botonVerMapa = document.getElementById("ag-ver-mapa");
+if (botonVerMapa) botonVerMapa.addEventListener("click", () => { document.getElementById("cerrar-laboratorio").click(); if (panelIA) panelIA.abrir("ag"); activarEvolucion(true); });
 if (cajaEvolucion) {
   cajaEvolucion.checked = false;
-  cajaEvolucion.addEventListener("change", () => {
-    if (!cajaEvolucion.checked) { apagarEvolucion(""); return; }
-    if (!mapa) { apagarEvolucion("sin partida: no hay AG que mostrar"); return; }
-    evolucion = crearEvolucion(scene, {
-      alturaTerreno,
-      alCambiar: (i, texto) => {
-        const sel = document.getElementById("evo-gen");
-        if (sel.options.length > i) sel.value = String(i);
-        document.getElementById("evo-generacion").textContent = texto;
-      },
-    });
-    document.getElementById("evo-controles").classList.remove("oculto");
-    cargarEvolucion();
-  });
-  document.getElementById("evo-play").addEventListener("click", () => { if (evolucion) evolucion.reproducir(); });
-  document.getElementById("evo-recalc").addEventListener("click", cargarEvolucion);
-  document.getElementById("evo-gen").addEventListener("change", (ev) => { if (evolucion) evolucion.irA(Number(ev.target.value)); });
+  cajaEvolucion.addEventListener("change", () => activarEvolucion(cajaEvolucion.checked));
+  const abrirControles = document.getElementById("evo-abrir-controles");
+  if (abrirControles) abrirControles.addEventListener("click", () => { if (panelIA) panelIA.abrir("ag"); });
 }
 
 // ---------- holograma de IA junto al rover (Paquete A) ----------
@@ -1636,6 +1646,7 @@ function pintarHud(e) {
   if (velo) { velo.className = e.ambiente === "noche" || e.ambiente === "tormenta" ? e.ambiente : ""; }
   ambientePlaneta.reforzar(e.ambiente === "tormenta" ? 2.2 : 1);   // la tormenta levanta el viento mientras dura
   aplicarCondiciones(e);
+  vigenciaEvolucion(e);
   document.getElementById("h-semilla").textContent = e.semilla;
   document.getElementById("h-estado").textContent = nombreEstado(e.estado);
   // 22/11: porcentaje de la capacidad del rover (nunca más de 100 %); el motor sigue en sus unidades
@@ -2674,7 +2685,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     mapa = mp;
     construirMapa(mapa);
     if (capaRiesgoActiva) construirCapaRiesgo(mapa) || actualizarCapaRiesgo();   // M15: la capa sigue al mapa nuevo
-    if (evolucion) cargarEvolucion();   // Paquete A: el AG de la partida nueva
+    if (evolucion) { evolucion.cargar(null); if (evoUI) evoUI.datos(null); cargarEvolucion(); }   // el AG de la partida nueva
     aplicarAspecto(planetaActivo);
     construirRover();
     ubicarRover(datos.posicion, datos.rumbo_sugerido, true);
@@ -3957,7 +3968,17 @@ try {
     alMaximizar: () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "h" })),   // lo mismo que la tecla H
     alNarrar: (texto) => mostrarSubtitulo(texto),                                         // subtítulos en el modo cine
     alMarcarCeldas: marcarCeldasRNA, vehiculo: vehiculoActual,
+    alEditarReglas: () => abrirEdicionReglas(),
   });
+  evoUI = crearEvolucionUI({
+    alActivar: (si) => activarEvolucion(si),
+    alRecalcular: () => cargarEvolucion({ reproducir: false }),
+    alReproducir: () => { if (evolucion) { evolucion.reproducir(); evoUI.reproduciendo(evolucion.reproduciendo); } },
+    alPausar: () => { if (evolucion) { evolucion.pausar(); evoUI.reproduciendo(false); } },
+    alIr: (i) => { if (evolucion) { evolucion.pausar(); evoUI.reproduciendo(false); evolucion.irA(i); } },
+    alVelocidad: (k) => { if (evolucion) evolucion.velocidad(k); },
+  });
+  panelIA.seccion("ag").prepend(evoUI.elemento);
   if (!document.getElementById("menu").classList.contains("oculto")) panelIA.mostrar(false);
 } catch (e) { console.warn("panel de IA: no se pudo crear; la partida sigue sin él", e); panelIA = null; }
 // Barra de control fija (Reproducir, Un paso, velocidad): siempre a la vista durante la partida, sea cual sea la pestaña del panel

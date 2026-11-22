@@ -27,7 +27,7 @@ async function obtener(ruta) {
 
 // opciones: controles (nodo a llevar a la pestaña Misión), alCambiarAncho(px), alAmpliar(laboratorio), alMaximizar()
 // alMarcarCeldas([{celda, riesgo}]) pinta en la escena las celdas que clasificó la RNA; vehiculo() = «rover» | «sonda»
-export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmpliar = null, alMaximizar = null, alNarrar = null, alMarcarCeldas = null, vehiculo = null, alVerEvolucion = null, alEditarReglas = null } = {}) {
+export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmpliar = null, alMaximizar = null, alNarrar = null, alMarcarCeldas = null, vehiculo = null, alEditarReglas = null } = {}) {
   const raiz = el("aside", "pia oculto"); raiz.id = "panel-ia"; raiz.setAttribute("aria-label", "Panel de IA");
   const asa = el("div", "pia-asa"); asa.title = "Arrastra para cambiar el ancho"; asa.setAttribute("aria-hidden", "true");
   const cabecera = el("div", "pia-cabecera");
@@ -87,7 +87,13 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   const difLienzoSalida = el("canvas", "pia-lienzo"); const difCajaSalida = el("div", "pia-lienzo-caja"); difCajaSalida.append(difLienzoSalida);
   const difReglas = el("ol", "pia-reglas");
   const difHist = historial("últimos pasos · velocidad del difuso");
-  secciones.difuso.append(difSalida, difHist.caja, difRejilla, difTituloSalida, difCajaSalida, el("div", "pia-subtitulo", "Reglas activadas"), difReglas);
+  // Enlace a la edición de reglas (Laboratorios → Difuso) y aviso de que hay reglas propias en juego
+  const difEdicion = el("div", "pia-edicion");
+  const difAviso = el("span", "pia-badge-reglas oculto", "Reglas personalizadas activas"); difAviso.id = "dif-aviso-panel";
+  const difEditar = el("button", "pia-secundario", "Editar las reglas y ver el efecto"); difEditar.type = "button"; difEditar.title = "Abre Laboratorios → Difuso: reglas, pesos y funciones de pertenencia editables";
+  difEditar.addEventListener("click", () => { if (alEditarReglas) alEditarReglas(); });
+  difEdicion.append(difEditar, difAviso);
+  secciones.difuso.append(difEdicion, difSalida, difHist.caja, difRejilla, difTituloSalida, difCajaSalida, el("div", "pia-subtitulo", "Reglas activadas"), difReglas);
 
   // Genético
   const agResumen = el("div", "pia-decision", "Esperando el primer paso…");
@@ -453,5 +459,5 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   document.body.append(raiz);
   aplicarPlegado();
   abrir(pestana);
-  return { actualizar, mostrar, abrir, reiniciar, get ancho() { return anchoReal(); }, elemento: raiz };
+  return { actualizar, mostrar, abrir, reiniciar, seccion: (id) => secciones[id] || null, reglasPersonalizadas: (si) => difAviso.classList.toggle("oculto", !si), redibujar, get ancho() { return anchoReal(); }, elemento: raiz };
 }

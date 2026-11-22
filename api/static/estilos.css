@@ -1122,3 +1122,37 @@ body.cine .ia-conduce { display: none; }
 .pia-tramo-barra { display: flex; height: 6px; margin: 4px 0 3px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, 0.08); }
 .pia-tramo-barra i { display: block; height: 100%; }
 .pia-tramo-texto { font-size: 11px; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+
+/* ---- R23: evolución del AG en el mapa (controles en la pestaña Genético) ---- */
+.evo-ui { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--holo-suave, rgba(95, 230, 255, 0.35)); border-radius: 8px; background: rgba(95, 230, 255, 0.04); }
+.evo-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.evo-cab .pia-mini-titulo { margin: 0; }
+.evo-ui .evo-interruptor { width: auto; margin: 0; padding: 5px 10px; white-space: nowrap; }
+.evo-ui .evo-interruptor[aria-pressed="true"] { background: rgba(255, 207, 99, 0.14); border-color: rgba(255, 207, 99, 0.6); color: #ffcf63; }
+.evo-estado { font-size: 11.5px; color: var(--texto-suave); margin: 6px 0; line-height: 1.4; }
+.evo-fila { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 8px; }
+.evo-ui .evo-play { width: 36px; margin: 0; padding: 5px 0; font-size: 14px; }
+.evo-velocidad { background: rgba(255, 255, 255, 0.06); color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 4px; font-size: 12px; }
+.evo-deslizador { width: 100%; accent-color: #ffcf63; }
+.evo-gen { font-size: 12px; margin: 6px 0 2px; color: var(--texto); font-variant-numeric: tabular-nums; }
+.evo-leyenda { display: grid; gap: 2px; margin: 6px 0; font-size: 11px; color: var(--texto-suave); }
+.evo-ley::before { content: ""; display: inline-block; width: 18px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; background: var(--c); }
+.evo-ley-mejor { --c: #ffcf63; } .evo-ley-resto { --c: #42d9f2; } .evo-ley-sitio { --c: #ffb454; } .evo-ley-base { --c: #6ee7a8; }
+.evo-ley-sitio::before, .evo-ley-base::before { height: 8px; width: 8px; border-radius: 50%; margin-right: 10px; margin-left: 5px; }
+.evo-ley-base::before { border-radius: 1px; transform: rotate(45deg); }
+.evo-lectura { padding: 6px 8px; border-left: 3px solid #ffcf63; background: rgba(255, 207, 99, 0.06); border-radius: 4px; font-size: 12px; min-height: 40px; }
+.evo-lectura-titulo, .evo-tip strong { display: block; font-weight: 700; color: #ffe9b8; margin-bottom: 3px; }
+.evo-lectura-fila { display: grid; grid-template-columns: 92px 1fr; gap: 6px; margin: 2px 0; }
+.evo-lectura-clave { color: var(--texto-suave); }
+.evo-lectura-valor { color: var(--texto); overflow-wrap: anywhere; }
+.evo-lectura-fila.mal .evo-lectura-valor, .evo-tip .mal { color: var(--peligro); }
+.evo-lectura-fila.bien .evo-lectura-valor, .evo-tip .bien { color: var(--exito); }
+.evo-difuso { margin: 8px 0; font-size: 12px; }
+.evo-difuso summary { cursor: pointer; color: var(--texto-suave); }
+.evo-tip { position: fixed; z-index: 60; max-width: 340px; padding: 8px 10px; font-size: 12px; line-height: 1.4; border-radius: 8px; background: rgba(8, 14, 26, 0.94); border: 1px solid rgba(255, 207, 99, 0.55); color: var(--texto); pointer-events: none; }
+.evo-tip.oculto, .evo-ui .oculto { display: none; }
+.evo-abrir { width: auto; margin: 4px 0 0; padding: 4px 8px; font-size: 12px; }
+.pia-edicion { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+.pia-edicion .pia-secundario { width: auto; margin: 0; padding: 6px 10px; }
+.pia-badge-reglas, .badge-reglas { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: #1a1205; background: var(--acento-calido); }
+.pia-badge-reglas.oculto, .badge-reglas.oculto { display: none; }

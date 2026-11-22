@@ -5,6 +5,7 @@ import {
   tituloFinal, puntajeFinal, desglosePuntaje, estrellas, formatoDato, confetiPermitido,
 } from "./final_datos.js?v=r14";
 import { icono, insignia, estrella } from "./final_iconos.js?v=r14";
+import { Vehiculo, nombreEstado } from "./textos.js?v=r14";
 
 const reducidoAhora = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
@@ -171,7 +172,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
     const reducido = reducidoAhora();
     pararAnimaciones();
     titulo.textContent = tituloFinal(r.codigo);
-    subtitulo.textContent = [r.planeta || "—", r.modo || "—", r.motivo_final || r.codigo || "—"].join(" · ");
+    subtitulo.textContent = [r.planeta || "—", r.modo ? Vehiculo(r.modo) : "—", nombreEstado(r.motivo_final || r.codigo || "—")].join(" · ");
     const n = estrellas(r);
     pintarEstrellas(n);
     const total = puntajeFinal(r);
@@ -194,7 +195,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
     }));
     rejilla.replaceChildren(
       pintarEstadistica("planeta", "Cuerpo", r.planeta || "—"),
-      pintarEstadistica("brujula", "Modo", r.modo || "—"),
+      pintarEstadistica("brujula", "Vehículo", r.modo ? Vehiculo(r.modo) : "—"),
       pintarEstadistica("microscopio", "Ciencia", r.ciencia == null ? "—" : `${formatoDato(r.ciencia * 100)} %`),
       pintarEstadistica("probeta", "Objetivos muestreados", r.objetivos_muestreados == null || r.objetivos_totales == null ? "—" : `${formatoDato(r.objetivos_muestreados)} / ${formatoDato(r.objetivos_totales)}`),
       pintarEstadistica("bateria", "Batería final", r.bateria_pct == null ? "—" : `${formatoDato(r.bateria_pct, { decimales: 1 })} %`),

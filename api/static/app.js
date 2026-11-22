@@ -1,7 +1,7 @@
 // ARES-X · escena 3D del rover (ARX-04, ARX-05 y ARX-20: diseño realista). El motor está en Python; aquí solo se dibuja y se envían acciones.
 import * as THREE from "three";
 import { OrbitControls } from "/static/vendor/OrbitControls.js";
-import { iniciarLaboratorios, seguirPasoLaboratorio } from "/static/laboratorio.js?v=r14";
+import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
@@ -13,6 +13,10 @@ import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
 import { crearPanelIA } from "/static/panel_ia.js?v=r14";
 import { crearSonido } from "/static/sonido.js?v=r14";
 import { crearDefensa } from "/static/defensa.js?v=r14";
+import {
+  reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
+  textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural,
+} from "/static/textos.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
@@ -235,6 +239,7 @@ let cabezaRover = null; // cabeza de cámara del mástil (se mueve sola)
 let roverDestino = null;
 let planetaActivo = "Marte";     // planeta de la partida actual (aspecto y sonda)
 let modoPlanetaActivo = "rover"; // "rover" o "sonda"
+const vehiculoActual = () => vehiculoDe(modoPlanetaActivo);   // nombre para los textos: «rover» o «sonda»
 let sondaRover = null;           // sonda 3D cuando el modo es sonda (gigantes)// posición y rumbo a los que avanza el rover suavemente
 
 const materiales = {
@@ -1529,18 +1534,33 @@ document.getElementById("menu-modo").addEventListener("change", (ev) => {
 });
 
 // Recomendaciones (ARX-54, contrato §12): lo que haría cada modelo, sin mover el rover
-const NOMBRE_MODELO = { hibrido: "híbrido", rna: "RNA", difuso: "difuso", ag: "AG" };
+const NOMBRE_MODELO = { hibrido: "Híbrido", rna: "RNA", difuso: "Difuso", ag: "AG" };
+const TEXTO_REC_VACIO = "Pulsa el botón para ver qué haría cada modelo en esta celda.";
+let recomendacionEpoca = 0;   // sube con cada paso o partida: una respuesta tardía de una celda anterior no se muestra
+// Las recomendaciones valen para UNA celda: tras cada movimiento o paso se recalculan (si el cuadro está abierto) o se
+// borran y se pide consultar de nuevo, para que nunca se vea el «rumbo» de una posición anterior.
+function actualizarRecomendacion() {
+  recomendacionEpoca += 1;
+  const caja = document.getElementById("det-rec");
+  const modoManual = document.getElementById("modo").value === "manual";
+  if (modoManual && caja && caja.open && estado && !estado.sin_partida && !ESTADOS_TERMINALES.includes(estado.estado)) { consultarRecomendacion(); return; }
+  const lista = document.getElementById("rec-lista");
+  lista.replaceChildren(Object.assign(document.createElement("li"), { textContent: TEXTO_REC_VACIO }));
+}
 async function consultarRecomendacion() {
   const lista = document.getElementById("rec-lista");
+  const epoca = ++recomendacionEpoca;
   lista.replaceChildren();
   const datos = await deps_recomendacion();
+  if (epoca !== recomendacionEpoca) return;   // el rover ya se movió: esta respuesta es de otra celda
   if (!datos || !datos.propuestas) {
     lista.appendChild(Object.assign(document.createElement("li"), { textContent: "Sin recomendación (revisa que haya partida y modo manual)." }));
     return;
   }
+  if (Array.isArray(datos.posicion)) lista.appendChild(Object.assign(document.createElement("li"), { textContent: `Para la celda (${datos.posicion.join(", ")})` }));
   for (const p of datos.propuestas) {
     const li = document.createElement("li");
-    const rumbo = p.rumbo ? ` · rumbo ${p.rumbo}` : " · no mueve el rover";
+    const rumbo = p.rumbo ? ` · rumbo ${p.rumbo}` : ` · no mueve el ${vehiculoActual()}`;
     li.textContent = `${NOMBRE_MODELO[p.modelo] || p.modelo}: ${p.accion}${rumbo}. ${p.razon}`;
     lista.appendChild(li);
   }
@@ -1553,14 +1573,14 @@ document.getElementById("rec-consultar").addEventListener("click", consultarReco
 function pintarHud(e) {
   pintarModoDesc(e.modo);
   const modoSel = document.getElementById("modo");
-  const nombreModo = modoSel.options[modoSel.selectedIndex] ? modoSel.options[modoSel.selectedIndex].text : e.modo;
-  document.getElementById("resumen-texto").textContent = `semilla ${e.semilla} · nivel ${NIVELES[(e.nivel || 1) - 1]} · ${nombreModo}`;
+  const textoModo = modoSel.options[modoSel.selectedIndex] ? modoSel.options[modoSel.selectedIndex].text : nombreModo(e.modo);
+  document.getElementById("resumen-texto").textContent = `semilla ${e.semilla} · nivel ${NIVELES[(e.nivel || 1) - 1]} · ${textoModo}`;
   if (!modoDemoEstados) pintarEstadoBadge(e.estado);
   // Título con el planeta: /estado.planeta, luego /planetas.activo.planeta, y por último el valor local
   const planetaVisible = e.planeta || (planetasDatos && planetasDatos.activo && planetasDatos.activo.planeta);
   if (planetaVisible) {
     planetaActivo = planetaVisible;
-    const modoVisible = e.modo_planeta === "sonda" ? " · sonda" : (e.modo_planeta === "rover" ? " · rover" : "");
+    const modoVisible = e.modo_planeta === "sonda" || e.modo_planeta === "rover" ? ` · ${Vehiculo(e.modo_planeta)}` : "";
     document.querySelector("#hud h1").textContent = `ARES-X · ${planetaVisible}${modoVisible}`;
   }
   // ARX-85 (ev3-d61 A): en modo sonda, pantalla de sonda con sus lecturas y sin controles de rodaje
@@ -1578,10 +1598,10 @@ function pintarHud(e) {
     document.getElementById("sonda-temp").textContent = `${e.temperatura_interna} °C (tolerancia ${e.tolerancia} °C)`;
     document.getElementById("sonda-bateria").textContent = `${(e.bateria_pct ?? e.bateria).toFixed(1)} %`;
     document.getElementById("sonda-sobre").textContent = e.pasos_sobre_tolerancia ?? "-";
-    document.getElementById("sonda-estado").textContent = e.estado;
+    document.getElementById("sonda-estado").textContent = nombreEstado(e.estado);
   }
   document.getElementById("h-semilla").textContent = e.semilla;
-  document.getElementById("h-estado").textContent = e.estado;
+  document.getElementById("h-estado").textContent = nombreEstado(e.estado);
   // 22/11: porcentaje de la capacidad del rover (nunca más de 100 %); el motor sigue en sus unidades
   const bpct = e.bateria_pct ?? e.bateria;
   document.getElementById("h-bateria").textContent = `${bpct.toFixed(1)} %`;
@@ -1589,10 +1609,10 @@ function pintarHud(e) {
   try { pintarEnergia(e); } catch (err) { console.warn("bases y pilas: no se pudieron dibujar", err); }
   document.getElementById("h-puntaje").textContent = e.puntaje;
   document.getElementById("h-municion").textContent = e.municion;
-  document.getElementById("h-modo").textContent = e.modo;
+  document.getElementById("h-modo").textContent = nombreModo(e.modo);
   document.getElementById("h-paso").textContent = e.paso ?? "-";
   document.getElementById("h-cooldown").textContent = e.cooldown ?? "-";
-  const vivos = (e.npcs || []).map((n) => n.estado);
+  const vivos = (e.npcs || []).map((n) => nombreEstadoDron(n.estado));
   document.getElementById("h-drones").textContent = vivos.length ? vivos.join(", ") : "ninguno";
   document.getElementById("modo").value = e.modo;
   document.getElementById("veto").checked = e.veto !== false;
@@ -1635,10 +1655,10 @@ function decisionesDelPaso(p) {
     lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
   }
   const ruta = (p.ag || {}).ruta_planeada || [];
-  lineas.push(ruta.length ? `Planificador: ruta de ${ruta.length} celdas` : "Planificador: sin ruta");
+  lineas.push(ruta.length ? `Planificador: ruta de ${plural(ruta.length, "celda", "celdas")}` : "Planificador: sin ruta");
   const supv = p.supervisor || {};
   const vetos = (supv.motivos || []).filter(m => String(m).startsWith("V-"));
-  lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto ${vetos.join(", ")}` : ""}`);
+  lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto: ${nombresMotivos(vetos)}` : ""}`);
   return lineas;
 }
 
@@ -1701,7 +1721,7 @@ function pintarPaneles(p) {
   const reglas = dif.reglas || [];
   if (dif.usado === false) {
     document.getElementById("dif-velocidad").textContent = "no usado en este modo";
-    lista.innerHTML = "<li>el difuso no mueve el rover en este modo</li>";
+    lista.innerHTML = `<li>el difuso no mueve el ${vehiculoActual()} en este modo</li>`;
   } else if (reglas.length === 0) {
     lista.innerHTML = "<li>sin reglas activadas</li>";
   } else {
@@ -1714,8 +1734,8 @@ function pintarPaneles(p) {
 
   const ag = p.ag || {};
   const n = (ag.ruta_planeada || []).length;
-  document.getElementById("ag-ruta").textContent = n ? `${n} celdas hasta el objetivo` : "sin ruta";
-  document.getElementById("res-ag").textContent = n ? `${n} celdas` : "sin ruta";
+  document.getElementById("ag-ruta").textContent = n ? `${plural(n, "celda", "celdas")} hasta el objetivo` : "sin ruta";
+  document.getElementById("res-ag").textContent = n ? plural(n, "celda", "celdas") : "sin ruta";
 
   document.getElementById("h-paso").textContent = p.paso ?? "-";
   const sup = p.supervisor || {};
@@ -1727,7 +1747,8 @@ function pintarPaneles(p) {
   motivos.innerHTML = "";
   for (const m of (sup.motivos || ["-"])) {
     const li = document.createElement("li");
-    li.textContent = m;
+    li.textContent = m === "-" ? m : nombreMotivo(m);
+    if (m !== "-") li.title = `Código del motor: ${m}`;
     motivos.appendChild(li);
   }
   // ARX-88: el porqué del paso con datos reales (M17): RNA, difuso, planificador y supervisor
@@ -1754,6 +1775,7 @@ async function refrescarPaneles() {
     if (p) pintarPaneles(p);
   });
   await refrescarHistorial();
+  actualizarRecomendacion();                            // las recomendaciones eran de la celda anterior
   // Los gráficos solo se piden si el panel está abierto
   if (!document.getElementById("graficos").classList.contains("plegado")) await refrescarGraficos();
   marcarDesbordes();
@@ -1783,7 +1805,7 @@ function pintarCalor(datos) {
   const sobre = t > datos.tolerancia;
   const nota = datos.aborto_termico_activo === false ? " (aborto térmico desactivado)" : "";
   // registro lateral y no avisar(): el aviso del paso lo taparía en el mismo ciclo (C1 de QA)
-  if (sobre && !calorSobreTolerancia) registrarEvento(`aviso: Calor interno sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
+  if (sobre && !calorSobreTolerancia) registrarEvento(`aviso: temperatura interna sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
   calorSobreTolerancia = sobre;
 }
 
@@ -1954,14 +1976,15 @@ async function refrescarHistorial() {
   const datos = await llamar("GET", "/historial" + (q ? "?" + q : ""));
   if (!datos) return;
   document.getElementById("hist-csv").href = "/historial.csv" + (q ? "?" + q : "");
-  document.getElementById("hist-total").textContent = `${datos.total} filas`;
+  document.getElementById("hist-total").textContent = plural(datos.total, "fila", "filas");
   const cuerpo = document.getElementById("hist-cuerpo");
   cuerpo.replaceChildren();
   for (const f of datos.filas.slice(-200)) {
     const tr = document.createElement("tr");
-    for (const texto of [f.n, f.modo, f.accion, f.tecnica, f.motivo || "-", valoresClave(f)]) {
+    for (const texto of [f.n, nombreModo(f.modo), f.accion, nombreTecnica(f.tecnica), nombresMotivos((f.motivo || "").split(";")) || "-", valoresClave(f)]) {
       const td = document.createElement("td");
       td.textContent = String(texto);
+      if (texto === nombresMotivos((f.motivo || "").split(";")) && f.motivo) td.title = `Códigos del motor: ${f.motivo}`;
       tr.appendChild(td);
     }
     cuerpo.appendChild(tr);
@@ -2017,8 +2040,10 @@ async function dispararEvento(nombreForzado = null) {
   const detalle = r.detalle || (r.ok ? "hecho" : "sin efecto");
   if (nombre === "barranco" && r.ok) revisarLogro({ tipo: "barranco" });
   if (nombre === "barranco" && r.ok && Array.isArray(r.celdas)) animarBarranco(r.celdas);
-  avisar(`Evento ${nombre}: ${detalle}`);
-  registrarEvento(`evento ${nombre}: ${detalle}`);
+  const opcion = [...document.getElementById("evento-nombre").options].find((o) => o.value === nombre);
+  const rotuloEvento = opcion ? opcion.textContent : nombre;   // «falla de sensor», no «falla_sensor»
+  avisar(`Evento ${rotuloEvento}: ${detalle}`);
+  registrarEvento(`evento ${rotuloEvento}: ${detalle}`);
   await refrescarEstado();
   await refrescarPaneles();
 }
@@ -2373,6 +2398,22 @@ function configuracionVigente() {
     veto: document.getElementById("veto").checked,
   };
 }
+// Una partida nueva vacía TODO el estado derivado de la anterior: bitácora lateral, historial y gráficos, tira de
+// decisiones, recomendaciones, panel de IA (gráficos «últimos pasos», decisión y narración), laboratorios y contadores.
+function reiniciarEstadoDerivado() {
+  document.getElementById("registro").replaceChildren();
+  document.getElementById("hist-cuerpo").replaceChildren();
+  document.getElementById("hist-total").textContent = "";
+  tiraPasos = []; pintarTira();
+  filasGraficos = []; cursorGrafico = null; geometriaGrafico = null;
+  try { dibujarGrafico(); } catch (e) { /* panel plegado */ }
+  recomendacionEpoca += 1;
+  document.getElementById("rec-lista").replaceChildren(Object.assign(document.createElement("li"), { textContent: TEXTO_REC_VACIO }));
+  ultimoPasoNumero = null; calorSobreTolerancia = false; ultimosObjetivos = null;
+  try { reiniciarLaboratorios(); } catch (e) { console.warn("laboratorios: no se pudieron reiniciar", e); }
+  try { if (panelIA) panelIA.reiniciar(); } catch (e) { console.warn("panel de IA: no se pudo reiniciar", e); }
+  try { document.getElementById("subtitulo-ia") && (document.getElementById("subtitulo-ia").textContent = ""); } catch (e) { /* sin subtítulo */ }
+}
 // Tamaño del mapa (ARX-21): pequeno 20×30, mediano 30×45, grande 40×60 (por defecto: grande)
 async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente(), bateria = null) {
   detenerReproduccion();
@@ -2402,7 +2443,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     estado = datos;
     revisarLogro({ tipo: "inicio", planeta: datos.planeta, modo: datos.modo_planeta });
     if (momentosPantalla) momentosPantalla.reiniciar();
-    document.getElementById("registro").replaceChildren();
+    reiniciarEstadoDerivado();   // lo que se calculó con la misión anterior no puede verse en la nueva
     recorridoRover = [];
     avisosVistos.clear();
     const mp = await llamar("GET", "/mapa");
@@ -2422,7 +2463,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     actualizarControlEvento();
     await refrescarPaneles();
     await refrescarEscenarios();
-    avisar(`Partida nueva en ${planetaActivo}${modoPlanetaActivo === "sonda" ? " (sonda)" : ""}: semilla ${estado.semilla}, nivel ${NIVELES[nivel - 1]}.`);
+    avisar(`Partida nueva en ${planetaActivo}${modoPlanetaActivo === "sonda" ? " (Sonda)" : ""}: semilla ${estado.semilla}, nivel ${NIVELES[nivel - 1]}.`);
     return true;
   } finally {
     cargando = false;
@@ -2544,7 +2585,7 @@ async function alFinDeMision(codigo) {
   }
   if (cadenaAutomatica && cadenaAutomatica.misiones > 0) {
     cadenaAutomatica.misiones -= 1;
-    avisar(`Misión terminada (${codigo}). La siguiente empieza en 3 s…`);
+    avisar(`Misión terminada (${nombreEstado(codigo)}). La siguiente empieza en 3 s…`);
     await esperar(3000);   // sin preguntar: espera 3 s y sigue con la siguiente
     const { nivel, veto } = cadenaAutomatica;
     // Misma configuración con la que se arrancó la cadena, no la que muestre el panel en ese momento
@@ -2580,7 +2621,7 @@ async function nuevaDesdeMeta(semilla, nivel) {
   if (ok) mostrarMision(estado.semilla, nivel);
 }
 
-// Pantalla de meta combinada (ARX-74): mapa y dificultad se eligen sin actuar; «Confirmar» arranca lo elegido
+// Pantalla de meta combinada: mapa y dificultad se eligen sin actuar; «Iniciar la misión elegida» arranca lo elegido
 let metaMapa = "repetir";
 let metaNivel = 1;
 function pintarMetaElecciones() {
@@ -2595,6 +2636,14 @@ function mostrarMeta(codigo, cadena = null) {
   const resumen = document.getElementById("meta-cadena");
   resumen.classList.toggle("oculto", !cadena);
   resumen.textContent = cadena ? `Cadena automática: ${cadena.hechas} ${cadena.hechas === 1 ? "misión" : "misiones"} · ${cadena.exitos} ${cadena.exitos === 1 ? "éxito" : "éxitos"} · ${cadena.fracasos} ${cadena.fracasos === 1 ? "fracaso" : "fracasos"} · ${textoCadena(cadena)}` : "";
+  // Resumen de la misión que acaba de terminar: pasos, puntaje y batería (el puntaje explica cómo se calcula)
+  const resumenLista = document.getElementById("meta-resumen");
+  resumenLista.replaceChildren(...resumenMeta(estado).map(([nombre, valor]) => {
+    const li = document.createElement("li");
+    li.textContent = `${nombre}: ${valor}`;
+    return li;
+  }));
+  document.getElementById("meta-puntaje-ayuda").textContent = AYUDA_PUNTAJE_SIMPLE;
   const lista = document.getElementById("meta-objetivos");
   lista.replaceChildren();
   for (const c of (ultimosObjetivos && ultimosObjetivos.condiciones) || []) {
@@ -2606,7 +2655,7 @@ function mostrarMeta(codigo, cadena = null) {
   }
   document.getElementById("meta-titulo").textContent = cadena
     ? "Cadena automática terminada"
-    : codigo === "EXITO" ? "¡Meta alcanzada!" : `Misión terminada: ${codigo}`;
+    : codigo === "EXITO" ? "¡Meta alcanzada!" : `Misión terminada: ${nombreEstado(codigo)}`;
   metaMapa = "repetir";
   metaNivel = estado.nivel;
   pintarMetaElecciones();
@@ -2758,8 +2807,9 @@ function mostrarAvisosNuevos(lista) {
   for (const aviso of vigentes) {
     if (avisosVistos.has(aviso)) continue;
     avisosVistos.add(aviso);
-    avisar(aviso);
-    registrarEvento(`aviso: ${aviso}`);
+    const claro = limpiarAviso(aviso, vehiculoActual());   // sin el código interno delante y con el vehículo real
+    avisar(claro);
+    registrarEvento(`aviso: ${claro}`);
   }
   // Un aviso que deja de estar vigente se olvida: si vuelve, se muestra otra vez
   for (const aviso of [...avisosVistos]) if (!vigentes.includes(aviso)) avisosVistos.delete(aviso);
@@ -2856,9 +2906,9 @@ async function paso() {
   if (terminada) sonido.fin(r.estado === "EXITO");
   await refrescarPaneles();
   momentosEnPaso(r);
-  const motivos = (r.motivos || []).join(", ");
-  avisar(`Paso ${pasoDe(r)}: ${r.accion} · ${motivos}` + eventosTexto(r.eventos_combate));
-  registrarEvento(`paso ${pasoDe(r)}: ${r.accion} · ${motivos}`);
+  const motivos = nombresMotivos(r.motivos);
+  avisar(`Paso ${pasoDe(r)}: ${r.accion}${motivos ? ` · ${motivos}` : ""}` + eventosTexto(r.eventos_combate));
+  registrarEvento(`paso ${pasoDe(r)}: ${r.accion}${motivos ? ` · ${motivos}` : ""}`);
   mostrarAvisosNuevos(estado && estado.avisos);   // después del aviso del paso, para que no lo tape
   (r.eventos_combate || []).forEach((e) => registrarEvento(`combate: ${e}`));
   if (cine && cineVivo() && !terminada && !fin) {
@@ -2868,7 +2918,7 @@ async function paso() {
   }
   if (terminada) {
     detenerReproduccion();
-    avisar(`Fin de la partida: ${r.estado}.`);
+    avisar(`Fin de la partida: ${nombreEstado(r.estado)}.`);
     alFinDeMision(r.estado);
     return false;
   }
@@ -2951,9 +3001,9 @@ function alternarReproduccion() {
 // Qué se espera ver con cada intervención (22/11: la sección se explicaba mal)
 const EXPLICACION_INTERVENCION = {
   ninguna: "",
-  "rna-barranco": "Qué mirar: aunque el terreno esté libre, el supervisor vetará el avance (V-RNA-BARRANCO) y el rover replanificará. Prueba que la RNA puede frenar al rover.",
-  "rna-libre": "Qué mirar: la RNA ya no avisa de barrancos; si el rover se sigue frenando ante uno, es el telémetro del supervisor (V-BORDE-BARRANCO). Prueba qué protección depende de la RNA y cuál no.",
-  difuso: "Qué mirar: la velocidad queda fija en el valor elegido (0 = el rover se detiene). Prueba que el difuso es quien decide la velocidad.",
+  "rna-barranco": "Qué mirar: aunque el terreno esté libre, el supervisor vetará el avance por el barranco que cree ver la RNA y el vehículo replanificará. Prueba que la RNA puede frenarlo.",
+  "rna-libre": "Qué mirar: la RNA ya no avisa de barrancos; si el vehículo se sigue frenando ante uno, es el telémetro del supervisor, que mide el desnivel. Prueba qué protección depende de la RNA y cuál no.",
+  difuso: "Qué mirar: la velocidad queda fija en el valor elegido (0 = el vehículo se detiene). Prueba que el difuso es quien decide la velocidad.",
 };
 function actualizarCampoIntervencion() {
   const tecnica = document.getElementById("int-tecnica").value;
@@ -3450,7 +3500,7 @@ document.getElementById("modo").addEventListener("change", async (ev) => {
   if (datos) {
     estado = datos;
     pintarHud(datos);
-    avisar(`Modo ${datos.modo}.`);
+    avisar(`Modo ${nombreModo(datos.modo)}.`);
     await refrescarPaneles();
     pintarTira();   // H-7: la tira aparece u oculta según el modo, sin esperar un paso nuevo
     }

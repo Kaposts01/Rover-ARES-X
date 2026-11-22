@@ -22,13 +22,13 @@
         <div class="fila"><span>Estado</span><span class="valor" id="h-estado">-</span></div>
         <div class="fila ancha"><span>Batería</span><span class="valor" id="h-bateria">-</span></div>
         <div class="barra-mini ancha"><div id="h-bateria-barra"></div></div>
-        <div class="fila" title="Puntaje simple del HUD (ciencia, batería y bono por no tener vetos). No es el puntaje de la pantalla final ni un criterio de evaluación."><span>Puntaje simple</span><span class="valor" id="h-puntaje">-</span></div>
+        <div class="fila" title="Puntaje simple = 100 × sitios visitados ÷ sitios totales + 0,5 × batería restante (unidades del motor) + 50 si no hubo ningún veto del supervisor. No es el puntaje de la pantalla final ni un criterio de evaluación."><span>Puntaje simple</span><span class="valor" id="h-puntaje">-</span></div>
         <div class="fila"><span>Munición</span><span class="valor" id="h-municion">-</span></div>
         <div class="fila"><span>Modo</span><span class="valor" id="h-modo">-</span></div>
         <div class="fila"><span>Paso</span><span class="valor" id="h-paso">-</span></div>
         <div class="fila"><span>Cooldown</span><span class="valor" id="h-cooldown">-</span></div>
         <div class="fila"><span>Drones</span><span class="valor" id="h-drones">-</span></div>
-        <div class="fila ancha" id="fila-calor"><span>Calor interno</span><span class="valor" id="h-calor">-</span></div>
+        <div class="fila ancha" id="fila-calor"><span>Temperatura interna</span><span class="valor" id="h-calor">-</span></div>
         <div class="barra-mini ancha" id="barra-calor-caja"><div id="h-calor-barra"></div></div>
       </div>
       <div id="objetivos" class="objetivos oculto"></div>
@@ -117,7 +117,7 @@
       </label>
       <div id="modo-desc" class="ayuda"></div>
       <label class="veto" title="Con el veto, el supervisor no deja avanzar hacia barrancos u obstáculos detectados">
-        <input type="checkbox" id="veto" checked> Veto de seguridad (rna, difuso, ag)
+        <input type="checkbox" id="veto" checked> Veto de seguridad (RNA, difuso, AG)
       </label>
     </section>
 
@@ -133,7 +133,7 @@
     </section>
 
     <section id="simulacion" class="paso">
-      <div class="titulo-seccion">3 · Simulación</div>
+      <div class="titulo-seccion">Simulación</div>
       <div class="par">
         <button id="paso" type="button">Paso</button>
         <label>Velocidad
@@ -147,8 +147,8 @@
     </section>
 
     <section class="paso">
-      <div class="titulo-seccion">4 · Experimento: forzar una técnica</div>
-      <p class="ayuda">Sirve para demostrar que cada técnica influye de verdad: fuerzas su salida y miras si cambia la decisión del rover. Los pasos quedan marcados como intervenidos en la bitácora.</p>
+      <div class="titulo-seccion">3 · Experimento: forzar una técnica</div>
+      <p class="ayuda">Sirve para demostrar que cada técnica influye de verdad: fuerzas su salida y miras si cambia la decisión del vehículo. Los pasos quedan marcados como intervenidos en la bitácora.</p>
       <label>Qué forzar
         <select id="int-tecnica">
           <option value="ninguna">nada (la IA decide sola)</option>
@@ -170,7 +170,7 @@
     </section>
 
     <section class="paso">
-      <div class="titulo-seccion">5 · Eventos</div>
+      <div class="titulo-seccion">4 · Eventos</div>
       <div class="fila-compacta" style="grid-template-columns: 1fr auto">
         <label>Evento
           <select id="evento-nombre">
@@ -181,7 +181,7 @@
             <option value="senal_biologica">señal biológica</option>
           </select>
         </label>
-        <button id="evento-disparar" type="button" disabled>Disparar</button>
+        <button id="evento-disparar" type="button" disabled>Lanzar</button>
       </div>
     </section>
 
@@ -199,8 +199,8 @@
     <div id="historial" class="dock-panel plegado">
       <div id="historial-cuerpo">
       <div>
-        <label>Modo <select id="hist-modo"><option value="">todos</option><option>manual</option><option>rna</option><option>difuso</option><option>ag</option><option>automatico</option></select></label>
-        <label>Técnica <select id="hist-tecnica"><option value="">todas</option><option>humano</option><option>rna</option><option>difuso</option><option>ag</option><option>supervisor</option><option>combate</option><option>escenario</option></select></label>
+        <label>Modo <select id="hist-modo"><option value="">todos</option><option value="manual">Manual</option><option value="rna">RNA</option><option value="difuso">Difuso</option><option value="ag">AG</option><option value="automatico">Híbrido</option></select></label>
+        <label>Técnica <select id="hist-tecnica"><option value="">todas</option><option value="humano">Humano</option><option value="rna">RNA</option><option value="difuso">Difuso</option><option value="ag">AG</option><option value="supervisor">Supervisor</option><option value="combate">Combate</option><option value="escenario">Escenario</option></select></label>
         <label>Motivo contiene <input id="hist-motivo" type="text" size="12"></label>
         <a id="hist-csv" href="/historial.csv">Exportar CSV</a>
         <span id="hist-total" class="ayuda"></span>
@@ -230,7 +230,7 @@
   <div id="sonda-panel" class="caja oculto" aria-label="Pantalla de sonda">
     <div class="kicker">Sonda</div>
     <div class="fila"><span>Planeta</span><span class="valor" id="sonda-planeta">-</span></div>
-    <div class="fila"><span>T interna</span><span class="valor" id="sonda-temp">-</span></div>
+    <div class="fila"><span>Temperatura interna</span><span class="valor" id="sonda-temp">-</span></div>
     <div class="fila"><span>Batería</span><span class="valor" id="sonda-bateria">-</span></div>
     <div class="fila"><span>Pasos sobre tolerancia</span><span class="valor" id="sonda-sobre">-</span></div>
     <div class="fila"><span>Estado</span><span class="valor" id="sonda-estado">-</span></div>
@@ -275,7 +275,7 @@
         <select id="evo-gen" aria-label="Generación"></select>
         <div id="evo-generacion" class="capa-nota"></div>
       </div>
-      <label class="veto" title="Panel junto al rover con lo que ven la RNA, el difuso y el AG en este paso">
+      <label class="veto" title="Panel junto al vehículo con lo que ven la RNA, el difuso y el AG en este paso">
         <input type="checkbox" id="holo-capa"> Holograma de IA
       </label>
       <div id="holo-aviso" class="capa-nota" aria-live="polite"></div>
@@ -345,7 +345,7 @@
       <section id="lab-difuso" class="lab-seccion oculto">
         <div class="lab-barra">
           <label>Distancia (m) <input id="dif-distancia" type="range" min="0" max="20" step="0.1" value="1"> <output id="dif-distancia-v"></output></label>
-          <label>Batería (%) <input id="dif-bateria" type="range" min="0" max="100" step="1" value="90"> <output id="dif-bateria-v"></output></label>
+          <label>Batería (% de la capacidad) <input id="dif-bateria" type="range" min="0" max="100" step="1" value="90"> <output id="dif-bateria-v"></output></label>
           <label>Inclinación (°) <input id="dif-inclinacion" type="range" min="0" max="45" step="1" value="2"> <output id="dif-inclinacion-v"></output></label>
           <label>Temperatura (°C) <input id="dif-temperatura" type="range" min="-80" max="80" step="1" value="15"> <output id="dif-temperatura-v"></output></label>
           <button id="dif-barrido" class="boton" type="button">Barrido 10 → 1 m</button>
@@ -382,15 +382,15 @@
             <div class="titulo-seccion">Salida · velocidad</div>
             <div class="lienzo-caja"><canvas id="dif-salida" class="lienzo"></canvas></div>
             <div id="dif-salida-tip" class="tip"></div>
-            <div id="dif-velocidad" class="ayuda"></div>
+            <div id="lab-dif-velocidad" class="ayuda"></div>
           </div>
           <div class="lab-bloque">
             <div class="titulo-seccion">Reglas</div>
-            <div id="dif-reglas" class="lab-scroll"></div>
+            <div id="lab-dif-reglas" class="lab-scroll"></div>
           </div>
         </div>
         <div class="lab-bloque">
-          <div class="titulo-seccion">Barrido de distancia · de 10 a 1 m (CA-05)</div>
+          <div class="titulo-seccion">Barrido de distancia · de 10 a 1 m</div>
           <div class="lienzo-caja"><canvas id="dif-barrido-curva" class="lienzo"></canvas></div>
           <div id="dif-barrido-tip" class="tip"></div>
           <div id="dif-barrido-tabla" class="lab-scroll"></div>
@@ -424,7 +424,7 @@
           <div id="rna-activaciones"></div>
         </div>
         <div class="lab-bloque">
-          <div class="titulo-seccion">Evaluación del modelo · matriz de confusión y recall (CA-06)</div>
+          <div class="titulo-seccion">Evaluación del modelo · matriz de confusión y recall</div>
           <div id="rna-evaluacion"></div>
         </div>
       </section>
@@ -506,6 +506,8 @@
     <div class="pausa-caja meta-caja">
       <div class="kicker" id="meta-titulo">Meta</div>
       <div id="meta-cadena" class="ayuda oculto"></div>
+      <ul id="meta-resumen" class="lista"></ul>
+      <div id="meta-puntaje-ayuda" class="ayuda"></div>
       <ul id="meta-objetivos" class="lista"></ul>
       <div class="meta-grupo" role="group" aria-labelledby="meta-mapa-titulo">
         <div class="kicker" id="meta-mapa-titulo">Mapa</div>
@@ -525,7 +527,7 @@
         </div>
       </div>
       <div class="meta-acciones">
-        <button id="meta-confirmar" class="boton-confirmar" type="button">Confirmar</button>
+        <button id="meta-confirmar" class="boton-confirmar" type="button">Iniciar la misión elegida</button>
         <button id="meta-salir" class="boton-salir" type="button">Salir al menú inicial</button>
         <a id="meta-reporte" class="boton-reporte" href="/reporte.html?descargar=1" download>Descargar reporte</a>
       </div>
@@ -562,7 +564,7 @@
     <div class="caja asistente">
       <div class="kicker">Rover autónomo · simulación planetaria</div>
       <h1>ARES-X</h1>
-      <p>Configura la misión en cuatro pasos y pulsa Iniciar.</p>
+      <p>Configura la misión en tres pasos y pulsa Iniciar.</p>
 
       <section class="paso">
         <div class="titulo-seccion"><span class="num">1</span> Planeta y mapa</div>
@@ -578,8 +580,8 @@
         </label>
         <label>Tipo de vehículo
           <select id="menu-modo-planeta">
-            <option value="rover">rover</option>
-            <option value="sonda">sonda</option>
+            <option value="rover">Rover</option>
+            <option value="sonda">Sonda</option>
           </select>
         </label>
         <label class="veto" title="Muestra una animación al cambiar de planeta; no cambia la partida">
@@ -617,7 +619,7 @@
         </label>
         <div id="menu-modo-desc" class="ayuda"></div>
         <label class="veto" title="Con el veto, el supervisor no deja avanzar hacia barrancos u obstáculos detectados">
-          <input type="checkbox" id="menu-veto" checked> Veto de seguridad (rna, difuso, ag)
+          <input type="checkbox" id="menu-veto" checked> Veto de seguridad (RNA, difuso, AG)
         </label>
         <label id="menu-misiones-fila" class="oculto">Misiones seguidas (automático)
           <input id="menu-misiones" type="number" min="1" max="20" value="3">

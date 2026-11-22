@@ -918,3 +918,9 @@ body.cine #subtitulo-ia { display: block; }
 #sonda-panel.oculto { display: none; }
 #sonda-panel .fila { font-size: 12px; }
 body.cine #sonda-panel { bottom: calc(9vh + 20px); right: 24px; }
+
+/* Correcciones de texto (ronda 23): el selector de cámara no corta «Persecución»; los valores del HUD parten por palabras */
+.barra-mision label { flex: 0 0 auto; white-space: nowrap; }
+.barra-mision select { flex: 0 0 auto; min-width: 9.5em; text-overflow: clip; }
+#hud .fila .valor, .hud-grid .fila .valor { overflow-wrap: break-word; word-break: normal; min-width: 0; }
+.def-criterios-nota { flex-basis: 100%; font-size: 11px; color: var(--texto-suave, #98a4bb); }

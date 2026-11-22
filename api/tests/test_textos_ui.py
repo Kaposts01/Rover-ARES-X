@@ -1,0 +1,342 @@
+"""Ronda 23 (interfaz): textos y datos que ve el jugador. Funciones puras de textos.js con node (opcional), los datos del
+servidor que las alimentan y comprobaciones estáticas del HTML y los módulos JS."""
+import json
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from api.servidor import Sesion, crear_app  # noqa: E402
+
+ESTATICOS = Path(__file__).resolve().parents[1] / "static"
+NODE = shutil.which("node")
+sin_node = pytest.mark.skipif(NODE is None, reason="node no está instalado")
+
+
+def _js(expresion: str):
+    codigo = (f"import * as m from {json.dumps((ESTATICOS / 'textos.js').as_uri())};"
+              f"console.log(JSON.stringify({expresion}));")
+    r = subprocess.run([NODE, "--input-type=module", "-"], input=codigo, capture_output=True, text=True,
+                       encoding="utf-8", timeout=30)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+def _cliente(**k):
+    return TestClient(crear_app(Sesion(semilla=11, **k)))
+
+
+def _cliente_grande():
+    """Partida jugable por defecto (mapa grande): su capacidad de batería no es 100 u., así que % y unidades difieren."""
+    c = TestClient(crear_app(Sesion(semilla=11)))
+    assert c.post("/partida", json={"semilla": 11, "nivel": 1}).status_code == 200
+    assert c.get("/estado").json()["capacidad_bateria"] > 120
+    return c
+
+
+def _html_sin_comentarios() -> str:
+    return re.sub(r"<!--.*?-->", "", (ESTATICOS / "index.html").read_text(encoding="utf-8"), flags=re.S)
+
+
+# ---------- 1. «undefined» ----------
+@sin_node
+def test_candidato_del_ag_no_trae_ruta_pasos_y_el_texto_no_dice_undefined():
+    # forma real de /ag: cromosoma, orden, pasos, fitness y desglose (no existe «ruta_pasos»)
+    c = {"cromosoma": [[1, 2], [3, 4], [5, 6]], "orden": [[1, 2], [3, 4], [5, 6]], "pasos": [None, [2, 2], None],
+         "fitness": 1.5, "desglose": {}}
+    t = _js(f"m.textoCandidatoAG({json.dumps(c)})")
+    assert "undefined" not in t and "NaN" not in t and "Orden de 3 sitios" in t and "1 punto de paso" in t
+    assert "undefined" not in _js("m.textoCandidatoAG({})") and "undefined" not in _js("m.textoCandidatoAG(null)")
+    assert "Orden de 1 sitio." in _js('m.textoCandidatoAG({orden: [[1, 1]]})')
+
+
+@sin_node
+def test_evaluacion_de_la_rna_usa_la_configuracion_real_del_servidor():
+    ev = _cliente().get("/rna/evaluacion?modelo=juego").json()
+    assert "nota" not in ev and ev["configuracion"] and ev["mapas_prueba"]   # la «nota» nunca existió
+    t = _js(f"m.textoEvaluacionRNA({json.dumps(ev)})")
+    assert "undefined" not in t and "Mapas de prueba:" in t and ev["configuracion"] in t
+    assert "undefined" not in _js("m.textoEvaluacionRNA({})")
+
+
+def test_los_modulos_no_leen_campos_que_el_servidor_no_manda():
+    lab = (ESTATICOS / "laboratorio.js").read_text(encoding="utf-8")
+    assert "ruta_pasos" not in lab and "ev.nota" not in lab and "datos.nota" not in lab
+
+
+# ---------- 2. batería del difuso ----------
+def test_difuso_publica_el_porcentaje_real_igual_al_del_hud():
+    c = _cliente_grande()
+    estado = c.get("/estado").json()
+    d = c.get("/difuso").json()["entradas"]
+    assert d["bateria_pct"] == estado["bateria_pct"]                         # lo que se rotula «%» coincide con el HUD
+    assert d["capacidad_bateria"] == estado["capacidad_bateria"]
+    assert d["bateria"] == pytest.approx(estado["bateria"], abs=0.01)         # la entrada realmente usada, en unidades del motor
+    assert d["bateria"] > 100 and d["bateria_pct"] == 100.0                   # el caso del evaluador: 145 u. no son 145 %
+
+
+def test_difuso_acepta_bateria_en_porcentaje_y_la_convierte_a_unidades_del_motor():
+    c = _cliente_grande()
+    cap = c.get("/estado").json()["capacidad_bateria"]
+    d = c.get("/difuso?bateria_pct=50").json()["entradas"]
+    assert d["bateria_pct"] == 50.0 and d["bateria"] == pytest.approx(cap / 2, abs=0.01)
+    assert c.get("/difuso?bateria_pct=101").status_code == 400
+    assert c.get("/difuso?bateria_pct=abc").status_code == 400
+    assert c.get("/difuso/barrido?bateria_pct=40").json()["bateria_pct"] == 40.0
+
+
+def test_ia_paso_muestra_el_porcentaje_real_de_la_bateria_que_uso_el_difuso():
+    c = _cliente_grande()
+    antes = c.get("/estado").json()
+    assert c.post("/modo", json={"modo": "automatico"}).status_code == 200
+    assert c.post("/paso").status_code == 200
+    e = c.get("/ia/paso").json()["difuso"]["entradas"]
+    # el paso se decidió con la batería anterior al movimiento: el porcentaje es el de esa carga, no las unidades del motor
+    assert e["bateria_pct"] == pytest.approx(antes["bateria_pct"], abs=0.2)
+    assert 0.0 <= e["bateria_pct"] <= 100.0 and e["bateria"] > 100
+
+
+@sin_node
+def test_texto_de_la_bateria_del_difuso_no_miente_sobre_la_escala():
+    t = _js('m.textoBateriaDifuso({bateria: 145, bateria_pct: 96.6, capacidad_bateria: 150})')
+    assert t == "96,6 % (145 u. del motor)"
+    assert "%" not in _js("m.textoBateriaDifuso({bateria: 70})")                # sin porcentaje real no inventa uno
+    assert "unidades del motor" in _js("m.ETIQUETA_BATERIA_UNIVERSO") and "%" not in _js("m.ETIQUETA_BATERIA_UNIVERSO")
+
+
+# ---------- 3. datos que no se limpian entre misiones ----------
+def test_partida_nueva_vacia_historial_serie_y_decision_del_servidor():
+    c = _cliente()
+    c.post("/modo", json={"modo": "automatico"})
+    for _ in range(3):
+        c.post("/paso")
+    assert c.get("/historial").json()["total"] >= 3
+    assert c.post("/partida", json={"semilla": 5, "nivel": 1}).status_code == 200
+    assert c.get("/historial").json()["total"] == 0
+    assert c.get("/serie").json()["total"] == 0
+    ia = c.get("/ia/paso").json()
+    assert ia["hay_paso"] is False and "difuso" not in ia and "rna" not in ia
+
+
+def test_el_cliente_vacia_todo_lo_derivado_al_crear_la_partida():
+    app = (ESTATICOS / "app.js").read_text(encoding="utf-8")
+    cuerpo = app[app.index("function reiniciarEstadoDerivado()"):app.index("// Tamaño del mapa (ARX-21)")]
+    for pieza in ("registro", "hist-cuerpo", "tiraPasos = []", "filasGraficos = []", "rec-lista", "reiniciarLaboratorios()", "panelIA.reiniciar()"):
+        assert pieza in cuerpo, pieza
+    carga = app[app.index("async function cargarPartida("):app.index("// Campo vacío = semilla aleatoria real")]
+    assert "reiniciarEstadoDerivado()" in carga
+    panel = (ESTATICOS / "panel_ia.js").read_text(encoding="utf-8")
+    assert "function reiniciar()" in panel and "hist.length = 0" in panel and "reiniciar," in panel
+    assert "miEpoca !== epoca" in panel            # una respuesta de la partida anterior no repinta el historial
+
+
+# ---------- 4. recomendaciones al día ----------
+def test_las_recomendaciones_se_recalculan_o_se_borran_tras_cada_paso():
+    app = (ESTATICOS / "app.js").read_text(encoding="utf-8")
+    refresco = app[app.index("async function refrescarPaneles()"):app.index("// Móviles, eventos y automático continuo")]
+    assert "actualizarRecomendacion()" in refresco
+    assert "caja.open" in app and "epoca !== recomendacionEpoca" in app
+
+
+# ---------- 5. lab Difuso: ids únicos ----------
+def test_los_id_del_html_son_unicos():
+    ids = re.findall(r'\bid="([^"]+)"', _html_sin_comentarios())
+    repetidos = sorted({i for i in ids if ids.count(i) > 1})
+    assert not repetidos, repetidos
+
+
+def test_el_laboratorio_difuso_pinta_en_sus_propios_contenedores():
+    html = _html_sin_comentarios()
+    lab = (ESTATICOS / "laboratorio.js").read_text(encoding="utf-8")
+    for i in ("lab-dif-reglas", "lab-dif-velocidad"):
+        assert f'id="{i}"' in html and f'$("{i}")' in lab
+    assert '$("dif-reglas")' not in lab and '$("dif-velocidad")' not in lab   # eran los del panel lateral
+
+
+def test_difuso_entrega_reglas_para_el_cuadro_del_laboratorio():
+    d = _cliente().get("/difuso?distancia=1&bateria_pct=90&inclinacion=2&temperatura=15").json()
+    assert d["reglas"] and d["reglas_activadas"]
+    ids = {r["id"] for r in d["reglas"]}
+    assert all(r["id"] in ids for r in d["reglas_activadas"])
+
+
+# ---------- 6. numeración ----------
+def test_la_numeracion_de_los_pasos_es_continua():
+    html = _html_sin_comentarios()
+    assert "en tres pasos" in html and "cuatro pasos" not in html
+    asistente = html[html.index('<div id="menu">'):]
+    assert re.findall(r'<span class="num">(\d)</span>', asistente) == ["1", "2", "3"]
+    panel = html[html.index('<div id="controles"'):html.index('<div id="dock"')]
+    # «Simulación» pasa a la barra de control y no cuenta: los visibles son 1, 2, 3 y 4 sin saltos
+    visibles = re.findall(r'titulo-seccion">(\d) · ', panel)
+    assert visibles == ["1", "2", "3", "4"]
+
+
+# ---------- 7. tildes, mayúsculas y siglas ----------
+@sin_node
+def test_nombres_visibles_de_modos_estados_y_drones():
+    assert _js('[m.nombreModo("automatico"), m.nombreModo("rna"), m.nombreModo("ag"), m.nombreModo("difuso")]') == ["Híbrido", "RNA", "AG", "Difuso"]
+    assert _js('[m.nombreEstado("CONFIGURACION"), m.nombreEstado("EXPLORACION"), m.nombreEstado("REPLANIFICACION")]') == ["Configuración", "Exploración", "Replanificación"]
+    assert _js('m.nombreEstadoDron("persecucion")') == "persecución"
+    assert _js('[m.Vehiculo("sonda"), m.Vehiculo("rover")]') == ["Sonda", "Rover"]
+
+
+def test_el_html_no_muestra_siglas_en_minuscula_ni_valores_internos():
+    html = _html_sin_comentarios()
+    assert "(rna, difuso, ag)" not in html
+    assert "Veto de seguridad (RNA, difuso, AG)" in html
+    visible = re.sub(r"<[^>]+>", "\n", html)
+    for malo in ("CONFIGURACION", "EXPLORACION", "REPLANIFICACION"):
+        assert malo not in visible
+    # el filtro del historial conserva los valores que entiende la API y muestra nombres claros
+    assert '<option value="automatico">Híbrido</option>' in html and '<option value="rna">RNA</option>' in html
+
+
+# ---------- 8. vehículo real ----------
+def test_el_narrador_usa_el_vehiculo_de_la_partida():
+    from api.narrador import narrar_fila
+    fila = {"paso": 3, "accion": "avanzar", "motivos": "OK"}
+    assert "El rover avanzó" in narrar_fila(fila) and "El rover avanzó" in narrar_fila(fila, "rover")
+    s = narrar_fila(fila, "sonda")
+    assert "La sonda avanzó" in s and "rover" not in s
+
+
+def test_ia_paso_y_reporte_narran_con_el_vehiculo_real():
+    c = _cliente()
+    c.post("/partida", json={"semilla": 11, "nivel": 1, "planeta": "Neptuno", "modo": "sonda"})
+    assert c.get("/estado").json()["modo_planeta"] == "sonda"
+    c.post("/modo", json={"modo": "automatico"})
+    assert c.post("/paso").status_code == 200
+    n = c.get("/ia/paso").json()["narracion"]
+    assert "La sonda" in n and "rover" not in n
+    assert "El rover" not in c.get("/reporte.html").text
+
+
+@sin_node
+def test_los_avisos_del_motor_usan_el_vehiculo_y_pierden_el_codigo():
+    assert _js('m.limpiarAviso("T-SOBRE-TOLERANCIA: 63 °C interna, más de 60", "rover")') == "63 °C interna, más de 60"
+    assert _js('m.limpiarAviso("El rover no puede moverse", "sonda")') == "La sonda no puede moverse"
+    assert _js('m.limpiarAviso("Faltan drones y el rover está detenido", "sonda")') == "Faltan drones y la sonda está detenido"
+    assert _js('m.limpiarAviso("El rover no puede moverse", "rover")') == "El rover no puede moverse"
+
+
+# ---------- 9, 10. «Temperatura interna» y plurales ----------
+def test_temperatura_interna_en_lugar_de_calor_interno():
+    todo = _html_sin_comentarios() + (ESTATICOS / "app.js").read_text(encoding="utf-8")
+    assert "Calor interno" not in todo and "Temperatura interna" in todo
+
+
+@sin_node
+def test_singular_y_plural_de_los_contadores():
+    assert _js("[m.reglasActivadas(0), m.reglasActivadas(1), m.reglasActivadas(2)]") == ["0 reglas activadas", "1 regla activada", "2 reglas activadas"]
+    assert _js('[m.plural(1, "celda", "celdas"), m.plural(5, "celda", "celdas")]') == ["1 celda", "5 celdas"]
+
+
+def test_el_narrador_no_usa_regla_s():
+    from api.narrador import narrar_fila
+    uno = narrar_fila({"paso": 1, "accion": "avanzar", "velocidad": 0.5, "reglas": "R1;R2", "motivos": "OK"})
+    dos = narrar_fila({"paso": 1, "accion": "avanzar", "velocidad": 0.5, "reglas": "R1;R2;R3", "motivos": "OK"})
+    assert "(s)" not in uno and "1 regla más" in uno and "2 reglas más" in dos
+
+
+def test_el_selector_de_camara_no_se_corta():
+    css = (ESTATICOS / "estilos.css").read_text(encoding="utf-8")
+    assert ".barra-mision select { flex: 0 0 auto; min-width: 9.5em;" in css
+
+
+# ---------- 11. Lanzar ----------
+def test_los_eventos_se_lanzan_y_el_arma_se_dispara():
+    html = _html_sin_comentarios()
+    assert re.search(r'<button id="evento-disparar"[^>]*>Lanzar</button>', html)
+    assert 'title="Disparar (Espacio)"' in html
+    assert "Lanzar un meteorito" in (ESTATICOS / "defensa.js").read_text(encoding="utf-8")
+
+
+# ---------- 12. jerga interna ----------
+JERGA = re.compile(r"§|sin_ag_|\bB1 de QA\b|\bCA-\d|\bRF-\d|ARX-\d|ev3-d\d|\bM\d{1,2}\b")
+
+
+def _cadenas(texto: str):
+    return re.findall(r'"([^"\n]{6,})"|`([^`\n]{6,})`', texto)
+
+
+def test_la_interfaz_no_muestra_codigos_internos():
+    html = re.sub(r"<[^>]+>", "\n", _html_sin_comentarios())
+    assert not JERGA.search(html), JERGA.search(html)
+    for nombre in ("laboratorio.js", "panel_ia.js", "textos.js", "final_tarjeta.js", "final_datos.js", "holo_datos.js", "holo3d.js"):
+        for a, b in _cadenas((ESTATICOS / nombre).read_text(encoding="utf-8")):
+            t = a or b
+            if t.startswith(("/", "#")) or " " not in t:
+                continue
+            assert not JERGA.search(t), (nombre, t)
+    # la pantalla Defensa puede citar RF/CA, pero los explica
+    defensa = (ESTATICOS / "defensa.js").read_text(encoding="utf-8")
+    assert "RF: requisito funcional" in defensa and "CA: criterio de aceptación" in defensa
+
+
+@sin_node
+def test_las_variantes_de_la_comparacion_tienen_nombre_claro_y_ayuda():
+    claves = ["hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_mas_corta", "sin_ag_2opt", "ruta_corta", "ag_puro"]
+    nombres = _js(f"{json.dumps(claves)}.map(m.nombreVariante)")
+    assert all("_" not in n for n in nombres) and nombres[claves.index("sin_ag_2opt")] == "Sin AG (ruta con 2-opt)"
+    assert "2-opt" in _js('m.ayudaVariante("sin_ag_2opt")') and "mejora local" in _js('m.ayudaVariante("sin_ag_2opt")')
+    nota = _js("m.NOTA_POLITICAS + ' ' + m.notaVariantes({sin_ag_2opt: {}, hibrido: {}})")
+    assert not JERGA.search(nota) and "undefined" not in nota
+    assert _js('m.nombreVariante("variante_nueva")') == "variante nueva"                 # una variante desconocida no rompe nada
+
+
+def test_la_comparacion_no_muestra_la_nota_cruda_del_archivo_de_resultados():
+    lab = (ESTATICOS / "laboratorio.js").read_text(encoding="utf-8")
+    assert "datos.nota" not in lab and "NOTA_POLITICAS" in lab
+
+
+@sin_node
+def test_los_codigos_de_motivo_se_traducen_y_el_desconocido_se_deja_tal_cual():
+    assert _js('m.nombreMotivo("V-RNA-BARRANCO")') == "la RNA vio un barranco delante"
+    assert _js('m.nombreMotivo("RNA-RIESGO:(3, 4):0.91")') == "la RNA confirmó riesgo en la celda"
+    assert _js('m.nombreMotivo("CODIGO-NUEVO")') == "CODIGO-NUEVO"
+    assert "V-" not in _js('m.nombresMotivos(["V-BORDE-BARRANCO", "OK"])')
+
+
+def test_el_reporte_no_muestra_codigos_de_motivo_ni_nombres_de_modo_internos():
+    from api.reporte import construir_html
+    log = [{"paso": 1, "motivos": "V-RNA-BARRANCO;V-BORDE-BARRANCO", "reglas": "R1", "velocidad": 0.2, "p_barranco": 0.9, "bateria": 50}]
+    hist = [{"n": 1, "paso_mision": 1, "modo": "automatico", "accion": "replanificar", "tecnica": "supervisor",
+             "motivo": "V-RNA-BARRANCO", "velocidad": 0.2, "p_barranco": 0.9, "bateria": 50, "reglas": "R1"}]
+    est = {"modo": "automatico", "estado": "EXITO", "puntaje": 120, "paso": 7, "modo_planeta": "rover"}
+    h = construir_html({"estado": est, "filas_log": log, "historial": hist})
+    assert "V-RNA-BARRANCO" not in h and "V-BORDE-BARRANCO" not in h
+    assert "Híbrido" in h and "Éxito" in h and "Supervisor" in h
+    assert "100 × sitios visitados" in h                      # el puntaje simple explica su cuenta
+
+
+# ---------- 13. pantalla final ----------
+def test_la_meta_dice_que_inicia_y_resume_pasos_puntaje_y_bateria():
+    html = _html_sin_comentarios()
+    boton = re.search(r'<button id="meta-confirmar"[^>]*>([^<]+)</button>', html).group(1)
+    assert boton != "Confirmar" and "misión" in boton.lower()
+    assert 'id="meta-resumen"' in html and 'id="meta-puntaje-ayuda"' in html
+
+
+@sin_node
+def test_resumen_de_la_meta_y_formula_del_puntaje_simple():
+    r = _js("m.resumenMeta({paso: 42, puntaje: 133, bateria_pct: 61.25, bateria: 90})")
+    assert r == [["Pasos", "42"], ["Puntaje simple", "133"], ["Batería", "61,3 %"]]
+    assert _js("m.resumenMeta(null)")[0][1] == "—"
+    assert "100 × sitios visitados ÷ sitios totales" in _js("m.AYUDA_PUNTAJE_SIMPLE")
+    assert "No es el puntaje de la pantalla final" in _js("m.AYUDA_PUNTAJE_SIMPLE")
+
+
+@sin_node
+def test_la_formula_del_puntaje_simple_coincide_con_la_del_motor():
+    c = _cliente()
+    e = c.get("/estado").json()
+    esperado = _js(f"m.puntajeSimple({json.dumps(dict(visitados=e['sitios_visitados'], totales=e['sitios_totales'], bateria=e['bateria'], vetos=e['vetos']))})")
+    assert esperado == e["puntaje"]

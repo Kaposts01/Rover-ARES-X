@@ -88,7 +88,66 @@ replantea la ruta antes de llegar. `/ia/paso` expone `rna.tramo`. Las lecturas u
 permanente también con el ruido nominal (el veto inmediato de la lectura del paso no cambia), y no marca celdas conocidas. Antes, una sola lectura falsa
 podía cerrar para siempre una celda, incluso una base de recarga.
 
-## 4. Cómo reproducir
+## 4. Resultados
+
+### 4.1 Parámetros evolucionados (entrenamiento frente a validación)
+
+Fitness medio por partida (máximo ≈ 1,7: éxito + 0,5 · ciencia + 0,2 · batería), nivel 4, 11 sitios; validación = semillas 401 a 420 no vistas.
+
+| Planeta | Semillas de entrenamiento | Entrenamiento: defecto → evolucionado | Validación: defecto → evolucionado | Éxito en validación (defecto → evolucionado) |
+|---|---|---|---|---|
+| Marte | 8 (301–308), pob. 12 × 7 gen. | 1,555 → 1,572 | 1,297 → 1,419 (+0,12) | 80 % → 90 % |
+| Neptuno | 16 (301–316), pob. 12 × 6 gen. | 1,352 → 1,505 | 1,392 → 1,375 (−0,02) | 90 % → 90 % |
+
+Neptuno, primer intento con 8 semillas: entrenamiento 1,470 → 1,518, validación 1,392 → 1,330 (éxito 90 → 85 %): **sobreajuste**. Con 16 semillas el entrenamiento
+mejora más (+0,15) y la validación no mejora (−0,02, dentro del ruido). **Lectura honesta**: en Marte la mejora de validación (+0,12, 10 puntos de éxito con n = 20)
+va en el sentido esperado pero no es concluyente; en Neptuno no se demuestra mejora fuera de las semillas de entrenamiento. Lo evolucionado son retoques chicos del
+difuso por defecto (anchuras de los conjuntos, pesos de 0,76 a 0,95 en 5 a 8 reglas, tope de velocidad con viento de 0,88 a 0,90; el tope sobre hielo y en pendiente no actúa
+y el factor de desvío queda en 1,29 y 1,38): solo se evaluaron 60 a 71 vectores distintos (población 12), poco para 30 genes.
+
+### 4.2 La IA importa: comparación en la partida jugable difícil
+
+Nivel 4, 11 sitios, mapa pequeño, mismas semillas para todas las variantes: **desarrollo** (1 a 20) y **validación** (101 a 120, no vistas por el diseño ni por la
+evolución). Éxito con intervalo de Wilson del 95 %; ciencia = fracción del valor total recogido (con la calidad de la ventana), media ± error estándar.
+
+Marte (viento moderado, polvo, algo de hielo):
+
+| Variante | Éxito desarrollo (IC 95 %) | Ciencia desarrollo | Éxito validación | Ciencia validación | Puntaje validación |
+|---|---|---|---|---|---|
+| híbrido | 18/20 (70–97) | 0,725 ± 0,046 | 19/20 | 0,770 ± 0,030 | 99 ± 3 |
+| sin RNA | 20/20 (84–100) | 0,777 ± 0,041 | 19/20 | 0,767 ± 0,040 | 109 ± 7 |
+| sin difuso | 18/20 (70–97) | 0,787 ± 0,041 | 17/20 | 0,758 ± 0,033 | 98 ± 5 |
+| sin AG: vecino más cercano | 18/20 (70–97) | 0,532 ± 0,032 | 17/20 | 0,619 ± 0,039 | 78 ± 5 |
+| sin AG: 2-opt | 17/20 (64–95) | 0,572 ± 0,033 | 19/20 | 0,636 ± 0,029 | 83 ± 4 |
+| sin AG: por ventanas (primero el que vence antes) | 13/20 (43–82) | 0,589 ± 0,053 | 19/20 | 0,758 ± 0,041 | 93 ± 5 |
+| difuso sin evolucionar | 18/20 (70–97) | 0,727 ± 0,051 | 17/20 | 0,742 ± 0,042 | 94 ± 6 |
+
+Neptuno (viento muy fuerte con ráfagas, hielo muy resbaladizo):
+
+| Variante | Éxito desarrollo (IC 95 %) | Ciencia desarrollo | Éxito validación | Ciencia validación | Puntaje validación |
+|---|---|---|---|---|---|
+| híbrido | 17/20 (64–95) | 0,743 ± 0,046 | 18/20 | 0,794 ± 0,037 | 108 ± 5 |
+| sin RNA | 18/20 (70–97) | 0,776 ± 0,039 | 19/20 | 0,782 ± 0,037 | 113 ± 8 |
+| sin difuso | 17/20 (64–95) | 0,792 ± 0,033 | 19/20 | 0,735 ± 0,045 | 100 ± 6 |
+| sin AG: vecino más cercano | 17/20 (64–95) | 0,556 ± 0,038 | 15/20 | 0,590 ± 0,036 | 75 ± 5 |
+| sin AG: 2-opt | 19/20 (76–99) | 0,572 ± 0,038 | 20/20 | 0,656 ± 0,031 | 96 ± 4 |
+| sin AG: por ventanas | 17/20 (64–95) | 0,647 ± 0,050 | 17/20 | 0,710 ± 0,041 | 91 ± 6 |
+| difuso sin evolucionar | 19/20 (76–99) | 0,773 ± 0,045 | 17/20 | 0,773 ± 0,046 | 105 ± 6 |
+
+Conclusiones, con cifras:
+
+- **El AG sí aporta, y de forma medible, en ciencia recogida y puntaje**: +0,15 a +0,20 de fracción de ciencia frente al vecino más cercano y al 2-opt en las cuatro
+  mediciones (4 a 6 errores estándar) y +15 a +30 puntos de puntaje. En **éxito** no hay diferencia: las ablaciones también ganan (la dificultad viene de la batería y
+  las tormentas, no del orden; con IC de ±15 puntos no se distingue). La heurística «por ventanas» (que mira las ventanas) se acerca al AG en la validación
+  (0,76 frente a 0,77 en Marte; 0,71 frente a 0,79 en Neptuno) pero con 190 a 200 pasos (el AG, 153 a 174) y más recargas.
+- **La RNA no aporta; en desarrollo incluso resta** (sin RNA ≥ híbrido en ciencia y éxito en las cuatro mediciones, diferencias de 0,00 a 0,05 de ciencia, dentro de 1 error
+  estándar o poco más: no concluyente, pero sin ninguna señal a favor). Motivo estructural: el supervisor ya veta con el telémetro inclinado (V-BORDE-BARRANCO) y el
+  mapa estimado se corrige con lo medido (ARX-93c lo mostró); la RNA añade falsos barrancos (~1,7 % de las celdas libres) y pasos de espera. Con la anticipación hay un
+  efecto real sobre una celda con barranco forzado (ver `tests/test_anticipacion_r23.py`) pero no se traduce en más partidas ganadas.
+- **El difuso evolucionado no se distingue del de defecto ni de la velocidad fija**: ±5 puntos de ciencia, ±10 de éxito, con signo cambiante entre desarrollo y validación.
+  El efecto de la velocidad sobre el resultado es chico (solo entra por viento, hielo y pendiente).
+
+## 5. Cómo reproducir
 
 ```
 python scripts/evolucionar_difuso.py --planeta Marte           # y Neptuno; escribe juego/difuso_planetas.json

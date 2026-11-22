@@ -142,6 +142,7 @@ PILAS_MAPA_GRANDE = 5                                         # pilas en el mapa
 # ARX-79 (ev3-d75 A): batería inicial del mapa más grande que el pequeño = batería por nivel × RAZON_BATERIA_GRANDE.
 # R = mediana de pasos de las victorias del grande (77,5) / mediana del pequeño (52,0) = 1,49 (ver ARX-79_calibracion.md).
 RAZON_BATERIA_GRANDE = 1.49
+RAZON_BATERIA_GRANDE_JUGABLE = 2.8    # R23: calibrada con scripts/medir_dificultad.py --tamano grande
 BATERIA_MAX_POR_NIVEL = {1: 60.0, 2: 56.0, 3: 52.0, 4: 48.0, 5: 44.0}   # calibrar: la ruta completa no llega sin recargar
 
 
@@ -453,7 +454,9 @@ def bateria_por_defecto(nivel: int, filas: int, columnas: int, garantia: bool = 
     else:
         bateria = 100.0 - 4.0 * (nivel - 1)                    # evaluación congelada: la de siempre
     if int(filas) * int(columnas) > FILAS_BASE * COLUMNAS_BASE and not con_estaciones:
-        bateria *= RAZON_BATERIA_GRANDE          # ARX-79 (ev3-d75 A): el grande tiene batería proporcional
+        # ARX-79 (ev3-d75 A): el grande tiene batería proporcional. R23: la partida jugable, con drones, viento y hielo, gasta
+        # más que la razón de pasos de las victorias del congelado: usa su propia razón
+        bateria *= RAZON_BATERIA_GRANDE_JUGABLE if (garantia and not con_estaciones) else RAZON_BATERIA_GRANDE
     return float(bateria)
 
 

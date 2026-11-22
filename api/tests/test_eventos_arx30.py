@@ -47,7 +47,7 @@ def test_partida_congelada_no_tiene_sismos_espontaneos():
 
 def test_regresion_ticks_de_meteoritos_no_cambian_con_el_sismo():
     # ARX-79: batería 84 explícita = la del nivel 5 antes del factor por tamaño; fija el generador (la lista no cambia)
-    p = Partida(semilla=11, nivel=5, filas=40, columnas=60, bateria=84.0)
+    p = Partida(semilla=11, nivel=5, filas=40, columnas=60, bateria=84.0, planeta="Tierra")   # R23: sin tormentas extra de polvo (Marte las tiene)
     ticks = []
     for k in range(3000):
         antes = len(p.meteoritos)
@@ -338,12 +338,25 @@ def test_arx66_muy_facil_y_facil_con_la_senal_espontanea_siguen_ganables():
 
 # ---------- ARX-30c (QA C1): la ganabilidad de la señal cuenta la caza de drones y el meteorito ----------
 def _sesion_automatica(semilla, nivel, eventos):
-    sesion = Sesion(semilla=semilla, nivel=nivel)
-    app = crear_app(sesion)
-    cliente = TestClient(app)
-    cliente.post("/partida", json={"semilla": semilla, "nivel": nivel, "tamano": "pequeno"})
+    # R23: estas pruebas comprueban la lógica de la señal biológica, no la dificultad. Se juegan con la dificultad y la
+    # garantía anteriores (batería 100 − 4·(nivel − 1), garantía sin bases ni planeta, sin mecánicas de planeta); la partida
+    # jugable actual puede perderse por batería.
+    from juego import dificultad
+    antes = 100.0 - 4.0 * (nivel - 1)
+    previa = dificultad.GARANTIA_CON_BASES_Y_PLANETA
+    dificultad.GARANTIA_CON_BASES_Y_PLANETA = False
+    try:
+        sesion = Sesion(semilla=semilla, nivel=nivel, bateria=antes)
+        app = crear_app(sesion)
+        cliente = TestClient(app)
+        cliente.post("/partida", json={"semilla": semilla, "nivel": nivel, "tamano": "pequeno", "bateria": antes})
+    finally:
+        dificultad.GARANTIA_CON_BASES_Y_PLANETA = previa
     cliente.post("/modo", json={"modo": "automatico", "veto": True})
-    app.state.sesion.partida.eventos_activos = tuple(eventos)
+    p = app.state.sesion.partida
+    p.eventos_activos = tuple(eventos)
+    p.mecanicas.activa = False
+    p.fisica_velocidad = False
     return app, cliente
 
 

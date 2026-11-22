@@ -345,6 +345,7 @@ def test_sin_bateria_para_los_sitios_termina_y_no_bucla(cliente):
     p.mision.estado = "EXITO"
     p.mision.visitados = set()
     p.rover.bateria = 22.0
+    p.estaciones = []                      # R23: con otro mapa elegido puede haber una base alcanzable; aquí no hay donde recargar
     p._revisar_victoria()
     assert p.estado == "FRACASO"
     assert any("Batería insuficiente" in a for a in p.avisos)

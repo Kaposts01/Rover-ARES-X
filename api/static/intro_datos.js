@@ -3,7 +3,6 @@
 import { PLANETAS_VIAJE, DISTANCIA_SOL_MKM, AVISO_TERRENO, datosTarjeta } from "./viaje_datos.js?v=r14";
 
 export { PLANETAS_VIAJE, DISTANCIA_SOL_MKM, AVISO_TERRENO };
-export const CLAVE_VISTA = "ares.intro.visto";   // sessionStorage: ya se mostró en esta sesión del navegador
 export const CLAVE_PREF = "ares.intro";          // localStorage: casilla «Mostrar intro» (activa por defecto)
 export const GUARDA_PRIMER_CUADRO_S = 3;         // si no hay primer cuadro en 3 s, se omite
 export const CIERRE_INACTIVIDAD_S = 90;          // sin interacción, se cierra sola y deja el asistente
@@ -28,10 +27,15 @@ export const CUERPOS_INTRO = PLANETAS_VIAJE.map((nombre, i) => ({
 
 export function esPerfilIntro(nombre) { return CUERPOS_INTRO.some((c) => c.nombre === nombre); }
 
-// activada: casilla; vistaEnSesion: ya se mostró; webgl: hay contexto. El movimiento reducido NO la impide (solo la vuelve estática).
-export function debeMostrarIntro({ activada, vistaEnSesion, reducido, webgl } = {}) {
+// El sistema solar es la pantalla de inicio. motivo: «abrir» (al cargar la app), «inicio» (vuelta al asistente), «salir» (salida de una partida) y
+// «manual» (botón «Ver intro»: ignora la casilla). «repetir» («Volver a jugar») no pasa por la intro. Cualquier otro motivo, o ninguno, no la muestra.
+// activada: casilla; webgl: hay contexto. El movimiento reducido NO la impide (solo la vuelve estática).
+export const MOTIVOS_INTRO = ["abrir", "inicio", "salir"];
+export function debeMostrarIntro({ motivo, activada, reducido, webgl } = {}) {
   void reducido;
-  return !!activada && !vistaEnSesion && !!webgl;
+  if (!webgl) return false;
+  if (motivo === "manual") return true;
+  return MOTIVOS_INTRO.includes(motivo) && !!activada;
 }
 export function modoIntro(reducido) { return reducido ? "estatico" : "animado"; }
 

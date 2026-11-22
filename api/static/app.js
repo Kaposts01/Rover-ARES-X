@@ -81,12 +81,7 @@ document.getElementById("error-reiniciar").addEventListener("click", async () =>
   document.getElementById("error-motor").classList.add("oculto");
   if (estado && !estado.sin_partida) await conCarga(() => cargarPartida(estado.semilla, estado.nivel), { transicion: true });
 });
-document.getElementById("error-menu").addEventListener("click", () => {
-  cerrarAvisos();
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("error-menu").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // ---------- utilidades de diseño ----------
 // Ruido determinista por celda: el mismo mapa y la misma semilla siempre se ven igual
@@ -1820,6 +1815,7 @@ async function refrescarMovilesYEscenario() {
   pintarObjetivos(await adaptador.objetivos());
   pintarCalor(estado);
   const datos = await adaptador.moviles();
+  if (datos && Array.isArray(datos.eventos_del_paso) && datos.eventos_del_paso.some((x) => x && x.nombre === "meteorito")) revisarLogro({ tipo: "meteorito" });
   aplicarMoviles(datos, scene, alturaTerreno, (texto) => avisar(texto), agregarGrietas);
   aplicarEnlaceYSenal(estado);
   await refrescarEscenarios();
@@ -1958,6 +1954,7 @@ async function refrescarEstado() {
   const datos = await llamar("GET", "/estado");
   if (!datos) return;
   estado = datos;
+  revisarEstadoLogros(datos);   // logros: solo lee el estado, no bloquea
   dibujarSeguro("estado", () => {
     registrarRecorrido(datos.posicion);
     ubicarRover(datos.posicion, datos.rumbo_sugerido);
@@ -1988,11 +1985,13 @@ function actualizarControlEvento() {
   boton.disabled = !mapa || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado);
 }
 async function dispararEvento() {
+  if (finActiva()) return;
   if (!mapa || ocupado() || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado)) return;
   const nombre = document.getElementById("evento-nombre").value;
   const r = await llamar("POST", "/evento", { nombre });
   if (!r) return;
   const detalle = r.detalle || (r.ok ? "hecho" : "sin efecto");
+  if (nombre === "barranco" && r.ok) revisarLogro({ tipo: "barranco" });
   avisar(`Evento ${nombre}: ${detalle}`);
   registrarEvento(`evento ${nombre}: ${detalle}`);
   await refrescarEstado();
@@ -2062,6 +2061,7 @@ async function correrViaje() {
     const [{ DURACION_VIAJE_S, GUARDA_EXTRA_S, CIERRE_ESTATICO_S, debeViajar, datosTarjeta, modoMovimiento }, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
       import("/static/viaje_datos.js?v=r14"), import("/static/viaje3d.js?v=r14"), import("/static/viaje_tarjeta.js?v=r14")]);
     if (!debeViajar({ previo: pend.desde, nuevo: pend.hacia, activado: true })) return;
+    revisarLogro({ tipo: "viaje", desde: pend.desde, hacia: pend.hacia });
     const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const modo = modoMovimiento(reducido, true);
     if (modo === "ninguno") return;
@@ -2096,11 +2096,13 @@ async function correrViaje() {
     viaje = null;
   }
 }
-// Introducción con el sistema solar (solo cliente: no escribe nada en el motor). Preferencia en localStorage («ares.intro», activada por defecto);
-// una vez por sesión del navegador (sessionStorage «ares.intro.visto»). Elegir un planeta solo rellena el asistente: la partida empieza con «Iniciar».
+// Introducción con el sistema solar = pantalla de inicio (solo cliente: no escribe nada en el motor). Aparece al abrir la app, al volver al inicio
+// y al salir de una partida. Preferencia en localStorage («ares.intro», activada por defecto; apagada = se va directo al asistente).
+// Elegir un planeta solo rellena el asistente: la partida empieza con «Iniciar».
 let intro = null;
 let introCorriendo = false;
 let tarjetaIntro = null;
+let generacionInicio = 0;   // sube al salir de una partida: un /paso en vuelo que llegue después no pinta nada
 function introActivada() {
   try { return localStorage.getItem("ares.intro") !== "0"; } catch (e) { return true; }
 }
@@ -2108,18 +2110,23 @@ function fijarIntroActivada(on) {
   try { localStorage.setItem("ares.intro", on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ }
   document.querySelectorAll(".casilla-intro").forEach((c) => { c.checked = on; });
 }
-function introVistaEnSesion() {
-  try { return sessionStorage.getItem("ares.intro.visto") === "1"; } catch (e) { return false; }
-}
-function marcarIntroVista() {
-  try { sessionStorage.setItem("ares.intro.visto", "1"); } catch (e) { /* sin almacenamiento */ }
-}
 document.querySelectorAll(".casilla-intro").forEach((c) => {
   c.checked = introActivada();
   c.addEventListener("change", () => fijarIntroActivada(c.checked));
 });
-// forzada: botón «Ver intro» (ignora la casilla y la marca de sesión). Si algo falla, el asistente sigue igual (nunca lanza ni se queda colgado).
-async function correrIntro({ forzada = false } = {}) {
+// Todos los caminos que llevan al asistente de inicio pasan por aquí: deja la partida en pausa y limpia, abre el asistente y muestra el sistema solar.
+function volverAlInicio(motivo = "salir") {
+  generacionInicio += 1;
+  cerrarAvisos();            // meta, pausa, avisos; con pausaActiva = false
+  detenerReproduccion();
+  cadenaAutomatica = null;
+  document.getElementById("controles").classList.add("oculto");
+  document.getElementById("manual").classList.add("oculto");
+  document.getElementById("menu").classList.remove("oculto");
+  correrIntro({ motivo });
+}
+// motivo: «abrir» | «inicio» | «salir» | «manual» («Ver intro», ignora la casilla). Si algo falla, el asistente sigue igual (nunca lanza ni se queda colgado).
+async function correrIntro({ motivo = "abrir" } = {}) {
   if (introCorriendo) return;
   let guarda = null, inactividad = null, limpiarActividad = null;
   const controlesAntes = controles.enabled;
@@ -2128,9 +2135,8 @@ async function correrIntro({ forzada = false } = {}) {
     const reducido = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const webgl = !!(renderer && renderer.getContext && renderer.getContext());
     const { debeMostrarIntro, elegirCuerpo, datosCuerpo, GUARDA_PRIMER_CUADRO_S, CIERRE_INACTIVIDAD_S } = await import("/static/intro_datos.js?v=r14");
-    if (!forzada && !debeMostrarIntro({ activada: introActivada(), vistaEnSesion: introVistaEnSesion(), reducido, webgl })) return;
+    if (!debeMostrarIntro({ motivo, activada: introActivada(), reducido, webgl })) return;
     if (!webgl || !planetasDatos) return;
-    marcarIntroVista();   // una vez por sesión: también si falla o se omite
     const [{ crearIntro }, { crearTarjetaIntro }] = await Promise.all([import("/static/intro3d.js?v=r14"), import("/static/intro_tarjeta.js?v=r14")]);
     if (!tarjetaIntro) tarjetaIntro = crearTarjetaIntro(document.body);
     controles.enabled = false;   // la cámara de la partida no se mueve mientras dura la intro
@@ -2177,7 +2183,128 @@ async function correrIntro({ forzada = false } = {}) {
   }
 }
 const botonVerIntro = document.getElementById("menu-ver-intro");
-if (botonVerIntro) botonVerIntro.addEventListener("click", () => { correrIntro({ forzada: true }); });
+if (botonVerIntro) botonVerIntro.addEventListener("click", () => { correrIntro({ motivo: "manual" }); });
+
+// Pantalla final (solo cliente: no escribe nada en el motor). Preferencia en localStorage («ares.final», activada por defecto).
+// Puntaje de juego, estrellas, logros y mejores momentos; si algo falla, se abre la meta como siempre.
+let tarjetaFinal = null;
+let finCorriendo = false;
+let cerrarFinal = null;                    // cierra la pantalla abierta con la acción pedida (null = continuar a la meta)
+let accionFinal = null;                    // «repetir» | «otro» | null, según el botón con que se cerró
+let logrosPantalla = null;                 // módulo de logros ya creado (carga perezosa)
+let promesaLogros = null;
+let colaLogros = Promise.resolve();        // los eventos de logros se evalúan en orden
+let logrosNuevos = [];                     // desbloqueados desde la última pantalla final
+let momentosPantalla = null;               // capturas de la partida en curso
+let promesaMomentos = null;
+function finActiva() { return document.body.classList.contains("final-activa"); }   // con la pantalla final abierta, los atajos de la partida no responden
+function finActivada() {
+  try { return localStorage.getItem("ares.final") !== "0"; } catch (e) { return true; }
+}
+function fijarFinActivada(on) {
+  try { localStorage.setItem("ares.final", on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ }
+  document.querySelectorAll(".casilla-final").forEach((c) => { c.checked = on; });
+}
+document.querySelectorAll(".casilla-final").forEach((c) => {
+  c.checked = finActivada();
+  c.addEventListener("change", () => fijarFinActivada(c.checked));
+});
+function cargarLogros() {
+  if (!promesaLogros) {
+    promesaLogros = import("/static/final_logros.js?v=r14").then(({ crearLogros }) => {
+      logrosPantalla = crearLogros({ contenedor: document.body, alDesbloquear: (l) => { logrosNuevos.push(l); } });
+      return logrosPantalla;
+    }).catch((e) => { console.warn("logros: no se pudo cargar el módulo", e); return null; });
+  }
+  return promesaLogros;
+}
+// Evalúa un evento de logro sin bloquear nada: si el módulo falla, el juego sigue igual.
+function revisarLogro(evento) {
+  colaLogros = colaLogros.then(() => cargarLogros()).then((l) => { if (l) l.revisar(evento); }).catch(() => { /* el juego no depende de los logros */ });
+}
+function revisarEstadoLogros(datos) {
+  colaLogros = colaLogros.then(() => cargarLogros()).then((l) => { if (l) l.revisarEstado(datos); }).catch(() => { /* idem */ });
+}
+function cargarMomentos() {
+  if (!promesaMomentos) {
+    promesaMomentos = import("/static/final_momentos.js?v=r14").then(({ crearMomentos }) => {
+      momentosPantalla = crearMomentos({ canvas: renderer.domElement, dibujar: () => renderer.render(scene, camara) });
+      return momentosPantalla;
+    }).catch((e) => { console.warn("momentos: no se pudo cargar el módulo", e); return null; });
+  }
+  return promesaMomentos;
+}
+function momentosEnPaso(r) {
+  if (!finActivada() || (intro && intro.activo) || (viaje && viaje.activo)) return;
+  cargarMomentos().then((m) => {
+    if (!m) return;
+    const riesgo = estado && estado.sensores ? estado.sensores.riesgo_enfrente : null;
+    m.alPaso({ paso: ultimoPasoNumero, motivos: r && r.motivos, riesgo });
+  }).catch(() => { /* sin capturas */ });
+}
+document.getElementById("pausa-borrar-logros").addEventListener("click", async () => {
+  const l = await cargarLogros();
+  if (l) { l.borrar(); logrosNuevos = []; avisar("Logros borrados de este navegador."); }
+});
+// Laboratorios y comparación de políticas: solo se cuentan las aperturas
+document.getElementById("abrir-laboratorio").addEventListener("click", () => revisarLogro({ tipo: "laboratorio", id: "ag" }));
+document.querySelectorAll(".lab-tab").forEach((b) => b.addEventListener("click", () => revisarLogro({ tipo: "laboratorio", id: b.dataset.lab })));
+
+// Muestra la pantalla final antes de la meta. Nunca lanza ni se queda colgada: la meta se abre siempre (la llama alFinDeMision).
+async function correrFinal(codigo) {
+  if (finCorriendo) return;
+  accionFinal = null;
+  let inactividad = null, limpiarActividad = null;
+  try {
+    const { debeMostrarFinal, normalizarResultado, CIERRE_INACTIVIDAD_S } = await import("/static/final_datos.js?v=r14");
+    const reducido = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (!debeMostrarFinal({ activada: finActivada(), reducido, terminal: ESTADOS_TERMINALES.includes(codigo) })) return;
+    finCorriendo = true;
+    const { crearFinal } = await import("/static/final_tarjeta.js?v=r14");
+    await colaLogros;                                 // los logros del último paso ya están evaluados
+    const m = await cargarMomentos();
+    if (m && estado) m.alFinal({ paso: ultimoPasoNumero, codigo });
+    const logros = await cargarLogros();
+    const resultado = normalizarResultado(estado);
+    await new Promise((resolver) => {
+      let hecho = false;
+      const fin = (accion = null) => { if (hecho) return; hecho = true; accionFinal = accion; resolver(); };
+      // «Volver a jugar» y «Explorar otro cuerpo» reutilizan la lógica de la meta y del asistente (se ejecutan después de cerrar la pantalla)
+      cerrarFinal = fin;
+      if (!tarjetaFinal) {
+        tarjetaFinal = crearFinal({
+          contenedor: document.body,
+          alContinuar: () => cerrarFinal && cerrarFinal(null),
+          alCerrar: () => cerrarFinal && cerrarFinal(null),
+          alRepetir: () => cerrarFinal && cerrarFinal("repetir"),
+          alOtroPlaneta: () => cerrarFinal && cerrarFinal("otro"),
+        });
+      }
+      document.body.classList.add("final-activa");
+      tarjetaFinal.mostrar(resultado, m ? m.lista() : [], {
+        logrosNuevos: [...logrosNuevos], logros: logros ? logros.lista() : [], activada: finActivada(), alCambiarCasilla: fijarFinActivada,
+      });
+      const reiniciarInactividad = () => {
+        clearTimeout(inactividad);
+        inactividad = setTimeout(() => { console.warn("final: cierre por inactividad"); fin(); }, CIERRE_INACTIVIDAD_S * 1000);
+      };
+      reiniciarInactividad();
+      window.addEventListener("pointermove", reiniciarInactividad); window.addEventListener("keydown", reiniciarInactividad);
+      limpiarActividad = () => { window.removeEventListener("pointermove", reiniciarInactividad); window.removeEventListener("keydown", reiniciarInactividad); };
+    });
+  } catch (e) {
+    accionFinal = null;
+    console.warn("final: fallo, se abre la meta", e);
+  } finally {
+    clearTimeout(inactividad);
+    if (limpiarActividad) limpiarActividad();
+    document.body.classList.remove("final-activa");
+    try { if (tarjetaFinal) tarjetaFinal.ocultar(); } catch (e) { /* ya oculta */ }
+    logrosNuevos = [];
+    try { if (momentosPantalla) momentosPantalla.reiniciar(); } catch (e) { /* sin capturas */ }
+    finCorriendo = false;
+  }
+}
 
 // Configuración para crear o reiniciar una partida: el planeta y vehículo confirmados, y el modo de control del panel
 function configuracionVigente() {
@@ -2215,6 +2342,8 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
       datos = control;
     }
     estado = datos;
+    revisarLogro({ tipo: "inicio", planeta: datos.planeta, modo: datos.modo_planeta });
+    if (momentosPantalla) momentosPantalla.reiniciar();
     document.getElementById("registro").replaceChildren();
     recorridoRover = [];
     avisosVistos.clear();
@@ -2266,9 +2395,7 @@ function mostrarMision(semilla, nivel) {
   document.getElementById("resumen-texto").textContent =
     `semilla ${semilla} · nivel ${NIVELES[nivel - 1]} · ${modo.options[modo.selectedIndex].text}`;
 }
-document.getElementById("reconfigurar").addEventListener("click", () => {
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("reconfigurar").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Controles manuales plegables (en móvil quedan plegados por defecto)
 document.getElementById("manual-toggle").addEventListener("click", (ev) => {
@@ -2398,6 +2525,13 @@ async function alFinDeMision(codigo) {
   }
   // La pantalla final usa la cadena; se anula después, para que el bloque conserve los datos de la última misión
   const cadenaTerminada = cadenaAutomatica;
+  await correrFinal(codigo);   // la pantalla final va antes de la meta; nunca lanza y, si falla o se omite, sigue la meta
+  const pedido = accionFinal; accionFinal = null;
+  if (pedido === "repetir") { cadenaAutomatica = null; await nuevaDesdeMeta(estado.semilla, estado.nivel); return; }
+  if (pedido === "otro") {
+    volverAlInicio("salir");   // «Explorar otro cuerpo»: de vuelta al sistema solar
+    return;
+  }
   mostrarMeta(codigo, cadenaTerminada);
   cadenaAutomatica = null;
 }
@@ -2459,12 +2593,7 @@ for (const b of document.querySelectorAll("#meta-dificultad button")) {
 document.getElementById("meta-confirmar").addEventListener("click", () => {
   nuevaDesdeMeta(metaMapa === "otro" ? null : estado.semilla, metaNivel);
 });
-document.getElementById("meta-salir").addEventListener("click", () => {
-  document.getElementById("meta").classList.add("oculto");
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("meta-salir").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Menú de pausa (ARX-61): Esc abre y cierra; los controles de juego quedan bloqueados mientras está abierto
 let pausaActiva = false;
@@ -2494,12 +2623,7 @@ document.getElementById("pausa-velocidad").addEventListener("change", (ev) => {
 document.getElementById("pausa-camara").addEventListener("change", (ev) => {
   camaraSiguiendo = ev.target.checked;
 });
-document.getElementById("pausa-salir").addEventListener("click", () => {
-  cerrarPausa();
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("pausa-salir").addEventListener("click", () => { volverAlInicio("salir"); });
 
 document.getElementById("menu-modo").addEventListener("change", (ev) => {
   document.getElementById("menu-misiones-fila").classList.toggle("oculto", ev.target.value !== "automatico");
@@ -2569,6 +2693,7 @@ function ocupado() {
 }
 
 async function mover(rumbo) {
+  if (finActiva()) return;
   if (!mapa || ocupado()) return;
   const r = await llamar("POST", "/mover", { rumbo });
   if (!r) return;
@@ -2644,16 +2769,11 @@ document.getElementById("motor-detener").addEventListener("click", () => {
   document.getElementById("motor-lento").classList.add("oculto");
   detenerReproduccion();
 });
-document.getElementById("motor-menu").addEventListener("click", () => {
-  cerrarAvisos();
-  detenerReproduccion();
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("motor-menu").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Un paso de la IA: el rover avanza en la escena y los paneles muestran lo que decidió.
 async function paso() {
+  if (finActiva()) return false;   // con la pantalla final abierta, los atajos de la partida no responden
   if (!mapa || ocupado() || pasoEnVuelo) return false;
   // Partida ya terminada: no se envía nada (evita respuestas 409 en la consola)
   if (estado && ESTADOS_TERMINALES.includes(estado.estado)) {
@@ -2663,6 +2783,7 @@ async function paso() {
   const estadoPrevio = estado;
   let r;
   pasoEnVuelo = true;
+  const generacion = generacionInicio;
   const temporizador = setTimeout(avisarMotorLento, 2000);   // más de 2 s sin respuesta: aviso
   try {
     r = await llamar("POST", "/paso");
@@ -2670,6 +2791,7 @@ async function paso() {
     clearTimeout(temporizador);
     pasoEnVuelo = false;
   }
+  if (generacion !== generacionInicio) return false;   // se salió de la partida con el paso en vuelo: no se pinta nada ni se abre la pantalla final
   if (!r) {
     detenerReproduccion();
     return false;
@@ -2681,6 +2803,7 @@ async function paso() {
   if (cadenaAutomatica && r.accion === "replanificar") cadenaAutomatica.replanteosActual += 1;
   await refrescarEstado();
   await refrescarPaneles();
+  momentosEnPaso(r);
   const motivos = (r.motivos || []).join(", ");
   avisar(`Paso ${pasoDe(r)}: ${r.accion} · ${motivos}` + eventosTexto(r.eventos_combate));
   registrarEvento(`paso ${pasoDe(r)}: ${r.accion} · ${motivos}`);
@@ -2711,13 +2834,7 @@ document.getElementById("sin-resultado-reintentar").addEventListener("click", as
   document.getElementById("sin-resultado").classList.add("oculto");
   if (estado) await conCarga(() => cargarPartida(estado.semilla, estado.nivel), { transicion: true });
 });
-document.getElementById("sin-resultado-menu").addEventListener("click", () => {
-  cerrarAvisos();
-  detenerReproduccion();
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("sin-resultado-menu").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Registro lateral (ARX-63): últimos 10 eventos, el más nuevo arriba. El 11 saca al más antiguo.
 const REGISTRO_MAX = 10;
@@ -2742,6 +2859,7 @@ function eventosTexto(eventos) {
 // Disparo hacia donde mira el rover (tecla Espacio o botón)
 async function disparar() {
   if (document.body.classList.contains("intro-activa")) return;   // la intro no dispara (QA ARX-97)
+  if (finActiva()) return;   // la pantalla final tampoco
   if (!mapa || ocupado() || !estado) return;
   const rumbo = estado.rumbo || "N";
   const r = await llamar("POST", "/disparo", { rumbo });
@@ -3035,6 +3153,7 @@ lienzoGrafico.addEventListener("mouseleave", () => {
 
 // ---------- entrada ----------
 window.addEventListener("keydown", (ev) => {
+  if (finActiva()) return;   // con la pantalla final abierta no responde ningún atajo de la partida
   // Esc: pausa (si no hay un laboratorio abierto, que cierra con Esc por su cuenta)
   if (ev.key === "Escape") {
     if (!document.getElementById("laboratorio").classList.contains("oculto")) return;
@@ -3264,7 +3383,7 @@ animar();
 
 iniciarLaboratorios({ llamar, avisar });
 
-// Al abrir: la intro (una vez por sesión) cuando ya se conocen los planetas; si falla, el asistente queda tal cual
-planetasListos.then(() => correrIntro(), () => { /* sin /planetas no hay intro */ });
+// Al abrir: la intro (pantalla de inicio) cuando ya se conocen los planetas; si falla, el asistente queda tal cual
+planetasListos.then(() => correrIntro({ motivo: "abrir" }), () => { /* sin /planetas no hay intro */ });
 
 // Arranque (ARX-14): sin partida; el menú pide semilla y nivel. No se crea nada hasta pulsar Iniciar.

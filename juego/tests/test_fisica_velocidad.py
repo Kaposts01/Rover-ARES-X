@@ -12,7 +12,9 @@ from juego.partida import Partida  # noqa: E402
 # Hash de comparar(range(1, 4)) del congelado. ARX-94f (regeneración única tras el mundo v2 y los sensores de 94b/94c):
 # antes "d6fb9079…" (base 3a6c5a9, mundo v1). Se comprobó que la fusión del mapa estimado y la RNA según ruido de 94f
 # no lo cambian (el congelado usa ruido nominal); el cambio viene de 94a-94c.
-HASH_CONGELADO_BASE = "fec4500dbea8810d6f80c1549daae1a80f27e116a5c02502f34c1b613ae28121"
+# R23 (RNA con refuerzo de barrancos): la RNA nominal ve más barrancos y también marca algunos falsos; cambia el híbrido
+# del congelado (20 semillas: 42,2 -> 43,95 pasos; sin_rna idéntico, 20/20 y 0 choques en ambos). Antes: "fec4500d…".
+HASH_CONGELADO_BASE = "73329aed691ffdaf8935dabebd303440f182a014799dee5ec4c9cc18d4f6f15d"
 # Hash de la nota de texto de la salida (la misma de la base; el hash anterior ya la cubría dentro del total, B2 de QA).
 HASH_NOTA_BASE = "f0696978dedf462892e6348ae4fac3c215c8a19c1dc0d2ec4184b34d31f863d8"
 

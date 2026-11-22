@@ -28,10 +28,10 @@
       "n": 20,
       "tasa_exito": 100.0,
       "pasos": {
-        "media": 42.2,
-        "mediana": 39.0,
-        "desviacion": 7.495,
-        "rango_intercuartil": 11.25
+        "media": 43.95,
+        "mediana": 41.5,
+        "desviacion": 7.783,
+        "rango_intercuartil": 10.75
       },
       "colisiones": {
         "media": 0.0,
@@ -40,9 +40,9 @@
         "rango_intercuartil": 0.0
       },
       "bateria_final": {
-        "media": 54.9,
-        "mediana": 56.5,
-        "desviacion": 9.899,
+        "media": 54.1,
+        "mediana": 55.0,
+        "desviacion": 10.141,
         "rango_intercuartil": 13.0
       },
       "sitios_visitados": {
@@ -86,10 +86,10 @@
       "n": 20,
       "tasa_exito": 100.0,
       "pasos": {
-        "media": 42.1,
-        "mediana": 39.0,
-        "desviacion": 7.426,
-        "rango_intercuartil": 11.25
+        "media": 43.85,
+        "mediana": 41.5,
+        "desviacion": 7.727,
+        "rango_intercuartil": 10.0
       },
       "colisiones": {
         "media": 0.0,
@@ -98,9 +98,9 @@
         "rango_intercuartil": 0.0
       },
       "bateria_final": {
-        "media": 54.9,
-        "mediana": 56.5,
-        "desviacion": 9.899,
+        "media": 54.1,
+        "mediana": 55.0,
+        "desviacion": 10.141,
         "rango_intercuartil": 13.0
       },
       "sitios_visitados": {
@@ -115,10 +115,10 @@
       "n": 20,
       "tasa_exito": 100.0,
       "pasos": {
-        "media": 44.05,
-        "mediana": 39.0,
-        "desviacion": 10.99,
-        "rango_intercuartil": 12.5
+        "media": 45.75,
+        "mediana": 41.5,
+        "desviacion": 11.248,
+        "rango_intercuartil": 11.5
       },
       "colisiones": {
         "media": 0.0,
@@ -127,9 +127,9 @@
         "rango_intercuartil": 0.0
       },
       "bateria_final": {
-        "media": 52.925,
-        "mediana": 56.5,
-        "desviacion": 12.846,
+        "media": 52.1,
+        "mediana": 55.0,
+        "desviacion": 13.074,
         "rango_intercuartil": 17.25
       },
       "sitios_visitados": {
@@ -144,10 +144,10 @@
       "n": 20,
       "tasa_exito": 100.0,
       "pasos": {
-        "media": 42.2,
-        "mediana": 39.0,
-        "desviacion": 7.495,
-        "rango_intercuartil": 11.25
+        "media": 43.95,
+        "mediana": 41.5,
+        "desviacion": 7.783,
+        "rango_intercuartil": 10.75
       },
       "colisiones": {
         "media": 0.0,
@@ -156,9 +156,9 @@
         "rango_intercuartil": 0.0
       },
       "bateria_final": {
-        "media": 54.9,
-        "mediana": 56.5,
-        "desviacion": 9.899,
+        "media": 54.1,
+        "mediana": 55.0,
+        "desviacion": 10.141,
         "rango_intercuartil": 13.0
       },
       "sitios_visitados": {
@@ -173,10 +173,10 @@
       "n": 20,
       "tasa_exito": 100.0,
       "pasos": {
-        "media": 42.2,
-        "mediana": 39.0,
-        "desviacion": 7.495,
-        "rango_intercuartil": 11.25
+        "media": 43.95,
+        "mediana": 41.5,
+        "desviacion": 7.783,
+        "rango_intercuartil": 10.75
       },
       "colisiones": {
         "media": 0.0,
@@ -185,9 +185,9 @@
         "rango_intercuartil": 0.0
       },
       "bateria_final": {
-        "media": 54.9,
-        "mediana": 56.5,
-        "desviacion": 9.899,
+        "media": 54.1,
+        "mediana": 55.0,
+        "desviacion": 10.141,
         "rango_intercuartil": 13.0
       },
       "sitios_visitados": {
@@ -272,9 +272,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 42,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 52.0,
       "sitios_visitados": 3
     },
     {
@@ -282,9 +282,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 49,
+      "pasos": 51,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 53.0,
       "sitios_visitados": 3
     },
     {
@@ -302,9 +302,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 39,
       "colisiones": 0,
-      "bateria_final": 62.0,
+      "bateria_final": 61.0,
       "sitios_visitados": 3
     },
     {
@@ -322,7 +322,7 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 40,
+      "pasos": 41,
       "colisiones": 0,
       "bateria_final": 55.0,
       "sitios_visitados": 3
@@ -332,9 +332,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 45,
       "colisiones": 0,
-      "bateria_final": 57.0,
+      "bateria_final": 50.0,
       "sitios_visitados": 3
     },
     {
@@ -342,9 +342,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 52,
+      "pasos": 56,
       "colisiones": 0,
-      "bateria_final": 34.0,
+      "bateria_final": 33.0,
       "sitios_visitados": 3
     },
     {
@@ -352,9 +352,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 30,
+      "pasos": 32,
       "colisiones": 0,
-      "bateria_final": 71.0,
+      "bateria_final": 70.0,
       "sitios_visitados": 3
     },
     {
@@ -362,9 +362,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 37,
       "colisiones": 0,
-      "bateria_final": 61.0,
+      "bateria_final": 62.0,
       "sitios_visitados": 3
     },
     {
@@ -382,9 +382,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 39,
+      "pasos": 41,
       "colisiones": 0,
-      "bateria_final": 56.0,
+      "bateria_final": 55.0,
       "sitios_visitados": 3
     },
     {
@@ -392,9 +392,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 43,
       "colisiones": 0,
-      "bateria_final": 59.0,
+      "bateria_final": 58.0,
       "sitios_visitados": 3
     },
     {
@@ -402,9 +402,9 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 57,
+      "pasos": 61,
       "colisiones": 0,
-      "bateria_final": 38.0,
+      "bateria_final": 36.0,
       "sitios_visitados": 3
     },
     {
@@ -452,7 +452,7 @@
       "variante": "hibrido",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 48,
+      "pasos": 49,
       "colisiones": 0,
       "bateria_final": 49.0,
       "sitios_visitados": 3
@@ -672,9 +672,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 42,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 52.0,
       "sitios_visitados": 3
     },
     {
@@ -682,9 +682,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 49,
+      "pasos": 51,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 53.0,
       "sitios_visitados": 3
     },
     {
@@ -702,9 +702,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 39,
       "colisiones": 0,
-      "bateria_final": 62.0,
+      "bateria_final": 61.0,
       "sitios_visitados": 3
     },
     {
@@ -722,7 +722,7 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 40,
+      "pasos": 41,
       "colisiones": 0,
       "bateria_final": 55.0,
       "sitios_visitados": 3
@@ -732,9 +732,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 45,
       "colisiones": 0,
-      "bateria_final": 57.0,
+      "bateria_final": 50.0,
       "sitios_visitados": 3
     },
     {
@@ -742,9 +742,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 52,
+      "pasos": 56,
       "colisiones": 0,
-      "bateria_final": 34.0,
+      "bateria_final": 33.0,
       "sitios_visitados": 3
     },
     {
@@ -752,9 +752,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 30,
+      "pasos": 32,
       "colisiones": 0,
-      "bateria_final": 71.0,
+      "bateria_final": 70.0,
       "sitios_visitados": 3
     },
     {
@@ -762,9 +762,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 37,
       "colisiones": 0,
-      "bateria_final": 61.0,
+      "bateria_final": 62.0,
       "sitios_visitados": 3
     },
     {
@@ -782,9 +782,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 39,
+      "pasos": 41,
       "colisiones": 0,
-      "bateria_final": 56.0,
+      "bateria_final": 55.0,
       "sitios_visitados": 3
     },
     {
@@ -792,9 +792,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 43,
       "colisiones": 0,
-      "bateria_final": 59.0,
+      "bateria_final": 58.0,
       "sitios_visitados": 3
     },
     {
@@ -802,9 +802,9 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 57,
+      "pasos": 61,
       "colisiones": 0,
-      "bateria_final": 38.0,
+      "bateria_final": 36.0,
       "sitios_visitados": 3
     },
     {
@@ -852,7 +852,7 @@
       "variante": "sin_difuso",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 46,
+      "pasos": 47,
       "colisiones": 0,
       "bateria_final": 49.0,
       "sitios_visitados": 3
@@ -872,9 +872,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 42,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 52.0,
       "sitios_visitados": 3
     },
     {
@@ -882,9 +882,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 60,
+      "pasos": 64,
       "colisiones": 0,
-      "bateria_final": 42.0,
+      "bateria_final": 40.0,
       "sitios_visitados": 3
     },
     {
@@ -902,9 +902,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 39,
       "colisiones": 0,
-      "bateria_final": 62.0,
+      "bateria_final": 61.0,
       "sitios_visitados": 3
     },
     {
@@ -922,7 +922,7 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 40,
+      "pasos": 41,
       "colisiones": 0,
       "bateria_final": 55.0,
       "sitios_visitados": 3
@@ -932,9 +932,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 45,
       "colisiones": 0,
-      "bateria_final": 57.0,
+      "bateria_final": 50.0,
       "sitios_visitados": 3
     },
     {
@@ -942,9 +942,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 60,
+      "pasos": 63,
       "colisiones": 0,
-      "bateria_final": 26.5,
+      "bateria_final": 24.0,
       "sitios_visitados": 3
     },
     {
@@ -952,9 +952,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 30,
+      "pasos": 32,
       "colisiones": 0,
-      "bateria_final": 71.0,
+      "bateria_final": 70.0,
       "sitios_visitados": 3
     },
     {
@@ -962,9 +962,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 37,
       "colisiones": 0,
-      "bateria_final": 61.0,
+      "bateria_final": 62.0,
       "sitios_visitados": 3
     },
     {
@@ -982,9 +982,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 39,
+      "pasos": 41,
       "colisiones": 0,
-      "bateria_final": 56.0,
+      "bateria_final": 55.0,
       "sitios_visitados": 3
     },
     {
@@ -992,9 +992,9 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 43,
       "colisiones": 0,
-      "bateria_final": 59.0,
+      "bateria_final": 58.0,
       "sitios_visitados": 3
     },
     {
@@ -1002,7 +1002,7 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 74,
+      "pasos": 76,
       "colisiones": 0,
       "bateria_final": 23.0,
       "sitios_visitados": 3
@@ -1052,7 +1052,7 @@
       "variante": "sin_ag_vecino",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 49,
+      "pasos": 50,
       "colisiones": 0,
       "bateria_final": 44.0,
       "sitios_visitados": 3
@@ -1072,9 +1072,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 42,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 52.0,
       "sitios_visitados": 3
     },
     {
@@ -1082,9 +1082,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 49,
+      "pasos": 51,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 53.0,
       "sitios_visitados": 3
     },
     {
@@ -1102,9 +1102,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 39,
       "colisiones": 0,
-      "bateria_final": 62.0,
+      "bateria_final": 61.0,
       "sitios_visitados": 3
     },
     {
@@ -1122,7 +1122,7 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 40,
+      "pasos": 41,
       "colisiones": 0,
       "bateria_final": 55.0,
       "sitios_visitados": 3
@@ -1132,9 +1132,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 45,
       "colisiones": 0,
-      "bateria_final": 57.0,
+      "bateria_final": 50.0,
       "sitios_visitados": 3
     },
     {
@@ -1142,9 +1142,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 52,
+      "pasos": 56,
       "colisiones": 0,
-      "bateria_final": 34.0,
+      "bateria_final": 33.0,
       "sitios_visitados": 3
     },
     {
@@ -1152,9 +1152,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 30,
+      "pasos": 32,
       "colisiones": 0,
-      "bateria_final": 71.0,
+      "bateria_final": 70.0,
       "sitios_visitados": 3
     },
     {
@@ -1162,9 +1162,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 37,
       "colisiones": 0,
-      "bateria_final": 61.0,
+      "bateria_final": 62.0,
       "sitios_visitados": 3
     },
     {
@@ -1182,9 +1182,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 39,
+      "pasos": 41,
       "colisiones": 0,
-      "bateria_final": 56.0,
+      "bateria_final": 55.0,
       "sitios_visitados": 3
     },
     {
@@ -1192,9 +1192,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 43,
       "colisiones": 0,
-      "bateria_final": 59.0,
+      "bateria_final": 58.0,
       "sitios_visitados": 3
     },
     {
@@ -1202,9 +1202,9 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 57,
+      "pasos": 61,
       "colisiones": 0,
-      "bateria_final": 38.0,
+      "bateria_final": 36.0,
       "sitios_visitados": 3
     },
     {
@@ -1252,7 +1252,7 @@
       "variante": "sin_ag_mas_corta",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 48,
+      "pasos": 49,
       "colisiones": 0,
       "bateria_final": 49.0,
       "sitios_visitados": 3
@@ -1272,9 +1272,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 42,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 52.0,
       "sitios_visitados": 3
     },
     {
@@ -1282,9 +1282,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 49,
+      "pasos": 51,
       "colisiones": 0,
-      "bateria_final": 54.0,
+      "bateria_final": 53.0,
       "sitios_visitados": 3
     },
     {
@@ -1302,9 +1302,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 39,
       "colisiones": 0,
-      "bateria_final": 62.0,
+      "bateria_final": 61.0,
       "sitios_visitados": 3
     },
     {
@@ -1322,7 +1322,7 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 40,
+      "pasos": 41,
       "colisiones": 0,
       "bateria_final": 55.0,
       "sitios_visitados": 3
@@ -1332,9 +1332,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 45,
       "colisiones": 0,
-      "bateria_final": 57.0,
+      "bateria_final": 50.0,
       "sitios_visitados": 3
     },
     {
@@ -1342,9 +1342,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 52,
+      "pasos": 56,
       "colisiones": 0,
-      "bateria_final": 34.0,
+      "bateria_final": 33.0,
       "sitios_visitados": 3
     },
     {
@@ -1352,9 +1352,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 30,
+      "pasos": 32,
       "colisiones": 0,
-      "bateria_final": 71.0,
+      "bateria_final": 70.0,
       "sitios_visitados": 3
     },
     {
@@ -1362,9 +1362,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 38,
+      "pasos": 37,
       "colisiones": 0,
-      "bateria_final": 61.0,
+      "bateria_final": 62.0,
       "sitios_visitados": 3
     },
     {
@@ -1382,9 +1382,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 39,
+      "pasos": 41,
       "colisiones": 0,
-      "bateria_final": 56.0,
+      "bateria_final": 55.0,
       "sitios_visitados": 3
     },
     {
@@ -1392,9 +1392,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 37,
+      "pasos": 43,
       "colisiones": 0,
-      "bateria_final": 59.0,
+      "bateria_final": 58.0,
       "sitios_visitados": 3
     },
     {
@@ -1402,9 +1402,9 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 57,
+      "pasos": 61,
       "colisiones": 0,
-      "bateria_final": 38.0,
+      "bateria_final": 36.0,
       "sitios_visitados": 3
     },
     {
@@ -1452,7 +1452,7 @@
       "variante": "sin_ag_2opt",
       "estado": "EXITO",
       "exito": true,
-      "pasos": 48,
+      "pasos": 49,
       "colisiones": 0,
       "bateria_final": 49.0,
       "sitios_visitados": 3

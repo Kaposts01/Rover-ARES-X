@@ -157,3 +157,61 @@ def test_rna_entrenada_por_defecto_es_v2_y_v1_se_pide_aparte():
         assert rna_entrenada().perfil == "v1"           # con MUNDO_V1 el modelo del juego es el v1
     finally:
         simulador.MUNDO_V1 = False
+
+
+# ---------- R23: la RNA debe ver el barranco (refuerzo de entrenamiento y regresión del barranco forzado) ----------
+
+def test_refuerzo_barranco_no_cambia_las_muestras_naturales_y_solo_agrega_barrancos():
+    X0, y0 = generar_dataset([0, 1], muestras_por_mapa=80)
+    X1, y1 = generar_dataset([0, 1], muestras_por_mapa=80, refuerzo_barranco=15)
+    assert len(y1) == len(y0) + 30
+    assert np.array_equal(X1[:len(y0)], X0) and np.array_equal(y1[:len(y0)], y0)   # las naturales, intactas
+    assert set(y1[len(y0):]) == {2}                                                  # el refuerzo es solo barranco
+    Xb, yb = generar_dataset([0, 1], muestras_por_mapa=80, refuerzo_barranco=15)
+    assert np.array_equal(X1, Xb) and np.array_equal(y1, yb)                         # reproducible (semilla fija)
+
+
+def test_refuerzo_no_usa_mapas_de_prueba():
+    from rna import SEMILLA_BASE_REFUERZO
+    tr, va, te = particion_por_mapas(total_mapas=60)
+    assert SEMILLA_BASE_REFUERZO > 200                  # lejos de las semillas de prueba (51-59 y 100-199)
+
+
+def test_recall_de_barranco_con_refuerzo_en_los_mapas_de_prueba():
+    """Mapas de prueba del laboratorio (51-59, natural): antes 19/30 = 63 %; medido ahora 25/30 = 83 %.
+    En 60 mapas nunca vistos (100-159): 87-90 %. Los falsos barrancos entre celdas libres quedan en ~2 %."""
+    from rna import REFUERZO_BARRANCO_POR_MAPA
+    tr, _, te = particion_por_mapas(total_mapas=60)
+    Xtr, ytr = generar_dataset(tr, muestras_por_mapa=400, refuerzo_barranco=REFUERZO_BARRANCO_POR_MAPA)
+    rna = NeuralPerception(semilla=42).entrenar(Xtr, ytr)
+    res = rna.evaluar(*generar_dataset(te, muestras_por_mapa=400))
+    m = res.matriz_confusion
+    assert res.recall_barranco >= 0.80 and m[2].sum() == 30
+    assert m[0, 0] / m[0].sum() >= 0.95                 # la celda libre sigue bien clasificada
+    assert m[1, 1] / m[1].sum() >= 0.95                 # el obstáculo no empeora
+    grande = rna.evaluar(*generar_dataset(np.arange(100, 160), muestras_por_mapa=400))
+    assert grande.recall_barranco >= 0.85
+    assert grande.matriz_confusion[0, 2] / grande.matriz_confusion[0].sum() <= 0.03   # falsos barrancos acotados
+
+
+def test_barranco_forzado_delante_del_rover_la_rna_no_dice_libre_con_certeza():
+    """Regresión R23. El evaluador forzó un barranco delante del rover y la RNA seguía en «libre 100 %».
+    Los barrancos poco profundos (1,0 a 1,5 m) se confundían con la pendiente y la red, entrenada con ~1 % de
+    barrancos, los daba por libres con confianza total. El barranco profundo debe marcarse siempre, y ninguno
+    puede quedar en «libre» con más de 0,9 de confianza."""
+    from juego.partida import Partida
+    profundos = marcados = 0
+    for semilla in range(1, 13):
+        p = Partida(semilla=semilla, nivel=1)
+        for _ in range(4):
+            p.avanzar_ia()
+        celda = tuple(p.mision.ruta[1])
+        if celda in p.mundo.sitios or celda in (p.mundo.inicio, p.mundo.refugio):
+            continue
+        p.mundo.marcar_barranco(celda)                  # mismo camino que el evento: baja la elevación de la celda
+        s = p.sugerencia()
+        assert s["p_libre"] < 0.9, (semilla, s["p_libre"])
+        if p.mundo.profundidad[celda] >= 1.5:
+            profundos += 1
+            marcados += s["p_barranco"] > 0.5
+    assert profundos >= 5 and marcados == profundos

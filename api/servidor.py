@@ -766,9 +766,11 @@ def _evaluacion_rna_notebook(perfil: str = None) -> dict:
     perfil, nombres = _modelo_evaluacion(perfil)
     if ("notebook", perfil) in _cache_evaluacion_rna:
         return _cache_evaluacion_rna[("notebook", perfil)]
-    from rna import generar_dataset, particion_por_mapas, NeuralPerception, CLASES
+    from rna import REFUERZO_BARRANCO_POR_MAPA, generar_dataset, particion_por_mapas, NeuralPerception, CLASES
     tr, _, te = particion_por_mapas(total_mapas=60)
-    X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400, perfil=perfil)
+    # R23: el entrenamiento lleva el refuerzo de barrancos (solo v2); la prueba (mapas 51-59) es natural
+    X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400, perfil=perfil,
+                                 refuerzo_barranco=REFUERZO_BARRANCO_POR_MAPA if perfil == "v2" else 0)
     X_te, y_te = generar_dataset(te, muestras_por_mapa=400, perfil=perfil)
     res = NeuralPerception(semilla=42, nombres=nombres, perfil=perfil).entrenar(X_tr, y_tr).evaluar(X_te, y_te)
     datos = {

@@ -838,7 +838,13 @@ class Partida:
             m.estado = "FRACASO"
             self._avisar("Faltan drones por destruir y el rover lleva %d pasos detenido: la caza no avanza" % PASOS_CAZA_SIN_AVANCE)
             return
-        mascara = np.asarray(self.mundo.tipo == LIBRE)
+        # ARX-94f: el BFS de la caza evita primero las celdas con riesgo conocido, como el veto V-RUTA-CON-RIESGO de la
+        # misión; si no, trazaba por la zona de un meteorito, la misión vetaba, se volvía a trazar igual y la caza se
+        # cortaba por «no avanza» (repro: semilla 2, nivel 5, pequeño). Sin camino seguro, el mapa real como antes.
+        mascara_real = np.asarray(self.mundo.tipo == LIBRE)
+        mascara_segura = mascara_real & (np.asarray(m.riesgo) < 0.5)
+        mascara_segura[origen] = True
+        mascara = mascara_segura
         vivos = sorted([d for d in self.combate.drones if d.vivo],
                        key=lambda d: max(abs(d.pos[0] - origen[0]), abs(d.pos[1] - origen[1])))
         tramos, largos = {}, {}
@@ -857,6 +863,9 @@ class Partida:
 
         bat_max = self.bateria_max if self.bateria_max is not None else self.rover.bateria
         mejor, hay_ruta = None, False
+        if all(largo(origen, tuple(int(x) for x in d.pos)) is None for d in vivos):
+            mascara = mascara_real                   # sin camino seguro a ningún dron: el mapa real, como antes
+            tramos.clear(); largos.clear()
         for d in vivos:
             objetivo = tuple(int(x) for x in d.pos)
             if largo(origen, objetivo) is not None:
@@ -874,6 +883,7 @@ class Partida:
         if len(ruta) < 2:   # ya sobre el dron: un paso libre para que la misión no vuelva al AG
             vecinos = [(origen[0] + df, origen[1] + dc) for df, dc in MOVIMIENTOS.values()]
             libre = [v for v in vecinos if self.mundo.dentro(v) and self.mundo.tipo[v] == LIBRE]
+            libre.sort(key=lambda v: m.riesgo[v] >= 0.5)   # ARX-94f: primero las vecinas sin riesgo (si no, el veto la frena)
             if not libre:
                 m.estado = "FRACASO"
                 self._avisar("Faltan drones por destruir y el rover no puede moverse")

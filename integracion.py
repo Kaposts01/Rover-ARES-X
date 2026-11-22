@@ -99,13 +99,19 @@ class SafetySupervisor:
         return Decision("avanzar", velocidad, ["OK"])
 
 
-def rna_entrenada(semilla: int = 42, perfil: str = None) -> NeuralPerception:
+def rna_entrenada(semilla: int = 42, perfil: str = None, ruido: float = None) -> NeuralPerception:
     """RNA del juego, entrenada una sola vez por proceso y perfil (partición por mapas, 30 mapas).
 
     ARX-94d: `perfil` "v2" (sensores físicos, por defecto) o "v1" (entrega del 17/11, dataset del mundo v1).
     Sin perfil, el que corresponde al mundo activo: v1 con `simulador.MUNDO_V1`, v2 si no.
+    ARX-94f: `ruido` del sensor de la misión. Si supera el nominal de entrenamiento (0,1), la RNA se entrena con ese
+    mismo ruido: el rover conoce la especificación de su sensor. La RNA nominal usada con ruido 0,6 marcaba como
+    barranco el 18 % de las celdas libres (ECE 0,195); entrenada con su ruido queda calibrada (ECE 0,017).
     """
-    return _rna_entrenada(semilla, perfil or perfil_activo())
+    perfil = perfil or perfil_activo()
+    if ruido is None or ruido <= RUIDO_NOMINAL_RNA + 1e-9:
+        return _rna_entrenada(semilla, perfil)
+    return _rna_entrenada_con_ruido(semilla, perfil, round(float(ruido), 3))
 
 
 @lru_cache(maxsize=4)
@@ -114,6 +120,15 @@ def _rna_entrenada(semilla: int, perfil: str) -> NeuralPerception:
         raise ValueError(f"Perfil de la RNA desconocido: {perfil!r} (v1 o v2)")
     tr, _, _ = particion_por_mapas(total_mapas=30)
     X, y = generar_dataset(tr, muestras_por_mapa=300, perfil=perfil)
+    return NeuralPerception(semilla=semilla, nombres=PERFILES_RASGOS[perfil], perfil=perfil).entrenar(X, y)
+
+
+@lru_cache(maxsize=4)
+def _rna_entrenada_con_ruido(semilla: int, perfil: str, ruido: float) -> NeuralPerception:
+    if perfil not in ("v1", "v2"):
+        raise ValueError(f"Perfil de la RNA desconocido: {perfil!r} (v1 o v2)")
+    tr, _, _ = particion_por_mapas(total_mapas=30)
+    X, y = generar_dataset(tr, muestras_por_mapa=300, ruido=ruido, perfil=perfil)
     return NeuralPerception(semilla=semilla, nombres=PERFILES_RASGOS[perfil], perfil=perfil).entrenar(X, y)
 
 
@@ -177,7 +192,10 @@ class Mision:
         # Intervención causal (ARX-10, ev3-d32 A). Apagada por defecto: None no cambia nada.
         self.intervencion_rna = intervencion_rna          # función(probs) -> probs
         self.intervencion_difuso = intervencion_difuso    # velocidad fija en [0, 1]
-        self.rna = rna or (rna_terreno_entrenada() if self.aporte_rna else rna_entrenada())
+        self.rna = rna or (rna_terreno_entrenada() if self.aporte_rna else rna_entrenada(ruido=ruido))
+        # ARX-94f: la RNA por defecto sigue al ruido del sensor (los escenarios lo cambian después de construir)
+        self._rna_defecto = None if (rna is not None or self.aporte_rna) else self.rna
+        self._rna_ruido = ruido
         self._celda_alerta = None
         self._rna_alerta2 = rna_alerta2               # se entrena al primer uso, solo con el aporte encendido
         self.rng = np.random.default_rng(semilla)
@@ -259,9 +277,24 @@ class Mision:
         return gp.optimizar().mejor_ruta
 
     # ---------- pseudociclo ----------
+    def _rna_segun_sensor(self):
+        """ARX-94f: si el ruido del sensor cambió y la RNA es la de por defecto, usa la entrenada con ese ruido."""
+        if self._rna_defecto is None or self.sensor.ruido == self._rna_ruido:
+            return
+        envuelta = hasattr(self.rna, "_rna")                 # la capa de juego la envuelve (_RnaSegura)
+        if (self.rna._rna if envuelta else self.rna) is not self._rna_defecto:
+            return                                           # alguien puso otra RNA a mano: no se toca
+        nueva = rna_entrenada(ruido=self.sensor.ruido)
+        if envuelta:
+            self.rna._rna = nueva
+        else:
+            self.rna = nueva
+        self._rna_defecto, self._rna_ruido = nueva, self.sensor.ruido
+
     def paso_mision(self):
         if self.estado in ESTADOS_TERMINALES:
             return self.estado
+        self._rna_segun_sensor()
         self.paso += 1
         if self.paso in self.eventos:
             self.eventos[self.paso](self)

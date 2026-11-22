@@ -107,17 +107,19 @@ def main():
     ap.add_argument("--poblacion", type=int, default=12)
     ap.add_argument("--generaciones", type=int, default=7)
     ap.add_argument("--semilla", type=int, default=2026)
+    ap.add_argument("--n-entrenamiento", type=int, default=8, help="semillas de entrenamiento (301, 302, ...)")
     ap.add_argument("--salida", default=str(dp.RUTA_JSON))
     a = ap.parse_args()
     t0 = time.perf_counter()
     log = lambda s: print(s, flush=True)
     log(f"Evolucionando el difuso de {a.planeta} (nivel {a.nivel}, {a.sitios} sitios, población {a.poblacion}, "
         f"{a.generaciones} generaciones, semilla {a.semilla})")
+    entrenamiento = list(range(301, 301 + a.n_entrenamiento))
     mejor, historial, cache = evolucionar(a.planeta, a.nivel, a.sitios, a.poblacion, a.generaciones, a.semilla,
-                                          SEMILLAS_ENTRENAMIENTO, log)
+                                          entrenamiento, log)
     log("Midiendo entrenamiento y validación (defecto frente a evolucionado)...")
     res = {}
-    for nombre, semillas in (("entrenamiento", SEMILLAS_ENTRENAMIENTO), ("validacion", SEMILLAS_VALIDACION)):
+    for nombre, semillas in (("entrenamiento", entrenamiento), ("validacion", SEMILLAS_VALIDACION)):
         res[nombre] = {"semillas": [semillas[0], semillas[-1]],
                        "defecto": evaluar(None, semillas, a.planeta, a.nivel, a.sitios),
                        "evolucionado": evaluar(mejor, semillas, a.planeta, a.nivel, a.sitios)}
@@ -127,7 +129,7 @@ def main():
     params = dp.a_parametros(mejor)
     todo["planetas"][a.planeta] = {**params, "vector": {n: round(float(v), 4) for n, v in zip(dp.NOMBRES, mejor)},
                                    "entrenamiento": {"nivel": a.nivel, "sitios": a.sitios, "semilla": a.semilla,
-                                                     "poblacion": a.poblacion, "generaciones": a.generaciones,
+                                                     "poblacion": a.poblacion, "generaciones": a.generaciones, "semillas_entrenamiento": len(entrenamiento),
                                                      "historial": historial, "evaluaciones": len(cache)},
                                    "resultados": res, "generado": date.today().isoformat()}
     dp.guardar(todo, a.salida)

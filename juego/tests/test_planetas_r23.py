@@ -271,7 +271,8 @@ def test_el_difuso_recibe_la_bateria_en_porcentaje_en_el_mapa_grande():
 
 
 def test_el_laboratorio_del_difuso_no_convierte_la_bateria():
-    p = Partida(semilla=3, nivel=2, filas=40, columnas=60, planeta="Marte", eventos_activos=())
+    # R23: sin los parámetros evolucionados del planeta (con ellos el difuso de Marte ya no es el de defecto)
+    p = Partida(semilla=3, nivel=2, filas=40, columnas=60, planeta="Marte", eventos_activos=(), difuso_evolucionado=False)
     a = p.mision.difuso.inferir(20.0, 80.0, 5.0)
     from difuso import FuzzyController
     b = FuzzyController().inferir(20.0, 80.0, 5.0)

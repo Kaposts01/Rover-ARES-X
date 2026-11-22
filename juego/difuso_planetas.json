@@ -249,6 +249,255 @@
     }
    },
    "generado": "2026-11-22"
+  },
+  "Neptuno": {
+   "difuso": {
+    "variables": {
+     "distancia": {
+      "etiquetas": {
+       "cerca": [
+        0,
+        0,
+        2.5066,
+        4.8007
+       ],
+       "lejos": [
+        10.8789,
+        15.1907,
+        20,
+        20
+       ]
+      }
+     },
+     "inclinacion": {
+      "etiquetas": {
+       "plana": [
+        0,
+        0,
+        3.3658,
+        7.1786
+       ],
+       "fuerte": [
+        27.5731,
+        37.3563,
+        45,
+        45
+       ]
+      }
+     },
+     "bateria": {
+      "etiquetas": {
+       "critica": [
+        0,
+        0,
+        27.1999,
+        48.1847
+       ],
+       "alta": [
+        63.7341,
+        87.3015,
+        100,
+        100
+       ]
+      }
+     }
+    },
+    "salida": {
+     "etiquetas": {
+      "rapida": [
+       0.7076,
+       0.9076,
+       1.0,
+       1.0
+      ],
+      "moderada": [
+       0.3334,
+       0.4834,
+       0.6334
+      ]
+     }
+    },
+    "reglas": [
+     {
+      "id": "R1",
+      "peso": 0.4869
+     },
+     {
+      "id": "R2",
+      "peso": 0.9503
+     },
+     {
+      "id": "R3",
+      "peso": 0.5446
+     },
+     {
+      "id": "R4",
+      "peso": 0.7878
+     },
+     {
+      "id": "R5",
+      "peso": 0.5996
+     },
+     {
+      "id": "R6",
+      "peso": 0.2898
+     },
+     {
+      "id": "R7",
+      "peso": 0.2727
+     },
+     {
+      "id": "R8",
+      "peso": 0.5871
+     },
+     {
+      "id": "R10",
+      "peso": 0.7704
+     },
+     {
+      "id": "R11",
+      "peso": 0.794
+     },
+     {
+      "id": "R9",
+      "peso": 0.4686
+     }
+    ]
+   },
+   "conduccion": {
+    "v_hielo": 0.2569,
+    "v_viento": 0.6707,
+    "v_pendiente": 0.4746,
+    "factor_desvio": 1.3025,
+    "umbral_desvio": 0.6399
+   },
+   "vector": {
+    "dist_cerca_c": 2.5066,
+    "dist_cerca_gap": 2.2941,
+    "dist_lejos_a": 10.8789,
+    "dist_lejos_gap": 4.3118,
+    "incl_plana_c": 3.3658,
+    "incl_plana_gap": 3.8127,
+    "incl_fuerte_a": 27.5731,
+    "incl_fuerte_gap": 9.7832,
+    "bat_critica_c": 27.1999,
+    "bat_critica_gap": 20.9848,
+    "bat_alta_a": 63.7341,
+    "bat_alta_gap": 23.5674,
+    "sal_rapida_a": 0.7076,
+    "sal_moderada_c": 0.4834,
+    "peso_R1": 0.4869,
+    "peso_R2": 0.9503,
+    "peso_R3": 0.5446,
+    "peso_R4": 0.7878,
+    "peso_R5": 0.5996,
+    "peso_R6": 0.2898,
+    "peso_R7": 0.2727,
+    "peso_R8": 0.5871,
+    "peso_R10": 0.7704,
+    "peso_R11": 0.794,
+    "peso_R9": 0.4686,
+    "v_hielo": 0.2569,
+    "v_viento": 0.6707,
+    "v_pendiente": 0.4746,
+    "factor_desvio": 1.3025,
+    "umbral_desvio": 0.6399
+   },
+   "entrenamiento": {
+    "nivel": 4,
+    "sitios": 11,
+    "semilla": 2026,
+    "poblacion": 12,
+    "generaciones": 7,
+    "historial": [
+     {
+      "generacion": 0,
+      "mejor": 1.5050861794028023,
+      "media": 1.473922614645744,
+      "peor": 1.3707620814640236
+     },
+     {
+      "generacion": 1,
+      "mejor": 1.516389362042454,
+      "media": 1.480520768444837,
+      "peor": 1.3537861603302201
+     },
+     {
+      "generacion": 2,
+      "mejor": 1.516389362042454,
+      "media": 1.4832141697010488,
+      "peor": 1.342450306358327
+     },
+     {
+      "generacion": 3,
+      "mejor": 1.516389362042454,
+      "media": 1.5018941401282635,
+      "peor": 1.4773106775999918
+     },
+     {
+      "generacion": 4,
+      "mejor": 1.5183109790982825,
+      "media": 1.4969270310643126,
+      "peor": 1.3789638075081838
+     },
+     {
+      "generacion": 5,
+      "mejor": 1.518312399152074,
+      "media": 1.5071198911411667,
+      "peor": 1.482883287656814
+     },
+     {
+      "generacion": 6,
+      "mejor": 1.518312399152074,
+      "media": 1.5078455246325575,
+      "peor": 1.4935604633982218
+     }
+    ],
+    "evaluaciones": 71
+   },
+   "resultados": {
+    "entrenamiento": {
+     "semillas": [
+      301,
+      308
+     ],
+     "defecto": {
+      "fitness": 1.4700918404373886,
+      "exito": 1.0,
+      "ciencia": 0.7971625,
+      "pasos": 128.0,
+      "n": 8
+     },
+     "evolucionado": {
+      "fitness": 1.518312399152074,
+      "exito": 1.0,
+      "ciencia": 0.84195,
+      "pasos": 135.25,
+      "n": 8
+     }
+    },
+    "validacion": {
+     "semillas": [
+      401,
+      420
+     ],
+     "defecto": {
+      "fitness": 1.3917113416270679,
+      "exito": 0.9,
+      "ciencia": 0.8115100000000002,
+      "pasos": 145.4,
+      "n": 20
+     },
+     "evolucionado": {
+      "fitness": 1.330003066089002,
+      "exito": 0.85,
+      "ciencia": 0.7871349999999999,
+      "pasos": 162.45,
+      "n": 20
+     }
+    }
+   },
+   "generado": "2026-11-22"
   }
  }
 }

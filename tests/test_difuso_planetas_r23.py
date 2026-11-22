@@ -82,7 +82,7 @@ def test_el_tope_de_velocidad_sobre_hielo_actua_solo_con_hielo_en_la_siguiente_c
 
 
 def test_reglas_editadas_en_una_partida_no_afectan_a_otras_ni_a_las_constantes():
-    a, b = Partida(semilla=3, nivel=1), Partida(semilla=3, nivel=1)
+    a, b = (Partida(semilla=3, nivel=1, difuso_evolucionado=False) for _ in range(2))
     nuevo = a.mision.difuso.copia()
     nuevo.aplicar({"reglas": [{"id": "R1", "peso": 0.2}, {"id": "R4", "activa": False}]})
     a.poner_difuso(nuevo)

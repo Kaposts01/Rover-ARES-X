@@ -46,3 +46,28 @@ Mapa grande (8 semillas, Marte): N3 88 %, N4 62 %, N5 50 %.
 Ablaciones en Marte (N3, N4, N5): híbrido 90, 70, 40 (esta pasada) frente a sin AG 75, 70, 55; sin difuso 90, 70, 50; sin RNA 90, 80, 65
 (pasada previa con el mismo código salvo el generador de polvo). Con 20 semillas el error es de ±10 puntos: el AG y el difuso aportan algo
 pequeño y la RNA no se distingue de cero.
+
+
+## Recalibración tras el AG con restricciones (22/11, segunda parte de R23)
+
+Con 8 a 12 sitios, ventanas, recarga obligatoria, opcionales, difuso evolucionado y RNA con anticipación (ver `R23_ag.md`) la partida jugable es otra:
+las cifras de arriba (3 a 4 sitios) ya no valen. No se tocó la batería por nivel (`dificultad.BATERIA_POR_NIVEL`): el problema nuevo, con 3 a 4 bases, ya
+deja a Marte dentro de las metas. Híbrido, modo automático por la API (con drones desde Medio), mapa pequeño, semillas 1 a 20, difuso evolucionado de Marte:
+
+| Nivel | Sitios | Meta | Marte | Tierra (difuso de defecto) |
+|---|---|---|---|---|
+| 1 Muy fácil | 8 | ≥ 95 % | 100 % (20/20) | 100 % |
+| 2 Fácil | 8 | ≥ 95 % | 100 % (20/20) | 95 % |
+| 3 Medio | 9 | 85–95 % | 85 % (17/20) | 100 % |
+| 4 Difícil | 10 | 65–85 % | 85 % (17/20) | 90 % |
+| 5 Hardcore | 11 | 40–65 % | 65 % (13/20) | 80 % |
+
+Batería sobrante de las ganadas en Marte: 56, 58, 53, 52 y 61 %. Pasos de las ganadas: 90, 93, 146, 147, 171 (antes, con 3 a 4 sitios, 45 a 55). Con 20 semillas
+el error es de ±10 a ±15 puntos: Marte está en la banda en los cinco niveles (N3, N4 y N5 en su borde superior); **Tierra queda por encima de la meta en N3 a N5** (la
+compensación por planeta de la primera parte la hace más fácil con el problema nuevo; no se recalibró). Derrotas: casi todas por batería agotada (tormentas, viento o
+un plan que se queda corto), una por drones sin batería para cazarlos, y 1 a 2 partidas de cada 100 que no terminan en 500 pasos (un bucle de espera cerca del refugio que
+no se resolvió).
+
+Con el difuso de defecto (sin evolucionar) la misma medición en Marte dio 100, 100, 90, 80 y 60 % (antes de los últimos retoques de robustez, 100, 100, 90, 80, 60).
+
+Cómo reproducir: `python scripts/medir_dificultad.py --tamano pequeno --planetas Marte,Tierra --semillas 20 --politica hibrido`.

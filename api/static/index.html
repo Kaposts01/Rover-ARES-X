@@ -77,7 +77,15 @@
     </div>
   </div>
 
-  <button id="cine-salir" class="cine-salir" type="button" aria-label="Salir del modo cine (Esc)"><span aria-hidden="true">✕</span> Salir del cine</button>
+  <div class="cine-controles">
+    <button id="cine-play" class="cine-salir cine-play" type="button" aria-label="Reanudar la simulación (barra espaciadora)" title="Reanudar la simulación (barra espaciadora)">▶</button>
+    <button id="cine-salir" class="cine-salir" type="button" aria-label="Salir del modo cine (Esc)"><span aria-hidden="true">✕</span> Salir del cine</button>
+  </div>
+  <div id="ia-conduce" class="ia-conduce oculto" role="status" aria-live="polite">
+    <span class="ia-conduce-punto" aria-hidden="true"></span>
+    <span>La IA está conduciendo</span><span aria-hidden="true">·</span>
+    <button id="ia-retomar" class="ia-retomar" type="button">Retomar el control</button>
+  </div>
   <div id="intervencion-aviso">INTERVENCIÓN ACTIVA</div>
 
   <div id="controles" class="caja oculto">
@@ -85,6 +93,7 @@
     <div id="controles-cuerpo">
     <div id="resumen-config" class="resumen">
       <span id="resumen-texto"></span>
+      <button id="tutorial-abrir" class="secundario tutorial-abrir" type="button" title="Recorrido corto por los controles del modo manual">Tutorial</button>
       <button id="reconfigurar" class="secundario" type="button">Reconfigurar</button>
     </div>
 
@@ -267,6 +276,7 @@
           </div>
         </div>
         <div class="capa-nota">Flechas o WASD mueven (7/9/1/3 diagonales) · Espacio dispara · H modo cine</div>
+        <button id="tutorial-abrir-manual" class="secundario tutorial-abrir" type="button" title="Recorrido corto por los controles del modo manual">Tutorial del modo manual</button>
       </div>
       <details id="capas-escena" class="grupo-manual">
         <summary class="grupo-titulo">Capas de la escena</summary>
@@ -467,6 +477,7 @@
             </select>
           </label>
           <button id="pol-cargar" class="boton" type="button">Cargar comparación</button>
+          <button id="pol-comparar-vivo" class="secundario" type="button" title="Dos políticas jugando el mismo mapa a la vez, paso a paso">Comparar dos políticas en vivo</button>
           <span id="pol-estado" class="ayuda"></span>
         </div>
         <div class="lab-grid-2">
@@ -550,6 +561,7 @@
         <button id="meta-confirmar" class="boton-confirmar" type="button">Iniciar la misión elegida</button>
         <button id="meta-salir" class="boton-salir" type="button">Salir al menú inicial</button>
         <a id="meta-reporte" class="boton-reporte" href="/reporte.html?descargar=1" download>Descargar reporte</a>
+        <button id="meta-records" class="secundario" type="button">Ver récords</button>
       </div>
     </div>
   </div>
@@ -649,6 +661,11 @@
 
       <section class="paso paso-final">
         <button id="iniciar" class="boton inicio" type="button"><span class="num">3</span> Iniciar misión</button>
+        <div class="menu-extras" role="group" aria-label="Más herramientas">
+          <button id="menu-comparar" class="secundario" type="button" title="Dos políticas jugando el mismo mapa a la vez">Comparar políticas</button>
+          <button id="menu-records" class="secundario" type="button" title="Mejores marcas por semilla">Récords</button>
+          <button id="menu-tutorial" class="secundario" type="button" title="Practica el modo manual con un recorrido guiado">Tutorial</button>
+        </div>
         <button id="menu-ver-intro" class="volver" type="button" title="Vuelve al sistema solar; elegir un planeta solo lo deja seleccionado aquí"><span aria-hidden="true">←</span> Volver al sistema solar</button>
       </section>
     </div>

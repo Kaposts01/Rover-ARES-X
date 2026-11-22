@@ -18,6 +18,11 @@ import {
   textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
 } from "/static/textos.js?v=r14";
 import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
+import { crearRecords } from "/static/records.js?v=r14";
+import { textoNuevoRecord } from "/static/records_datos.js?v=r14";
+import { crearComparar } from "/static/comparar.js?v=r14";
+import { crearTutorial } from "/static/tutorial.js?v=r14";
+import { TEXTO_CAMBIO_MODO } from "/static/tutorial_datos.js?v=r14";
 import { condicionesPlaneta, filasCondiciones, perfilPlaneta } from "/static/planeta_datos.js?v=r14";
 import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
@@ -1551,6 +1556,7 @@ function pintarModoDesc(modo) {
   document.getElementById("modo-desc").textContent = MODO_DESC[modo] || "";
   document.getElementById("menu-modo-desc").textContent = MODO_DESC[document.getElementById("menu-modo").value] || "";
   document.getElementById("det-rec").classList.toggle("oculto", modo !== "manual");   // recomendaciones solo en manual
+  pintarRotulosReproduccion();
 }
 document.getElementById("menu-modo").addEventListener("change", (ev) => {
   document.getElementById("menu-modo-desc").textContent = MODO_DESC[ev.target.value] || "";
@@ -1571,6 +1577,7 @@ function actualizarRecomendacion() {
   lista.replaceChildren(Object.assign(document.createElement("li"), { textContent: TEXTO_REC_VACIO }));
 }
 async function consultarRecomendacion() {
+  avisarAccion("recomendacion");
   const lista = document.getElementById("rec-lista");
   const epoca = ++recomendacionEpoca;
   lista.replaceChildren();
@@ -2171,6 +2178,7 @@ async function dispararEvento(nombreForzado = null) {
     if (nombre === "bateria_baja") destellarBateria();
   }
   avisar(texto);
+  if (r.ok) avisarAccion("evento");
   registrarEvento(texto.charAt(0).toLowerCase() + texto.slice(1));
   await refrescarEstado();
   if (r.ok && nombre === "senal_biologica" && estado && Array.isArray(estado.senal)) señalarEvento(nombre, [estado.senal]);
@@ -2369,6 +2377,7 @@ function volverAlInicio(motivo = "salir") {
   document.getElementById("controles").classList.add("oculto");
   document.getElementById("manual").classList.add("oculto");
   document.getElementById("menu").classList.remove("oculto");
+  tutorial.cerrar(); tutorial.cerrarOferta();
   if (panelIA) panelIA.mostrar(false);
   correrIntro({ motivo });
 }
@@ -2525,11 +2534,13 @@ async function correrFinal(codigo) {
           alCerrar: () => cerrarFinal && cerrarFinal(null),
           alRepetir: () => cerrarFinal && cerrarFinal("repetir"),
           alOtroPlaneta: () => cerrarFinal && cerrarFinal("otro"),
+          alVerRecords: () => abrirRecords({ semilla: estado ? estado.semilla : "" }),
         });
       }
       document.body.classList.add("final-activa");
       tarjetaFinal.mostrar(resultado, m ? m.lista() : [], {
         logrosNuevos: [...logrosNuevos], logros: logros ? logros.lista() : [], activada: finActivada(), alCambiarCasilla: fijarFinActivada,
+        record: textoNuevoRecord(ultimoRecord),
       });
       const reiniciarInactividad = () => {
         clearTimeout(inactividad);
@@ -2581,6 +2592,7 @@ function reiniciarEstadoDerivado() {
 // Tamaño del mapa (ARX-21): pequeno 20×30, mediano 30×45, grande 40×60 (por defecto: grande)
 async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente(), bateria = null) {
   detenerReproduccion();
+  finAtendido = false; ultimoRecord = null;
   cerrarAvisos();
   reiniciarEventos();
   cargando = true;
@@ -2735,8 +2747,11 @@ function textoCadena(c) {
 const semillaAleatoria = () => 1 + (crypto.getRandomValues(new Uint32Array(1))[0] % 999999);
 
 async function alFinDeMision(codigo) {
+  if (finAtendido) return;
+  finAtendido = true;
   detenerReproduccion();
   cerrarAvisos();
+  await registrarRecord();   // ronda 23: queda en los récords por semilla (el servidor decide si es nuevo récord)
   if (cadenaAutomatica) {
     cadenaAutomatica.hechas += 1;
     if (codigo === "EXITO") cadenaAutomatica.exitos += 1;
@@ -2768,6 +2783,7 @@ async function alFinDeMision(codigo) {
   const cadenaTerminada = cadenaAutomatica;
   await correrFinal(codigo);   // la pantalla final va antes de la meta; nunca lanza y, si falla o se omite, sigue la meta
   const pedido = accionFinal; accionFinal = null;
+  if (pedido === "jugar" && configPendiente) { const c = configPendiente; configPendiente = null; cadenaAutomatica = null; await jugarConfiguracion(c); return; }
   if (pedido === "repetir") { cadenaAutomatica = null; await nuevaDesdeMeta(estado.semilla, estado.nivel); return; }
   if (pedido === "otro") {
     volverAlInicio("salir");   // «Explorar otro cuerpo»: de vuelta al sistema solar
@@ -2807,6 +2823,8 @@ function mostrarMeta(codigo, cadena = null) {
     li.textContent = `${nombre}: ${valor}`;
     return li;
   }));
+  const rec = textoNuevoRecord(ultimoRecord);
+  if (rec) { const li = document.createElement("li"); li.textContent = `${rec.nuevo ? "★ " : ""}${rec.titulo}`; if (rec.nuevo) li.className = "nuevo-record"; li.title = rec.detalle; resumenLista.appendChild(li); }
   document.getElementById("meta-puntaje-ayuda").textContent = AYUDA_PUNTAJE_SIMPLE;
   const lista = document.getElementById("meta-objetivos");
   lista.replaceChildren();
@@ -2878,6 +2896,87 @@ document.getElementById("menu-modo").addEventListener("change", (ev) => {
   document.getElementById("menu-misiones-fila").classList.toggle("oculto", ev.target.value !== "automatico");
 });
 
+// ---------- ronda 23: récords por semilla, comparar políticas y tutorial del modo manual ----------
+let ultimoRecord = null;        // respuesta de /records/registrar de la misión que acaba de terminar
+let finAtendido = false;        // la misión actual ya pasó por alFinDeMision (los pasos manuales también la terminan)
+let configPendiente = null;     // «Jugar esta semilla» pedido desde la pantalla final
+let tutorialPendiente = false;  // el botón «Tutorial» del menú arranca una partida manual y abre el recorrido
+
+async function registrarRecord() {
+  ultimoRecord = null;
+  try {
+    const r = await fetch("/records/registrar", { method: "POST" });
+    if (r.ok) ultimoRecord = await r.json();
+  } catch (e) { /* sin récord: la misión sigue su curso */ }
+}
+// La misión se puede terminar con un movimiento o un disparo del jugador, no solo con un paso de la IA
+function revisarFinManual() {
+  if (finAtendido || !estado || !ESTADOS_TERMINALES.includes(estado.estado)) return;
+  alFinDeMision(estado.estado);
+}
+
+const vistaRecords = crearRecords({ alJugar: (cfg) => jugarConfiguracion(cfg) });
+function abrirRecords(opciones = {}) { vistaRecords.abrir(opciones); }
+// Empieza una misión con la semilla y las condiciones de un récord, usando el mismo camino que el asistente del menú
+async function jugarConfiguracion(cfg) {
+  if (finActiva() && cerrarFinal) { configPendiente = cfg; cerrarFinal("jugar"); return; }   // la pantalla final se cierra y después arranca
+  const poner = (id, valor) => { const c = document.getElementById(id); c.value = String(valor); c.dispatchEvent(new Event("change")); };
+  poner("menu-planeta", cfg.planeta); poner("menu-modo-planeta", cfg.vehiculo); poner("menu-tamano", cfg.tamano);
+  poner("menu-nivel", cfg.nivel); poner("menu-modo", cfg.control);
+  document.getElementById("menu-semilla").value = String(cfg.semilla);
+  cadenaAutomatica = null;
+  document.getElementById("iniciar").click();
+}
+
+const vistaComparar = crearComparar({
+  valores: () => {
+    const enPartida = document.getElementById("menu").classList.contains("oculto") && estado && !estado.sin_partida;
+    if (enPartida) return { planeta: vigente.planeta, vehiculo: vigente.vehiculo, tamano: document.getElementById("tamano").value, nivel: estado.nivel, semilla: estado.semilla };
+    return { planeta: document.getElementById("menu-planeta").value, vehiculo: document.getElementById("menu-modo-planeta").value, nivel: document.getElementById("menu-nivel").value };
+  },
+  planetas: () => [...document.getElementById("menu-planeta").options].map((o) => [o.value, o.textContent]),
+});
+
+// Tutorial: cada paso deja visible el panel que necesita
+const tutorial = crearTutorial({
+  vehiculo: () => vehiculoDe(vigente.vehiculo || (estado && estado.modo_planeta)),
+  preparar: (clave) => {
+    const abrir = (id, boton) => { const c = document.getElementById(id); if (c && c.classList.contains("plegado")) document.getElementById(boton).click(); };
+    if (clave === "controles") { abrir("manual", "manual-toggle"); abrir("controles", "controles-toggle"); }
+    if (clave === "misión" && panelIA) panelIA.abrir("mision");   // los eventos viven en la pestaña Misión del panel derecho
+    if (clave === "recomendaciones") {
+      abrir("decision", "decision-toggle");
+      const d = document.getElementById("det-rec"); if (d) d.open = true;
+    }
+  },
+});
+const avisarAccion = (tipo) => window.dispatchEvent(new CustomEvent("ares:accion", { detail: { tipo } }));
+
+async function asegurarModoManual() {
+  if (document.getElementById("modo").value === "manual") return;
+  avisar(TEXTO_CAMBIO_MODO);
+  detenerReproduccion();
+  document.getElementById("modo").value = "manual";
+  const datos = await llamar("POST", "/modo", { modo: "manual", veto: document.getElementById("veto").checked });
+  if (datos) { estado = datos; pintarHud(datos); await refrescarPaneles(); }
+}
+document.querySelectorAll(".tutorial-abrir").forEach((b) => b.addEventListener("click", async () => {
+  if (!estado || estado.sin_partida || ocupado()) return;
+  await asegurarModoManual();
+  tutorial.cerrarOferta();
+  tutorial.iniciar();
+}));
+document.getElementById("menu-tutorial").addEventListener("click", () => {
+  const modo = document.getElementById("menu-modo");
+  modo.value = "manual"; modo.dispatchEvent(new Event("change"));
+  tutorialPendiente = true;
+  document.getElementById("iniciar").click();
+});
+document.getElementById("menu-records").addEventListener("click", () => abrirRecords());
+document.getElementById("menu-comparar").addEventListener("click", () => vistaComparar.abrir());
+document.getElementById("pol-comparar-vivo").addEventListener("click", () => vistaComparar.abrir());
+document.getElementById("meta-records").addEventListener("click", () => abrirRecords({ semilla: estado ? estado.semilla : "" }));
+
 // Menú de inicio (ARX-14): hasta que el jugador inicia una partida, la página no crea ninguna.
 // Aplica la configuración del asistente: semilla, nivel, modo y veto.
 document.getElementById("iniciar").addEventListener("click", async () => {
@@ -2902,6 +3001,8 @@ document.getElementById("iniciar").addEventListener("click", async () => {
   mostrarMision(estado.semilla, nivel);
   document.getElementById("menu").classList.add("oculto");
   document.getElementById("menu-semilla").value = "";   // el siguiente inicio vuelve a ser aleatorio, salvo que se escriba una
+  if (tutorialPendiente) { tutorialPendiente = false; tutorial.iniciar(); }
+  else if (config.control === "manual") setTimeout(() => tutorial.ofrecer(), 700);   // la primera vez en manual se ofrece el recorrido
 });
 ["hist-modo", "hist-tecnica", "hist-motivo"].forEach((id) =>
   document.getElementById(id).addEventListener("change", () => refrescarHistorial()));
@@ -2945,12 +3046,15 @@ function ocupado() {
 async function mover(rumbo) {
   if (finActiva()) return;
   if (!mapa || ocupado()) return;
+  if (enModoManual() && reproduciendo !== null) { detenerReproduccion(); avisar("Control retomado: conduces tú."); }   // mover a mano es retomar el control
   const r = await llamar("POST", "/mover", { rumbo });
   if (!r) return;
   avisar((r.movido ? `Movimiento ${rumbo}.` : `Movimiento ${rumbo} rechazado: ${r.motivo}`) + eventosTexto(r.eventos_combate));
   registrarEvento(r.movido ? `mover ${rumbo}` : `mover ${rumbo} rechazado: ${r.motivo}`);
+  if (r.movido) avisarAccion("mover");
   await refrescarEstado();
   await refrescarPaneles();
+  revisarFinManual();
 }
 
 // Cierra todos los avisos y capas: se llama al crear una partida o al entrar en cualquier carga (N9)
@@ -3061,6 +3165,7 @@ async function paso() {
   }
   const terminada = ESTADOS_TERMINALES.includes(r.estado);
   const fin = r.accion === "fin";
+  if (terminada || fin) detenerReproduccion();   // antes de esperar al refresco: otro tick del reloj enviaba un /paso más y el motor respondía 409
   if (r.ultimo && r.ultimo.paso != null) ultimoPasoNumero = r.ultimo.paso;
   if (r.accion === "disparar") efectoDisparoAutomatico(r, estadoPrevio);
   if (cadenaAutomatica && r.accion === "replanificar") cadenaAutomatica.replanteosActual += 1;
@@ -3140,15 +3245,28 @@ async function disparar() {
   registrarEvento(r.impacto ? "disparo: impacto" : "disparo sin impacto");
   await refrescarEstado();
   await refrescarPaneles();
+  revisarFinManual();
 }
 
-const ROTULO_PLAY = "▶ Reproducir", ROTULO_PAUSA = "❚❚ Pausa";
+// En manual, «Reproducir» pone a la IA a conducir: el botón lo dice, y mientras conduce hay un aviso fijo para retomar el control.
+// (Ronda 23.) El servidor ve esos pasos como de la IA en una partida manual y la marca como asistida para los récords.
+const enModoManual = () => document.getElementById("modo").value === "manual";
+function pintarRotulosReproduccion() {
+  const manual = enModoManual(), corre = reproduciendo !== null;
+  const r = document.getElementById("reproducir"), un = document.getElementById("paso"), cp = document.getElementById("cine-play");
+  if (r) r.textContent = corre ? (manual ? "❚❚ Retomar el control" : "❚❚ Pausa") : (manual ? "▶ Dejar que la IA conduzca" : "▶ Reproducir");
+  if (r) r.title = manual ? "En modo manual, la IA conduce sola hasta que retomes el control. La misión contará como asistida por la IA en los récords." : "";
+  if (un) { un.textContent = manual ? "⏭ Un paso de la IA" : "⏭ Un paso"; un.title = manual ? "La IA da un paso por ti; la misión contará como asistida por la IA" : "Avanza un paso de la IA"; }
+  if (cp) { cp.textContent = corre ? "⏸" : "▶"; cp.setAttribute("aria-label", corre ? "Pausar la simulación (barra espaciadora)" : "Reanudar la simulación (barra espaciadora)"); cp.title = cp.getAttribute("aria-label"); }
+  const aviso = document.getElementById("ia-conduce");
+  if (aviso) aviso.classList.toggle("oculto", !(manual && corre));
+}
 function detenerReproduccion() {
   if (reproduciendo !== null) {
     clearInterval(reproduciendo);
     reproduciendo = null;
-    document.getElementById("reproducir").textContent = ROTULO_PLAY;
   }
+  pintarRotulosReproduccion();
 }
 
 function alternarReproduccion() {
@@ -3157,8 +3275,8 @@ function alternarReproduccion() {
     return;
   }
   const ms = Number(document.getElementById("velocidad").value);
-  document.getElementById("reproducir").textContent = ROTULO_PAUSA;
   reproduciendo = setInterval(() => { paso(); }, ms);
+  pintarRotulosReproduccion();
 }
 
 // ---------- intervención (ARX-10) ----------
@@ -3556,6 +3674,8 @@ function salirCine() {
   sincronizarCine();
 }
 document.getElementById("cine-salir").addEventListener("click", () => salirCine());
+document.getElementById("cine-play").addEventListener("click", (ev) => { alternarReproduccion(); ev.currentTarget.blur(); });   // arranca o pausa sin salir del cine
+document.getElementById("ia-retomar").addEventListener("click", () => { detenerReproduccion(); avisar("Control retomado: conduces tú."); });
 // Estado visible del cine: bandas negras y botón pulsado mientras el director está en vivo
 let cineVivoAntes = null;
 function sincronizarCine() {
@@ -3598,7 +3718,7 @@ window.addEventListener("keydown", (ev) => {
   if (cineVivo()) {
     if (ev.key === "Escape") { cineActivar(false); return; }
     if (!(ev.key === "h" || ev.key === "H") || ["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) {
-      if (ev.key === " " && ev.target === document.body) ev.preventDefault();
+      if (ev.key === " " && ev.target === document.body) { ev.preventDefault(); alternarReproduccion(); }   // en el cine, la barra espaciadora arranca o pausa
       return;
     }
   }
@@ -3624,7 +3744,7 @@ window.addEventListener("keydown", (ev) => {
   }
   if (ev.key === " ") {
     ev.preventDefault();
-    disparar();
+    if (document.body.classList.contains("cine")) alternarReproduccion(); else disparar();   // en el cine (sin director) también arranca o pausa
     return;
   }
   const rumbo = RUMBO_TECLA[ev.key];
@@ -3800,7 +3920,7 @@ function montarBarraMision() {
   const barra = document.createElement("div");
   barra.id = "barra-mision"; barra.className = "barra-mision"; barra.setAttribute("role", "toolbar"); barra.setAttribute("aria-label", "Control de la simulación");
   const viejaSim = document.getElementById("simulacion"), viejaRep = rep.closest("section");
-  rep.textContent = ROTULO_PLAY; un.textContent = "⏭ Un paso"; un.title = "Avanza un paso de la IA";
+  pintarRotulosReproduccion();
   const cineB = document.createElement("button");
   cineB.id = "boton-cine"; cineB.type = "button"; cineB.className = "boton-cine"; cineB.textContent = "🎬 Cine";
   cineB.title = "Modo cine: cámara de director sin paneles. Reproducir encadena tomas; Un paso corta a un plano cercano. H o Esc para salir.";
@@ -3837,6 +3957,8 @@ function montarBarraMision() {
   if (viejaRep && viejaRep !== viejaSim && !viejaRep.querySelector("button")) viejaRep.hidden = true;
 }
 try { montarBarraMision(); } catch (e) { console.warn("barra de control: se quedan los botones en el panel", e); }
+// El aviso «La IA está conduciendo» vive en la franja inferior, justo sobre la barra de control, para que no tape el mensaje ni la bitácora
+try { const dock = document.getElementById("dock"), aviso = document.getElementById("ia-conduce"), barra = document.getElementById("barra-mision"); if (dock && aviso) dock.insertBefore(aviso, barra || dock.firstChild); } catch (e) { /* queda flotando arriba */ }
 new MutationObserver(encuadrarVista).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 for (const id of ["manual", "menu"]) new MutationObserver(encuadrarVista).observe(document.getElementById(id), { attributes: true, attributeFilter: ["class"] });   // los controles aparecen al iniciar la partida
 encuadrarVista();

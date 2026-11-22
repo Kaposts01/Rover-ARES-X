@@ -13,6 +13,7 @@ Récords (/records): ver api/records.py.
 """
 import collections
 import hashlib
+import math
 import time
 import uuid
 from typing import Any
@@ -43,6 +44,16 @@ POLITICAS = {
     "solo_difuso": ("difuso", "hibrido"),
     "solo_ag": ("ag", "hibrido"),
 }
+
+
+def puntaje_de_juego(e: dict) -> int:
+    """El puntaje de la pantalla final (la misma fórmula que final_datos.js): ciencia(0 a 1)×1000 + vetos por barranco×50 +
+    batería(%)×5 − violaciones×500, mínimo 0. Es el que ve el jugador, por eso es el de los récords."""
+    total = float(e.get("sitios_totales") or 0)
+    ciencia = min(1.0, max(0.0, float(e.get("sitios_visitados") or 0) / total)) if total > 0 else 0.0
+    violaciones = float(e.get("colisiones") or 0) + float(e.get("pasos_sobre_tolerancia") or 0)
+    bruto = 1000 * ciencia + 50 * float(e.get("barrancos_evitados") or 0) + 5 * float(e.get("bateria_pct") or 0) - 500 * violaciones
+    return max(0, int(math.floor(bruto + 0.5)))
 
 
 class ComparacionIn(BaseModel):
@@ -159,7 +170,7 @@ def instalar(app: FastAPI, servidor) -> None:
     def ficha(l: Lado, n: int, r: dict) -> dict:
         e = servidor._estado(l.sesion)
         return {"n": n, "posicion": e["posicion"], "accion": r.get("accion"), "motivos": list(r.get("motivos") or []),
-                "estado": estado_de(l), "bateria_pct": e["bateria_pct"], "puntaje": e["puntaje"],
+                "estado": estado_de(l), "bateria_pct": e["bateria_pct"], "puntaje": puntaje_de_juego(e),
                 "sitios_visitados": e["sitios_visitados"], "sitios_totales": e["sitios_totales"],
                 "visitados": [list(map(int, c)) for c in sorted(l.sesion.partida.mision.visitados)],
                 "vetos": e["vetos"], "colisiones": e["colisiones"], "replanes": e["replanes"]}
@@ -304,7 +315,8 @@ def instalar(app: FastAPI, servidor) -> None:
         origen = records.origen_de(s.historial)
         nuevo = {"planeta": e["planeta"], "nivel": int(s.nivel), "tamano": tamano, "semilla": int(s.semilla),
                  "vehiculo": e["modo_planeta"], "origen": origen, "modo": s.modo,
-                 "resultado": e["estado"], "pasos": int(e["paso"]), "puntaje": int(e["puntaje"]),
+                 "resultado": e["estado"], "pasos": int(e["paso"]), "puntaje": puntaje_de_juego(e),
+                 "puntaje_simple": int(e["puntaje"]),
                  "bateria_pct": float(e["bateria_pct"]), "sitios_visitados": e["sitios_visitados"],
                  "sitios_totales": e["sitios_totales"]}
         try:

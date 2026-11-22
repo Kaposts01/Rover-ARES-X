@@ -67,6 +67,8 @@ export const NOMBRE_MOTIVO = {
   "REPLAN-SISMO": "sismo en la ruta",
   "REPLAN-AG-SISMO": "sismo: el AG recalculó el orden",
   "REPLAN-AG-METEORITO": "meteorito: el AG recalculó el orden",
+  "CAZA-DRON-BFS": "persigue al dron por la ruta más corta",
+  EXITO: "misión cumplida", FRACASO: "la misión fracasó", SIN_RUTA: "no queda ruta posible", MODO_SEGURO: "el vehículo entró en modo seguro",
 };
 export function nombreMotivo(codigo) {
   const t = String(codigo ?? "");
@@ -205,3 +207,10 @@ export function avisoEvento(nombre, rotulo, r, vehiculoCelda, vehiculo = "rover"
   if (donde && String(detalle).includes(`(${celdas[0][0]}, ${celdas[0][1]})`)) donde = donde.replace(/^fila \d+, columna \d+( · )?/, "");
   return donde ? `Evento ${rotulo}: ${detalle} · ${donde}` : `Evento ${rotulo}: ${detalle}`;
 }
+
+// ---------- acciones de un paso (ronda 23): lo que hizo el vehículo, en lenguaje claro ----------
+export const NOMBRE_ACCION = {
+  avanzar: "avanzó", replanificar: "replanificó la ruta", esperar: "esperó", detener: "se detuvo", disparar: "disparó a un dron",
+  cazar: "persiguió a un dron", recargar: "recargó batería", fin: "terminó", error: "no pudo decidir",
+};
+export const nombreAccion = (a) => NOMBRE_ACCION[a] || String(a ?? "—").replace(/_/g, " ");

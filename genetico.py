@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+import simulador
 from simulador import BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, World
 
 PESOS_POR_DEFECTO = {"ciencia": 1.0, "distancia": 0.3, "energia": 0.2,
@@ -23,6 +24,13 @@ PENALIZACION_INVIABLE = 1.0     # P(inviabilidad) por violación dura
 B_MAX_BATERIA = 225.0
 K_EXCESO = 0.01
 COSTO_BATERIA_PASO = 1.0        # % de batería por celda (supuesto de simulación)
+
+
+# ARX-94c (ev3-d83 A, umbrales en docs/planes/ARX-94_umbrales.md): una imagen orbital resuelve relieve grande, no
+# grietas. Los barrancos de menos de PROFUNDIDAD_ORBITAL_M se detectan con P_DETECTAR_SOMERO; los de esa profundidad
+# o más y los obstáculos, con `p_detectar` (0,8 por defecto). Supuestos de simulación declarados, fijados antes de medir.
+PROFUNDIDAD_ORBITAL_M = 2.0
+P_DETECTAR_SOMERO = 0.3
 
 
 def cota_viable(pesos: dict, pasos_maximos: int, bateria: float) -> float:
@@ -36,15 +44,21 @@ def cota_viable(pesos: dict, pasos_maximos: int, bateria: float) -> float:
 
 def mapa_estimado(mundo: World, rng: np.random.Generator, p_detectar: float = 0.8,
                   p_prior: float = 0.05) -> np.ndarray:
-    """Riesgo estimado por celda en [0, 1] que el rover construye con sus sensores.
+    """Riesgo estimado por celda en [0, 1] que el rover construye con el mapa orbital previo.
 
-    Un peligro detectado vale 1.0; uno no detectado queda con el prior bajo p_prior.
-    Las celdas libres también tienen prior, porque el rover no conoce el mapa completo.
+    Un peligro detectado vale 1.0; uno no detectado queda con el prior bajo p_prior. Las celdas libres también
+    tienen prior, porque el rover no conoce el mapa completo.
+    Mundo v2 (ARX-94c): la probabilidad de detectar depende de la profundidad del barranco (los de menos de
+    PROFUNDIDAD_ORBITAL_M se ven con P_DETECTAR_SOMERO). Se sortea un número por peligro y en el mismo orden que
+    antes, así que es reproducible por semilla; con MUNDO_V1 todos los peligros usan p_detectar (mapa anterior).
     """
     riesgo = np.full(mundo.forma, p_prior, dtype=float)
     peligros = np.argwhere(mundo.tipo != LIBRE)
     for f, c in peligros:
-        if rng.random() < p_detectar:
+        p = p_detectar
+        if not simulador.MUNDO_V1 and mundo.tipo[f, c] == BARRANCO and mundo.profundidad[f, c] < PROFUNDIDAD_ORBITAL_M:
+            p = P_DETECTAR_SOMERO
+        if rng.random() < p:
             riesgo[f, c] = 1.0
     return riesgo
 

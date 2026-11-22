@@ -17,6 +17,15 @@ LIBRE, OBSTACULO, BARRANCO = 0, 1, 2
 FIRMA_BARRANCO_ACTIVA = False
 DESNIVEL_BARRANCO_M = 3.0
 
+# ARX-94a: mundo v2 (relieve suave 2D, barrancos con profundidad propia U(1, 4) m, obstáculos con
+# altura). MUNDO_V1 = True reproduce exactamente el mundo anterior (suma de ruido por filas y
+# firma opcional del barranco); es el perfil "v1" de pruebas y comparaciones.
+MUNDO_V1 = False
+RELIEVE_SIGMA_M = 1.5        # desviación del relieve v2 (supuesto de simulación)
+RELIEVE_SUAVIDAD = 3.0       # escala de suavizado del relieve v2, en celdas
+PROFUNDIDAD_BARRANCO_M = (1.0, 4.0)
+ALTURA_OBSTACULO_M = (0.3, 2.0)
+
 # Movimientos cardinales (fila, columna)
 # Ocho direcciones (ev3-d29 B). Una diagonal se permite si la celda de destino es transitable.
 MOVIMIENTOS = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "O": (0, -1),
@@ -72,6 +81,14 @@ class World:
     refugio: tuple
     inicio: tuple
     semilla: int
+    profundidad: np.ndarray = None   # metros bajo el relieve; 0 fuera de barrancos (ARX-94a)
+    altura: np.ndarray = None        # metros sobre el suelo; solo en obstáculos (ARX-94a)
+
+    def __post_init__(self):
+        if self.profundidad is None:
+            self.profundidad = np.zeros(self.tipo.shape)
+        if self.altura is None:
+            self.altura = np.zeros(self.tipo.shape)
 
     @property
     def forma(self):
@@ -84,15 +101,43 @@ class World:
     def transitable(self, pos) -> bool:
         return self.dentro(pos) and self.tipo[pos] == LIBRE
 
-    def marcar_barranco(self, pos) -> None:
-        """Evento manual o de simulación: convierte una celda en precipicio."""
+    def marcar_barranco(self, pos, rng=None) -> None:
+        """Evento manual o de simulación: convierte una celda en precipicio.
+
+        Mundo v2: la celda baja U(1, 4) m sorteados con `rng` (el generador del evento; si no se da,
+        uno determinista derivado de la semilla y la celda). Marcar dos veces no baja dos veces.
+        """
         if not self.dentro(pos):
             raise ValueError(f"Celda fuera del mapa: {pos}")
         if pos in (self.inicio, self.refugio):
             raise ValueError("No se puede poner un barranco sobre inicio o refugio.")
-        if FIRMA_BARRANCO_ACTIVA and self.tipo[pos] != BARRANCO:
-            self.elevacion[pos] -= DESNIVEL_BARRANCO_M
+        if self.tipo[pos] != BARRANCO:
+            if not MUNDO_V1:
+                if rng is None:
+                    rng = np.random.default_rng([abs(int(self.semilla)), int(pos[0]), int(pos[1])])
+                prof = float(rng.uniform(*PROFUNDIDAD_BARRANCO_M))
+                self.elevacion[pos] -= prof
+                self.profundidad[pos] = prof
+            elif FIRMA_BARRANCO_ACTIVA:
+                self.elevacion[pos] -= DESNIVEL_BARRANCO_M
+                self.profundidad[pos] = DESNIVEL_BARRANCO_M
         self.tipo[pos] = BARRANCO
+
+
+def _relieve_suave(rng, forma, sigma_m=RELIEVE_SIGMA_M, suavidad=RELIEVE_SUAVIDAD) -> np.ndarray:
+    """Relieve 2D: ruido gaussiano blanco filtrado con un núcleo gaussiano separable y reescalado
+    a desviación `sigma_m`. Vecinos de cualquier dirección difieren poco (no hay suma por filas)."""
+    ruido = rng.normal(0, 1, size=forma)
+    radio = int(np.ceil(3 * suavidad))
+    x = np.arange(-radio, radio + 1)
+    nucleo = np.exp(-0.5 * (x / suavidad) ** 2)
+    nucleo /= nucleo.sum()
+    for eje in (0, 1):
+        pad = [(0, 0), (0, 0)]
+        pad[eje] = (radio, radio)
+        relleno = np.pad(ruido, pad, mode="reflect")
+        ruido = np.apply_along_axis(lambda v: np.convolve(v, nucleo, mode="valid"), eje, relleno)
+    return ruido / ruido.std() * sigma_m
 
 
 def generar_mundo(semilla: int, filas: int = 20, columnas: int = 30,
@@ -116,10 +161,23 @@ def generar_mundo(semilla: int, filas: int = 20, columnas: int = 30,
         if p not in (inicio, refugio):
             tipo[p] = BARRANCO
 
-    # Elevación suavizada: base de altimetría (supuesto de simulación)
-    elevacion = np.cumsum(rng.normal(0, 0.2, size=(filas, columnas)), axis=1)
-    if FIRMA_BARRANCO_ACTIVA:
-        elevacion[tipo == BARRANCO] -= DESNIVEL_BARRANCO_M
+    profundidad = np.zeros((filas, columnas))
+    altura = np.zeros((filas, columnas))
+    if MUNDO_V1:
+        # Mundo v1: elevación por suma de ruido a lo largo de cada fila (supuesto original)
+        elevacion = np.cumsum(rng.normal(0, 0.2, size=(filas, columnas)), axis=1)
+        if FIRMA_BARRANCO_ACTIVA:
+            elevacion[tipo == BARRANCO] -= DESNIVEL_BARRANCO_M
+            profundidad[tipo == BARRANCO] = DESNIVEL_BARRANCO_M
+    else:
+        # Mundo v2: relieve suave 2D; el barranco baja U(1, 4) m bajo el relieve; el obstáculo tiene altura
+        elevacion = _relieve_suave(rng, (filas, columnas))
+        sorteo_prof = rng.uniform(*PROFUNDIDAD_BARRANCO_M, size=(filas, columnas))
+        sorteo_alt = rng.uniform(*ALTURA_OBSTACULO_M, size=(filas, columnas))
+        es_barranco = tipo == BARRANCO
+        profundidad[es_barranco] = sorteo_prof[es_barranco]
+        elevacion[es_barranco] -= sorteo_prof[es_barranco]
+        altura[tipo == OBSTACULO] = sorteo_alt[tipo == OBSTACULO]
 
     sitios = {}
     intentos = 0
@@ -130,41 +188,99 @@ def generar_mundo(semilla: int, filas: int = 20, columnas: int = 30,
             sitios[p] = int(rng.integers(1, 10))
 
     return World(tipo=tipo, elevacion=elevacion, sitios=sitios,
-                 refugio=refugio, inicio=inicio, semilla=semilla)
+                 refugio=refugio, inicio=inicio, semilla=semilla,
+                 profundidad=profundidad, altura=altura)
+
+
+# ARX-94b: ruido de cada sensor = `ruido` (0,1 por defecto) por la escala de la tabla; con ruido = 0 las
+# lecturas son exactas. Supuestos de simulación, no especificaciones de misión.
+ESCALA_PROXIMIDAD = 1.0      # σ 0,1 m (como antes)
+ESCALA_ALTIMETRIA = 0.5      # σ 0,05 m (como antes)
+ESCALA_DESNIVEL = 5.0        # σ 0,5 m (telémetro inclinado)
+ESCALA_CAMARA = 4.0          # σ 0,4 (contraste óptico)
+ESCALA_IMU = 3.0             # σ 0,3 (vibración de la celda actual)
+CONTRASTE_HOYO_M = 4.0       # profundidad que satura el contraste oscuro de un hoyo
+CONTRASTE_ROCA = 0.8         # una roca se ve clara
+AMBIENTES = ("normal", "tormenta", "noche")
+
+
+# Veto duro declarado (ev3-d83): desnivel medido por el telémetro inclinado menor que este valor = barranco.
+# Lo usan el supervisor, el mapa estimado de la misión y el rasgo de la RNA; el sensor solo entrega la medida.
+UMBRAL_DESNIVEL_BARRANCO_M = -2.0
 
 
 @dataclass
 class SensorSuite:
-    """Lecturas ruidosas del entorno inmediato. No ve el mundo completo."""
+    """Lecturas ruidosas del entorno inmediato. No ve el mundo completo.
+
+    `ambiente` recoge los eventos: "tormenta" duplica el ruido de todos los sensores y degrada la cámara;
+    "noche" degrada la cámara (señal x0,5, ruido x2). `prob_fallo` = 1 devuelve NaN (falla de sensor).
+    """
 
     rng: np.random.Generator
     ruido: float = 0.1          # desviación relativa del ruido gaussiano
     prob_fallo: float = 0.0     # probabilidad de lectura NaN por sensor
+    ambiente: str = "normal"    # "normal" | "tormenta" | "noche"
 
-    def _ruidoso(self, valor: float, escala: float) -> float:
+    def _ruidoso(self, valor: float, escala: float, factor: float = 1.0) -> float:
         if self.rng.random() < self.prob_fallo:
             return float("nan")
-        return float(valor + self.rng.normal(0, self.ruido * escala))
+        return float(valor + self.rng.normal(0, self.ruido * escala * factor))
 
     def leer(self, mundo: World, pos, rumbo: str = "N") -> dict:
-        """Distancia al obstáculo o barranco más cercano en la dirección de avance."""
+        """Lecturas físicas del rover en `pos` mirando a `rumbo` (ARX-94b).
+
+        Cada lectura sale de la geometría (elevación, profundidad, altura) y del estado del rover; el
+        tipo de celda solo se consulta para el volumen de un obstáculo en la proximidad.
+        """
+        if self.ambiente not in AMBIENTES:
+            raise ValueError(f"Ambiente desconocido: {self.ambiente!r}")
+        general = 2.0 if self.ambiente == "tormenta" else 1.0
         df, dc = MOVIMIENTOS[rumbo]
-        distancia = 20  # alcance máximo del sensor de proximidad (m)
+        # Telémetro de obstáculos: rebota en volúmenes que sobresalen; no ve hoyos ni barrancos
+        distancia = 20  # alcance máximo (m)
         for paso in range(1, 21):
             p = (pos[0] + df * paso, pos[1] + dc * paso)
             if not mundo.dentro(p):
                 break
-            if mundo.tipo[p] != LIBRE:
+            if mundo.tipo[p] == OBSTACULO:
                 distancia = paso
                 break
-        altura_actual = mundo.elevacion[pos]
-        celdas_barranco = self._barrancos_vecinos(mundo, pos)
-        return {
-            "proximidad_frontal_m": self._ruidoso(distancia, 1.0),
-            "borde_barranco": len(celdas_barranco) > 0,
-            "celdas_barranco": celdas_barranco,
-            "altimetria_m": self._ruidoso(altura_actual, 0.5),
+        siguiente = (pos[0] + df, pos[1] + dc)
+        desnivel_frontal = self._desnivel(mundo, pos, siguiente, general)
+        desniveles_vecinos = {
+            (pos[0] + a, pos[1] + b): self._desnivel(mundo, pos, (pos[0] + a, pos[1] + b), general)
+            for a, b in MOVIMIENTOS.values() if mundo.dentro((pos[0] + a, pos[1] + b))}
+        lectura = {
+            "proximidad_frontal_m": self._ruidoso(distancia, ESCALA_PROXIMIDAD, general),
+            "desnivel_frontal_m": desnivel_frontal,
+            "desniveles_vecinos": desniveles_vecinos,
+            "contraste_optico": self._contraste(mundo, siguiente),
+            "altimetria_m": self._ruidoso(mundo.elevacion[pos], ESCALA_ALTIMETRIA, general),
+            # IMU de la celda que se pisa: suelo uniforme, media 0 (sin terrenos distintos todavía)
+            "vibracion": self._ruidoso(0.0, ESCALA_IMU, general),
         }
+        return lectura
+
+    def _desnivel(self, mundo: World, pos, destino, general: float) -> float:
+        """Telémetro inclinado: elevación de la celda `destino` menos la actual. NaN fuera del mapa."""
+        if not mundo.dentro(destino):
+            return float("nan")
+        return self._ruidoso(mundo.elevacion[destino] - mundo.elevacion[pos], ESCALA_DESNIVEL, general)
+
+    def _contraste(self, mundo: World, destino) -> float:
+        """Cámara sobre la celda siguiente: hoyo en sombra (oscuro, según la profundidad), volumen que
+        sobresale (claro), suelo ~0. Noche y tormenta: señal x0,5 y ruido x2. NaN fuera del mapa."""
+        if not mundo.dentro(destino):
+            return float("nan")
+        if mundo.profundidad[destino] > 0:
+            senal = -min(1.0, mundo.profundidad[destino] / CONTRASTE_HOYO_M)
+        elif mundo.altura[destino] > 0:
+            senal = CONTRASTE_ROCA
+        else:
+            senal = 0.0
+        degradada = self.ambiente in ("noche", "tormenta")
+        return self._ruidoso(senal * (0.5 if degradada else 1.0), ESCALA_CAMARA, 2.0 if degradada else 1.0)
 
     def leer_desnivel(self, mundo: World, pos, rumbo: str = "N", distancia: int = 2,
                       sigma: float = 0.05) -> float:
@@ -177,16 +293,6 @@ class SensorSuite:
         if not mundo.dentro(destino):
             return float("nan")
         return float(mundo.elevacion[destino] - mundo.elevacion[pos] + self.rng.normal(0, sigma))
-
-    @staticmethod
-    def _barrancos_vecinos(mundo: World, pos) -> list:
-        """LIDAR de borde: celdas de precipicio en los cuatro vecinos."""
-        vecinos = []
-        for df, dc in MOVIMIENTOS.values():
-            p = (pos[0] + df, pos[1] + dc)
-            if mundo.dentro(p) and mundo.tipo[p] == BARRANCO:
-                vecinos.append(p)
-        return vecinos
 
 
 @dataclass

@@ -1728,9 +1728,11 @@ function pintarPaneles(p) {
   const indicador = document.getElementById("sup-sensores");
   // QA ARX-86: sin «null» en pantalla; durante una falla se muestra «falla» en lugar de las lecturas
   const dato = (x) => (x == null ? "—" : x);
+  // QA O-5: el rótulo sigue al modelo activo (v2: desnivel/contraste); sin nombres, los de v1
+  const rotulo = (i, porDefecto) => ((sen && sen.rasgos_nombres && sen.rasgos_nombres[i]) || porDefecto).replace(/_/g, " ");
   if (indicador) indicador.textContent = !sen ? "-"
     : sen.falla ? `${sen.rumbo}: falla de sensor · riesgo enfrente ${dato(sen.riesgo_enfrente)}`
-    : `${sen.rumbo}: proximidad ${dato(sen.proximidad)} · borde ${dato(sen.borde)} · gradiente ${dato(sen.gradiente)} · vibración ${dato(sen.vibracion)} · riesgo enfrente ${dato(sen.riesgo_enfrente)}`;
+    : `${sen.rumbo}: proximidad ${dato(sen.proximidad)} · ${rotulo(1, "borde")} ${dato(sen.borde)} · ${rotulo(2, "gradiente")} ${dato(sen.gradiente)} · vibración ${dato(sen.vibracion)} · riesgo enfrente ${dato(sen.riesgo_enfrente)}`;
 }
 
 async function refrescarPaneles() {

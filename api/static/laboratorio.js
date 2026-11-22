@@ -452,6 +452,8 @@ const ETIQUETA_RASGO = {
   borde_barranco: "borde de barranco",
   gradiente_altura_m: "gradiente de altura (m)",
   vibracion: "vibración",
+  desnivel_frontal_m: "desnivel frontal (m)",
+  contraste_optico: "contraste óptico",
 };
 const CLASES = ["libre", "obstáculo", "barranco"];
 const COLOR_CLASE = { libre: "#5fd3ff", "obstáculo": "#ffb454", barranco: "#ff5d6c" };
@@ -462,17 +464,42 @@ const RASGOS = [
 ];
 let rnaUsoRover = true;   // al abrir, se usa la celda frente al rover hasta que se edite un rasgo
 
+let rnaPerfil = null;   // perfil del modelo activo ("v1" o "v2"); v2 reutiliza los controles: gradiente → desnivel, borde → contraste
+
+function adaptarControlesRNA(modelo) {
+  const perfil = modelo && modelo.perfil;
+  if (perfil === rnaPerfil) return;
+  rnaPerfil = perfil;
+  const v2 = perfil === "v2";
+  const selBorde = $("rna-borde");
+  let cont = $("rna-contraste");
+  if (!cont) {
+    cont = document.createElement("input");
+    cont.id = "rna-contraste"; cont.type = "range"; cont.min = "-1.5"; cont.max = "1.5"; cont.step = "0.05"; cont.value = "0";
+    selBorde.parentNode.insertBefore(cont, selBorde);
+    cont.addEventListener("input", conRetardo(() => { rnaUsoRover = false; consultarRNA(); }, 200));
+  }
+  cont.style.display = v2 ? "" : "none";
+  selBorde.style.display = v2 ? "none" : "";
+  selBorde.parentNode.childNodes[0].nodeValue = v2 ? "Contraste óptico " : "Borde de barranco
+            ";
+  $("rna-gradiente").parentNode.childNodes[0].nodeValue = v2 ? "Desnivel frontal (m) " : "Gradiente de altura (m) ";
+}
+
 function parametrosRNA() {
-  const q = new URLSearchParams({ borde: $("rna-borde").value });
-  for (const r of RASGOS) q.set(r.clave === "proximidad_frontal_m" ? "proximidad" : r.clave === "gradiente_altura_m" ? "gradiente" : "vibracion", $(r.id).value);
+  const q = rnaPerfil === "v2" ? new URLSearchParams({ contraste: $("rna-contraste").value, desnivel: $("rna-gradiente").value })
+    : new URLSearchParams({ borde: $("rna-borde").value });
+  for (const r of RASGOS) q.set(r.clave === "proximidad_frontal_m" ? "proximidad" : r.clave === "gradiente_altura_m" ? (rnaPerfil === "v2" ? "desnivel" : "gradiente") : "vibracion", $(r.id).value);
   return q;
 }
 
 function rellenarRasgos(entrada) {
   $("rna-proximidad").value = Math.min(20, Math.max(0, entrada.proximidad_frontal_m)).toFixed(1);
-  $("rna-gradiente").value = Math.min(10, Math.max(-10, entrada.gradiente_altura_m)).toFixed(1);
+  const pendiente = rnaPerfil === "v2" ? entrada.desnivel_frontal_m : entrada.gradiente_altura_m;
+  $("rna-gradiente").value = Math.min(10, Math.max(-10, pendiente)).toFixed(1);
   $("rna-vibracion").value = Math.min(5, Math.max(-5, entrada.vibracion)).toFixed(1);
-  $("rna-borde").value = entrada.borde_barranco >= 0.5 ? "1" : "0";
+  if (rnaPerfil === "v2") $("rna-contraste").value = Math.min(1.5, Math.max(-1.5, entrada.contraste_optico)).toFixed(2);
+  else $("rna-borde").value = entrada.borde_barranco >= 0.5 ? "1" : "0";
   for (const r of RASGOS) $(`${r.id}-v`).textContent = coma($(r.id).value, 1);
 }
 
@@ -480,6 +507,7 @@ async function consultarRNA() {
   const q = rnaUsoRover ? "" : `?${parametrosRNA()}`;
   const datos = await deps.llamar("GET", `/rna${q}`);
   if (!datos) { $("rna-accion").textContent = "Sin respuesta de la RNA (revisa que haya partida)."; return; }
+  adaptarControlesRNA(datos.modelo);
   if (rnaUsoRover) rellenarRasgos(datos.entrada);
   for (const r of RASGOS) $(`${r.id}-v`).textContent = coma($(r.id).value, 1);
 
@@ -490,16 +518,17 @@ async function consultarRNA() {
   for (const t of ["rasgo", "entrada", "normalizada"]) cab.appendChild(nodo("th", "", t));
   tabla.appendChild(nodo("thead")).appendChild(cab);
   const cuerpo = nodo("tbody");
-  for (const k of Object.keys(ETIQUETA_RASGO)) {
+  for (const k of (datos.modelo ? datos.modelo.rasgos : Object.keys(ETIQUETA_RASGO))) {
     const fila = nodo("tr");
     fila.appendChild(nodo("td", "", ETIQUETA_RASGO[k]));
-    fila.appendChild(nodo("td", "", coma(e[k === "borde_barranco" ? "borde_barranco" : k], 2)));
+    fila.appendChild(nodo("td", "", coma(e[k], 2)));
     fila.appendChild(nodo("td", "", coma(nrm[k], 2)));
     cuerpo.appendChild(fila);
   }
   tabla.appendChild(cuerpo);
   $("rna-entrada").replaceChildren(tabla);
-  $("rna-entrada").appendChild(nodo("div", "ayuda", `borde de barranco: ${e.borde_barranco >= 0.5 ? "sí" : "no"} (entrada ${coma(e.borde_barranco, 0)})`));
+  if (e.borde_barranco !== undefined) $("rna-entrada").appendChild(nodo("div", "ayuda", `borde de barranco: ${e.borde_barranco >= 0.5 ? "sí" : "no"} (entrada ${coma(e.borde_barranco, 0)})`));
+  if (datos.modelo) $("rna-entrada").appendChild(nodo("div", "ayuda", `modelo activo: ${datos.modelo.perfil} · rasgos: ${datos.modelo.rasgos.join(", ")}`));
 
   const probs = $("rna-probs");
   probs.replaceChildren();
@@ -570,6 +599,7 @@ async function cargarEvaluacion() {
     metricas.appendChild(m);
   }
   cont.appendChild(metricas);
+  if (ev.perfil) cont.appendChild(nodo("div", "ayuda", `modelo ${ev.perfil} · rasgos: ${ev.rasgos.join(", ")}`));
 
   const tabla = nodo("table", "lab-tabla lab-confusion");
   const cab = nodo("tr");

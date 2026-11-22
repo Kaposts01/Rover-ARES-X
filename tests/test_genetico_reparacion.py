@@ -133,10 +133,9 @@ def test_obstaculo_real_no_detectado_lo_veta_el_supervisor_al_ejecutar():
     assert (2, 6) in d.ruta and m.tipo[2, 6] == OBSTACULO
     assert d.reparaciones == 0 and plan.evaluar([(2, 2), (2, 9)]).penalizacion == 0
     # El veto del supervisor cubre la celda real al pisarla.
-    lectura = {"proximidad_frontal_m": 1.0, "borde_barranco": True, "celdas_barranco": [(2, 6)],
-               "altimetria_m": 0.5}
+    lectura = {"proximidad_frontal_m": 1.0, "desnivel_frontal_m": -3.0, "altimetria_m": 0.5}
     dec = SafetySupervisor().decidir({"libre": 0.9}, 0.8, lectura, 90)
     assert dec.accion == "replanificar" and "V-BORDE-BARRANCO" in dec.motivos
     dec = SafetySupervisor().decidir({"obstáculo": 0.9, "libre": 0.1}, 0.8,
-                                     dict(lectura, borde_barranco=False), 90)
+                                     dict(lectura, desnivel_frontal_m=0.0), 90)
     assert dec.accion == "replanificar" and "V-RNA-OBSTACULO" in dec.motivos

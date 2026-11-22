@@ -134,7 +134,8 @@ def rna_anticipacion(ruido: float = 0.1, semilla: int = 42) -> RnaAnticipacion:
     return RnaAnticipacion(semilla).entrenar(np.vstack([X, Xr]), np.concatenate([y, yr]))
 
 
-def evaluar(rna: RnaAnticipacion, semillas=range(51, 60), muestras_por_mapa: int = 400, ruido: float = 0.1) -> dict:
+def evaluar(rna: RnaAnticipacion, semillas=range(51, 60), muestras_por_mapa: int = 400, ruido: float = 0.1,
+            umbral: float = None) -> dict:
     """Recall de barrancos y tasa de falsos barrancos (libres marcadas como barranco), por distancia k, en mapas de prueba.
     Los datos de prueba salen sin refuerzo de barrancos de más: p_barranco = 0,30 en las muestras (se informa el recall, que no
     depende de esa proporción, y la tasa de falsos positivos sobre las celdas libres, que tampoco)."""
@@ -142,6 +143,9 @@ def evaluar(rna: RnaAnticipacion, semillas=range(51, 60), muestras_por_mapa: int
     ks = X[:, 3].astype(int)
     proba = rna.corregir(rna.modelo.predict_proba(rna.escalador.transform(X)))
     pred = rna.modelo.classes_[proba.argmax(axis=1)]
+    if umbral is not None:       # barranco si p(barranco) >= umbral (en vez de ser la clase más probable)
+        pb = proba[:, list(rna.modelo.classes_).index(BARRANCO)]
+        pred = np.where(pb >= umbral, BARRANCO, pred)
     out = {}
     for k in DISTANCIAS:
         sel = ks == k

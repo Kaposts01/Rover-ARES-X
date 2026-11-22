@@ -11,6 +11,7 @@ import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/stati
 import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
 import { crearPanelIA } from "/static/panel_ia.js?v=r14";
+import { crearSonido } from "/static/sonido.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
@@ -29,6 +30,7 @@ const escena = document.getElementById("escena");
 let reproduciendo = null;   // id del temporizador de reproducción, o null
 let cargando = false;       // true mientras el motor crea una partida nueva
 let panelIA = null;         // panel derecho de IA (se crea al final del módulo)
+const sonido = crearSonido(); // sonido procedural, apagado hasta que el usuario lo active
 
 function avisar(texto) {
   elMensaje.textContent = texto;
@@ -2701,7 +2703,10 @@ async function paso() {
   if (r.ultimo && r.ultimo.paso != null) ultimoPasoNumero = r.ultimo.paso;
   if (r.accion === "disparar") efectoDisparoAutomatico(r, estadoPrevio);
   if (cadenaAutomatica && r.accion === "replanificar") cadenaAutomatica.replanteosActual += 1;
+  const estadoAntesSonido = estadoPrevio;
   await refrescarEstado();
+  sonido.paso(r, estadoAntesSonido, estado);
+  if (terminada) sonido.fin(r.estado === "EXITO");
   await refrescarPaneles();
   momentosEnPaso(r);
   const motivos = (r.motivos || []).join(", ");
@@ -3418,7 +3423,15 @@ function montarBarraMision() {
   cineB.title = "Modo cine: cámara de director sin paneles. Reproducir encadena tomas; Un paso corta a un plano cercano. H o Esc para salir.";
   cineB.setAttribute("aria-pressed", "false");
   cineB.addEventListener("click", () => cineDesdeBarra());
-  barra.append(rep, un, vel.closest("label") || vel, cineB);
+  const sonidoB = document.createElement("button");
+  sonidoB.id = "boton-sonido"; sonidoB.type = "button"; sonidoB.className = "boton-sonido"; sonidoB.textContent = "🔇 Sonido";
+  sonidoB.title = "Sonido procedural: motor, vetos, replanteos, choques, sitios y eventos";
+  sonidoB.setAttribute("aria-pressed", "false");
+  sonidoB.addEventListener("click", () => {
+    const on = sonido.alternar();
+    sonidoB.textContent = on ? "🔊 Sonido" : "🔇 Sonido"; sonidoB.setAttribute("aria-pressed", String(on));
+  });
+  barra.append(rep, un, vel.closest("label") || vel, cineB, sonidoB);
   dock.prepend(barra);
   if (viejaSim) viejaSim.hidden = true;
   if (viejaRep && viejaRep !== viejaSim && !viejaRep.querySelector("button")) viejaRep.hidden = true;

@@ -865,3 +865,5 @@ body.cine #hud-navegacion { display: none; }
   padding: 8px 14px; border-radius: 6px; background: rgba(0, 0, 0, 0.6); color: #f4f7fb; font-size: 15px; line-height: 1.45; text-align: center; opacity: 0; transition: opacity 0.4s; pointer-events: none; }
 body.cine #subtitulo-ia { display: block; }
 #subtitulo-ia.visible { opacity: 1; }
+.barra-mision .boton-sonido { background: rgba(255, 255, 255, 0.06); color: var(--texto-suave); border: 1px solid var(--borde); }
+.barra-mision .boton-sonido[aria-pressed="true"] { color: #6ee7a8; border-color: rgba(110, 231, 168, 0.5); }

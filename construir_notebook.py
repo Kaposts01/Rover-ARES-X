@@ -136,6 +136,19 @@ with open("mision_resumen.json", "w", encoding="utf-8") as f:
 print("Exportado: mision_traza.csv y mision_resumen.json")
 """
 
+CELDA_FIGURAS = """# Figuras 2D del informe (matriz de confusión y ablación). Se muestran solo si ya fueron generadas
+# con scripts/generar_figuras.py; esta celda no las calcula.
+from pathlib import Path
+from IPython.display import Image, display
+
+for _nombre in ("matriz_confusion.png", "ablacion.png"):
+    _ruta = Path("docs") / "figuras" / _nombre
+    if _ruta.exists():
+        display(Image(filename=str(_ruta)))
+    else:
+        print("Figura no generada:", _nombre)
+"""
+
 CELDA_CONCLUSIONES = """## 7. Resultados, limitaciones y conclusiones
 
 **Experimento (20 semillas, mapas de Marte, movimiento en 8 direcciones)**
@@ -208,6 +221,7 @@ def construir():
         nbf.v4.new_markdown_cell(CELDA_DEMO),
         nbf.v4.new_code_cell(CELDA_DEMO_CODIGO),
         nbf.v4.new_code_cell(CELDA_EXPORTAR),
+        nbf.v4.new_code_cell(CELDA_FIGURAS),
         nbf.v4.new_markdown_cell(CELDA_CONCLUSIONES),
     ]
     nb["cells"] = celdas

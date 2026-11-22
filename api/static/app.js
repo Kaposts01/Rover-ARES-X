@@ -11,7 +11,7 @@ import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/stati
 import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
 import { crearPanelIA } from "/static/panel_ia.js?v=r14";
-import { generadorAleatorio, texturaParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
+import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -117,7 +117,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;   // PCF simple: más barato que el suave
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // bordes de sombra suaves (rover y rocas)
 escena.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -173,11 +173,20 @@ const materialCielo = new THREE.ShaderMaterial({
     uniform vec3 horizonte;
     uniform vec3 sol;
     varying vec3 vDir;
+    float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
     void main() {
-      float altura = smoothstep(0.0, 0.5, vDir.y);
+      vec3 d = normalize(vDir);
+      float altura = smoothstep(0.0, 0.5, d.y);
       vec3 color = mix(horizonte, arriba, altura);
-      float brillo = max(dot(vDir, normalize(sol)), 0.0);
-      color += vec3(1.0, 0.72, 0.45) * (0.35 * pow(brillo, 16.0) + 1.2 * pow(brillo, 400.0));
+      // velo de bruma pegado al horizonte (polvo en suspensión)
+      color = mix(color, horizonte * 1.12, 0.35 * exp(-abs(d.y) * 14.0));
+      // estrellas: solo visibles cuando el cielo es oscuro (Mercurio, noche) y por encima del horizonte
+      float oscuridad = 1.0 - smoothstep(0.06, 0.22, dot(arriba, vec3(0.3, 0.59, 0.11)));
+      vec3 celda = floor(d * 700.0);
+      float e = step(0.9986, hash(celda)) * (0.5 + 0.5 * hash(celda + 3.1));
+      color += vec3(0.9, 0.95, 1.0) * e * oscuridad * smoothstep(0.02, 0.2, d.y);
+      float brillo = max(dot(d, normalize(sol)), 0.0);
+      color += vec3(1.0, 0.72, 0.45) * (0.35 * pow(brillo, 16.0) + 1.2 * pow(brillo, 400.0) + 0.12 * pow(brillo, 3.0));
       gl_FragColor = vec4(color, 1.0);
     }`,
 });
@@ -185,7 +194,8 @@ const cielo = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), materialCiel
 cielo.renderOrder = -1;
 scene.add(cielo);
 
-scene.add(new THREE.HemisphereLight(0xb9cfff, 0x4a2818, 0.85));
+const luzCielo = new THREE.HemisphereLight(0xb9cfff, 0x4a2818, 0.85);   // el suelo rebota la luz con el color del planeta
+scene.add(luzCielo);
 const sol = new THREE.DirectionalLight(0xffe0bd, 2.6);
 sol.castShadow = true;
 sol.shadow.mapSize.set(1024, 1024);   // rendimiento: 1024 para las sombras del rover y la sonda
@@ -222,8 +232,8 @@ let modoPlanetaActivo = "rover"; // "rover" o "sonda"
 let sondaRover = null;           // sonda 3D cuando el modo es sonda (gigantes)// posición y rumbo a los que avanza el rover suavemente
 
 const materiales = {
-  roca: new THREE.MeshStandardMaterial({ color: 0x8a5e4a, roughness: 0.92, flatShading: true }),
-  borde: new THREE.MeshStandardMaterial({ color: 0x8c3f24, roughness: 0.85, flatShading: true }),
+  roca: new THREE.MeshStandardMaterial({ color: 0x8a5e4a, roughness: 0.9, metalness: 0.02 }),
+  borde: new THREE.MeshStandardMaterial({ color: 0x8c3f24, roughness: 0.88 }),
   refugio: new THREE.MeshStandardMaterial({ color: 0xdfe4ec, roughness: 0.38, metalness: 0.35 }),
   cupula: new THREE.MeshStandardMaterial({ color: 0x9cd9ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.32, depthWrite: false }),
   cristal: new THREE.MeshStandardMaterial({ color: 0x8fdcff, emissive: 0x2a7fd0, emissiveIntensity: 0.9, roughness: 0.08, metalness: 0.1, flatShading: true, transparent: true, opacity: 0.92 }),
@@ -240,7 +250,7 @@ const materiales = {
   acento: new THREE.MeshBasicMaterial({ color: 0x3ee0ff, toneMapped: false }),
   faro: new THREE.MeshBasicMaterial({ color: 0xfff3c4, toneMapped: false }),
   piloto: new THREE.MeshBasicMaterial({ color: 0xff3d4d, toneMapped: false }),
-  guijarro: new THREE.MeshStandardMaterial({ color: 0x8e5e44, roughness: 0.95, flatShading: true }),
+  guijarro: new THREE.MeshStandardMaterial({ color: 0x8e5e44, roughness: 0.95 }),
   junta: new THREE.MeshStandardMaterial({ color: 0x5a6474, roughness: 0.5, metalness: 0.5 }),
   tornillo: new THREE.MeshStandardMaterial({ color: 0xaeb8c6, roughness: 0.3, metalness: 0.8 }),
   ventilacion: new THREE.MeshStandardMaterial({ color: 0x0c0e12, roughness: 0.9 }),
@@ -540,13 +550,21 @@ function influenciaPozos(x, z) {
   return Math.min(s, 1);
 }
 
+// Ruido de valor suave (determinista) para el micro relieve del suelo
+const RELIEVE_FINO = 0.16;
+function ruidoSuelo(x, z) {
+  const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz;
+  const sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz);
+  const a = azar(ix, iz, 7), b = azar(ix + 1, iz, 7), c = azar(ix, iz + 1, 7), d = azar(ix + 1, iz + 1, 7);
+  return a + (b - a) * sx + (c - a) * sz + (a - b - c + d) * sx * sz;
+}
 // Altura del terreno en coordenadas de escena: el rover, las rocas y los drones se apoyan en ella
 function alturaTerreno(x, z) {
   let h = RELIEVE * (
     Math.sin(x * 0.52 + 1.3) * Math.cos(z * 0.41 - 0.4)
     + 0.6 * Math.sin((x + z) * 0.23 + 2.1)
     + 0.35 * Math.cos(x * 1.31 - z * 0.97)
-  );
+  ) + RELIEVE_FINO * (ruidoSuelo(x * 0.9, z * 0.9) * 0.65 + ruidoSuelo(x * 2.3 + 17, z * 2.3 + 5) * 0.35 - 0.5);
   if (refugioPos) {
     const d = Math.hypot(x - refugioPos[0], z - refugioPos[1]);
     h *= THREE.MathUtils.smoothstep(d, 1.6, 4);
@@ -583,7 +601,7 @@ function construirCuadricula(columnas, filas) {
 function construirTerreno(columnas, filas) {
   const ancho = columnas + 2 * MARGEN_TERRENO;
   const alto = filas + 2 * MARGEN_TERRENO;
-  const geom = new THREE.PlaneGeometry(ancho, alto, ancho, alto);
+  const geom = new THREE.PlaneGeometry(ancho, alto, ancho * 2, alto * 2);   // dos segmentos por celda: se ve el micro relieve
   geom.rotateX(-Math.PI / 2);
   geom.translate(columnas / 2, 0, filas / 2);
   const pos = geom.attributes.position;
@@ -592,19 +610,31 @@ function construirTerreno(columnas, filas) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
     pos.setY(i, alturaTerreno(x, z));
-    // Los barrancos se oscurecen por vértice: se leen como agujeros sin texturas nuevas
-    const k = 1 - 0.8 * influenciaPozos(x, z);
-    sombra[i * 3] = k;
+    // Los barrancos se oscurecen por vértice; además, manchas grandes de color (el suelo no se ve repetido)
+    const k = (1 - 0.8 * influenciaPozos(x, z)) * (0.84 + 0.3 * ruidoSuelo(x * 0.11 + 3, z * 0.11 + 9));
+    const tinte = ruidoSuelo(x * 0.07 + 40, z * 0.07 + 11) - 0.5;
+    sombra[i * 3] = k * (1 + tinte * 0.12);
     sombra[i * 3 + 1] = k;
-    sombra[i * 3 + 2] = k;
+    sombra[i * 3 + 2] = k * (1 - tinte * 0.12);
+  }
+  geom.computeVertexNormals();
+  // Laderas más oscuras (oclusión barata): cuanto más inclinada la normal, menos luz recibe
+  const nor = geom.attributes.normal;
+  for (let i = 0; i < pos.count; i++) {
+    const f = 0.72 + 0.28 * THREE.MathUtils.smoothstep(nor.getY(i), 0.8, 0.99);
+    sombra[i * 3] *= f; sombra[i * 3 + 1] *= f; sombra[i * 3 + 2] *= f;
   }
   geom.setAttribute("color", new THREE.BufferAttribute(sombra, 3));
-  geom.computeVertexNormals();
 
   const texturaActual = texturaParaPlaneta(planetaActivo);
-  texturaActual.repeat.set(ancho / 10, alto / 10);
-  // Material barato (Lambert, sin brillo PBR): menos trabajo por píxel en pantalla completa
-  const material = new THREE.MeshLambertMaterial({ map: texturaActual, vertexColors: true });
+  texturaActual.repeat.set(ancho / 12, alto / 12);   // 12 unidades por repetición: el patrón casi no se nota
+  const normalActual = normalParaPlaneta(planetaActivo);
+  if (normalActual) normalActual.repeat.copy(texturaActual.repeat);
+  // PBR mate con mapa de normales: el relieve fino recoge la luz rasante del sol
+  const material = new THREE.MeshStandardMaterial({
+    map: texturaActual, vertexColors: true, roughness: 0.95, metalness: 0,
+    normalMap: normalActual || null, normalScale: new THREE.Vector2(0.9, 0.9),
+  });
   const suelo = new THREE.Mesh(geom, material);
   suelo.receiveShadow = true;
   return suelo;
@@ -641,6 +671,56 @@ function crearVortice(x, y, z) {
 }
 
 // Malla instanciada a partir de una lista de matrices; sin sombra propia (rendimiento)
+// Libera lo propio del mapa anterior: el suelo (geometría y material) y los búferes de instancias.
+// Los materiales compartidos (materiales.*) y las geometrías de roca cacheadas se reutilizan y no se liberan.
+function liberarMapa() {
+  const suelo = grupoMapa.children[0];
+  if (suelo && suelo.isMesh && !suelo.isInstancedMesh) {
+    try { suelo.geometry.dispose(); suelo.material.dispose(); } catch (e) { /* ya liberado */ }
+  }
+  grupoMapa.traverse((o) => { if (o.isInstancedMesh) { try { o.dispose(); } catch (e) { /* ya liberado */ } } });
+}
+// Canto rodado: icosaedro deformado por una función de la posición (los vértices repetidos se mueven igual y no se abren
+// grietas) y con la base aplanada para que apoye en el suelo. Caras planas a propósito: se lee como roca fracturada.
+const geometriasRoca = new Map();
+function geometriaRoca(variante, detalle = 2) {
+  const clave = `${variante}:${detalle}`;
+  if (geometriasRoca.has(clave)) return geometriasRoca.get(clave);
+  const g = new THREE.IcosahedronGeometry(1, detalle);
+  const pos = g.attributes.position, s0 = 1.7 + variante * 2.3;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const d = 1 + 0.22 * Math.sin(x * 2.3 + s0) * Math.sin(y * 1.9 + s0 * 1.3) * Math.sin(z * 2.7 + s0 * 0.7)
+      + 0.09 * Math.sin(x * 6.1 + y * 4.3 + s0) + 0.05 * Math.sin(z * 9.7 - x * 7.3 + s0 * 2);
+    x *= d; y *= d * 0.82; z *= d;
+    if (y < -0.3) y = -0.3 + (y + 0.3) * 0.25;
+    pos.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  geometriasRoca.set(clave, g);
+  return g;
+}
+// Rocas instanciadas repartidas en las variantes, con un tono distinto por roca (el color base es el del planeta)
+function instanciarRocas(material, matrices, { detalle = 2, sombra = true, semilla = 1 } = {}) {
+  const grupo = new THREE.Group();
+  const azarTono = generadorAleatorio(semilla);
+  const color = new THREE.Color();
+  for (let v = 0; v < 3; v++) {
+    const propias = matrices.filter((_, k) => k % 3 === v);
+    if (!propias.length) continue;
+    const im = new THREE.InstancedMesh(geometriaRoca(v, detalle), material, propias.length);
+    propias.forEach((m, k) => {
+      im.setMatrixAt(k, m);
+      const t = 0.78 + azarTono() * 0.4;
+      im.setColorAt(k, color.setRGB(t * (0.97 + azarTono() * 0.06), t, t * (0.95 + azarTono() * 0.06)));
+    });
+    im.instanceMatrix.needsUpdate = true;
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    im.castShadow = sombra; im.receiveShadow = true;
+    grupo.add(im);
+  }
+  return grupo;
+}
 function instanciar(geom, material, matrices) {
   const im = new THREE.InstancedMesh(geom, material, matrices.length);
   matrices.forEach((m, k) => im.setMatrixAt(k, m));
@@ -708,6 +788,7 @@ function agregarGrietas(celdas) {
 
 function construirMapa(datos) {
   limitesMapa = { columnas: datos.columnas, filas: datos.filas };
+  liberarMapa();
   grupoMapa.clear();
   animados = [];
   halos = [];
@@ -732,7 +813,7 @@ function construirMapa(datos) {
   const alto = datos.filas + 2 * MARGEN_TERRENO;
   const azarGuijarros = generadorAleatorio(datos.columnas * 31 + datos.filas);
   const cantidad = ES_GIGANTE(planetaActivo) ? 0 : Math.round(ancho * alto * 0.2);   // sin guijarros sobre las nubes
-  const guijarros = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), materiales.guijarro, cantidad);
+  const matricesGuijarros = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const e = new THREE.Vector3();
@@ -748,16 +829,11 @@ function construirMapa(datos) {
     p.set(x, alturaTerreno(x, z) + tam * 0.3, z);
     e.set(tam * (1 + azarGuijarros() * 0.5), tam, tam);
     m.compose(p, q, e);
-    guijarros.setMatrixAt(colocados++, m);
+    matricesGuijarros.push(m.clone()); colocados++;
   }
-  guijarros.count = colocados;
-  guijarros.instanceMatrix.needsUpdate = true;
-  guijarros.castShadow = false;   // los guijarros no proyectan sombra: ahorra mucho render
-  guijarros.receiveShadow = true;
-  grupoMapa.add(guijarros);
+  // los guijarros no proyectan sombra: ahorra mucho render
+  if (matricesGuijarros.length) grupoMapa.add(instanciarRocas(materiales.guijarro, matricesGuijarros, { detalle: 1, sombra: false, semilla: 11 }));
 
-  const geomRoca = new THREE.DodecahedronGeometry(1, 0);
-  const geomPiedraBorde = new THREE.DodecahedronGeometry(0.1, 0);
   const geomHalo = new THREE.RingGeometry(0.32, 0.46, 32);
 
   // Rocas y piedras de borde como instancias (rendimiento): un dibujo por tipo en lugar de una malla por piedra
@@ -799,8 +875,8 @@ function construirMapa(datos) {
       }
     }
   }
-  if (rocas.length) grupoMapa.add(instanciar(geomRoca, materiales.roca, rocas));
-  if (bordes.length) grupoMapa.add(instanciar(geomPiedraBorde, materiales.borde, bordes));
+  if (rocas.length) grupoMapa.add(instanciarRocas(materiales.roca, rocas, { semilla: datos.columnas * 7 + datos.filas }));
+  if (bordes.length) grupoMapa.add(instanciarRocas(materiales.borde, bordes.map((mb) => mb.clone().scale(new THREE.Vector3(0.1, 0.1, 0.1))), { detalle: 1, sombra: false, semilla: 5 }));
 
   for (const s of datos.sitios) {
     const [f, c] = s.pos;
@@ -1841,6 +1917,8 @@ function aplicarAspecto(planeta) {
   materialCielo.uniforms.horizonte.value.set(...p.horizonte);
   scene.fog.color.setHex(p.niebla);
   sol.color.setHex(p.sol);
+  luzCielo.groundColor.setHex(p.niebla).multiplyScalar(0.55);
+  luzCielo.color.setRGB(p.arriba[0], p.arriba[1], p.arriba[2]).lerp(new THREE.Color(0xdfe8ff), 0.6);
 }
 
 // Lo último que confirmó el motor: planeta y tipo de vehículo

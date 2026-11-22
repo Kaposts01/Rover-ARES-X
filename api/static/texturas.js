@@ -99,9 +99,10 @@ function crearTexturaPlaneta(planeta) {
 
 function texturaParaPlaneta(planeta) {
   if (!texturasPorPlaneta.has(planeta)) {
-    const t = planeta === "Marte"
-      ? (texturaSuelo || (texturaSuelo = crearTexturaSuelo()))
-      : crearTexturaPlaneta(planeta);
+    // Planetas rocosos: suelo fbm con relieve (color + normales); gigantes: bandas de nubes; si falla, la textura anterior
+    let t = null;
+    try { const suelo = sueloProcedural(planeta); if (suelo) t = suelo.mapa; } catch (e) { console.warn("texturas: suelo procedural no disponible", e); }
+    if (!t) t = planeta === "Marte" ? (texturaSuelo || (texturaSuelo = crearTexturaSuelo())) : crearTexturaPlaneta(planeta);
     texturasPorPlaneta.set(planeta, t);
   }
   return texturasPorPlaneta.get(planeta);
@@ -200,4 +201,122 @@ function obtenerTexturaCarbono() {
   return texturaCarbonoCache;
 }
 
-export { generadorAleatorio, lienzo, texturaParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono };
+// ---------- Suelo procedural con relieve (Fase 6): color y mapa de normales del mismo campo de alturas ----------
+// Ruido de valor periódico (la textura se repite sin costuras) y fbm de varias octavas. Determinista por planeta.
+function ruidoPeriodico(semilla) {
+  const P = 256, tabla = new Float32Array(P * P), rnd = generadorAleatorio(semilla);
+  for (let i = 0; i < tabla.length; i++) tabla[i] = rnd();
+  const v = (ix, iy, per) => tabla[(((iy % per) + per) % per) * P + (((ix % per) + per) % per)];
+  // x, y en [0, per): periodo entero por octava
+  return (x, y, per) => {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = v(ix, iy, per), b = v(ix + 1, iy, per), c = v(ix, iy + 1, per), d = v(ix + 1, iy + 1, per);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  };
+}
+
+// Estilo del suelo por planeta rocoso: rampa de color (de lo hondo a lo alto), cráteres, grietas y fuerza del relieve
+const ESTILO_SUELO = {
+  Marte: { rampa: ["#5a2a18", "#8e4a2c", "#b8704a", "#d29466", "#e2b088"], crateres: 12, tamCrater: 0.55, grietas: 0, relieve: 2.2, grano: 0.22 },
+  Mercurio: { rampa: ["#3c3c40", "#626266", "#8c8c90", "#a9a9ad", "#c4c4c8"], crateres: 90, tamCrater: 1, grietas: 0, relieve: 3.0, grano: 0.18 },
+  Venus: { rampa: ["#2b1a10", "#4a3020", "#6e4a2c", "#8a6238", "#a8804a"], crateres: 5, tamCrater: 0.6, grietas: 1, relieve: 2.4, grano: 0.2 },
+  Tierra: { rampa: ["#3e5a2c", "#557a3a", "#6f8f4a", "#8a7a4a", "#a39a6a"], crateres: 0, grietas: 0, relieve: 1.6, grano: 0.25 },
+};
+
+function hexARgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function rampa(colores, t) {
+  const k = Math.min(0.9999, Math.max(0, t)) * (colores.length - 1), i = Math.floor(k), f = k - i;
+  const a = colores[i], b = colores[i + 1];
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+}
+
+function crearSueloProcedural(planeta, tam = 512) {
+  const est = ESTILO_SUELO[planeta];
+  const semilla = [...planeta].reduce((s, ch) => s * 31 + ch.charCodeAt(0), 7) >>> 0;
+  const ruido = ruidoPeriodico(semilla), rnd = generadorAleatorio(semilla ^ 0x9e3779b9);
+  const H = new Float32Array(tam * tam);
+  // fbm de 6 octavas, periodo base 4 celdas de ruido sobre la textura
+  for (let y = 0; y < tam; y++) {
+    for (let x = 0; x < tam; x++) {
+      let h = 0, amp = 0.5, per = 4, sum = 0;
+      for (let o = 0; o < 6; o++) {
+        h += amp * ruido((x / tam) * per, (y / tam) * per, per); sum += amp;
+        amp *= 0.5; per *= 2;
+      }
+      H[y * tam + x] = h / sum;
+    }
+  }
+  // Grietas (Venus): crestas del ruido, finas y hundidas
+  const grieta = new Float32Array(tam * tam);
+  if (est.grietas) {
+    for (let y = 0; y < tam; y++) for (let x = 0; x < tam; x++) {
+      const n = ruido((x / tam) * 8 + 50, (y / tam) * 8 + 50, 8) * 0.65 + ruido((x / tam) * 16 + 9, (y / tam) * 16 + 9, 16) * 0.35;
+      const g = Math.max(0, 1 - Math.abs(n - 0.5) * 32);
+      grieta[y * tam + x] = g; H[y * tam + x] -= g * 0.12;
+    }
+  }
+  // Cráteres: cuenco hundido con borde levantado (con envoltura: la textura sigue repitiéndose sin costura)
+  for (let k = 0; k < est.crateres; k++) {
+    const grande = k % 9 === 0 && est.tamCrater >= 1;   // los cráteres grandes solo en los cuerpos muy craterizados
+    const cx = rnd() * tam, cy = rnd() * tam, r = ((grande ? 34 : 6) + rnd() * (grande ? 30 : 16)) * (est.tamCrater || 1);
+    const fuerza = est.tamCrater >= 1 ? 1 : 0.55;
+    const x0 = Math.floor(cx - r * 1.5), x1 = Math.ceil(cx + r * 1.5), y0 = Math.floor(cy - r * 1.5), y1 = Math.ceil(cy + r * 1.5);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const d = Math.hypot(x - cx, y - cy) / r; if (d > 1.5) continue;
+      const cuenco = d < 1 ? -(1 - d * d) * 0.16 * fuerza : 0;
+      const borde = Math.exp(-((d - 1) ** 2) / 0.04) * 0.05 * fuerza;
+      const i = (((y % tam) + tam) % tam) * tam + (((x % tam) + tam) % tam);
+      H[i] += cuenco + borde;
+    }
+  }
+  // Normalizar alturas a [0, 1]
+  let lo = Infinity, hi = -Infinity;
+  for (const v of H) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  const rango = hi - lo || 1;
+  for (let i = 0; i < H.length; i++) H[i] = (H[i] - lo) / rango;
+
+  const colores = est.rampa.map(hexARgb);
+  const color = lienzo(tam), cc = color.getContext("2d"), img = cc.createImageData(tam, tam);
+  const normal = lienzo(tam), cn = normal.getContext("2d"), imgN = cn.createImageData(tam, tam);
+  const at = (x, y) => H[(((y % tam) + tam) % tam) * tam + (((x % tam) + tam) % tam)];
+  for (let y = 0; y < tam; y++) {
+    for (let x = 0; x < tam; x++) {
+      const i = y * tam + x, h = H[i];
+      // pendiente local para oscurecer laderas y la normal por diferencias centrales
+      const dx = (at(x + 1, y) - at(x - 1, y)) * est.relieve * tam / 64, dy = (at(x, y + 1) - at(x, y - 1)) * est.relieve * tam / 64;
+      const grano = (rnd() - 0.5) * est.grano;
+      let [r, g, b] = rampa(colores, h * 0.85 + 0.1 + grano * 0.25);
+      const sombreado = 1 - Math.min(0.35, Math.hypot(dx, dy) * 0.12);
+      r *= sombreado; g *= sombreado; b *= sombreado;
+      if (grieta[i] > 0) {   // lava incandescente en las grietas de Venus
+        const k = grieta[i];
+        r = r + (255 - r) * k; g = g + (120 - g) * k; b = b + (30 - b) * k * 0.6;
+      }
+      const j = i * 4;
+      img.data[j] = r; img.data[j + 1] = g; img.data[j + 2] = b; img.data[j + 3] = 255;
+      const n = Math.hypot(dx, dy, 1);
+      imgN.data[j] = (-dx / n * 0.5 + 0.5) * 255; imgN.data[j + 1] = (dy / n * 0.5 + 0.5) * 255; imgN.data[j + 2] = (1 / n * 0.5 + 0.5) * 255; imgN.data[j + 3] = 255;
+    }
+  }
+  cc.putImageData(img, 0, 0); cn.putImageData(imgN, 0, 0);
+  const mapa = new THREE.CanvasTexture(color);
+  mapa.colorSpace = THREE.SRGBColorSpace; mapa.wrapS = mapa.wrapT = THREE.RepeatWrapping; mapa.anisotropy = 4;
+  const mapaNormal = new THREE.CanvasTexture(normal);
+  mapaNormal.wrapS = mapaNormal.wrapT = THREE.RepeatWrapping;
+  return { mapa, normal: mapaNormal };
+}
+
+const suelosProcedurales = new Map();   // planeta -> { mapa, normal }
+function sueloProcedural(planeta) {
+  if (!ESTILO_SUELO[planeta]) return null;
+  if (!suelosProcedurales.has(planeta)) suelosProcedurales.set(planeta, crearSueloProcedural(planeta));
+  return suelosProcedurales.get(planeta);
+}
+// Mapa de normales del suelo (null en los gigantes gaseosos: sus «suelos» son nubes)
+function normalParaPlaneta(planeta) {
+  const s = sueloProcedural(planeta);
+  return s ? s.normal : null;
+}
+
+export { generadorAleatorio, lienzo, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono };

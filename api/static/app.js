@@ -1566,9 +1566,13 @@ function pintarHud(e) {
   // ARX-85 (ev3-d61 A): en modo sonda, pantalla de sonda con sus lecturas y sin controles de rodaje
   const enSonda = e.modo_planeta === "sonda";
   const panelSonda = document.getElementById("sonda-panel");
-  const controlesManuales = document.getElementById("manual");
+  const padConduccion = document.getElementById("pad");
   if (panelSonda) panelSonda.classList.toggle("oculto", !enSonda);
-  if (controlesManuales) controlesManuales.style.display = enSonda ? "none" : "";
+  // 22/11: la sonda no se conduce a mano, pero sí se puede encuadrar y ver capas: solo se oculta el pad de conducción
+  // (antes se ocultaba todo el bloque y con la sonda no había forma de recentrar la cámara)
+  if (padConduccion) padConduccion.style.display = enSonda ? "none" : "";
+  const botonRover = document.getElementById("encuadrar");
+  if (botonRover) { botonRover.textContent = enSonda ? "Sonda" : "Rover"; botonRover.title = enSonda ? "Centrar en la sonda" : "Centrar en el rover"; }
   if (enSonda) {
     document.getElementById("sonda-planeta").textContent = planetaActivo;
     document.getElementById("sonda-temp").textContent = `${e.temperatura_interna} °C (tolerancia ${e.tolerancia} °C)`;
@@ -3583,6 +3587,10 @@ function montarBarraMision() {
     const on = sonido.alternar();
     sonidoB.textContent = on ? "🔊 Sonido" : "🔇 Sonido"; sonidoB.setAttribute("aria-pressed", String(on));
   });
+  const seguirB = document.createElement("button");
+  seguirB.id = "boton-seguir"; seguirB.type = "button"; seguirB.className = "boton-seguir"; seguirB.textContent = "⌖ Seguir";
+  seguirB.title = "Vuelve a seguir al vehículo con la cámara (rover o sonda). Tecla F";
+  seguirB.addEventListener("click", () => seguirVehiculo());
   const defensaB = document.createElement("button");
   defensaB.id = "boton-defensa"; defensaB.type = "button"; defensaB.className = "boton-defensa"; defensaB.textContent = "🎓 Defensa";
   defensaB.title = "Recorrido guiado de 11 pasos para presentar el trabajo, con cifras en vivo y los criterios de la consigna";
@@ -3596,7 +3604,7 @@ function montarBarraMision() {
     });
     if (defensa.abierta) defensa.cerrar(); else defensa.abrir();
   });
-  barra.append(rep, un, vel.closest("label") || vel, cineB, sonidoB, defensaB);
+  barra.append(rep, un, vel.closest("label") || vel, seguirB, cineB, sonidoB, defensaB);
   dock.prepend(barra);
   if (viejaSim) viejaSim.hidden = true;
   if (viejaRep && viejaRep !== viejaSim && !viejaRep.querySelector("button")) viejaRep.hidden = true;
@@ -3604,6 +3612,16 @@ function montarBarraMision() {
 try { montarBarraMision(); } catch (e) { console.warn("barra de control: se quedan los botones en el panel", e); }
 new MutationObserver(encuadrarVista).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 encuadrarVista();
+
+// 22/11: «⌖ Seguir» / tecla F: la cámara vuelve a seguir al vehículo (rover o sonda) en cualquier modo y momento
+function seguirVehiculo() {
+  if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); }
+  if (modoCamara === "orbita") document.getElementById("encuadrar").click();   // recentra y deja el seguimiento activo
+  camaraSiguiendo = true;
+}
+window.addEventListener("keydown", (ev) => {
+  if ((ev.key === "f" || ev.key === "F") && !["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName) && !finActiva()) seguirVehiculo();
+});
 
 // ---------- modos de cámara (auditoría 22/11) ----------
 // Órbita (la de siempre, con OrbitControls), persecución, primera persona desde el mástil y cenital. El cine tiene

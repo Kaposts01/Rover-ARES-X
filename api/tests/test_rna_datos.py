@@ -89,7 +89,12 @@ def test_ia_del_paso_muestra_lo_que_la_ia_uso_en_ese_paso():
         assert d["hay_paso"] is True
         # el difuso recalculado con las entradas del paso da la misma velocidad que usó el motor
         if d["supervisor"]["accion"] == "avanzar":
-            assert d["difuso"]["salida"]["velocidad"] == pytest.approx(d["difuso"]["velocidad_usada"], abs=1e-3)
+            if "tope_conduccion" in d["difuso"]:
+                # R23: la conducción recortó la velocidad (tope del planeta o frenado por anticipación): se avanzó con el tope
+                assert d["difuso"]["tope_conduccion"] == pytest.approx(d["difuso"]["velocidad_usada"], abs=1e-3)
+                assert d["difuso"]["velocidad_usada"] < d["difuso"]["salida"]["velocidad"]
+            else:
+                assert d["difuso"]["salida"]["velocidad"] == pytest.approx(d["difuso"]["velocidad_usada"], abs=1e-3)
         else:
             # R23: con un veto del supervisor (la RNA reentrenada vetea algún paso) el rover no avanza y la velocidad que
             # se aplicó es 0, aunque el difuso, con las mismas entradas, habría dado su velocidad

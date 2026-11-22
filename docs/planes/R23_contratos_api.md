@@ -62,6 +62,8 @@ Restaura las reglas del planeta (las evolucionadas si hay, si no las de fábrica
 - `rna.tramo`: `[{celda:[f,c], probabilidades:{libre, obstáculo, barranco}, distancia, fuente:"rna"|"anticipacion", marcada:bool}]`, ordenado por
   `distancia`, máximo 4. `distancia 1` es la celda siguiente (la RNA de siempre) y `distancia 1` coincide con `celda` de la respuesta; 2 a 4 son las
   celdas de la ruta a esos pasos (RNA de anticipación). `marcada` = la celda quedó como riesgo por esa observación.
+- `difuso.tope_conduccion` (solo si aplica): la velocidad con que se avanzó cuando la conducción recortó la del difuso (tope por hielo, viento o pendiente
+  del planeta evolucionado, o frenado por un posible barranco a 2 a 4 celdas). `difuso.velocidad_usada` es siempre la velocidad real del paso.
 - `difuso.entradas.bateria` sigue en unidades del motor y `bateria_pct` es el % de la capacidad que **usó** el difuso (se convierte una sola vez).
 
 ## GET /comparacion

@@ -1277,6 +1277,10 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                                     e["temperatura"], bateria_pct=e.get("bateria_pct"))
                 dif["intervenido"] = u["difuso_intervenido"]
                 dif["velocidad_usada"] = ultima.get("velocidad")
+                if ultima.get("accion") == "avanzar" and (ultima.get("velocidad") or 0.0) < dif["salida"]["velocidad"] - 1e-3:
+                    # R23: la conducción recortó la velocidad del difuso (tope por hielo, viento o pendiente del planeta, o frenado
+                    # por un posible barranco a 2 a 4 celdas): se informa la velocidad con que se avanzó
+                    dif["tope_conduccion"] = ultima.get("velocidad")
                 salida["difuso"] = dif
             else:
                 salida["difuso"] = None

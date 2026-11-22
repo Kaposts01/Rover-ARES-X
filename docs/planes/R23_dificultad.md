@@ -68,6 +68,6 @@ compensación por planeta de la primera parte la hace más fácil con el problem
 un plan que se queda corto), una por drones sin batería para cazarlos, y 1 a 2 partidas de cada 100 que no terminan en 500 pasos (un bucle de espera cerca del refugio que
 no se resolvió).
 
-Con el difuso de defecto (sin evolucionar) la misma medición en Marte dio 100, 100, 90, 80 y 60 % (antes de los últimos retoques de robustez, 100, 100, 90, 80, 60).
+Con el difuso de defecto (sin evolucionar) la misma medición en Marte dio 100, 100, 90, 80 y 60 %: el difuso evolucionado de Marte no cambia la dificultad por encima del error (±10 a ±15 puntos).
 
 Cómo reproducir: `python scripts/medir_dificultad.py --tamano pequeno --planetas Marte,Tierra --semillas 20 --politica hibrido`.

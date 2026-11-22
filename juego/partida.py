@@ -325,7 +325,9 @@ def _es_ganable(mundo, bateria: float, drones=(), bateria_max=None, estaciones=(
 PLAN_RESTRINGIDO_JUGABLE = True       # la partida jugable (garantia=True) usa el AG con restricciones (planificacion.py)
 AG_PLAN_INICIAL = (60, 60)            # (población, generaciones) del plan inicial
 AG_PLAN_REPLANTEO = (40, 30)          # y de los replanteos completos (eventos graves, plan inviable)
-FACTOR_SEGURIDAD_PLAN = 1.08          # margen sobre el factor de energía del planeta al planificar recargas
+OLVIDOS_MAXIMOS = 4                 # veces por partida que se pueden olvidar las dudas de la RNA
+MARGEN_ESCAPE_PLAN = 0.08           # fracción de la capacidad que debe quedar tras cada sitio para llegar a una base (tormentas, ráfagas)
+MARGEN_FACTOR_PLAN = 1.2           # margen sobre el factor de energía del planeta al planificar recargas
 # R23 (RNA): la RNA nominal da ~1,7 % de falsos barrancos entre las celdas libres; marcar una celda como riesgo permanente con una
 # sola observación la cierra para siempre (en una prueba, la RNA «vio» un barranco sobre una base de recarga y el rover no llegó).
 # Con True se exigen OBSERVACIONES_RNA_CONFIRMA observaciones con media de p(barranco) > 0,5, como Mision ya hace con ruido alto.
@@ -660,8 +662,8 @@ class Partida:
                 est_ = _colocar_estaciones(mundo_, self.semilla_mundo, n_est)
                 if self.plan_activo:
                     # R23: con más de 6 sitios no se prueban todas las permutaciones: la garantía usa el planificador
-                    return _es_ganable_plan(mundo_, bat0, est_, fac * FACTOR_SEGURIDAD_PLAN,
-                                            reserva_extra=self.margen_caza * len(drones_) * fac * FACTOR_SEGURIDAD_PLAN)
+                    return _es_ganable_plan(mundo_, bat0, est_, fac * MARGEN_FACTOR_PLAN,
+                                            reserva_extra=self.margen_caza * len(drones_) * fac * MARGEN_FACTOR_PLAN)
                 return _es_ganable(mundo_, bat0, drones_, bateria_max=bat_max, estaciones=est_, factor=fac,
                                    margen_caza_pasos=self.margen_caza)
             ganable = False
@@ -757,6 +759,7 @@ class Partida:
         self._precaucion_ant = False
         if garantia:
             self.mision._riesgo_por_rna = self._riesgo_por_rna_partida      # método ligado: sobrevive a copy y deepcopy
+            self.mision._barrancos_fusionados = self._barrancos_fusionados_partida
         self._falla_restante = 0           # pasos de IA detenida por falla de sensor
         self._prob_fallo_base = None       # probabilidad de fallo del sensor antes de la falla
         self._ambiente = "normal"          # "normal" | "tormenta" | "noche"
@@ -1732,11 +1735,13 @@ class Partida:
         Las ventanas se centran en las llegadas de un recorrido de referencia (`_plan_de_referencia`) con anchos por nivel
         (`dificultad.VENTANAS_POR_NIVEL`); un sitio sin ventana vale siempre el 100 %. Determinista con la semilla del mundo."""
         mundo = self.mundo
-        self.factor_plan_base = float(self.mision.factor_ambiente) * FACTOR_SEGURIDAD_PLAN
+        self.factor_plan_base = float(self.mision.factor_ambiente) * MARGEN_FACTOR_PLAN
         self.factor_plan = self.factor_plan_base
-        self._gasto_ema = self.factor_plan_base / FACTOR_SEGURIDAD_PLAN     # gasto observado por paso (% de batería)
+        self._gasto_ema = self.factor_plan_base / MARGEN_FACTOR_PLAN     # gasto observado por paso (% de batería)
         self._gasto_prev = None
         self._paso_replan_energia = -100
+        self._olvidos = 0                      # veces que se olvidaron las dudas de la RNA para recuperar un sitio inalcanzable
+        self._rna_olvidada = False
         obligatorios = _sitios_obligatorios(mundo)
         celdas = sorted(mundo.sitios)
         base = [planificacion.SitioPlan(i + 1, c, float(mundo.sitios[c]), None, c in obligatorios)
@@ -1801,10 +1806,11 @@ class Partida:
         mascara[origen] = True
         mascara[refugio] = True
         sitios = [self.sitios_plan[tuple(c)] for c in sorted(pendientes) if tuple(c) in self.sitios_plan]
-        self.factor_plan = max(self.factor_plan_base, self._gasto_ema * FACTOR_SEGURIDAD_PLAN)   # el gasto real manda
+        self.factor_plan = max(self.factor_plan_base, self._gasto_ema * MARGEN_FACTOR_PLAN)   # el gasto real manda
         return planificacion.Problema(origen, refugio, sitios, self.estaciones, self.rover.bateria, self.capacidad_bateria,
                                       planificacion.Distancias.de(mascara), self.factor_plan,
-                                      reserva_extra=self._reserva_caza(), t0=int(m.paso))
+                                      reserva_extra=self._reserva_caza(), t0=int(m.paso),
+                                      margen_escape=MARGEN_ESCAPE_PLAN * float(self.capacidad_bateria))
 
     def _cromosoma_de_wp(self, prob):
         """Cromosoma (orden, sel, paradas) del plan vigente sobre `prob`: las paradas que quedan, en su orden."""
@@ -1921,6 +1927,9 @@ class Partida:
         m.replanes += 1
         origen = tuple(int(v) for v in self.rover.posicion)
         refugio = tuple(int(v) for v in self.mundo.refugio)
+        for c in self._celdas_conocidas():       # bases, sitios, inicio y refugio son libres por construcción: una marca es un falso positivo
+            if m.riesgo[c] >= 0.5:
+                m.riesgo[c] = 0.05
         self._actualizar_plan()
         pendientes = {c: v for c, v in self.mundo.sitios.items() if c not in m.visitados}
         prob = plan = None
@@ -1941,17 +1950,39 @@ class Partida:
                 m.objetivos = [c for c in ruta if c in self.mundo.sitios] + [refugio]
                 m.ruta = ruta if camino_valido(ruta, m.riesgo) else (_bfs_a(m, origen, refugio) or [])
                 return bool(m.ruta) and m.ruta[-1] == refugio
+            if (not plan.factible or not ruta) and self._olvidos < OLVIDOS_MAXIMOS and prob is not None                     and any(prob.dist.largo(origen, sit.celda) is None for sit in prob.sitios if sit.obligatorio):
+                # un sitio obligatorio quedó inalcanzable en el mapa estimado: las dudas de la RNA (riesgo entre 0,5 y 1, no medido)
+                # lo habrán cerrado. Se olvidan y se planifica de nuevo (las lecturas firmes, riesgo 1, se conservan)
+                dudas = (m.riesgo >= 0.5) & (m.riesgo < 0.99)
+                if dudas.any():
+                    self._olvidos += 1
+                    m.riesgo[dudas] = 0.05
+                    self._rna_olvidada = True
+                    self._wp = []
+                    ruta = m._optimizar_ag(origen, pendientes)
+                    plan = getattr(m._optimizar_ag, "plan", None)
+                    prob = getattr(m._optimizar_ag, "problema", None)
             if not plan.factible or not ruta:
                 # sin plan con las restricciones: se intenta al menos llegar al refugio recargando
                 alivio = self._problema_plan(origen, {})
                 directo = alivio.decodificar((), (), (-1,))
                 ruta = alivio.ruta(directo) if directo.factible else None
+                wp_alivio = [(n[0], n[1], n[2]) for n in directo.nodos[1:] if n[0] == "base"] if directo.factible else []
                 if not ruta:
-                    ruta = camino_bfs(origen, refugio, m.riesgo < 0.5) or []
+                    # ni al refugio llega: se va a la base alcanzable más cercana (recargar es lo único que salva la partida)
+                    cerca = [(len(t) - 1, i) for i, b in enumerate(self.estaciones)
+                             for t in [camino_bfs(origen, tuple(b), m.riesgo < 0.5)] if t is not None
+                             and len(t) - 1 <= self.rover.bateria]
+                    if cerca:
+                        _, i = min(cerca)
+                        ruta = camino_bfs(origen, tuple(self.estaciones[i]), m.riesgo < 0.5)
+                        wp_alivio = [("base", tuple(self.estaciones[i]), i)]
+                    else:
+                        ruta = camino_bfs(origen, refugio, m.riesgo < 0.5) or []
                 m.objetivos = [refugio]
-                self._wp = [(n[0], n[1], n[2]) for n in directo.nodos[1:] if n[0] == "base"] if directo.factible else []
+                self._wp = wp_alivio
                 m.ruta = ruta if camino_valido(ruta, m.riesgo) else []
-                return bool(m.ruta) and m.ruta[-1] == refugio
+                return bool(m.ruta) and (m.ruta[-1] == refugio or bool(wp_alivio))     # ir a una base también es un plan
         m.objetivos = [n[1] for n in plan.nodos if n[0] == "sitio"] + [refugio]
         self._wp = [(n[0], n[1], n[2]) for n in plan.nodos[1:] if n[0] in ("base", "sitio")]
         m.ruta = ruta if camino_valido(ruta, m.riesgo) else []
@@ -2016,6 +2047,12 @@ class Partida:
         celdas |= {tuple(int(v) for v in self.mundo.inicio), tuple(int(v) for v in self.mundo.refugio)}
         return celdas
 
+    def _barrancos_fusionados_partida(self, lectura, guardar: bool = True) -> set:
+        """Mision._barrancos_fusionados sin las celdas conocidas (bases, sitios, inicio, refugio): con tormenta el ruido del telémetro
+        marcaba como barranco una celda libre sobre la que hay que pasar (en una prueba, un sitio obligatorio quedó inalcanzable)."""
+        marcadas = Mision._barrancos_fusionados(self.mision, lectura, guardar)
+        return marcadas - self._celdas_conocidas()
+
     def _riesgo_por_rna_partida(self, probs, celda, dec, destino=None, guardar: bool = True) -> None:
         """Como Mision._riesgo_por_rna (riesgo[celda] = max(riesgo, p) y nota RNA-RIESGO) con dos cambios de R23: no marca
         celdas conocidas y, con `confirmar_rna`, exige OBSERVACIONES_RNA_CONFIRMA observaciones con media > 0,5 también con el
@@ -2058,7 +2095,7 @@ class Partida:
         """
         m = destino if destino is not None else self.mision
         celda = m._celda_observada(pos, rumbo, distancia)
-        if celda is not None and (celda in (m.mundo.inicio, m.mundo.refugio)
+        if celda is not None and (celda in (m.mundo.inicio, m.mundo.refugio) or celda in getattr(self, "estaciones", ())
                                   or (celda in m.mundo.sitios and celda not in m.visitados)):
             return
         Mision._actualizar_mapa_estimado(m, pos, rumbo, distancia)

@@ -145,7 +145,7 @@ class Problema:
     """Instancia del problema de ruta con ventanas, recarga y selección. `dist` da longitudes de camino (BFS)."""
 
     def __init__(self, inicio, refugio, sitios, bases, bateria, capacidad, dist, factor=1.0, reserva=MARGEN_ENERGIA,
-                 reserva_extra=0.0, t0=0, recarga_pasos=RECARGA_PASOS, calidad_fuera=CALIDAD_FUERA_VENTANA):
+                 reserva_extra=0.0, t0=0, recarga_pasos=RECARGA_PASOS, calidad_fuera=CALIDAD_FUERA_VENTANA, margen_escape=0.0):
         self.inicio = (int(inicio[0]), int(inicio[1]))
         self.refugio = (int(refugio[0]), int(refugio[1]))
         self.sitios = list(sitios)
@@ -160,6 +160,7 @@ class Problema:
         self.reserva_extra = float(reserva_extra)      # p. ej. margen de caza de drones obligatorios, en % de batería
         self.t0 = int(t0)
         self.recarga_pasos = int(recarga_pasos)
+        self.margen_escape = float(margen_escape)       # batería extra (%) que debe quedar para poder llegar a una base tras cada sitio
         self.calidad_fuera = float(calidad_fuera)
         self.valor_total = float(sum(s.valor for s in self.sitios)) or 1.0
         self._escape = {}
@@ -175,7 +176,7 @@ class Problema:
         if celda not in self._escape:
             ds = [self.dist.largo(celda, b) for b in self.bases]
             ds = [d for d in ds if d is not None]
-            self._escape[celda] = (min(ds) * self.factor) if ds else 0.0
+            self._escape[celda] = (min(ds) * self.factor + self.margen_escape) if ds else 0.0
         return self._escape[celda]
 
     def calidad(self, s: SitioPlan, t: int) -> float:

@@ -2633,6 +2633,7 @@ async function paso() {
   if (cine && cineVivo() && !terminada && !fin) {
     const tipoCine = cine.datos.tipoMomento({ motivos: r.motivos, eventos: r.eventos_combate, estado: r.estado });
     if (tipoCine) cineMomento(tipoCine);
+    else if (reproduciendo === null) cineCortePaso();   // «Un paso»: cada paso es un plano corto distinto
   }
   if (terminada) {
     detenerReproduccion();
@@ -2985,6 +2986,8 @@ let cinePost = null;
 let cinePostCarga = null;
 let cineRepitiendo = false;
 let cineOcultoPorH = false;
+let cineForzado = false;       // el botón «Cine» de la barra: el director actúa también en conducción manual
+let cineTomaPaso = 0;          // turno de las tomas cortas de «Un paso»
 let cineFpsAcum = 0, cineFpsEma = 0;
 const cineReducido = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function cinePref(clave) { try { return localStorage.getItem(clave) === "1"; } catch (e) { return false; } }
@@ -3018,12 +3021,13 @@ function cinePuede() {
   return cine.datos.debeActuar({
     activado: true, enPartida: oculto("menu"), intro: Boolean(introCorriendo || (intro && intro.activo)), viaje: Boolean(viaje && viaje.activo),
     pausa: pausaActiva, final: !oculto("meta") || !oculto("sin-resultado") || !oculto("error-motor"),
-    manual: document.getElementById("modo").value !== "automatico",
+    manual: document.getElementById("modo").value !== "automatico" && !cineForzado,
   });
 }
 // Devuelve true si el director quedó en marcha
 async function cineActivar(on) {
   if (!on) {
+    cineForzado = false;
     if (cine) { cine.director.activar(false); cine.cinta.director(false); cineRepitiendo = false; }
     if (cineOcultoPorH) { document.body.classList.remove("cine"); cineOcultoPorH = false; }
     return false;
@@ -3071,6 +3075,42 @@ async function cinePostActivar(on) {
     cineAvisar("Cine no disponible: la partida sigue igual");
   }
 }
+// «Un paso» con el cine: alterna planos cercanos (primer plano, rasante, travelling y seguimiento)
+const TOMAS_PASO = ["primer", "rasante", "travelling", "seguimiento"];
+function cineCortePaso() {
+  if (!cineVivo() || cineRepitiendo) return;
+  const id = TOMAS_PASO[cineTomaPaso % TOMAS_PASO.length]; cineTomaPaso += 1;
+  const n = cine.datos.TOMAS.findIndex((t) => t.id === id);
+  if (n >= 0) cine.director.cortar(n);
+}
+// Botón «Cine» de la barra: oculta los paneles (como H) y enciende el director en cualquier modo de conducción.
+// Reproducir encadena tomas automáticas; Un paso corta a un plano cercano; H, Esc, el botón o tocar la escena salen.
+async function cineDesdeBarra() {
+  if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); cineOcultoPorH = false; sincronizarCine(); return; }
+  cineForzado = true;
+  const yaOculto = document.body.classList.contains("cine");
+  document.body.classList.add("cine"); cineOcultoPorH = !yaOculto;
+  const actuo = await cineActivar(true);
+  if (!actuo) {
+    cineForzado = false;
+    if (!yaOculto) document.body.classList.remove("cine");
+    cineOcultoPorH = false;
+    avisar("El modo cine necesita una partida en curso (sin pausa, viaje ni pantalla final).");
+  }
+  sincronizarCine();
+}
+// Estado visible del cine: bandas negras y botón pulsado mientras el director está en vivo
+let cineVivoAntes = null;
+function sincronizarCine() {
+  const vivo = cineVivo();
+  if (vivo === cineVivoAntes) return;
+  cineVivoAntes = vivo;
+  document.body.classList.toggle("cine-director", vivo);
+  const b = document.getElementById("boton-cine");
+  if (b) { b.setAttribute("aria-pressed", String(vivo)); b.textContent = vivo ? "✕ Salir del cine" : "🎬 Cine"; }
+}
+setInterval(sincronizarCine, 250);   // el director también se apaga con H, Esc o un gesto sobre la escena
+
 // Momento dramático: repetición visual lenta con la simulación en pausa (el cliente no envía ningún paso mientras dura)
 function cineMomento(tipo) {
   if (!cineVivo() || cineRepitiendo || cineReducido()) return false;
@@ -3285,7 +3325,12 @@ function montarBarraMision() {
   barra.id = "barra-mision"; barra.className = "barra-mision"; barra.setAttribute("role", "toolbar"); barra.setAttribute("aria-label", "Control de la simulación");
   const viejaSim = document.getElementById("simulacion"), viejaRep = rep.closest("section");
   rep.textContent = ROTULO_PLAY; un.textContent = "⏭ Un paso"; un.title = "Avanza un paso de la IA";
-  barra.append(rep, un, vel.closest("label") || vel);
+  const cineB = document.createElement("button");
+  cineB.id = "boton-cine"; cineB.type = "button"; cineB.className = "boton-cine"; cineB.textContent = "🎬 Cine";
+  cineB.title = "Modo cine: cámara de director sin paneles. Reproducir encadena tomas; Un paso corta a un plano cercano. H o Esc para salir.";
+  cineB.setAttribute("aria-pressed", "false");
+  cineB.addEventListener("click", () => cineDesdeBarra());
+  barra.append(rep, un, vel.closest("label") || vel, cineB);
   dock.prepend(barra);
   if (viejaSim) viejaSim.hidden = true;
   if (viejaRep && viejaRep !== viejaSim && !viejaRep.querySelector("button")) viejaRep.hidden = true;

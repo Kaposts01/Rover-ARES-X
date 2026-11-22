@@ -98,6 +98,13 @@ export function crearDirector({ THREE, escena, camara, controles, sueloEn, celda
     camara.lookAt(mira);
   }
 
+  // Corte a la toma n (Un paso en modo cine): la toma empieza de cero; no actúa durante una repetición ni en modo estático
+  function cortar(n) {
+    if (!activo || rep || modo === "estatico") return false;
+    toma = ((Math.trunc(n) % TOMAS.length) + TOMAS.length) % TOMAS.length; tToma = 0;
+    return true;
+  }
+
   function dispose() {
     if (activo) activar(false);
     if (fantasma) { escena.remove(fantasma); fantasma = null; }
@@ -106,7 +113,7 @@ export function crearDirector({ THREE, escena, camara, controles, sueloEn, celda
   }
 
   return {
-    activar, actualizar, dispose,
+    activar, actualizar, cortar, dispose,
     empezarRepeticion, cancelarRepeticion,
     get activo() { return activo; },
     get repitiendo() { return !!rep; },

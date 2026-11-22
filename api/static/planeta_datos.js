@@ -97,6 +97,8 @@ export function condicionesPlaneta(origen, planeta) {
     rafagaPasos: Math.max(0, Math.round(numero(vivo.rafaga_restante, 0))),
     rafagaProb: numero(p.rafaga_prob, null),
     fuente: tieneV ? "motor" : "referencia",
+    rotuloPerfil: typeof p.viento_rotulo === "string" && p.viento_rotulo ? p.viento_rotulo : null,   // rótulo del motor (escala única); sin él, nombreFuerza
+    rotuloVivo: typeof vivo.viento_rotulo === "string" && vivo.viento_rotulo ? vivo.viento_rotulo : null,
   };
   // hielo: fracción del mapa cubierta (la mide el motor); el brillo del suelo escala contra la mayor fracción de los planetas
   const tieneH = esNumero(p.hielo_fraccion);
@@ -124,7 +126,7 @@ export function queCambia(origen, planeta) {
   else if (g > 0.5) frases.push(`gravedad de ${f2(g)} g: se gasta más batería por paso y al subir`);
   else frases.push(`gravedad baja (${f2(g)} g): subir cuesta poco`);
   if (c.viento.base < 0.05) frases.push("sin viento");
-  else frases.push(`viento ${nombreFuerza(c.viento.perfil)} hacia el ${nombreDireccion(c.viento.grados)}${c.viento.rafagaProb ? ", con ráfagas" : ""}: de cara gasta más batería y de costado puede desviar`);
+  else frases.push(`viento ${c.viento.rotuloPerfil || nombreFuerza(c.viento.perfil)} hacia el ${nombreDireccion(c.viento.grados)}${c.viento.rafagaProb ? ", con ráfagas" : ""}: de cara gasta más batería y de costado puede desviar`);
   if (c.hielo.fraccion > 0) frases.push(`hielo en el ${pct0(c.hielo.fraccion)} del mapa${c.hielo.fragilidad > 1.05 ? " (muy resbaladizo)" : ""}: a velocidad alta el vehículo resbala`);
   if (c.terreno.pendiente > 1.05) frases.push("regolito suelto: las subidas cuestan más");
   if (c.terreno.arrastre > 0) frases.push("atmósfera densa: frena en cada paso");
@@ -140,7 +142,7 @@ export function filasFicha(mecanicas, planeta) {
   const c = condicionesPlaneta(mecanicas, planeta);
   const filas = [
     { etiqueta: "Gravedad", valor: `${f2(c.gravedad.g)} g`, tipo: "mecanica" },
-    { etiqueta: "Viento", valor: c.viento.base < 0.05 ? "en calma" : `${nombreFuerza(c.viento.perfil)} · ${nombreDireccion(c.viento.grados)}`, tipo: "mecanica" },
+    { etiqueta: "Viento", valor: c.viento.base < 0.05 ? "en calma" : `${c.viento.rotuloPerfil || nombreFuerza(c.viento.perfil)} · ${nombreDireccion(c.viento.grados)}`, tipo: "mecanica" },
     { etiqueta: "Hielo", valor: c.hielo.fraccion > 0 ? `${pct0(c.hielo.fraccion)} del mapa` : "sin hielo", tipo: "mecanica" },
   ];
   filas.push({ etiqueta: "Al jugar aquí", valor: queCambia(mecanicas, planeta).join("; ") + ".", tipo: "mecanica-nota" });
@@ -151,7 +153,7 @@ export function filasFicha(mecanicas, planeta) {
 export function filasCondiciones(c, paso) {
   const calma = c.viento.base < 0.05 && !c.viento.rafaga;
   const dir = nombreDireccion(c.viento.grados);
-  let textoViento = calma ? "en calma" : `${nombreFuerza(c.viento.rafaga ? c.viento.fuerza : c.viento.perfil)} · hacia el ${dir}`;   // en ráfaga, la fuerza de la ráfaga en la misma escala;
+  let textoViento = calma ? "en calma" : `${c.viento.rafaga ? (c.viento.rotuloVivo || nombreFuerza(c.viento.fuerza)) : (c.viento.rotuloPerfil || nombreFuerza(c.viento.perfil))} · hacia el ${dir}`;   // en ráfaga, la fuerza de la ráfaga en la misma escala;
   if (c.viento.rafaga) textoViento = `ráfaga ${textoViento}${c.viento.rafagaPasos ? ` (${c.viento.rafagaPasos} ${c.viento.rafagaPasos === 1 ? "paso" : "pasos"})` : ""}`;
   const filas = [
     ["Gravedad", `${f2(c.gravedad.g)} g`, c.gravedad.fuente],

@@ -56,13 +56,14 @@ export const FILAS_TABLA = {
   sitios_visitados: { rotulo: "Sitios visitados", f: (v) => String(v) },
   vetos: { rotulo: "Vetos del supervisor", f: (v) => String(v) },
   colisiones: { rotulo: "Choques", f: (v) => String(v) },
+  ciencia_fraccion: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia_fraccion: v }) || { texto: "—" }).texto },
   ciencia: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia: v }) || { texto: "—" }).texto },
   ciencia_pct: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia_pct: v }) || { texto: "—" }).texto },
   ciencia_recogida: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia_recogida: v }) || { texto: "—" }).texto },
 };
 // Ciencia recogida (métrica propia de cada lado, la añade el motor). Se lee con tolerancia de nombres y de forma:
 // un número (fracción 0..1, porcentaje 0..100 en `ciencia_pct`, o puntos) o un objeto {fraccion, recogida, maxima}. Sin dato: null.
-export const CLAVES_CIENCIA = ["ciencia", "ciencia_pct", "ciencia_recogida"];
+export const CLAVES_CIENCIA = ["ciencia_fraccion", "ciencia", "ciencia_pct", "ciencia_recogida"];   // `ciencia_fraccion` (0..1) es la que manda el motor
 const esNum = (v) => v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
 export function leerCiencia(origen) {
   if (!origen || typeof origen !== "object") return null;

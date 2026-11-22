@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from genetico import GeneticPlanner, camino_bfs  # noqa: E402
 from integracion import (ESTADOS_TERMINALES, MARGEN_ENERGIA,  # noqa: E402
                          GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO,
-                         Decision, Mision, _rumbo, barrancos_medidos, camino_valido)
+                         Decision, Mision, _rumbo, camino_valido)
 from difuso import ResultadoDifuso, aplanar_membresias  # noqa: E402
 from juego import termico  # noqa: E402
 from rna import _rasgos_celda, inclinacion_de_rasgos  # noqa: E402
@@ -666,7 +666,7 @@ class Partida:
         lectura = sombra.sensor.leer(self.mundo, pos, rumbo)
         probs = sombra.rna.explicar(rasgos)["probabilidades"] if m.usar_rna else {"libre": 1.0}
         sombra._actualizar_mapa_estimado(pos, rumbo, lectura["proximidad_frontal_m"])
-        for celda in barrancos_medidos(lectura):
+        for celda in m._barrancos_fusionados(lectura, guardar=False):   # ARX-94f: misma fusión, sin acumular
             sombra.riesgo[celda] = 1.0
         inclinacion = min(45.0, inclinacion_de_rasgos(rasgos) * GRADOS_POR_GRADIENTE)
         fz = sombra.difuso.inferir(sombra._distancia_a_riesgo_en_ruta(), self.rover.bateria, inclinacion)

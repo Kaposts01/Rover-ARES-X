@@ -51,6 +51,22 @@ def _bajo_umbral(desnivel) -> bool:
     return desnivel == desnivel and desnivel < UMBRAL_DESNIVEL_BARRANCO_M
 
 
+# ARX-94f: fusión de lecturas del desnivel de las vecinas antes de marcarlas como barranco en el mapa estimado.
+# Antes una sola lectura bajo el umbral dejaba la celda en riesgo 1 para siempre. Con el ruido del escenario exigente
+# (σ = 0,6 × 5 = 3 m) una celda llana cae bajo -2 m en ~25 % de las lecturas: el mapa se llenaba de barrancos falsos
+# y la misión terminaba en SIN_RUTA (híbrido 0/20). Ahora se exigen n_min lecturas cuya MEDIA quede bajo el umbral,
+# con n_min tal que una celda llana tenga menos de un 1 % de falso positivo: n_min = ceil((Z·σ/|umbral|)²).
+# Con ruido bajo (σ 0,5 m) n_min = 1 y la regla es la de antes (basta una lectura bajo el umbral).
+# El veto inmediato del frente (V-BORDE-BARRANCO) no cambia: sigue con la lectura del paso.
+Z_FALSO_POSITIVO_DESNIVEL = 2.326     # una cola, 1 %
+# ARX-94f: la RNA se entrenó con el ruido nominal (generar_dataset, ruido 0,1). Con más ruido sus entradas salen de lo que
+# vio y una p(barranco) alta suelta no basta para cerrar la celda para siempre: se exigen OBSERVACIONES_RNA_RUIDOSO
+# observaciones con media de p > 0,5. El veto inmediato V-RNA-BARRANCO no cambia; al vetar se replanifica y el rover
+# vuelve a mirar la misma celda, así que la confirmación llega sola. Con ruido nominal la regla es la de antes.
+RUIDO_NOMINAL_RNA = 0.1
+OBSERVACIONES_RNA_RUIDOSO = 2
+
+
 def barrancos_medidos(lectura: dict) -> set:
     """Celdas vecinas cuyo desnivel medido supera el umbral del veto duro (ARX-94c). Solo mide: no consulta el tipo."""
     return {c for c, d in lectura["desniveles_vecinos"].items() if _bajo_umbral(d)}
@@ -169,6 +185,10 @@ class Mision:
         self.sensor = SensorSuite(rng=self.rng, ruido=ruido)
         self.rover = Rover(posicion=mundo.inicio, bateria=bateria)
         self.riesgo = mapa_estimado(mundo, self.rng)
+        self._desnivel_suma = np.zeros(mundo.tipo.shape)         # ARX-94f: lecturas acumuladas por celda vecina
+        self._desnivel_n = np.zeros(mundo.tipo.shape, dtype=int)
+        self._rna_suma = np.zeros(mundo.tipo.shape)               # ARX-94f: p(barranco) acumulada por celda mirada
+        self._rna_n = np.zeros(mundo.tipo.shape, dtype=int)
         # Paquete A: SOLO DE REGISTRO (para la capa «no observada» de la interfaz). Ninguna decisión, ruta, veto,
         # RNA, difuso ni AG la lee, y marcarla no consume números del rng.
         self.observadas = np.zeros(mundo.tipo.shape, dtype=bool)
@@ -267,7 +287,7 @@ class Mision:
             probs = self.intervencion_rna(probs)
         self._actualizar_mapa_estimado(pos, rumbo, lectura["proximidad_frontal_m"])
         self._registrar_observacion(pos, rumbo, lectura["proximidad_frontal_m"])   # solo registro, no decide nada
-        for celda in barrancos_medidos(lectura):
+        for celda in self._barrancos_fusionados(lectura):
             self.riesgo[celda] = 1.0
         alerta = self._marcar_riesgo_rna(pos, rumbo, siguiente) if self.alerta_rna_2 and self.usar_rna else None
         # el desnivel frontal mide justo la celda siguiente de la ruta (rumbo = hacia `siguiente`)
@@ -326,6 +346,9 @@ class Mision:
             else:
                 self.colisiones += 1
                 dec.motivos.append("V-CELDA-BLOQUEADA")
+                # ARX-94f: el contacto es una medición: la celda que no se pudo pisar queda en el mapa estimado
+                # (si no, con ruido alto el planificador volvía a mandar al rover contra la misma celda)
+                self.riesgo[siguiente] = 1.0
                 self._planear()
         self._registrar(dec.accion, dec.velocidad, dec.motivos, probs, fz)
         if self.rover.bateria <= 0 and self.estado not in ESTADOS_TERMINALES:
@@ -385,11 +408,36 @@ class Mision:
                 break
             self.observadas[celda] = True
 
+    def _barrancos_fusionados(self, lectura, guardar: bool = True) -> set:
+        """Celdas vecinas cuya media de desnivel medido queda bajo el umbral con confianza (ARX-94f). Solo mide.
+        Con guardar=False (consultas y recomendaciones) usa la lectura sin acumularla: no cambia la partida."""
+        sigma = float(self.sensor.ruido) * simulador.ESCALA_DESNIVEL
+        n_min = max(1, int(np.ceil((Z_FALSO_POSITIVO_DESNIVEL * sigma / abs(UMBRAL_DESNIVEL_BARRANCO_M)) ** 2)))
+        marcadas = set()
+        for celda, d in lectura["desniveles_vecinos"].items():
+            if d != d:
+                continue
+            suma, n = self._desnivel_suma[celda] + d, self._desnivel_n[celda] + 1
+            if guardar:
+                self._desnivel_suma[celda], self._desnivel_n[celda] = suma, n
+            if n_min == 1:
+                if _bajo_umbral(d):                      # ruido bajo: la regla original, lectura a lectura
+                    marcadas.add(celda)
+            elif n >= n_min and suma / n < UMBRAL_DESNIVEL_BARRANCO_M:
+                marcadas.add(celda)
+        return marcadas
+
     def _riesgo_por_rna(self, probs, celda, dec):
         """riesgo[celda] = max(riesgo, p(barranco)) y, si la RNA lo sube a más de 0,5, anota `RNA-RIESGO:(celda):p`."""
         if not self.usar_rna:
             return
         p = probs.get("barranco", 0.0)
+        if float(self.sensor.ruido) > RUIDO_NOMINAL_RNA + 1e-9:      # ARX-94f: sensor ruidoso, se confirma
+            self._rna_suma[celda] += p
+            self._rna_n[celda] += 1
+            if self._rna_n[celda] < OBSERVACIONES_RNA_RUIDOSO:
+                return
+            p = float(self._rna_suma[celda] / self._rna_n[celda])
         if p > UMBRAL_RIESGO_RNA and p > self.riesgo[celda]:
             dec.motivos.append(f"RNA-RIESGO:{celda}:{p:.2f}")
         self.riesgo[celda] = max(self.riesgo[celda], p)

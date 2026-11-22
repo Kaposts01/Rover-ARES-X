@@ -220,14 +220,63 @@ def test_obstaculo_en_ruta_sigue_igual_que_antes():
 
 
 def test_rna_riesgo_no_se_anota_con_p_baja_y_sin_rna_no_toca_el_mapa():
+    # ARX-94f: se prueba la escritura de la RNA en el mapa de forma aislada. Con paso_mision el rover avanza contra el
+    # barranco de 1,5 m (no lo veta el desnivel) y el contacto marca la celda: eso lo cubre la prueba siguiente.
     mision, celda = _mision_con_barranco_adelante(1.5, p_rna=0.3)
-    mision.paso_mision()
-    assert "RNA-RIESGO" not in mision.log.a_dataframe().iloc[-1]["motivos"]
+    dec = integracion.Decision("avanzar", 1.0, [])
+    mision._riesgo_por_rna({"barranco": 0.3}, celda, dec)
+    assert not any(m.startswith("RNA-RIESGO") for m in dec.motivos)
     assert mision.riesgo[celda] == pytest.approx(0.3)      # max(riesgo, p) sin pasar de 0,5: no veta
     mision, celda = _mision_con_barranco_adelante(1.5, p_rna=0.9)
     mision.usar_rna = False
-    mision.paso_mision()
+    mision._riesgo_por_rna({"barranco": 0.9}, celda, dec)
     assert mision.riesgo[celda] == 0.0
+
+
+def test_el_contacto_con_una_celda_que_no_se_puede_pisar_la_marca_en_el_mapa():
+    # ARX-94f: barranco de 1,5 m (sobre el umbral de -2 m: el telémetro no lo veta) y RNA que no lo ve
+    mision, celda = _mision_con_barranco_adelante(1.5, p_rna=0.3)
+    mision.paso_mision()
+    assert mision.colisiones == 1
+    assert "V-CELDA-BLOQUEADA" in mision.log.a_dataframe().iloc[-1]["motivos"]
+    assert mision.riesgo[celda] == 1.0                    # el planificador ya no vuelve a mandar al rover contra ella
+
+
+def _lectura_vecina(celda, d):
+    return {"desniveles_vecinos": {celda: d}}
+
+
+def test_desnivel_con_ruido_nominal_una_lectura_bajo_el_umbral_basta():
+    mision = Mision(_mundo_llano(), semilla=5, rna=_RnaFalsa(0.0), ruido=0.1)
+    assert mision._barrancos_fusionados(_lectura_vecina((1, 1), -2.5)) == {(1, 1)}
+
+
+def test_desnivel_con_ruido_alto_una_lectura_suelta_no_cierra_la_celda():
+    # ARX-94f: σ = 0,6 × 5 = 3 m; una celda llana cae bajo -2 m en ~25 % de las lecturas: hace falta evidencia repetida
+    mision = Mision(_mundo_llano(), semilla=5, rna=_RnaFalsa(0.0), ruido=0.6)
+    assert mision._barrancos_fusionados(_lectura_vecina((1, 1), -2.5)) == set()
+    marcadas = set()
+    for _ in range(30):                                      # lecturas de un barranco real de 3 m
+        marcadas |= mision._barrancos_fusionados(_lectura_vecina((1, 1), -3.0))
+    assert marcadas == {(1, 1)}
+    # la consulta sin guardar no acumula lecturas
+    n = int(mision._desnivel_n[1, 1])
+    mision._barrancos_fusionados(_lectura_vecina((1, 1), -3.0), guardar=False)
+    assert int(mision._desnivel_n[1, 1]) == n
+
+
+def test_rna_con_ruido_alto_confirma_antes_de_marcar_y_con_ruido_nominal_no():
+    dec = integracion.Decision("replanificar", 0.0, [])
+    ruidosa = Mision(_mundo_llano(), semilla=5, rna=_RnaFalsa(0.9), ruido=0.6)
+    ruidosa.riesgo[:] = 0.0
+    ruidosa._riesgo_por_rna({"barranco": 0.9}, (1, 1), dec)
+    assert ruidosa.riesgo[1, 1] == 0.0                       # una observación suelta no cierra la celda
+    ruidosa._riesgo_por_rna({"barranco": 0.9}, (1, 1), dec)
+    assert ruidosa.riesgo[1, 1] == pytest.approx(0.9)         # la segunda la confirma
+    nominal = Mision(_mundo_llano(), semilla=5, rna=_RnaFalsa(0.9), ruido=0.1)
+    nominal.riesgo[:] = 0.0
+    nominal._riesgo_por_rna({"barranco": 0.9}, (1, 1), dec)
+    assert nominal.riesgo[1, 1] == pytest.approx(0.9)         # regla de antes: basta una
 
 
 def test_nada_oculto_ni_la_decision_ni_las_lecturas_consultan_el_tipo():
@@ -237,6 +286,6 @@ def test_nada_oculto_ni_la_decision_ni_las_lecturas_consultan_el_tipo():
     import inspect
     import re
     for f in (SafetySupervisor.decidir, integracion.barrancos_medidos, integracion._bajo_umbral,
-              Mision.paso_mision, Mision._riesgo_por_rna, Mision._actualizar_mapa_estimado,
+              Mision.paso_mision, Mision._riesgo_por_rna, Mision._barrancos_fusionados, Mision._actualizar_mapa_estimado,
               Mision._distancia_a_riesgo_en_ruta, Mision._obstaculo_en_ruta):
         assert not re.search(r"[.]tipo", inspect.getsource(f)), f.__qualname__

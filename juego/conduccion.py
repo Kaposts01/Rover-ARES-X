@@ -63,6 +63,27 @@ def _observar(partida) -> dict:
     return obs
 
 
+def _guardar_ia(partida, pos, rumbo: str, obs_dir: dict, usar_rna: bool, usar_difuso: bool = False,
+                entrada_difuso: dict = None) -> None:
+    """R23: deja en `mision.ultima_ia` lo que usó la técnica activa del modo suelto en este paso (solo registro), con el
+    mismo formato que Mision.paso_mision, para que /ia/paso y el panel de IA funcionen también en rna, difuso y ag."""
+    m = partida.mision
+    df, dc = MOVIMIENTOS[rumbo]
+    rasgos = obs_dir["rasgos"]
+    nombres = list(getattr(m.rna, "nombres", []) or [])
+    m.ultima_ia = {
+        "paso": int(m.paso), "posicion": tuple(int(v) for v in pos), "rumbo": rumbo,
+        "celda": (int(pos[0] + df), int(pos[1] + dc)),
+        "rasgos": {n: float(v) for n, v in zip(nombres, rasgos)} if len(nombres) == len(rasgos) else None,
+        "probabilidades": {k: float(v) for k, v in obs_dir["probs"].items()},
+        "rna_intervenida": m.intervencion_rna is not None and usar_rna, "usar_rna": bool(usar_rna and m.usar_rna),
+        "difuso": entrada_difuso or {"distancia": 0.0, "bateria": float(partida.rover.bateria), "inclinacion": 0.0,
+                                      "temperatura": 0.0},
+        "difuso_intervenido": m.intervencion_difuso is not None and usar_difuso,
+        "usar_difuso": bool(usar_difuso and m.usar_difuso),
+    }
+
+
 def _motivo_veto(obs_dir: dict, veto: bool):
     if not veto:
         return None
@@ -206,6 +227,7 @@ def avanzar(partida, modo: str, veto: bool = True) -> dict:
         return {**partida.sugerencia(), **partida._posicion_estado()}
 
     m.paso += 1
+    partida._entrada_difuso = None
     pos = partida.rover.posicion
     objetivo = _objetivo(partida)
     if pos == partida.mundo.refugio and not m._quedan_sitios():
@@ -221,6 +243,7 @@ def avanzar(partida, modo: str, veto: bool = True) -> dict:
         elegido = _elegir_rna(partida, cands, objetivo)
         if elegido is None:
             return _estado_tras_paso(partida, "detener", motivos + ["D-SIN-CANDIDATO"], None, 0.0)
+        _guardar_ia(partida, pos, elegido.rumbo, obs[elegido.rumbo], usar_rna=True)
         ok = _ejecutar(partida, elegido.rumbo, elegido.destino)
         if ok:
             _tras_mover(partida, elegido.destino, objetivo, ruta_ag=False)
@@ -236,6 +259,10 @@ def avanzar(partida, modo: str, veto: bool = True) -> dict:
         # auditoría 22/11: con el perfil v2 el rasgo 2 es el contraste óptico; la pendiente sale como en Mision.paso_mision
         inclinacion = min(45.0, inclinacion_de_rasgos(obs[rumbo]["rasgos"]) * GRADOS_POR_GRADIENTE)
         fz = m.difuso.inferir(m._distancia_a_riesgo_en_ruta(), partida.rover.bateria, inclinacion)
+        entrada = getattr(partida, "_entrada_difuso", None) or {
+            "distancia": float(m._distancia_a_riesgo_en_ruta()), "bateria": float(partida.rover.bateria),
+            "inclinacion": float(inclinacion), "temperatura": 0.0}
+        _guardar_ia(partida, pos, rumbo, obs[rumbo], usar_rna=False, usar_difuso=True, entrada_difuso=dict(entrada))
         v = float(fz.velocidad)
         if m.intervencion_difuso is not None:        # prueba causal (ARX-10) también en el modo difuso (ARX-18.2)
             v = float(m.intervencion_difuso)
@@ -275,6 +302,7 @@ def avanzar(partida, modo: str, veto: bool = True) -> dict:
     siguiente = m.ruta[1]
     rumbo = _rumbo(pos, siguiente)
     veto_dir = _motivo_veto(obs[rumbo], veto)
+    _guardar_ia(partida, pos, rumbo, obs[rumbo], usar_rna=False)
     if veto_dir:
         _marcar_veto(partida, siguiente)
     if m.riesgo[siguiente] >= UMBRAL_RIESGO_RNA or veto_dir:

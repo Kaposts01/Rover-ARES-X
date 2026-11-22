@@ -22,7 +22,17 @@ TOLERANCIA_POR_PLANETA = {"Mercurio": 60.0, "Venus": 60.0}   # ev3-d88 B: mismo 
 PASOS_MAXIMOS_SOBRE_TOLERANCIA = 5  # el aborto llega al paso siguiente a cinco seguidos sobre la tolerancia
 
 # Temperatura ambiente por planeta rover, °C (Mercurio: de día; supuesto de simulación)
-T_AMB_POR_PLANETA = {"Mercurio": 430.0, "Venus": 464.0, "Tierra": 15.0, "Marte": -60.0}
+# R23: los gigantes (modo sonda) también tienen modelo térmico (temperatura en las nubes, PLAN_PLANETAS). Antes no estaban en
+# la tabla, el modelo quedaba inactivo y la temperatura interna se quedaba fija en 20 °C toda la partida.
+T_AMB_POR_PLANETA = {"Mercurio": 430.0, "Venus": 464.0, "Tierra": 15.0, "Marte": -60.0,
+                     "Júpiter": -110.0, "Saturno": -140.0, "Urano": -195.0, "Neptuno": -200.0}
+# R23: planeta frío (ambiente por debajo de T_INT_INICIAL). El modelo caliente solo sube; en un planeta frío el rover pierde
+# calor hacia un equilibrio: T_eq = T_INT_INICIAL + AISLAMIENTO_FRIO · (T_amb − T_INT_INICIAL) (el aislamiento y el calor propio
+# retienen el 75 % del salto), y T_int lo alcanza con rapidez K_FRIO por paso. Al sol el equilibrio sube GANANCIA_SOL_FRIO.
+AISLAMIENTO_FRIO = 0.25
+K_FRIO = 0.02
+GANANCIA_SOL_FRIO = 5.0
+TOLERANCIA_FRIA = -40.0             # °C: por debajo, el hardware está fuera de rango por frío (solo informativo, sin aborto)
 PLANETA_POR_DEFECTO = "Marte"
 
 
@@ -55,6 +65,11 @@ class Termico:
         Sin modelo para el planeta (inactivo): no cambia nada."""
         if not self.activo:
             return self.t_int
+        if self.t_amb < T_INT_INICIAL:                  # R23: planeta frío
+            equilibrio = self.t_equilibrio_frio + (0.0 if sombra else GANANCIA_SOL_FRIO)
+            self.t_int += K_FRIO * (equilibrio - self.t_int)
+            self.pasos_sobre_tolerancia = self.pasos_sobre_tolerancia + 1 if self.sobre_tolerancia else 0
+            return self.t_int
         if sombra:
             t_efectiva = min(self.t_amb, T_SOMBRA)
             self.t_int += (K_CALOR * max(0.0, t_efectiva - self.t_int)
@@ -64,6 +79,15 @@ class Termico:
             self.t_int += K_CALOR * max(0.0, t_efectiva - self.t_int)
         self.pasos_sobre_tolerancia = self.pasos_sobre_tolerancia + 1 if self.sobre_tolerancia else 0
         return self.t_int
+
+    @property
+    def t_equilibrio_frio(self) -> float:
+        """T_int a la que tiende el rover en un planeta frío (a la sombra)."""
+        return T_INT_INICIAL + AISLAMIENTO_FRIO * (self.t_amb - T_INT_INICIAL)
+
+    @property
+    def bajo_tolerancia_fria(self) -> bool:
+        return self.t_int < TOLERANCIA_FRIA
 
     @property
     def tolerancia(self) -> float:

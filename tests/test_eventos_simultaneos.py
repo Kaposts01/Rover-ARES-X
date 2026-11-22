@@ -15,8 +15,22 @@ TRIPLE = ["sismo", "bateria_baja", "meteorito"]
 PAR = ["tormenta", "baja_conectividad"]
 
 
+def _partida_anterior(semilla, nivel):
+    """R23: estas pruebas fijan el orden de vetos y avisos de mapas y baterías concretos; se juegan con la dificultad y la
+    garantía anteriores (batería 100 − 4·(nivel − 1), sin mecánicas de planeta), no con la curva nueva de la partida jugable."""
+    from juego import dificultad
+    previa = dificultad.GARANTIA_CON_BASES_Y_PLANETA
+    dificultad.GARANTIA_CON_BASES_Y_PLANETA = False
+    try:
+        p = Partida(semilla=semilla, nivel=nivel, bateria=100.0 - 4.0 * (nivel - 1))
+    finally:
+        dificultad.GARANTIA_CON_BASES_Y_PLANETA = previa
+    p.mecanicas.activa = False
+    return p
+
+
 def _corrida(eventos, semilla, pasos, nivel=5):
-    p = Partida(semilla=semilla, nivel=nivel)
+    p = _partida_anterior(semilla, nivel)
     resultados = [(e, p.disparar_evento(e)["ok"]) for e in eventos]
     bateria_tras_eventos = round(float(p.rover.bateria), 2)
     avisos_tras_eventos = list(p.avisos)

@@ -37,6 +37,7 @@ from difuso import BATERIA_MAX, COLUMNAS_MEMBRESIA, DISTANCIA_MAX, INCLINACION_M
 from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
 from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
 from juego.partida import Partida, METODO_ORDEN, bateria_por_defecto  # noqa: E402
+from juego import planetas as planetas_mec  # noqa: E402
 from juego import termico  # noqa: E402
 from simulador import MOVIMIENTOS  # noqa: E402
 
@@ -298,6 +299,9 @@ def _estado(sesion: Sesion) -> dict:
         "tolerancia": p.termico.tolerancia,    # ev3-d88 B: la tolerancia del planeta de la partida
         "aborto_termico_activo": termico.ABORTO_TERMICO_ACTIVO,    # O2 de QA: la interfaz aclara si el aborto está apagado
         "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
+        "tolerancia_fria": termico.TOLERANCIA_FRIA,    # R23: límite por frío (planetas fríos; solo informativo)
+        # R23: mecánicas del planeta (gravedad, viento, hielo): perfil fijo y estado de la partida
+        "planeta_mecanicas": {"perfil": p.parametros_planeta(), "estado": p.mecanicas.estado()},
         "sensores": _sensores(p),                    # ARX-86
         # Solo lectura, para la pantalla final (datos que el motor ya calcula)
         "paso": int(p.mision.paso),
@@ -1392,11 +1396,19 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         lista = []
         for nombre, perfil in PERFILES.items():
             lista.append({"nombre": nombre, "modo": perfil.modo, "viable": perfil.modo == "rover",
+                          "mecanicas": planetas_mec.parametros(nombre),      # R23: gravedad, viento, hielo
                           "motivo": None if perfil.modo == "rover" else
                           f"{nombre} es un gigante sin suelo accesible: no admite rodaje; usa modo sonda"})
         activo = ({"planeta": getattr(sesion, "planeta", "Marte"), "modo": getattr(sesion, "modo_planeta", "rover")}
                   if sesion is not None else None)
         return {"planetas": lista, "modos": ["rover", "sonda"], "activo": activo}
+
+    @app.get("/hielo")
+    def hielo():
+        """R23: celdas de hielo de la partida (parches resbaladizos) y el viento actual, para dibujarlos en el mapa."""
+        sesion = activa()
+        mec = sesion.partida.mecanicas
+        return {"planeta": sesion.partida.planeta, "celdas": mec.celdas_hielo(), "estado": mec.estado()}
 
     @app.get("/comparacion")
     def comparacion(semillas: int = 20, escenario: str = "congelado"):

@@ -117,11 +117,13 @@ def test_determinismo_de_la_serie_t_int():
 
 
 @pytest.mark.parametrize("planeta", ["Saturno", "Urano", "Neptuno", "Júpiter"])
-def test_planeta_sin_modelo_termico_deja_termico_inactivo(bandera, planeta):
-    p = Partida(semilla=11, planeta=planeta)                  # no lanza ValueError
-    assert p.termico.activo is False
+def test_gigante_tiene_modelo_termico_frio_sin_aborto(bandera, planeta):
+    # R23: antes los gigantes no tenían modelo y T_int se quedaba fija en 20 °C (error del motor, visto en Neptuno);
+    # ahora se enfrían hacia su equilibrio y no hay aborto ni aviso de calor
+    p = Partida(semilla=11, planeta=planeta)
+    assert p.termico.activo is True
     _al_sol(p)
     for _ in range(40):
         p.avanzar_ia()
-    assert p.t_int == termico.T_INT_INICIAL and p.pasos_sobre_tolerancia == 0
+    assert p.t_int < termico.T_INT_INICIAL and p.pasos_sobre_tolerancia == 0
     assert "V-TEMPERATURA" not in set(p.bitacora()["motivos"])

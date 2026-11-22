@@ -20,7 +20,7 @@ from integracion import (ESTADOS_TERMINALES, MARGEN_ENERGIA,  # noqa: E402
                          GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO,
                          Decision, Mision, _rumbo, camino_valido)
 from difuso import ResultadoDifuso, aplanar_membresias  # noqa: E402
-from juego import termico  # noqa: E402
+from juego import dificultad, planetas, termico  # noqa: E402
 from rna import _rasgos_celda, inclinacion_de_rasgos  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
@@ -136,11 +136,13 @@ BASES_RECARGA_JUGABLES = True
 FACTOR_DESVIO_JUGABLE = 1.3                                   # margen para ir a la base (ARX-59 usaba 2,0: peor tormenta)
 UMBRAL_DESVIO_JUGABLE = 0.6                                   # no se desvía a una base con más del 60 % de la capacidad
 PILAS_JUGABLES = True
+COLCHON_RECARGA = 0.10                                        # R23: la recarga parcial deja este tanto de la capacidad sobre lo necesario
 PILA_FRACCION = 0.10                                          # una pila da el 10 % de la capacidad
 PILAS_MAPA_GRANDE = 5                                         # pilas en el mapa grande; más chico, proporcional (mín. 2)
 # ARX-79 (ev3-d75 A): batería inicial del mapa más grande que el pequeño = batería por nivel × RAZON_BATERIA_GRANDE.
 # R = mediana de pasos de las victorias del grande (77,5) / mediana del pequeño (52,0) = 1,49 (ver ARX-79_calibracion.md).
 RAZON_BATERIA_GRANDE = 1.49
+RAZON_BATERIA_GRANDE_JUGABLE = 2.8    # R23: calibrada con scripts/medir_dificultad.py --tamano grande
 BATERIA_MAX_POR_NIVEL = {1: 60.0, 2: 56.0, 3: 52.0, 4: 48.0, 5: 44.0}   # calibrar: la ruta completa no llega sin recargar
 
 
@@ -442,12 +444,19 @@ def _paso_de_juego(metodo):
     return envuelto
 
 
-def bateria_por_defecto(nivel: int, filas: int, columnas: int, garantia: bool = True) -> float:
+def bateria_por_defecto(nivel: int, filas: int, columnas: int, garantia: bool = True, planeta: str = "Marte") -> float:
     """ARX-87: batería inicial por defecto del nivel y el tamaño (la misma fórmula que usa Partida si no hay campo)."""
     con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
-    bateria = BATERIA_MAX_POR_NIVEL[nivel] if con_estaciones else 100.0 - 4.0 * (nivel - 1)
+    if con_estaciones:
+        bateria = BATERIA_MAX_POR_NIVEL[nivel]
+    elif garantia:
+        bateria = dificultad.bateria_inicial(nivel, planeta)   # R23: la partida jugable tiene su propia curva de dificultad
+    else:
+        bateria = 100.0 - 4.0 * (nivel - 1)                    # evaluación congelada: la de siempre
     if int(filas) * int(columnas) > FILAS_BASE * COLUMNAS_BASE and not con_estaciones:
-        bateria *= RAZON_BATERIA_GRANDE          # ARX-79 (ev3-d75 A): el grande tiene batería proporcional
+        # ARX-79 (ev3-d75 A): el grande tiene batería proporcional. R23: la partida jugable, con drones, viento y hielo, gasta
+        # más que la razón de pasos de las victorias del congelado: usa su propia razón
+        bateria *= RAZON_BATERIA_GRANDE_JUGABLE if (garantia and not con_estaciones) else RAZON_BATERIA_GRANDE
     return float(bateria)
 
 
@@ -466,7 +475,7 @@ class Partida:
             raise ValueError(f"nivel inválido: {nivel!r} (debe estar entre 1 y {NIVEL_MAX})")
         con_estaciones = bool(garantia) and ESTACIONES_ACTIVAS   # ARX-59: solo con la bandera encendida
         if bateria is None:
-            bateria = bateria_por_defecto(nivel, filas, columnas, garantia)   # ARX-87: misma fórmula, en una función
+            bateria = bateria_por_defecto(nivel, filas, columnas, garantia, planeta)   # ARX-87: misma fórmula, en una función
         self.nivel = nivel
         self.semilla = semilla
         self.eventos_activos = tuple(eventos_activos)
@@ -495,6 +504,13 @@ class Partida:
             n_est = max(minimo, round(ESTACIONES_POR_NIVEL[nivel] * escala_grande)) if con_estaciones else 0
             fac = AMBIENTE_FACTOR_POR_NIVEL[nivel] if con_estaciones else 1.0
             fac *= self.factor_seguridad               # ARX-79b
+            if not con_estaciones and BASES_RECARGA_JUGABLES and dificultad.GARANTIA_CON_BASES_Y_PLANETA:
+                # R23: la garantía de la partida jugable es «existe una ruta ganadora» con las bases de recarga que habrá y
+                # la mitad del sobrecoste medio del planeta; no promete ganar siempre (viento, hielo, eventos y la
+                # conducción de la IA pueden hacerla fallar). Antes ignoraba las bases y el planeta.
+                n_est = max(1, round(ESTACIONES_POR_NIVEL[nivel] * (self.filas * self.columnas) / (40 * 60)))
+                fac *= 1.0 + dificultad.GARANTIA_FRACCION_SOBRECOSTO * planetas.sobrecosto_medio(
+                    planeta, dificultad.INTENSIDAD_POR_NIVEL[nivel])
             ganable = False
             for k in range(1, 60):
                 drones = _drones_obligatorios(mundo, semilla, nivel)
@@ -512,6 +528,9 @@ class Partida:
                                       margen_caza_pasos=self.margen_caza)
             self._sin_garantia = not ganable
         self.mision = Mision(mundo, semilla=semilla, bateria=bateria)
+        if garantia:
+            # R23: los sensores de la partida jugable tienen el ruido de su nivel (la RNA se reentrena sola con él)
+            self.mision.sensor.ruido = dificultad.RUIDO_POR_NIVEL[nivel]
         self._fitness_paso = None          # ARX-80: fitness del AG ya medido en el paso en curso (avanzar_ia)
         self._fitness_ultimo = 0.0         # último fitness finito medido; se arrastra si no hay plan del AG
         self.mision.log.completar = self._completar_fila
@@ -521,6 +540,7 @@ class Partida:
         self.capacidad_bateria = float(self.mision.rover.bateria)   # 22/11: la interfaz muestra la batería sobre esto
         self.factor_desvio = FACTOR_DESVIO
         self.umbral_recarga = 1.0                                   # recarga si la batería está bajo este tanto del máximo
+        self.recarga_parcial = False                                # True solo con las bases de la partida jugable (R23)
         escala_area = (self.filas * self.columnas) / (40 * 60)
         if garantia and not con_estaciones and BASES_RECARGA_JUGABLES:
             # bases de recarga sobre el mapa ya elegido (la garantía no las usa: el mapa es el mismo de siempre)
@@ -528,6 +548,7 @@ class Partida:
             self.estaciones = _colocar_estaciones(mundo, self.semilla_mundo, max(1, round(ESTACIONES_POR_NIVEL[nivel] * escala_area)))
             self.factor_desvio = FACTOR_DESVIO_JUGABLE
             self.umbral_recarga = 0.9                               # de paso por una base casi llena, no se detiene
+            self.recarga_parcial = True                             # R23: la base carga solo lo necesario
         elif con_estaciones:
             self.capacidad_bateria = float(self.bateria_max)
         self.pilas = (_colocar_pilas(mundo, self.semilla_mundo, max(2, round(PILAS_MAPA_GRANDE * escala_area)), self.estaciones)
@@ -546,6 +567,14 @@ class Partida:
         self.mision.bateria_max = self.bateria_max
         self.mision.estaciones = self.estaciones
         self.mision.factor_ambiente = AMBIENTE_FACTOR_POR_NIVEL[nivel] if con_estaciones else 1.0
+        # R23: mecánicas del planeta (gravedad, viento, hielo). Solo la partida jugable; el congelado no las usa.
+        self.intensidad_planeta = dificultad.INTENSIDAD_POR_NIVEL[nivel]
+        self.mecanicas = planetas.MecanicasPlaneta(planeta, mundo, self.semilla_mundo, self.intensidad_planeta,
+                                                   activa=bool(garantia))
+        if self.mecanicas.activa:
+            # la caza de drones y la señal estiman su coste con el sobrecoste medio del planeta (la mitad, como la garantía)
+            self.mision.factor_ambiente *= 1.0 + dificultad.GARANTIA_FRACCION_SOBRECOSTO * planetas.sobrecosto_medio(
+                planeta, self.intensidad_planeta)
         self.mision._optimizar_ag = _ag_con_todos_los_sitios(self.mision, self.mision._optimizar_ag, anotar=self._avisar)
         # ARX-66 / N12: mientras se cazan drones obligatorios, el refugio no es destino (Mision.paso_mision fijaría EXITO
         # al llegar sin moverse, y la caza nunca se ejecutaría).
@@ -567,7 +596,7 @@ class Partida:
         self._rng_enlace = np.random.default_rng([int(semilla), 1315])    # ARX-30b: propio, no altera meteoritos ni sismos
         self._rng_senal = np.random.default_rng([int(semilla), 1316])     # ARX-30c: propio
         self._rng_resbalon = np.random.default_rng([int(semilla), 1317])  # ARX-28c: propio, no altera los demás
-        self.fisica_velocidad = False      # ARX-28c: apagada por defecto; solo la enciende el escenario exigente
+        self.fisica_velocidad = bool(garantia)   # ARX-28c: resbalón por pendiente y velocidad; R23: también en la partida jugable (el escenario exigente la enciende aparte)
         self.resbalones = 0
         self.senales = []                  # señales biológicas: [{"paso", "celda", "visitada"}] (ARX-30c)
         self._ultimo_corte = None          # paso del último corte de enlace (para /moviles)
@@ -580,18 +609,28 @@ class Partida:
         self.termico = termico.Termico(planeta)
         self._termico_activo = bool(garantia) and self.termico.activo     # planeta sin modelo: inactivo, sin ValueError
         self._en_paso_juego = False                                       # ev3-d88 B: ver _paso_de_juego
-        if self._termico_activo:
+        self._entrada_difuso = None                                       # R23: lo último que recibió el difuso en un paso
+        self._en_sugerencia = False                                       # R23: sugerencia() ve lo mismo que el paso real
+        if self._termico_activo or self.mecanicas.activa:
             _inferir = self.mision.difuso.inferir
 
-            def _inferir_con_temperatura(distancia, bateria, inclinacion, temperatura=0.0):
+            def _inferir_con_juego(distancia, bateria, inclinacion, temperatura=0.0):
                 # ev3-d88 B: solo durante el paso de juego se usa la T_int; el laboratorio /difuso responde con la
                 # temperatura que se pide
-                if termico.ABORTO_TERMICO_ACTIVO and self._en_paso_juego:
-                    temperatura = self.termico.t_int
+                if self._en_paso_juego or self._en_sugerencia:
+                    if termico.ABORTO_TERMICO_ACTIVO and self._termico_activo and self._en_paso_juego:
+                        temperatura = self.termico.t_int
+                    if self.mecanicas.activa:
+                        inclinacion = self._inclinacion_con_hielo(inclinacion)   # R23: el hielo se ve como pendiente
+                        # R23: el universo del difuso es 0 a 100: recibe el porcentaje de la capacidad, no las unidades del motor
+                        bateria = self.bateria_pct_difuso(bateria)
                 if self._en_paso_juego:
+                    self._entrada_difuso = {"distancia": float(distancia), "bateria": float(bateria),
+                                            "inclinacion": float(inclinacion), "temperatura": float(temperatura)}
+                if self._en_paso_juego and self._termico_activo:
                     self.mision._ultima_temperatura = float(temperatura)   # solo registro: la T que usó el paso
                 return _inferir(distancia, bateria, inclinacion, temperatura)
-            self.mision.difuso.inferir = _inferir_con_temperatura
+            self.mision.difuso.inferir = _inferir_con_juego
         self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4); antes de planificar: el AG puede anotar AG-FALLBACK-GARANTIA (ARX-92c)
         # Mision() ya planificó con el AG original: se replanifica con el envoltorio que exige todos los sitios
         self.mision.objetivos = []
@@ -677,6 +716,38 @@ class Partida:
 
     # ---------- IA: sugerencia sin efectos ----------
     def sugerencia(self) -> dict:
+        """Observa y decide como lo haría Mision.paso_mision, pero sobre copias (ver _sugerencia_sin_efectos)."""
+        previo = self._en_sugerencia
+        self._en_sugerencia = True
+        try:
+            return self._sugerencia_sin_efectos()
+        finally:
+            self._en_sugerencia = previo
+
+    def bateria_pct_difuso(self, bateria: float) -> float:
+        """R23: batería en % de la capacidad (0 a 100), la unidad del universo del difuso."""
+        return float(min(100.0, 100.0 * float(bateria) / max(float(self.capacidad_bateria), 1e-9)))
+
+    def _inclinacion_con_hielo(self, inclinacion: float) -> float:
+        """R23: el rover nota el hielo de la celda siguiente de su ruta; el difuso lo recibe como pendiente extra y frena."""
+        ruta = self.mision.ruta
+        if len(ruta) > 1 and self.mecanicas.hay_hielo(ruta[1]):
+            return min(45.0, float(inclinacion) + planetas.HIELO_EQUIV_GRADOS)
+        return inclinacion
+
+    def parametros_planeta(self) -> dict:
+        """R23 (contrato estable): parámetros del planeta de la partida y la intensidad que le da el nivel.
+
+        Es lo que consulta el AG que optimiza el difuso por planeta. Incluye el perfil completo (`planetas.PerfilPlaneta`),
+        `intensidad` (escala del nivel), `activa` (False en la evaluación congelada) y `sobrecosto_medio` (% de batería
+        por paso). Siempre devuelve un diccionario nuevo.
+        """
+        d = planetas.parametros(self.planeta)
+        d.update({"intensidad": float(self.intensidad_planeta), "activa": bool(self.mecanicas.activa),
+                  "sobrecosto_medio": planetas.sobrecosto_medio(self.planeta, self.intensidad_planeta)})
+        return d
+
+    def _sugerencia_sin_efectos(self) -> dict:
         """Observa y decide como lo haría Mision.paso_mision, pero sobre copias.
 
         No reutiliza paso_mision porque este muta el estado. Se copian el generador aleatorio,
@@ -1053,8 +1124,15 @@ class Partida:
 
     @_cronometrado
     @_paso_de_juego
+    @_paso_de_juego
     def avanzar_modo(self, modo: str, veto: bool = True) -> dict:
         """Un paso conducido solo por rna, difuso o ag (ARX-11). Ver juego/conduccion.py."""
+        pos_previa, filas_previas = tuple(int(v) for v in self.rover.posicion), len(self.mision.log.filas)
+        resultado = self._avanzar_modo_sin_planeta(modo, veto)
+        self._efectos_planeta(pos_previa, filas_previas)
+        return resultado
+
+    def _avanzar_modo_sin_planeta(self, modo: str, veto: bool = True) -> dict:
         if self._recargando > 0:
             return self._paso_recarga()
         if self._caza_con_bfs():
@@ -1102,8 +1180,37 @@ class Partida:
             return
         if pos != self._ultima_estacion:
             self._ultima_estacion = pos
-            if self.rover.bateria < self.bateria_max * self.umbral_recarga:
+            if self.rover.bateria < self.bateria_max * self.umbral_recarga and self._conviene_recargar():
                 self._recargando = RECARGA_PASOS
+
+    def _coste_restante(self) -> float:
+        """R23: pasos que faltan para terminar la misión desde la posición actual: los sitios pendientes (en el orden del
+        plan), un margen de caza por cada dron obligatorio vivo y el tramo final al refugio. Por el mapa estimado."""
+        m = self.mision
+        pos = tuple(int(v) for v in self.rover.posicion)
+        refugio = tuple(int(v) for v in self.mundo.refugio)
+        pendientes = [tuple(int(v) for v in o) for o in m.objetivos
+                      if tuple(int(v) for v in o) in self.mundo.sitios and o not in m.visitados]
+        pendientes += [tuple(int(v) for v in o) for o in self.mundo.sitios
+                       if o not in m.visitados and tuple(int(v) for v in o) not in pendientes]
+        mascara = m.riesgo < 0.5
+        total, actual = 0.0, pos
+        for destino in pendientes + [refugio]:
+            t = camino_bfs(actual, destino, mascara)
+            total += (len(t) - 1) if t is not None else 1.5 * _cheb(actual, destino)
+            actual = destino
+        if self._drones_vivos_obligatorios():
+            total += self.margen_caza * sum(1 for d in self.combate.drones if d.vivo)
+        return total
+
+    def _conviene_recargar(self) -> bool:
+        """R23: parar tres pasos a recargar solo si la batería no alcanza para lo que queda de la misión (con el margen de
+        desvío y la reserva). Antes se recargaba siempre al pasar por una base con menos del 90 %, aunque quedaran pocos
+        pasos (p. ej. 3 pasos de recarga con el 79 % y la meta a 20 celdas)."""
+        if self.bateria_max is None:
+            return True
+        necesario = self._coste_restante() * self.factor_desvio + MARGEN_ENERGIA
+        return bool(self.rover.bateria < necesario)
 
     def _proximo_punto(self):
         """Próximo punto de la misión: el primer sitio o dron pendiente, o el refugio."""
@@ -1190,9 +1297,19 @@ class Partida:
                         bateria=round(self.rover.bateria, 2), accion="recargar", velocidad=0.0,
                         p_barranco=None, p_obstaculo=None, reglas="", motivos="RECARGA")
         if self._recargando == 0:
-            self.rover.bateria = float(self.bateria_max)
+            antes = float(self.rover.bateria)
+            objetivo = float(self.bateria_max)
+            if self.recarga_parcial:
+                # R23: la base entrega lo que la misión necesita (con el margen de desvío, la reserva y un colchón del
+                # 10 % de la capacidad), no siempre el 100 %: así recargar no regala la partida
+                necesario = self._coste_restante() * self.factor_desvio + MARGEN_ENERGIA + COLCHON_RECARGA * self.bateria_max
+                objetivo = min(objetivo, max(antes, necesario))
+            self.rover.bateria = objetivo
             self.recargas_hechas += 1
-            self._avisar("Recarga completa: batería al máximo")
+            if objetivo >= float(self.bateria_max) - 1e-9:
+                self._avisar("Recarga completa: batería al máximo")
+            else:
+                self._avisar(f"Recarga: +{round(100 * (objetivo - antes) / self.bateria_max)} % de batería (lo que pide la misión)")
         return {**self.sugerencia(), **self._posicion_estado()}
 
     def _ruta_inconsistente(self) -> bool:
@@ -1241,6 +1358,10 @@ class Partida:
             m.paso_mision()
             if self.fisica_velocidad:
                 self._resbalar_si_corresponde(pos_previa, filas_previas, visitados_previos)
+            self._efectos_planeta(tuple(int(v) for v in pos_previa), filas_previas)
+            ui = m.ultima_ia
+            if self.mecanicas.activa and ui and ui.get("paso") == m.paso and self._entrada_difuso:
+                ui["difuso"] = {**ui["difuso"], **{k: self._entrada_difuso[k] for k in ("bateria", "inclinacion")}}   # R23: lo que vio el difuso
             self._tras_paso_estacion()
             self._revisar_victoria()
             if m.paso > paso_previo:
@@ -1290,6 +1411,61 @@ class Partida:
         fila["posicion"] = str(pos_previa)
         fila["bateria"] = round(self.rover.bateria, 2)
         fila["motivos"] = (fila["motivos"] + ";" if fila.get("motivos") else "") + "D-RESBALON"
+
+    def _efectos_planeta(self, pos_previa, filas_previas: int) -> None:
+        """R23: tras un avance de una celda, aplica las mecánicas del planeta (gravedad, pendiente, viento, hielo).
+
+        Gasta el sobrecoste de energía, y si el viento de costado o el hielo desplazan al rover, lo mueve, arregla la
+        ruta (la celda alcanzada vuelve a ser la siguiente) y anota D-VIENTO o D-HIELO en la fila del paso. En el
+        refugio no hay desplazamiento. No hace nada fuera de la partida jugable.
+        """
+        mec = self.mecanicas
+        if not mec.activa or self.estado in ESTADOS_TERMINALES:
+            return
+        m = self.mision
+        destino = tuple(int(v) for v in self.rover.posicion)
+        if destino == pos_previa or max(abs(destino[0] - pos_previa[0]), abs(destino[1] - pos_previa[1])) != 1:
+            return
+        nueva_fila = len(m.log.filas) == filas_previas + 1
+        fila = m.log.filas[-1] if nueva_fila else None
+        v = float((fila or {}).get("velocidad") or 0.0)
+        if v <= 0.0:
+            v = planetas.VELOCIDAD_MANUAL                  # manual o técnica sin velocidad propia
+        extra = mec.costo_extra(pos_previa, destino, v)["total"]
+        if extra > 0:
+            self.rover.consumir(extra)
+            mec.energia_extra += extra
+        nueva, motivo = mec.perturbar(pos_previa, destino, v, lambda c: self.mundo.transitable(c))
+        if destino == tuple(int(x) for x in self.mundo.refugio):
+            nueva, motivo = destino, None                   # la llegada al refugio no se desplaza
+        if nueva != destino:
+            nueva = (int(nueva[0]), int(nueva[1]))
+            if motivo == "D-HIELO":
+                self.rover.consumir(planetas.COSTO_DESLIZ)
+                mec.energia_extra += planetas.COSTO_DESLIZ
+            self.rover.posicion = nueva
+            ruta = m.ruta
+            if len(ruta) > 1 and tuple(ruta[0]) == destino and tuple(ruta[1]) == nueva:
+                ruta.pop(0)                                 # el deslizamiento llevó justo a la celda que seguía
+            elif ruta and tuple(ruta[0]) == destino:
+                ruta.insert(0, nueva)                       # vuelve a la celda alcanzada y sigue
+            if nueva in self.mundo.sitios:
+                m.visitados.add(nueva)
+            self._avisar_planeta(motivo)
+        if fila is not None:
+            if nueva != destino:
+                fila["posicion"] = str(nueva)
+                fila["motivos"] = (fila["motivos"] + ";" if fila.get("motivos") else "") + motivo
+            fila["bateria"] = round(self.rover.bateria, 2)
+        if self.rover.bateria <= 0 and self.estado not in ESTADOS_TERMINALES:
+            m.estado = "FRACASO"
+
+    def _avisar_planeta(self, motivo) -> None:
+        """Aviso de interfaz la primera vez que el viento o el hielo desplazan al rover."""
+        if motivo == "D-HIELO" and self.mecanicas.resbalones_hielo == 1:
+            self._avisar("Hielo: el rover patinó; a menos velocidad no resbala")
+        elif motivo == "D-VIENTO" and self.mecanicas.desvios_viento == 1:
+            self._avisar("Viento: una ráfaga desvió al rover de su rumbo")
 
     def _paso_con_falla(self) -> None:
         """Paso de IA detenida por falla de sensor: no llama a paso_mision ni mueve al rover."""
@@ -1466,6 +1642,8 @@ class Partida:
             self.rover.posicion = destino
             self.rover.distancia_recorrida += 1
 
+        pos_previa = tuple(int(v) for v in (destino[0] - df, destino[1] - dc))
+        self._efectos_planeta(pos_previa, len(m.log.filas))     # R23: gravedad, viento y hielo también al conducir a mano
         pos = self.rover.posicion
         if pos in self.mundo.sitios:
             m.visitados.add(pos)
@@ -1505,6 +1683,7 @@ class Partida:
     def _tick_ambiente(self) -> None:
         """Un paso de ambiente: consume batería extra si hay tormenta o noche, o tira el dado de inicio."""
         self._marcar_senal()
+        self.mecanicas.avanzar_clima()                  # R23: ráfagas de viento del planeta
         if self._ambiente_restante > 0:
             self.rover.consumir(COSTO_AMBIENTE[self._ambiente])
             self._ambiente_restante -= 1
@@ -1513,6 +1692,8 @@ class Partida:
         elif self._rng_ambiente.random() < PROB_AMBIENTE:
             tipo = "tormenta" if self._rng_ambiente.random() < 0.5 else "noche"
             self._iniciar_ambiente(tipo)
+        elif self.mecanicas.tormenta_de_polvo():
+            self._iniciar_ambiente("tormenta")        # R23: Marte tiene más tormentas de polvo (generador propio)
         # ARX-30: meteoritos que caen solos en la partida jugable, con probabilidad por nivel
         if (self.meteoritos_activos and "meteorito" in self.eventos_activos
                 and self.estado not in ESTADOS_TERMINALES

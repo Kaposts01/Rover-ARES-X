@@ -64,9 +64,11 @@ def test_el_mapa_elegido_es_ganable_con_el_estimador_nuevo_y_es_determinista(niv
     b = Partida(semilla=2, nivel=nivel)
     assert a.semilla_mundo == b.semilla_mundo
     assert (a.mundo.tipo == b.mundo.tipo).all()
-    assert a.avisos == []                                    # pequeño: sigue habiendo variante que pasa
+    assert AVISO_SIN_GARANTIA not in a.avisos                # pequeño: sigue habiendo variante que pasa (R23: puede avisar AG-FALLBACK)
     drones = pm._drones_obligatorios(a.mundo, a.semilla, nivel)
-    assert _es_ganable(a.mundo, a.rover.bateria, drones, factor=a.factor_seguridad, margen_caza_pasos=a.margen_caza)
+    # R23: la garantía de la partida jugable cuenta con las bases de recarga y el sobrecoste medio del planeta
+    assert _es_ganable(a.mundo, a.rover.bateria, drones, bateria_max=a.bateria_max, estaciones=a.estaciones,
+                       factor=a.factor_seguridad * a.mision.factor_ambiente, margen_caza_pasos=a.margen_caza)
 
 
 def test_pequeno_no_se_queda_sin_garantia_en_una_muestra():

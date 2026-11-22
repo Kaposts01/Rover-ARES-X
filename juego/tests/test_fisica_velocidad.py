@@ -35,7 +35,9 @@ def _correr(escenario, velocidad, pasos=50, semilla=5):
 
 
 def test_bandera_apagada_por_defecto_y_en_congelado():
-    assert Partida(semilla=1).fisica_velocidad is False
+    # R23: la partida jugable (garantia=True) enciende el resbalón por pendiente; la evaluación congelada no
+    assert Partida(semilla=1).fisica_velocidad is True
+    assert Partida(semilla=1, garantia=False).fisica_velocidad is False
     assert comparacion.partida_variante(1, "hibrido", "congelado").fisica_velocidad is False
     assert comparacion.partida_variante(1, "hibrido", "exigente").fisica_velocidad is True
 

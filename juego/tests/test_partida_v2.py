@@ -47,7 +47,12 @@ def test_nivel_genera_el_mundo_del_contrato(nivel):
 
 @pytest.mark.parametrize("nivel", [1, 2, 3, 4, 5])
 def test_bateria_inicial_baja_4_por_nivel(nivel):
-    assert Partida(semilla=11, nivel=nivel).rover.bateria == 100.0 - 4.0 * (nivel - 1)
+    # R23: la curva de 100 − 4·(nivel − 1) es la de la evaluación congelada (garantia=False); la partida jugable tiene la
+    # suya, más exigente (juego/dificultad.py), y en Marte coincide con la tabla del nivel
+    assert Partida(semilla=11, nivel=nivel, garantia=False).rover.bateria == 100.0 - 4.0 * (nivel - 1)
+    jugable = Partida(semilla=11, nivel=nivel).rover.bateria
+    from juego import dificultad
+    assert jugable == dificultad.BATERIA_POR_NIVEL[nivel] and jugable <= 100.0 - 4.0 * (nivel - 1)
 
 
 def test_bateria_explicita_gana_sobre_el_nivel():

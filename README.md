@@ -1,6 +1,6 @@
 # ARES-X · rover autónomo con IA híbrida
 
-Simulación de un rover en Marte que combina una red neuronal (RNA), lógica difusa y un algoritmo genético (AG), con un supervisor de seguridad. Incluye un juego de escritorio y una interfaz en el navegador servida por una API FastAPI. Es una simulación ficticia con parámetros de referencia, no una misión real.
+Simulación de un rover planetario que combina una red neuronal (RNA), lógica difusa y un algoritmo genético (AG), con un supervisor de seguridad. Incluye un juego de escritorio y una interfaz en el navegador servida por una API FastAPI. Es una simulación ficticia con parámetros de referencia, no una misión real.
 
 ## Instalación y arranque
 
@@ -21,12 +21,30 @@ Para las pruebas y el notebook: `python -m pip install -r requirements-dev.txt`.
 - Juego de escritorio: `python juego/main.py`. Necesita `pygame-ce` con versión fija, instalado aparte: `python -m pip install pygame-ce==2.5.8`. Solo lo usa el juego de escritorio; la demo web, con `arrancar`, no lo necesita.
 - Sin ventana: `python -m juego --headless --semilla 11 --pasos 300 --nivel 3`.
 
+## Interfaz en el navegador
+
+Al abrir `http://127.0.0.1:8765/` aparece el sistema solar. Elige un planeta o pulsa Escape para ir al menú de la misión.
+
+- **Carga:** un cohete viaja al planeta. Su avance sigue a la carga real del motor.
+- **Partida:**
+  - a la izquierda, el estado del rover y la decisión de la IA;
+  - a la derecha, el panel de IA con las pestañas **RNA**, **Difuso**, **Genético** y **Misión**. Muestra lo que la IA usó de verdad en cada paso (`GET /ia/paso`), con un historial de los últimos 40 pasos y una frase del narrador;
+  - abajo, la barra de control: Reproducir/Pausa, Un paso, velocidad, cámara, Seguir, Cine, Sonido y Defensa.
+- **Cámaras:** órbita, persecución, primera persona y cenital.
+- **Modo cine:** cámara de director con subtítulos del narrador.
+- **Defensa guiada** (🎓): recorrido de 11 pasos con los criterios de la consigna y cifras en vivo.
+- **Bases de recarga y pilas:** en la partida jugable, las bases recargan al máximo y cada pila suma un 10 %. La batería se muestra como porcentaje de la capacidad del rover.
+- **Reporte de la misión:** `GET /reporte.html`, una página autocontenida con resumen, técnicas, gráficos, narración y bitácora. Se descarga desde la pantalla de fin.
+- **Laboratorios:** RNA, Difuso, Genético y Políticas. La casilla «Seguir la misión en vivo» carga las entradas del último paso.
+
+Teclas: flechas o WASD para mover (manual), Espacio para disparar, C para cambiar la cámara, F para seguir al vehículo, H para dejar solo la escena (o salir del cine) y Esc para la pausa o para saltar la intro.
+
 ## Técnicas
 
 - **RNA:** perceptrón multicapa de dos capas ocultas (32 y 16 neuronas), ReLU, tres clases (libre, obstáculo, barranco). Se entrena con mapas separados por semilla.
-- **Lógica difusa:** controlador Mamdani (min-max, centroide). Entradas: distancia al riesgo, batería e inclinación. Salida: velocidad en [0, 1].
+- **Lógica difusa:** controlador Mamdani (min-max, centroide). Entradas: distancia al riesgo, batería, inclinación y temperatura interna. Salida: velocidad en [0, 1].
 - **Algoritmo genético:** cromosoma de K puntos de paso, decodificado en una ruta con BFS. En el juego, el AG decide el orden de visita de los sitios, con la misma restricción de energía que la ejecución (entrega 2, ARX-92c). La búsqueda exhaustiva de la ruta más corta queda como respaldo, para cuando el AG no encuentra un orden viable (`juego/partida.py`, `_ag_con_todos_los_sitios`).
-- **Supervisor:** aplica vetos con código de motivo (`V-…`) y replantea con BFS si el rover queda parado varios pasos.
+- **Supervisor:** aplica vetos con código de motivo (`V-…`) y replantea con BFS si el rover queda parado varios pasos. Con sensores ruidosos fusiona varias lecturas antes de marcar una celda como barranco, y la RNA usa el modelo entrenado con el ruido de su sensor (ARX-94f, `docs/planes/medicion_94f.md`).
 
 ## Mapa sin garantía
 
@@ -36,7 +54,7 @@ Si al generar la partida ninguna de las 59 variantes del mapa pasa la comprobaci
 
 El mapa es ganable si hay una ruta por el terreno real que visita todos los sitios, cumple con los drones obligatorios y llega al refugio con la batería inicial. Se demuestra con cualquier semilla: no hay mapa especial.
 
-Dos cifras distintas, y las dos son ciertas.
+Dos cifras distintas, y las dos son ciertas. **Aviso:** las tablas se midieron antes del mundo v2 (ARX-94) y de las bases de recarga del 22/11. Hay que volver a medirlas.
 
 **Mapas con variante ganable según el estimador de garantía** (de 20 semillas):
 
@@ -64,12 +82,16 @@ El mapa grande arranca con 1,49 veces la batería del pequeño, porque su ruta e
 
 ## Límites
 
-- Solo Marte (modo rover). Los otros planetas no están implementados.
-- Con 10 sitios (escenario exigente), el híbrido gana 17 de 20 semillas tras la segunda corrección del AG (antes 12), frente a 14 con el vecino más cercano y 17 con 2-opt. El juego normal no se ve afectado. Detalle en `INFORME_TECNICO.md` (§4.3).
+- Ocho planetas: rover en los rocosos y sonda en los gigantes gaseosos. El terreno, los obstáculos y los eventos son los de Marte en todos; el planeta cambia el aspecto, la temperatura interna y el vehículo permitido.
+- Con 10 sitios (escenario exigente10, cifras regeneradas el 22/11): el híbrido gana 17 de 20 semillas, frente a 11 con el vecino más cercano y 18 con 2-opt (`docs/COMPARACION_POLITICAS_exigente10.json`).
+- Escenario exigente, con sensores muy ruidosos: el híbrido gana 19 de 20 semillas, igual que sin RNA, y con algo menos de choques. Con ese ruido, la RNA calibrada casi no puede detectar barrancos en una sola observación.
 - Los valores sin fuente son supuestos de simulación, no especificaciones de misión.
 - En el escenario normal la RNA es redundante con el supervisor. El detalle y las demás limitaciones están en `INFORME_TECNICO.md`.
 
 ## Documentación
 
-- `INFORME_TECNICO.md`: arquitectura, experimentos, resultados y limitaciones. El trabajo futuro del diseño del juego está en su sección 9.
+- `INFORME_TECNICO.md`: arquitectura, experimentos, resultados y limitaciones. El trabajo futuro del diseño del juego está en su sección 9. Algunas cifras son anteriores a la regeneración del 22/11 (lista en `docs/planes/medicion_94f.md` §5).
+- `docs/AVANCES_2026-11-22.md`: qué cambió el 21 y 22/11 (rediseño, ARX-94f, auditoría y pedidos), cómo probarlo y qué queda pendiente.
+- `docs/planes/medicion_94f.md`: atribución de las pruebas en rojo de ARX-94 y corrección del rendimiento en el escenario exigente.
+- `docs/planes/auditoria_2026-11-22.md`: comparación con el ARES-X de ejemplo, defectos encontrados y su estado.
 - `ARES_X_entregable.ipynb`: notebook de la entrega (se regenera con `python construir_notebook.py`).

@@ -1,7 +1,7 @@
 // ARES-X · escena 3D del rover (ARX-04, ARX-05 y ARX-20: diseño realista). El motor está en Python; aquí solo se dibuja y se envían acciones.
 import * as THREE from "three";
 import { OrbitControls } from "/static/vendor/OrbitControls.js";
-import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios } from "/static/laboratorio.js?v=r14";
+import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios, abrirEdicionDifuso } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
@@ -498,7 +498,18 @@ function vigenciaEvolucion(e) {
   if (!evolucion || !evoUI || evoReplanes === null || !e || e.replanes === undefined || e.replanes === evoReplanes) return;
   evoUI.mensaje(EVO.planCambio);
 }
-function abrirEdicionReglas() { document.getElementById("abrir-laboratorio").click(); const b = document.querySelector('.lab-tab[data-lab="difuso"]'); if (b) b.click(); }
+// Reglas difusas editadas por el jugador: aviso persistente en el HUD y en la pestaña Difuso mientras estén en juego
+function marcarReglasPersonalizadas(si) {
+  const b = document.getElementById("hud-reglas"); if (b) b.classList.toggle("oculto", !si);
+  if (panelIA) panelIA.reglasPersonalizadas(!!si);
+}
+async function refrescarReglasPersonalizadas() {
+  const r = await pedirSinAviso("/difuso/reglas");   // sin soporte en el motor (404) = reglas del planeta
+  marcarReglasPersonalizadas(!!(r.ok && r.cuerpo && r.cuerpo.personalizadas === true));
+}
+function abrirEdicionReglas() { abrirEdicionDifuso(); }
+const botonHudReglas = document.getElementById("hud-reglas");
+if (botonHudReglas) botonHudReglas.addEventListener("click", abrirEdicionReglas);
 // Laboratorios → Genético → «Ver la evolución en el mapa»: cierra el laboratorio, abre la pestaña y enciende la capa
 const botonVerMapa = document.getElementById("ag-ver-mapa");
 if (botonVerMapa) botonVerMapa.addEventListener("click", () => { document.getElementById("cerrar-laboratorio").click(); if (panelIA) panelIA.abrir("ag"); activarEvolucion(true); });
@@ -2684,6 +2695,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     if (!mp) return false;
     mapa = mp;
     construirMapa(mapa);
+    refrescarReglasPersonalizadas();   // las reglas difusas de la partida nueva (¿hay editadas?)
     if (capaRiesgoActiva) construirCapaRiesgo(mapa) || actualizarCapaRiesgo();   // M15: la capa sigue al mapa nuevo
     if (evolucion) { evolucion.cargar(null); if (evoUI) evoUI.datos(null); cargarEvolucion(); }   // el AG de la partida nueva
     aplicarAspecto(planetaActivo);
@@ -4223,7 +4235,7 @@ function animar() {
 }
 animar();
 
-iniciarLaboratorios({ llamar, avisar });
+iniciarLaboratorios({ llamar, avisar, alReglas: (e) => marcarReglasPersonalizadas(e.personalizadas && !e.soloPrevia) });
 
 // Al abrir: la intro (pantalla de inicio) cuando ya se conocen los planetas; si falla, el asistente queda tal cual
 planetasListos.then(() => correrIntro({ motivo: "abrir" }), () => { /* sin /planetas no hay intro */ });

@@ -836,3 +836,8 @@ body.cine-director #cine-cinta { top: calc(9vh - 14px); z-index: 30; }
 .pia-historial { margin: 6px 0 10px; }
 .lab-cabecera .lab-vivo { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 10px; font-size: 12px; color: var(--texto-suave); cursor: pointer; }
 .lab-cabecera .lab-vivo input { width: auto; margin: 0; accent-color: var(--acento); }
+/* Reporte de la misión (auditoría 22/11) */
+.boton-reporte { display: block; margin-top: 10px; padding: 10px; text-align: center; border-radius: 10px; color: #5fe6ff; border: 1px solid rgba(95, 230, 255, 0.4); text-decoration: none; font-weight: 600; }
+.boton-reporte:hover { background: rgba(95, 230, 255, 0.1); }
+#controles a.boton-enlace { display: block; margin-top: 8px; padding: 8px; text-align: center; border-radius: 8px; color: var(--texto); text-decoration: none; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(160, 200, 255, 0.18); font-size: 13px; }
+#controles a.boton-enlace:hover { background: rgba(255, 255, 255, 0.14); }

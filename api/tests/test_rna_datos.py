@@ -96,3 +96,19 @@ def test_ia_del_paso_muestra_lo_que_la_ia_uso_en_ese_paso():
         inclinaciones.add(round(d["difuso"]["entradas"]["inclinacion"], 1))
     assert len(inclinaciones) > 1      # la inclinación real cambia con el terreno (el laboratorio la deja en 0)
     assert d["ag"]["generaciones"]     # el AG es el del plan en juego
+
+
+def test_reporte_de_la_mision_es_html_autocontenido_y_escapa_el_texto():
+    c = TestClient(crear_app(Sesion(semilla=77, nivel=4)))
+    for _ in range(5):
+        c.post("/paso")
+    r = c.get("/reporte.html")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/html")
+    t = r.text
+    assert "reporte de misión" in t and "semilla 77" in t and "<svg" in t
+    assert "http://" not in t and "https://" not in t              # sin recursos externos: se abre sin conexión
+    d = c.get("/reporte.html?descargar=1")
+    assert "attachment" in d.headers.get("content-disposition", "")
+    from api.reporte import construir_html
+    malicioso = construir_html({"estado": {"avisos": ["<script>alert(1)</script>"]}, "filas_log": [], "historial": []})
+    assert "<script>alert" not in malicioso and "&lt;script&gt;" in malicioso

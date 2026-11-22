@@ -1387,6 +1387,16 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": "attachment; filename=historial_decisiones.csv"})
 
+    @app.get("/reporte.html")
+    def reporte(descargar: bool = False):
+        """Reporte de la misión en una página HTML autocontenida (solo lectura). Con descargar=1 se baja como archivo."""
+        from api.reporte import construir_html
+        sesion = activa()
+        datos = {"estado": _estado(sesion), "filas_log": list(sesion.partida.mision.log.filas),
+                 "historial": _filtrar_historial(sesion, 0, None, None, None)}
+        cabeceras = {"Content-Disposition": f"attachment; filename=ares-x_reporte_semilla_{sesion.semilla}.html"} if descargar else {}
+        return Response(content=construir_html(datos), media_type="text/html; charset=utf-8", headers=cabeceras)
+
     @app.get("/paneles")
     def paneles():
         datos = _paneles(activa())

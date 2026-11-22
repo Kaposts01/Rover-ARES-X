@@ -1591,6 +1591,7 @@ function pintarHud(e) {
   // 22/11: la sonda no se conduce a mano, pero sí se puede encuadrar y ver capas: solo se oculta el pad de conducción
   // (antes se ocultaba todo el bloque y con la sonda no había forma de recentrar la cámara)
   if (padConduccion) padConduccion.style.display = enSonda ? "none" : "";
+  document.getElementById("manual").classList.toggle("sin-pad", enSonda);   // sin pad, los botones de vista se reparten en dos filas
   const botonRover = document.getElementById("encuadrar");
   if (botonRover) { botonRover.textContent = enSonda ? "Sonda" : "Rover"; botonRover.title = enSonda ? "Centrar en la sonda" : "Centrar en el rover"; }
   if (enSonda) {
@@ -3371,7 +3372,7 @@ function cineCortePaso() {
 // Botón «Cine» de la barra: oculta los paneles (como H) y enciende el director en cualquier modo de conducción.
 // Reproducir encadena tomas automáticas; Un paso corta a un plano cercano; H, Esc, el botón o tocar la escena salen.
 async function cineDesdeBarra() {
-  if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); cineOcultoPorH = false; sincronizarCine(); return; }
+  if (cineVivo()) { salirCine(); return; }
   cineForzado = true;
   const yaOculto = document.body.classList.contains("cine");
   document.body.classList.add("cine"); cineOcultoPorH = !yaOculto;
@@ -3384,6 +3385,14 @@ async function cineDesdeBarra() {
   }
   sincronizarCine();
 }
+// Salida única del modo cine (botón «Salir», Esc, H, «Seguir»): apaga el director, quita la clase y deja cada panel como estaba
+function salirCine() {
+  if (cine && cineVivo()) cineActivar(false);
+  document.body.classList.remove("cine");
+  cineOcultoPorH = false; cineForzado = false;
+  sincronizarCine();
+}
+document.getElementById("cine-salir").addEventListener("click", () => salirCine());
 // Estado visible del cine: bandas negras y botón pulsado mientras el director está en vivo
 let cineVivoAntes = null;
 function sincronizarCine() {
@@ -3422,6 +3431,7 @@ for (const tipo of ["pointerdown", "wheel"]) {
 window.addEventListener("keydown", (ev) => {
   if (finActiva()) return;   // con la pantalla final abierta no responde ningún atajo de la partida
   // Con el director en vivo solo valen Esc y H; el resto de atajos del juego (espacio, flechas, WASD, zoom) no hacen nada
+  if (ev.key === "Escape" && !pausaActiva && document.body.classList.contains("cine") && document.getElementById("laboratorio").classList.contains("oculto")) { ev.preventDefault(); salirCine(); return; }   // Esc sale del cine (con o sin director) antes de abrir la pausa
   if (cineVivo()) {
     if (ev.key === "Escape") { cineActivar(false); return; }
     if (!(ev.key === "h" || ev.key === "H") || ["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) {
@@ -3441,7 +3451,7 @@ window.addEventListener("keydown", (ev) => {
   if (pausaActiva) return;
   // H: modo cine, oculta los paneles y deja la escena (no actúa mientras se escribe en un campo)
   if ((ev.key === "h" || ev.key === "H") && !["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) {
-    if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); cineOcultoPorH = false; return; }   // H otra vez: el director se desactiva
+    if (cineVivo()) { salirCine(); return; }   // H otra vez: el director se desactiva
     document.body.classList.toggle("cine");
     if (document.body.classList.contains("cine") && document.getElementById("cine-director").checked) {
       cineOcultoPorH = true;
@@ -3595,8 +3605,12 @@ function encuadrarVista() {
   let izq = 0, der = 0;
   if (!document.body.classList.contains("cine") && W > 760) {
     const col = document.getElementById("columna");
-    if (col && col.offsetParent !== null) izq = col.getBoundingClientRect().right;
+    // (offsetParent es siempre null en elementos fixed: con él la columna nunca contaba y el vehículo quedaba detrás de ella)
+    if (col && col.getClientRects().length > 0) izq = col.getBoundingClientRect().right;
     if (panelIA && !panelIA.elemento.classList.contains("oculto")) der = panelIA.ancho + 12;
+    // la zona de vista (ficha de la sonda y controles) ocupa el borde derecho del hueco: el centro óptico se corre para que el vehículo no quede detrás
+    const zona = document.getElementById("zona-vista");
+    if (zona && zona.getClientRects().length > 0 && !document.getElementById("manual").classList.contains("oculto")) der += zona.getBoundingClientRect().width + 12;
   }
   const desplazamiento = Math.round((der - izq) / 2);
   if (desplazamiento) camara.setViewOffset(W, H, desplazamiento, 0, W, H); else camara.clearViewOffset();
@@ -3661,11 +3675,12 @@ function montarBarraMision() {
 }
 try { montarBarraMision(); } catch (e) { console.warn("barra de control: se quedan los botones en el panel", e); }
 new MutationObserver(encuadrarVista).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+for (const id of ["manual", "menu"]) new MutationObserver(encuadrarVista).observe(document.getElementById(id), { attributes: true, attributeFilter: ["class"] });   // los controles aparecen al iniciar la partida
 encuadrarVista();
 
 // 22/11: «⌖ Seguir» / tecla F: la cámara vuelve a seguir al vehículo (rover o sonda) en cualquier modo y momento
 function seguirVehiculo() {
-  if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); }
+  if (cineVivo()) salirCine();
   if (modoCamara === "orbita") document.getElementById("encuadrar").click();   // recentra y deja el seguimiento activo
   camaraSiguiendo = true;
 }

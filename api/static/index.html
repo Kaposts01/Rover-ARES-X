@@ -69,6 +69,7 @@
     </div>
   </div>
 
+  <button id="cine-salir" class="cine-salir" type="button" aria-label="Salir del modo cine (Esc)"><span aria-hidden="true">✕</span> Salir del cine</button>
   <div id="intervencion-aviso">INTERVENCIÓN ACTIVA</div>
 
   <div id="controles" class="caja oculto">
@@ -226,61 +227,72 @@
       <div class="ayuda">Pulsa una leyenda para ocultar o mostrar esa serie.</div>
     </div>
     </div>
+  <!-- Zona de vista (derecha de la franja inferior): ficha de la sonda y controles. Van apiladas, nunca en posiciones fijas que choquen. -->
+  <div id="zona-vista" class="zona-vista">
   <!-- ARX-85: pantalla de sonda (solo en modo sonda, sin rodaje) -->
-  <div id="sonda-panel" class="caja oculto" aria-label="Pantalla de sonda">
-    <div class="kicker">Sonda</div>
+  <div id="sonda-panel" class="caja panel-hud oculto" aria-label="Pantalla de sonda">
+    <div class="panel-hud-titulo">Ficha de la sonda</div>
     <div class="fila"><span>Planeta</span><span class="valor" id="sonda-planeta">-</span></div>
     <div class="fila"><span>Temperatura interna</span><span class="valor" id="sonda-temp">-</span></div>
     <div class="fila"><span>Batería</span><span class="valor" id="sonda-bateria">-</span></div>
     <div class="fila"><span>Pasos sobre tolerancia</span><span class="valor" id="sonda-sobre">-</span></div>
     <div class="fila"><span>Estado</span><span class="valor" id="sonda-estado">-</span></div>
   </div>
-  <!-- Controles manuales: esquina inferior derecha, compactos y semitransparentes -->
-  <div id="manual" class="caja oculto">
+  <!-- Controles de vista y conducción: panel con el mismo estilo del HUD, agrupado y con etiquetas -->
+  <div id="manual" class="caja panel-hud oculto">
     <button id="manual-toggle" class="manual-cabecera" type="button" aria-expanded="true">Controles <span aria-hidden="true">▾</span></button>
     <div id="manual-cuerpo">
-      <div id="pad">
-        <button data-r="NO" aria-label="noroeste">↖</button><button data-r="N" aria-label="norte">↑</button><button data-r="NE" aria-label="noreste">↗</button>
-        <button data-r="O" aria-label="oeste">←</button><button id="disparar" class="disparo" type="button" title="Disparar (Espacio)" aria-label="disparar">●</button><button data-r="E" aria-label="este">→</button>
-        <button data-r="SO" aria-label="suroeste">↙</button><button data-r="S" aria-label="sur">↓</button><button data-r="SE" aria-label="sureste">↘</button>
+      <div class="grupo-manual" role="group" aria-label="Conducción y vista">
+        <div class="grupo-titulo">Conducción y vista</div>
+        <div class="grupo-fila">
+          <div id="pad">
+            <button data-r="NO" aria-label="noroeste">↖</button><button data-r="N" aria-label="norte">↑</button><button data-r="NE" aria-label="noreste">↗</button>
+            <button data-r="O" aria-label="oeste">←</button><button id="disparar" class="disparo" type="button" title="Disparar (Espacio)" aria-label="disparar">●</button><button data-r="E" aria-label="este">→</button>
+            <button data-r="SO" aria-label="suroeste">↙</button><button data-r="S" aria-label="sur">↓</button><button data-r="SE" aria-label="sureste">↘</button>
+          </div>
+          <div class="vista">
+            <button id="zoom-mas" class="secundario" type="button" title="Acercar" aria-label="Acercar">＋</button>
+            <button id="zoom-menos" class="secundario" type="button" title="Alejar" aria-label="Alejar">－</button>
+            <button id="encuadrar" class="secundario" type="button" title="Centrar en el rover">Rover</button>
+            <button id="ver-mapa" class="secundario" type="button" title="Ver el mapa completo">Mapa</button>
+            <button id="mapa-completo" class="secundario" type="button" title="Mapa completo: todo el terreno y la ruta planificada">Todo</button>
+          </div>
+        </div>
+        <div class="capa-nota">Flechas o WASD mueven (7/9/1/3 diagonales) · Espacio dispara · H modo cine</div>
       </div>
-      <div class="vista">
-        <button id="zoom-mas" class="secundario" type="button" title="Acercar">＋</button>
-        <button id="zoom-menos" class="secundario" type="button" title="Alejar">－</button>
-        <button id="encuadrar" class="secundario" type="button" title="Centrar en el rover">Rover</button>
-        <button id="ver-mapa" class="secundario" type="button" title="Ver el mapa completo">Mapa</button>
-        <button id="mapa-completo" class="secundario" type="button" title="Mapa completo: todo el terreno y la ruta planificada">Todo</button>
-      </div>
-      <label class="veto" title="Capa sobre el suelo: solo celdas con riesgo desde 0,3: amarillo a rojo según el riesgo estimado: mapa previo orbital (≈80 % de detección) + sensores">
-        <input type="checkbox" id="riesgo-capa"> Riesgo estimado (mapa previo + sensores)
-      </label>
-      <select id="riesgo-modo" aria-label="Modo de la capa de riesgo" title="Riesgo: solo celdas con riesgo desde 0,3. Incertidumbre: además marca lo que el sensor aún no observó.">
-        <option value="riesgo">Riesgo</option>
-        <option value="incertidumbre">Incertidumbre</option>
-      </select>
-      <div id="riesgo-leyenda" class="capa-nota" hidden>
-        <span><b style="color:#a78bfa">&#9632;</b> no observada</span>
-        <span><b style="color:#2fc773">&#9632;</b> observada y segura</span>
-        <span><b style="color:#ff4a1a">&#9632;</b> riesgo ≥ 0,3 (mapa previo orbital ≈80 % + sensores)</span>
-        <span>Una celda roja no observada viene del mapa previo.</span>
-      </div>
-      <div id="riesgo-aviso" class="capa-nota" aria-live="polite"></div>
-      <label class="veto" title="Muestra, generación a generación, los mejores órdenes de visita de sitios que probó el algoritmo genético. No es el camino recorrido.">
-        <input type="checkbox" id="evo-capa"> Evolución del AG
-      </label>
-      <div id="evo-aviso" class="capa-nota" aria-live="polite"></div>
-      <div id="evo-controles" class="oculto">
-        <button id="evo-play" class="secundario" type="button" title="Reproducir las generaciones">▶ Reproducir</button>
-        <button id="evo-recalc" class="secundario" type="button" title="Volver a calcular desde la posición actual">Recalcular</button>
-        <select id="evo-gen" aria-label="Generación"></select>
-        <div id="evo-generacion" class="capa-nota"></div>
-      </div>
-      <label class="veto" title="Panel junto al vehículo con lo que ven la RNA, el difuso y el AG en este paso">
-        <input type="checkbox" id="holo-capa"> Holograma de IA
-      </label>
-      <div id="holo-aviso" class="capa-nota" aria-live="polite"></div>
-      <div class="ayuda">Espacio: disparar. Flechas o WASD; 7/9/1/3 diagonales. H: modo cine.</div>
+      <details id="capas-escena" class="grupo-manual">
+        <summary class="grupo-titulo">Capas de la escena</summary>
+        <label class="veto" title="Capa sobre el suelo: solo celdas con riesgo desde 0,3: amarillo a rojo según el riesgo estimado: mapa previo orbital (≈80 % de detección) + sensores">
+          <input type="checkbox" id="riesgo-capa"> Riesgo estimado (mapa previo + sensores)
+        </label>
+        <select id="riesgo-modo" aria-label="Modo de la capa de riesgo" title="Riesgo: solo celdas con riesgo desde 0,3. Incertidumbre: además marca lo que el sensor aún no observó.">
+          <option value="riesgo">Riesgo</option>
+          <option value="incertidumbre">Incertidumbre</option>
+        </select>
+        <div id="riesgo-leyenda" class="capa-nota" hidden>
+          <span><b style="color:#a78bfa">&#9632;</b> no observada</span>
+          <span><b style="color:#2fc773">&#9632;</b> observada y segura</span>
+          <span><b style="color:#ff4a1a">&#9632;</b> riesgo ≥ 0,3 (mapa previo orbital ≈80 % + sensores)</span>
+          <span>Una celda roja no observada viene del mapa previo.</span>
+        </div>
+        <div id="riesgo-aviso" class="capa-nota" aria-live="polite"></div>
+        <label class="veto" title="Muestra, generación a generación, los mejores órdenes de visita de sitios que probó el algoritmo genético. No es el camino recorrido.">
+          <input type="checkbox" id="evo-capa"> Evolución del AG
+        </label>
+        <div id="evo-aviso" class="capa-nota" aria-live="polite"></div>
+        <div id="evo-controles" class="oculto">
+          <button id="evo-play" class="secundario" type="button" title="Reproducir las generaciones">▶ Reproducir</button>
+          <button id="evo-recalc" class="secundario" type="button" title="Volver a calcular desde la posición actual">Recalcular</button>
+          <select id="evo-gen" aria-label="Generación"></select>
+          <div id="evo-generacion" class="capa-nota"></div>
+        </div>
+        <label class="veto" title="Panel junto al vehículo con lo que ven la RNA, el difuso y el AG en este paso">
+          <input type="checkbox" id="holo-capa"> Holograma de IA
+        </label>
+        <div id="holo-aviso" class="capa-nota" aria-live="polite"></div>
+      </details>
     </div>
+  </div>
   </div>
 
   </div>

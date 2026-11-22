@@ -6,6 +6,8 @@ import { CIAN_HOLO, materialPlanetaHolo, materialHaloHolo, materialSolHolo, mate
 
 const N_ESTRELLAS_CERCA = 900, N_ESTRELLAS_LEJOS = 1800;
 const CON_ANILLOS = new Set(["Saturno", "Urano"]);
+const ZONA_FACTOR = 1.9;       // la zona de clic mide 1,9 veces el radio del planeta
+const ZONA_MIN_PX = 26;        // y nunca baja de 26 px de radio en pantalla (Mercurio, Tierra y Marte son diminutos)
 
 // opciones: THREE, renderer, OrbitControls, texturaPlaneta(nombre), paleta, alElegir(nombre), alPasar(nombre|null), reducido
 export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, paleta, alElegir, alPasar, reducido = false }) {
@@ -61,7 +63,9 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
     const material = propio(materialPlanetaHolo(THREE, { color })); animables.push(material);
     const malla = new THREE.Mesh(geoEsfera, material); malla.scale.setScalar(c.radioEscena); malla.userData.nombre = c.nombre;
     const haloP = new THREE.Mesh(geoHalo, propio(materialHaloHolo(THREE, CIAN_HOLO, 0.55))); haloP.scale.setScalar(c.radioEscena);
-    const grupo = new THREE.Group(); grupo.add(malla, haloP);
+    // Zona de clic invisible y más grande que el planeta (su escala se ajusta en cada cuadro para no bajar de ZONA_MIN_PX)
+    const zona = new THREE.Mesh(geoEsfera, propio(new THREE.MeshBasicMaterial({ visible: false }))); zona.visible = false; zona.userData.nombre = c.nombre;
+    const grupo = new THREE.Group(); grupo.add(malla, haloP, zona);
     if (CON_ANILLOS.has(c.nombre)) {
       const ga = propio(new THREE.RingGeometry(c.radioEscena * 1.35, c.radioEscena * 2.1, 96, 4));
       const ma = propio(new THREE.MeshBasicMaterial({ color: color.clone().lerp(new THREE.Color(CIAN_HOLO), 0.45), side: THREE.DoubleSide, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -75,7 +79,7 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
     matOrbita.uniforms.uTramos.value = Math.round(c.distanciaEscena * 3);
     const orbita = new THREE.LineLoop(propio(geometriaOrbita(THREE, c.distanciaEscena)), matOrbita);
     escena.add(orbita);
-    cuerpos.push({ datos: c, grupo, malla, material, orbita, etiqueta: null });
+    cuerpos.push({ datos: c, grupo, malla, zona, material, orbita, etiqueta: null, boton: null });
   }
 
   // Retícula sobre el planeta señalado
@@ -85,6 +89,8 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
   function actualizarResaltes(t) {
     const k = hover ? cuerpos.find((x) => x.datos.nombre === hover) : null;
     for (const x of cuerpos) {
+      if (x.boton) x.boton.classList.toggle("activo", x === k);
+      if (x.etiqueta) x.etiqueta.classList.toggle("activo", x === k);
       const u = x.material.uniforms.uResalte;
       u.value += ((x === k ? 1 : 0) - u.value) * 0.15;
       x.orbita.material.uniforms.uResalte.value = u.value;
@@ -118,16 +124,28 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
     const b = document.createElement("button");
     b.type = "button"; b.className = "in-etiqueta"; b.textContent = k.datos.nombre; b.setAttribute("role", "listitem");
     b.setAttribute("aria-label", `Elegir ${k.datos.nombre}`);
+    b.tabIndex = -1;   // el teclado usa la lista fija de abajo; estas etiquetas siguen el planeta y solo sirven al ratón
+    b.addEventListener("click", () => elegir(k.datos.nombre));
+    b.addEventListener("mouseenter", () => pasar(k.datos.nombre));
+    b.addEventListener("mouseleave", () => pasar(null));
+    k.etiqueta = b; capa.append(b);
+  }
+  // Lista fija de planetas (alternativa al clic en 3D): Tab recorre, Intro elige, y al enfocar se ve la ficha
+  const lista = document.createElement("nav");
+  lista.className = "in-lista"; lista.setAttribute("aria-label", "Elegir un planeta");
+  for (const k of cuerpos) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "in-lista-boton"; b.textContent = k.datos.nombre;
     b.addEventListener("click", () => elegir(k.datos.nombre));
     b.addEventListener("mouseenter", () => pasar(k.datos.nombre));
     b.addEventListener("mouseleave", () => pasar(null));
     b.addEventListener("focus", () => pasar(k.datos.nombre));
     b.addEventListener("blur", () => pasar(null));
-    k.etiqueta = b; capa.append(b);
+    k.boton = b; lista.append(b);
   }
   const dialogo = document.querySelector(".in-capa");   // las etiquetas viven dentro del diálogo aria-modal (foco y lectores de pantalla)
   capa.setAttribute("aria-label", "Planetas del sistema solar");
-  (dialogo || document.body).append(capa);
+  (dialogo || document.body).append(capa, lista);
 
   // Cámara y controles propios sobre el mismo canvas; los de la partida los deshabilita la app mientras dura
   const controles = new OrbitControls(cam, renderer.domElement);
@@ -148,6 +166,7 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
   let activo = false, liberado = false, resolver = null, vuelo = null, aspectoPrevio = 0, t0 = 0, primerCuadro = false;
   const raycaster = new THREE.Raycaster(), puntero = new THREE.Vector2(), v = new THREE.Vector3(), w = new THREE.Vector3();
   let hover = null;
+  let tOrbital = 0, velOrbital = 1, ultimoCuadro = performance.now();   // reloj de las órbitas: se detiene sin afectar al resto de la animación
 
   function pasar(nombre) {
     if (nombre === hover) return;
@@ -158,11 +177,12 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
     const r = renderer.domElement.getBoundingClientRect();
     puntero.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(puntero, cam);
-    const hit = raycaster.intersectObjects(cuerpos.map((k) => k.malla), false)[0];
+    const hit = raycaster.intersectObjects(cuerpos.map((k) => k.zona), false)[0];   // zonas generosas: el rayo usa el tamaño real del canvas, sin depender del devicePixelRatio
     return hit ? hit.object.userData.nombre : null;
   }
   let abajo = null;
   const onMover = (ev) => { if (!activo || vuelo) return; const n = cuerpoBajo(ev); pasar(n); renderer.domElement.style.cursor = n ? "pointer" : ""; };
+  const onSalir = () => { if (!activo || vuelo) return; pasar(null); renderer.domElement.style.cursor = ""; };   // el puntero salió del lienzo: la órbita sigue
   const onAbajo = (ev) => { abajo = { x: ev.clientX, y: ev.clientY }; };
   const onArriba = (ev) => {
     if (!activo || vuelo || !abajo) return;
@@ -173,6 +193,18 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
   renderer.domElement.addEventListener("pointermove", onMover);
   renderer.domElement.addEventListener("pointerdown", onAbajo);
   renderer.domElement.addEventListener("pointerup", onArriba);
+  renderer.domElement.addEventListener("pointerleave", onSalir);
+
+  // Ajusta cada zona de clic: 1,9 veces el radio y, como mínimo, ZONA_MIN_PX de radio en pantalla
+  function ajustarZonas() {
+    const alto = renderer.domElement.clientHeight || 600, tanMitad = Math.tan((cam.fov * Math.PI) / 360);
+    for (const k of cuerpos) {
+      k.grupo.getWorldPosition(v);
+      const mundoPorPx = (2 * cam.position.distanceTo(v) * tanMitad) / alto;
+      const r = Math.max(k.datos.radioEscena * ZONA_FACTOR, ZONA_MIN_PX * mundoPorPx);
+      k.zona.scale.setScalar(r);   // geoEsfera tiene radio 1 y el grupo escala 1
+    }
+  }
 
   function terminar() {
     if (!activo) return;
@@ -248,13 +280,18 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
         aspectoPrevio = aspecto; cam.aspect = aspecto; cam.updateProjectionMatrix();
         if (sinMover) encuadrar(aspecto);
       }
+      const ahora = performance.now(), dt = Math.min(0.1, (ahora - ultimoCuadro) / 1000); ultimoCuadro = ahora;
       if (animado) {
+        // Con un planeta señalado (ratón, lista o etiqueta) las órbitas se frenan con suavidad hasta detenerse; al soltarlo, retoman
+        velOrbital += ((hover ? 0 : 1) - velOrbital) * (1 - Math.exp(-dt * 7));
+        tOrbital += dt * velOrbital;
         for (const k of cuerpos) {
-          const p = posicionOrbital(t, k.datos); k.grupo.position.set(p[0], p[1], p[2]);
-          k.malla.rotation.y += 0.004;
+          const p = posicionOrbital(tOrbital, k.datos); k.grupo.position.set(p[0], p[1], p[2]);
+          k.malla.rotation.y += 0.004 * velOrbital;
         }
         sol.rotation.y += 0.002;
       }
+      ajustarZonas();
       if (vuelo) {
         const u = (performance.now() - vuelo.t0) / 1000 / vuelo.fases.aproximacion;
         const s = pasoVuelo(u);
@@ -280,9 +317,10 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
     renderer.domElement.removeEventListener("pointermove", onMover);
     renderer.domElement.removeEventListener("pointerdown", onAbajo);
     renderer.domElement.removeEventListener("pointerup", onArriba);
+    renderer.domElement.removeEventListener("pointerleave", onSalir);
     renderer.domElement.style.cursor = "";
     try { controles.dispose(); } catch (e) { /* ya liberado */ }
-    capa.remove();
+    capa.remove(); lista.remove();
     for (const r of recursos) { try { r.dispose(); } catch (e) { /* ya liberado */ } }
     recursos.length = 0;
     escena.clear();

@@ -127,10 +127,10 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     document.documentElement.style.setProperty("--ancho-panel-ia", `${anchoReal()}px`);
     avisarAncho();
   }
-  function aplicarPlegado() {
+  function aplicarPlegado(persistir = true) {
     raiz.classList.toggle("plegado", plegado);
     bPlegar.textContent = plegado ? "«" : "»"; bPlegar.title = plegado ? "Abrir el panel" : "Plegar el panel";
-    guardar(CLAVE_PLEGADO, plegado ? "1" : "0");
+    if (persistir) guardar(CLAVE_PLEGADO, plegado ? "1" : "0");
     aplicarAncho();
     if (!plegado) redibujar();
   }
@@ -459,5 +459,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   document.body.append(raiz);
   aplicarPlegado();
   abrir(pestana);
-  return { actualizar, mostrar, abrir, reiniciar, seccion: (id) => secciones[id] || null, reglasPersonalizadas: (si) => difAviso.classList.toggle("oculto", !si), redibujar, get ancho() { return anchoReal(); }, elemento: raiz };
+  // Ancho angosto: el panel se pliega solo a su tira lateral sin tocar la preferencia guardada; al volver a un ancho normal se restaura
+  function plegarPorAncho(si) { plegado = si ? true : leer(CLAVE_PLEGADO, "0") === "1"; aplicarPlegado(false); if (!plegado) { redibujar(); actualizar({ forzar: true }); } }
+  return { actualizar, mostrar, abrir, reiniciar, plegarPorAncho, seccion: (id) => secciones[id] || null, reglasPersonalizadas: (si) => difAviso.classList.toggle("oculto", !si), redibujar, get ancho() { return anchoReal(); }, elemento: raiz };
 }

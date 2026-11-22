@@ -2119,8 +2119,8 @@ function huecoLibre() {
   let l = 8, r = W - 8, t = 60, b = H - 8;
   if (!document.body.classList.contains("cine")) {
     const col = document.getElementById("columna"), dock = document.getElementById("dock");
-    if (col && col.getClientRects().length > 0 && W > 760) l = col.getBoundingClientRect().right + 8;
-    if (panelIA && !panelIA.elemento.classList.contains("oculto") && W > 760) r = W - panelIA.ancho - 20;
+    if (col && col.getClientRects().length > 0 && W > 900) l = col.getBoundingClientRect().right + 8;
+    if (panelIA && !panelIA.elemento.classList.contains("oculto") && W > 900) r = W - panelIA.ancho - 20;
     if (dock && dock.getClientRects().length > 0) b = Math.min(b, dock.getBoundingClientRect().top - 8);
   }
   if (r - l < 120 || b - t < 120) return { l: 8, r: W - 8, t: 8, b: H - 8 };
@@ -2750,6 +2750,28 @@ document.getElementById("manual-toggle").addEventListener("click", (ev) => {
   manual.classList.toggle("abierto");
   ev.currentTarget.setAttribute("aria-expanded", String(!manual.classList.contains("plegado")));
 });
+
+// Ancho angosto (hasta 900 px): la columna izquierda es un cajón, el panel de IA una tira plegada y los controles de vista una chip
+const anchoAngosto = window.matchMedia("(max-width: 900px)");
+function fijarCajonIzquierdo(abierto) {
+  document.body.classList.toggle("cajon-izq", abierto);
+  const asa = document.getElementById("cajon-izq"); if (asa) asa.setAttribute("aria-expanded", String(abierto));
+}
+let manualPlegadoPorAncho = false;
+function ajustarAnchoAngosto() {
+  const angosto = anchoAngosto.matches;
+  if (!angosto) fijarCajonIzquierdo(false);
+  const manual = document.getElementById("manual"), toggle = document.getElementById("manual-toggle");
+  if (angosto && manual && !manual.classList.contains("plegado")) { toggle.click(); manualPlegadoPorAncho = true; }   // los controles de vista empiezan plegados
+  else if (!angosto && manualPlegadoPorAncho && manual && manual.classList.contains("plegado")) { toggle.click(); manualPlegadoPorAncho = false; }   // y se abren al volver a un ancho normal
+  if (panelIA) panelIA.plegarPorAncho(angosto);
+  try { encuadrarVista(); } catch (e) { /* aún sin cámara */ }
+}
+document.getElementById("cajon-izq").addEventListener("click", () => fijarCajonIzquierdo(!document.body.classList.contains("cajon-izq")));
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && document.body.classList.contains("cajon-izq") && anchoAngosto.matches) fijarCajonIzquierdo(false); });
+anchoAngosto.addEventListener("change", ajustarAnchoAngosto);
+// Tocar la escena cierra el cajón
+renderer.domElement.addEventListener("pointerdown", () => { if (anchoAngosto.matches && document.body.classList.contains("cajon-izq")) fijarCajonIzquierdo(false); });
 
 // Pantalla de carga (ARX-60): vuelo del cohete ligado a la carga real; sin animación, una barra simple. Con transición del vehículo al pulsar «Nueva» o reiniciar
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -3956,7 +3978,7 @@ function mostrarSubtitulo(texto) {
 function encuadrarVista() {
   const W = window.innerWidth, H = window.innerHeight;
   let izq = 0, der = 0;
-  if (!document.body.classList.contains("cine") && W > 760) {
+  if (!document.body.classList.contains("cine") && W > 900) {
     const col = document.getElementById("columna");
     // (offsetParent es siempre null en elementos fixed: con él la columna nunca contaba y el vehículo quedaba detrás de ella)
     if (col && col.getClientRects().length > 0) izq = col.getBoundingClientRect().right;
@@ -3992,6 +4014,7 @@ try {
   });
   panelIA.seccion("ag").prepend(evoUI.elemento);
   if (!document.getElementById("menu").classList.contains("oculto")) panelIA.mostrar(false);
+  ajustarAnchoAngosto();
 } catch (e) { console.warn("panel de IA: no se pudo crear; la partida sigue sin él", e); panelIA = null; }
 // Barra de control fija (Reproducir, Un paso, velocidad): siempre a la vista durante la partida, sea cual sea la pestaña del panel
 function montarBarraMision() {

@@ -1190,3 +1190,41 @@ button.badge-reglas { border: 0; cursor: pointer; margin: 6px 0 0; width: auto; 
 .dedit-campos { display: grid; gap: 4px; margin-top: 4px; }
 .dedit-campo { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; font-size: 12px; }
 .dedit-etq { min-width: 74px; color: var(--c); font-weight: 600; }
+
+/* ---- R23: anchos angostos (hasta 900 px): paneles plegables en cajón para que el vehículo no quede tapado.
+   Por encima de 900 px nada de esto se aplica: 1366×768 y superiores quedan igual. ---- */
+.cajon-asa { display: none; }
+@media (max-width: 900px) {
+  :root { --ancho-izq: 0px; }
+  /* columna izquierda: cajón que se abre sobre la escena y se cierra con el mismo botón */
+  #columna { top: 0; left: 0; bottom: 0; width: min(300px, 86vw); max-width: none; max-height: none; height: 100%; border-radius: 0 var(--radio) var(--radio) 0;
+    z-index: 42; transform: translateX(-104%); transition: transform 0.2s ease; visibility: hidden; }
+  body.cajon-izq #columna { transform: none; visibility: visible; }
+  #columna #decision { max-height: none; }
+  .cajon-asa { display: inline-flex; align-items: center; gap: 6px; position: fixed; left: 0; top: 42%; z-index: 43; margin: 0; padding: 8px 12px 8px 8px; width: auto;
+    background: var(--cristal-solido); color: var(--acento); border: 1px solid var(--borde); border-left: 0; border-radius: 0 10px 10px 0; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: left 0.2s ease; }
+  body.cajon-izq .cajon-asa { left: min(300px, 86vw); }
+  body.cajon-izq .cajon-asa .cajon-flecha { transform: rotate(180deg); }
+  body:has(#menu:not(.oculto)) .cajon-asa, body.cine .cajon-asa, body.intro-activa .cajon-asa { display: none; }
+  /* panel de IA: tira lateral plegada (46 px); abierto, cubre casi todo el ancho sin empujar la escena */
+  #panel-ia { top: 12px; bottom: 12px; left: auto; right: 12px; height: auto; width: min(var(--ancho-panel, 400px), calc(100vw - 24px)); z-index: 41; }
+  #panel-ia.plegado { width: 46px; height: auto; }
+  #panel-ia.plegado .pia-cabecera { flex-direction: column-reverse; }
+  #panel-ia.plegado .pia-tabs { flex-direction: column; }
+  #panel-ia.plegado .pia-tab { writing-mode: vertical-rl; }
+  /* la franja inferior ocupa el ancho libre, sin pasar por debajo de la tira del panel */
+  .dock { left: 12px; right: 70px; bottom: 12px; }
+  .dock > .zona-vista { width: min(224px, 100%); }
+  .registro { left: 24px; width: min(340px, calc(100vw - 130px)); }
+  #mensaje { left: 50%; transform: translateX(-50%); max-width: calc(100vw - 150px); top: 12px; right: auto; font-size: 12px; }
+  #intervencion-aviso { left: 50%; }
+  /* controles de vista: una chip plegada; el cuerpo solo se despliega al pulsar */
+  #manual { padding: 6px 8px; }
+}
+@media (max-width: 760px) {
+  #mensaje { max-width: calc(100vw - 100px); }
+  #controles { top: auto; }
+  .dock { right: 66px; }
+  .barra-mision button { padding: 6px 9px; font-size: 12px; }
+  .barra-mision #reproducir { min-width: 0; }
+}

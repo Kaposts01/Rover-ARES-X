@@ -112,3 +112,13 @@ def test_reporte_de_la_mision_es_html_autocontenido_y_escapa_el_texto():
     from api.reporte import construir_html
     malicioso = construir_html({"estado": {"avisos": ["<script>alert(1)</script>"]}, "filas_log": [], "historial": []})
     assert "<script>alert" not in malicioso and "&lt;script&gt;" in malicioso
+
+
+def test_narrador_explica_rna_difuso_y_supervisor_en_lenguaje_natural():
+    from api.narrador import narrar_fila
+    t = narrar_fila({"paso": 7, "accion": "replanificar", "velocidad": 0.0, "p_barranco": 0.91, "p_obstaculo": 0.02,
+                     "reglas": "R1", "motivos": "V-RNA-BARRANCO;RNA-RIESGO:(3, 4):0.91"})
+    assert t.startswith("Paso 7.") and "barranco (91 %)" in t and "R1" in t
+    assert "vetó el avance" in t and "replanificó" in t
+    assert narrar_fila({}) == "Todavía no hay pasos de la IA."
+    assert "CODIGO-NUEVO" not in narrar_fila({"paso": 1, "accion": "avanzar", "motivos": "CODIGO-NUEVO"})   # sin traducción: no inventa

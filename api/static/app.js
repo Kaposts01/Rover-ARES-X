@@ -3366,6 +3366,16 @@ window.addEventListener("resize", () => {
   dibujarGrafico();
 });
 
+// Subtítulos del narrador: solo se ven en el modo cine (dentro de la banda negra inferior)
+let subtituloTimer = null;
+function mostrarSubtitulo(texto) {
+  let sub = document.getElementById("subtitulo-ia");
+  if (!sub) { sub = document.createElement("div"); sub.id = "subtitulo-ia"; sub.setAttribute("aria-live", "polite"); document.body.append(sub); }
+  sub.textContent = texto || "";
+  sub.classList.toggle("visible", !!texto);
+  clearTimeout(subtituloTimer);
+  subtituloTimer = setTimeout(() => sub.classList.remove("visible"), 9000);
+}
 // ---------- panel derecho de IA y encuadre de la escena ----------
 // La escena ocupa toda la ventana, pero el centro óptico se corre al centro del hueco que dejan los paneles,
 // para que el rover no quede tapado por la columna izquierda ni por el panel de IA.
@@ -3390,6 +3400,7 @@ try {
       if (seccion) { const b = document.querySelector(`.lab-tab[data-lab="${seccion}"]`); if (b) b.click(); }
     },
     alMaximizar: () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "h" })),   // lo mismo que la tecla H
+    alNarrar: (texto) => mostrarSubtitulo(texto),                                         // subtítulos en el modo cine
   });
   if (!document.getElementById("menu").classList.contains("oculto")) panelIA.mostrar(false);
 } catch (e) { console.warn("panel de IA: no se pudo crear; la partida sigue sin él", e); panelIA = null; }

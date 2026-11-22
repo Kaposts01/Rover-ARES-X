@@ -1155,6 +1155,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             ag.update({"generaciones": res.historial, "viable": bool(res.viable), "evaluados": int(res.evaluados),
                        "mejor_desglose": _desglose_fitness(res.mejor_desglose)})
         salida["ag"] = ag
+        from api.narrador import narrar_fila
+        salida["narracion"] = narrar_fila(ultima) if ultima else narrar_fila({})
         return salida
 
     @app.get("/rna/red")

@@ -858,3 +858,10 @@ body.cine #hud-navegacion { display: none; }
 .hn-mira::after { top: 50%; left: -10px; right: -10px; height: 1px; }
 .hn-rotulo { position: absolute; left: var(--centro); top: 74px; transform: translateX(-50%); font: 11px "Cascadia Mono", Consolas, monospace; letter-spacing: 0.2em; color: rgba(120, 255, 200, 0.9); }
 .barra-mision { flex-wrap: wrap; justify-content: center; max-width: 100%; }
+/* Narrador de pasos (auditoría 22/11) */
+.pia-narracion { font-size: 12px; line-height: 1.45; margin: -4px 0 10px; color: #d9f6ff; }
+.pia-narracion:empty { display: none; }
+#subtitulo-ia { display: none; position: fixed; left: 50%; bottom: calc(9vh + 120px); transform: translateX(-50%); z-index: 31; max-width: min(860px, 80vw);
+  padding: 8px 14px; border-radius: 6px; background: rgba(0, 0, 0, 0.6); color: #f4f7fb; font-size: 15px; line-height: 1.45; text-align: center; opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+body.cine #subtitulo-ia { display: block; }
+#subtitulo-ia.visible { opacity: 1; }

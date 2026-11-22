@@ -24,7 +24,7 @@ async function obtener(ruta) {
 }
 
 // opciones: controles (nodo a llevar a la pestaña Misión), alCambiarAncho(px), alAmpliar(laboratorio), alMaximizar()
-export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmpliar = null, alMaximizar = null } = {}) {
+export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmpliar = null, alMaximizar = null, alNarrar = null } = {}) {
   const raiz = el("aside", "pia oculto"); raiz.id = "panel-ia"; raiz.setAttribute("aria-label", "Panel de IA");
   const asa = el("div", "pia-asa"); asa.title = "Arrastra para cambiar el ancho"; asa.setAttribute("aria-hidden", "true");
   const cabecera = el("div", "pia-cabecera");
@@ -40,7 +40,8 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
 
   // Cabecera común: el paso, la celda y el rumbo de la decisión que se está mostrando (se ve cambiar paso a paso)
   const pasoInfo = el("div", "pia-paso", "Sin pasos todavía: pulsa «Un paso» o «Reproducir».");
-  cuerpo.append(pasoInfo);
+  const narracion = el("p", "pia-narracion"); narracion.setAttribute("aria-live", "polite");
+  cuerpo.append(pasoInfo, narracion);
   function historial(titulo) {
     const caja = el("div", "pia-historial");
     const t = el("div", "pia-mini-titulo", titulo);
@@ -144,6 +145,8 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
       if (!d) { pasoInfo.textContent = "Sin datos (no hay partida o el motor no respondió)."; return; }
       iaUlt = d;
       const nuevo = d.hay_paso && d.paso !== ultimoPaso;
+      narracion.textContent = d.hay_paso ? (d.narracion || "") : "";
+      if (nuevo && alNarrar) { try { alNarrar(d.narracion || ""); } catch (e) { /* sin subtítulos */ } }
       if (!d.hay_paso) { pasoInfo.textContent = "Sin pasos todavía: pulsa «Un paso» o «Reproducir»."; }
       else {
         const sup = d.supervisor || {};

@@ -107,6 +107,8 @@ def construir_html(datos: dict) -> str:
         f"<td>{_e(h.get('accion'))}</td><td>{_e(h.get('tecnica'))}</td><td>{_e(h.get('motivo'))}</td>"
         f"<td class='n'>{_num(h.get('velocidad'), 2)}</td><td class='n'>{_num(h.get('p_barranco'), 2)}</td>"
         f"<td class='n'>{_num(h.get('bateria'), 1)}</td><td>{_e(h.get('reglas'))}</td></tr>" for h in hist)
+    from api.narrador import narrar_fila
+    narracion = "".join(f"<li>{_e(narrar_fila(f))}</li>" for f in log)
     semilla, nivel = est.get("semilla", "-"), est.get("nivel", "-")
     return f"""<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -127,6 +129,7 @@ svg {{ width: 100%; height: auto; background: #0f1626; border-radius: 6px; }}
 .eje {{ stroke: #2a3a58; }} .et {{ fill: #8fa0bd; font-size: 10px; }}
 .nota {{ color: #8fa0bd; font-size: 12px; }}
 .bitacora {{ max-height: 520px; overflow: auto; }}
+.narracion li {{ margin: 3px 0; }} summary {{ cursor: pointer; color: #5fe6ff; }}
 @media print {{ body {{ background: #fff; color: #111; }} svg {{ background: #f4f6fa; }} .bitacora {{ max-height: none; }} }}
 </style></head><body><main>
 <h1>ARES-X · reporte de misión</h1>
@@ -141,6 +144,8 @@ svg {{ width: 100%; height: auto; background: #0f1626; border-radius: 6px; }}
 </div>
 <h2>Evolución por paso</h2>{graficos}
 <h2>Avisos de la misión</h2><ul>{avisos}</ul>
+<h2>Narración paso a paso</h2>
+<details><summary>{len(log)} pasos explicados por el narrador (desplegar)</summary><ol class="narracion">{narracion}</ol></details>
 <h2>Bitácora ({len(hist)} acciones)</h2>
 <div class="bitacora"><table><thead><tr><th>#</th><th>paso</th><th>modo</th><th>acción</th><th>técnica</th><th>motivo</th><th>vel.</th><th>p(b)</th><th>bat.</th><th>reglas</th></tr></thead>
 <tbody>{bitacora or "<tr><td colspan='10'>Sin acciones todavía.</td></tr>"}</tbody></table></div>

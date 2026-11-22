@@ -804,3 +804,6 @@ function iniciarPoliticas() {
       : "Pasa el ratón sobre una barra.";
   });
 }
+
+// Compartidas con el panel derecho de IA (panel_ia.js)
+export { dibujarLineas, preparar };

@@ -1079,6 +1079,22 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             entrada[clave] = _valor_rango(dados[param], param, lo, hi, 0.0 if actual != actual else actual)
         return _rna_entrada(sesion, entrada)
 
+    @app.get("/rna/red")
+    def red_rna():
+        """Forma y pesos del MLP que usa la partida, para dibujar la red en el panel (solo lectura).
+        `capas`: neuronas por capa (entrada, ocultas, salida); `pesos[i]`: matriz capas[i] × capas[i+1], redondeada a 3
+        decimales. Los pesos no cambian durante la partida: el panel la pide una vez y luego solo /rna."""
+        from rna import CLASES
+        modelo = _modelo_rna(activa())
+        nn = modelo.modelo
+        capas = [int(nn.coefs_[0].shape[0])] + [int(W.shape[1]) for W in nn.coefs_]
+        return {
+            "modelo": _info_modelo(modelo),
+            "capas": capas,
+            "clases": [CLASES[c] for c in nn.classes_],
+            "pesos": [[[round(float(v), 3) for v in fila] for fila in W] for W in nn.coefs_],
+        }
+
     @app.get("/rna/evaluacion")
     def evaluacion_rna(modelo: str = "notebook", perfil: str = None):
         """Matriz de confusión, macro-F1, recall de barrancos y línea base de la RNA (CA-06).

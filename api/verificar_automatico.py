@@ -53,7 +53,7 @@ def verificar(url: str, carpeta: str) -> dict:
             "['EXITO','FRACASO','SIN_RUTA','MODO_SEGURO'].includes(document.getElementById('h-estado').textContent)",
             timeout=180000,
         )
-        pag.click("#reproducir") if pag.inner_text("#reproducir") == "Detener" else None
+        pag.click("#reproducir") if "Pausa" in pag.inner_text("#reproducir") else None
         res["estado_automatico_semilla_11"] = _estado(pag)
         res["mensaje_final"] = pag.inner_text("#mensaje")
         pag.wait_for_timeout(500)

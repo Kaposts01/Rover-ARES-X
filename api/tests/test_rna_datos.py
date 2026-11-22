@@ -65,3 +65,14 @@ def test_serie_por_paso_tiene_bateria_velocidad_y_accion(cliente):
     assert len(filas) == 2
     assert {"bateria", "velocidad", "accion", "fitness"} <= set(filas[0])
     assert filas[0]["velocidad"] is not None
+
+
+def test_rna_red_da_forma_y_pesos_coherentes_con_las_activaciones(cliente):
+    red = cliente.get("/rna/red").json()
+    act = cliente.get("/rna").json()
+    assert red["capas"] == [len(red["modelo"]["rasgos"]), 32, 16, 3]
+    assert red["modelo"] == act["modelo"]
+    assert len(red["pesos"]) == 3
+    for i, W in enumerate(red["pesos"]):
+        assert len(W) == red["capas"][i] and all(len(f) == red["capas"][i + 1] for f in W)
+    assert set(red["clases"]) == set(act["probabilidades"])

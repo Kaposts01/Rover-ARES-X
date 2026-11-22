@@ -10,6 +10,7 @@ import { adaptarAG, ROTULO_EVOLUCION } from "/static/evolucion_datos.js?v=r14";
 import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
 import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
+import { crearPanelIA } from "/static/panel_ia.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
@@ -27,6 +28,7 @@ const elMensaje = document.getElementById("mensaje");
 const escena = document.getElementById("escena");
 let reproduciendo = null;   // id del temporizador de reproducción, o null
 let cargando = false;       // true mientras el motor crea una partida nueva
+let panelIA = null;         // panel derecho de IA (se crea al final del módulo)
 
 function avisar(texto) {
   elMensaje.textContent = texto;
@@ -1550,6 +1552,7 @@ async function refrescarPaneles() {
   // Los gráficos solo se piden si el panel está abierto
   if (!document.getElementById("graficos").classList.contains("plegado")) await refrescarGraficos();
   marcarDesbordes();
+  if (panelIA) panelIA.actualizar({ firma: firmaPlanHolo(estado) });   // el panel de IA pide solo lo de su pestaña abierta
   await refrescarMovilesYEscenario();
 }
 
@@ -1961,6 +1964,7 @@ function volverAlInicio(motivo = "salir") {
   document.getElementById("controles").classList.add("oculto");
   document.getElementById("manual").classList.add("oculto");
   document.getElementById("menu").classList.remove("oculto");
+  if (panelIA) panelIA.mostrar(false);
   correrIntro({ motivo });
 }
 // motivo: «abrir» | «inicio» | «salir» | «manual» («Ver intro», ignora la casilla). Si algo falla, el asistente sigue igual (nunca lanza ni se queda colgado).
@@ -2226,6 +2230,7 @@ document.getElementById("menu-aleatoria").addEventListener("click", () => {
 // Una sola configuración: el asistente central. Tras iniciar, el panel derecho muestra el resumen.
 function mostrarMision(semilla, nivel) {
   document.getElementById("controles").classList.remove("oculto");
+  if (panelIA) panelIA.mostrar(true);
   document.getElementById("manual").classList.remove("oculto");
   document.getElementById("semilla").value = "";
   document.getElementById("nivel").value = nivel;
@@ -2691,11 +2696,12 @@ async function disparar() {
   await refrescarPaneles();
 }
 
+const ROTULO_PLAY = "▶ Reproducir", ROTULO_PAUSA = "❚❚ Pausa";
 function detenerReproduccion() {
   if (reproduciendo !== null) {
     clearInterval(reproduciendo);
     reproduciendo = null;
-    document.getElementById("reproducir").textContent = "Iniciar";
+    document.getElementById("reproducir").textContent = ROTULO_PLAY;
   }
 }
 
@@ -2705,7 +2711,7 @@ function alternarReproduccion() {
     return;
   }
   const ms = Number(document.getElementById("velocidad").value);
-  document.getElementById("reproducir").textContent = "Detener";
+  document.getElementById("reproducir").textContent = ROTULO_PAUSA;
   reproduciendo = setInterval(() => { paso(); }, ms);
 }
 
@@ -3237,11 +3243,56 @@ document.getElementById("ver-mapa").addEventListener("click", () => {
 
 window.addEventListener("resize", () => {
   camara.aspect = window.innerWidth / window.innerHeight;
-  camara.updateProjectionMatrix();
+  encuadrarVista();
   renderer.setSize(window.innerWidth, window.innerHeight);
   if (cinePost) cinePost.ajustar(window.innerWidth, window.innerHeight);
   dibujarGrafico();
 });
+
+// ---------- panel derecho de IA y encuadre de la escena ----------
+// La escena ocupa toda la ventana, pero el centro óptico se corre al centro del hueco que dejan los paneles,
+// para que el rover no quede tapado por la columna izquierda ni por el panel de IA.
+function encuadrarVista() {
+  const W = window.innerWidth, H = window.innerHeight;
+  let izq = 0, der = 0;
+  if (!document.body.classList.contains("cine") && W > 760) {
+    const col = document.getElementById("columna");
+    if (col && col.offsetParent !== null) izq = col.getBoundingClientRect().right;
+    if (panelIA && !panelIA.elemento.classList.contains("oculto")) der = panelIA.ancho + 12;
+  }
+  const desplazamiento = Math.round((der - izq) / 2);
+  if (desplazamiento) camara.setViewOffset(W, H, desplazamiento, 0, W, H); else camara.clearViewOffset();
+  camara.updateProjectionMatrix();
+}
+try {
+  panelIA = crearPanelIA({
+    controles: document.getElementById("controles"),
+    alCambiarAncho: () => encuadrarVista(),
+    alAmpliar: (seccion) => {
+      document.getElementById("abrir-laboratorio").click();
+      if (seccion) { const b = document.querySelector(`.lab-tab[data-lab="${seccion}"]`); if (b) b.click(); }
+    },
+    alMaximizar: () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "h" })),   // lo mismo que la tecla H
+  });
+  if (!document.getElementById("menu").classList.contains("oculto")) panelIA.mostrar(false);
+} catch (e) { console.warn("panel de IA: no se pudo crear; la partida sigue sin él", e); panelIA = null; }
+// Barra de control fija (Reproducir, Un paso, velocidad): siempre a la vista durante la partida, sea cual sea la pestaña del panel
+function montarBarraMision() {
+  const dock = document.getElementById("dock");
+  const rep = document.getElementById("reproducir"), un = document.getElementById("paso"), vel = document.getElementById("velocidad");
+  if (!dock || !rep || !un || !vel) return;
+  const barra = document.createElement("div");
+  barra.id = "barra-mision"; barra.className = "barra-mision"; barra.setAttribute("role", "toolbar"); barra.setAttribute("aria-label", "Control de la simulación");
+  const viejaSim = document.getElementById("simulacion"), viejaRep = rep.closest("section");
+  rep.textContent = ROTULO_PLAY; un.textContent = "⏭ Un paso"; un.title = "Avanza un paso de la IA";
+  barra.append(rep, un, vel.closest("label") || vel);
+  dock.prepend(barra);
+  if (viejaSim) viejaSim.hidden = true;
+  if (viejaRep && viejaRep !== viejaSim && !viejaRep.querySelector("button")) viejaRep.hidden = true;
+}
+try { montarBarraMision(); } catch (e) { console.warn("barra de control: se quedan los botones en el panel", e); }
+new MutationObserver(encuadrarVista).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+encuadrarVista();
 
 // ---------- bucle ----------
 // Contador de FPS (?fps=1): para medir el rendimiento en el propio navegador y GPU

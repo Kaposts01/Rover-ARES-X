@@ -240,7 +240,11 @@ def _sensores(p) -> dict:
     if not falla:
         obs = conduccion._observar(p)
         rasgos = (obs.get(rumbo) or next(iter(obs.values())))["rasgos"]
+    # ARX-94 (QA O-5): nombres reales de los 4 rasgos según el modelo activo (v1: borde/gradiente; v2: desnivel/contraste)
+    rna = p.mision.rna
+    rna = rna._rna if hasattr(rna, "_rna") else rna
     return {"rumbo": p.rover.rumbo or "sin rumbo",
+            "rasgos_nombres": list(getattr(rna, "nombres", [])),
             "proximidad": None if rasgos is None else finito(rasgos[0]),
             "borde": None if rasgos is None else finito(rasgos[1]),
             "gradiente": None if rasgos is None else finito(rasgos[2]),

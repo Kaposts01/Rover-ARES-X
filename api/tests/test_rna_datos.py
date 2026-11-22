@@ -88,7 +88,12 @@ def test_ia_del_paso_muestra_lo_que_la_ia_uso_en_ese_paso():
         d = c.get("/ia/paso").json()
         assert d["hay_paso"] is True
         # el difuso recalculado con las entradas del paso da la misma velocidad que usó el motor
-        assert d["difuso"]["salida"]["velocidad"] == pytest.approx(d["difuso"]["velocidad_usada"], abs=1e-3)
+        if d["supervisor"]["accion"] == "avanzar":
+            assert d["difuso"]["salida"]["velocidad"] == pytest.approx(d["difuso"]["velocidad_usada"], abs=1e-3)
+        else:
+            # R23: con un veto del supervisor (la RNA reentrenada vetea algún paso) el rover no avanza y la velocidad que
+            # se aplicó es 0, aunque el difuso, con las mismas entradas, habría dado su velocidad
+            assert d["difuso"]["velocidad_usada"] == pytest.approx(0.0, abs=1e-3)
         # la RNA con los rasgos del paso da las probabilidades que usó el motor
         for k, v in d["rna"]["probabilidades_usadas"].items():
             assert d["rna"]["probabilidades"][k] == pytest.approx(v, abs=2e-3)

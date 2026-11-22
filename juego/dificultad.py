@@ -36,3 +36,30 @@ def bateria_inicial(nivel: int, planeta: str = "Marte") -> float:
 def parametros(nivel: int) -> dict:
     return {"nivel": int(nivel), "bateria": BATERIA_POR_NIVEL[nivel], "intensidad": INTENSIDAD_POR_NIVEL[nivel],
             "ruido": RUIDO_POR_NIVEL[nivel]}
+
+
+# ---------- R23 (AG): el problema de planificación de la partida jugable ----------
+# Sitios científicos de la partida jugable (mapa pequeño 20x30); mediano +1, grande +2, con tope de 12.
+SITIOS_POR_NIVEL = {1: 8, 2: 8, 3: 9, 4: 10, 5: 11}
+SITIOS_MAXIMO = 12
+# Bases de recarga del mapa pequeño por nivel; los mapas mayores multiplican por la raíz de la razón de áreas (mín. 1).
+BASES_POR_NIVEL = {1: 4, 2: 4, 3: 3, 4: 3, 5: 3}
+# Ventanas de tiempo por nivel: (fracción de sitios con ventana, ancho mínimo, ancho máximo) en pasos por cada lado de la
+# llegada de un recorrido de referencia (aleatorio mejorado con tres 2-opt; el AG puede encontrar uno mejor). Más difícil = más
+# sitios con ventana y más estrechas. Supuestos de simulación.
+VENTANAS_POR_NIVEL = {1: (0.5, 26, 40), 2: (0.6, 22, 36), 3: (0.7, 18, 30), 4: (0.8, 14, 26), 5: (0.8, 12, 22)}
+# Fracción de los sitios (los de menor valor) que son opcionales: se pueden sacrificar si no caben.
+FRACCION_OPCIONALES = 0.25
+
+
+def n_sitios(nivel: int, filas: int, columnas: int) -> int:
+    """Sitios científicos de la partida jugable según el nivel y el tamaño del mapa."""
+    area = (int(filas) * int(columnas)) / (20 * 30)
+    extra = 0 if area <= 1.0 else (1 if area <= 2.5 else 2)
+    return int(min(SITIOS_MAXIMO, SITIOS_POR_NIVEL[nivel] + extra))
+
+
+def n_bases(nivel: int, filas: int, columnas: int) -> int:
+    """Bases de recarga de la partida jugable (sube con la raíz del área del mapa)."""
+    area = (int(filas) * int(columnas)) / (20 * 30)
+    return max(1, int(round(BASES_POR_NIVEL[nivel] * area ** 0.5)))

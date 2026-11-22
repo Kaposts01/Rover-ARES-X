@@ -22,7 +22,7 @@ def _partida_anterior(semilla, nivel):
     previa = dificultad.GARANTIA_CON_BASES_Y_PLANETA
     dificultad.GARANTIA_CON_BASES_Y_PLANETA = False
     try:
-        p = Partida(semilla=semilla, nivel=nivel, bateria=100.0 - 4.0 * (nivel - 1))
+        p = Partida(semilla=semilla, nivel=nivel, bateria=100.0 - 4.0 * (nivel - 1), plan_restringido=False)   # R23: planificador anterior (3-4 sitios)
     finally:
         dificultad.GARANTIA_CON_BASES_Y_PLANETA = previa
     p.mecanicas.activa = False
@@ -83,7 +83,9 @@ def test_triple_orden_de_vetos_y_avisos_fijado_semilla_18():
     assert r["avisos"] == r["avisos_tras_eventos"]
     # el sismo cae en la ruta (REPLAN-AG-SISMO, ARX-31a) y, en el primer paso, el veto por riesgo en la ruta
     assert r["motivos"][:3] == ["REPLAN-AG-SISMO", "V-RUTA-CON-RIESGO", "OK"]
-    assert r["vetos"] == 1
+    # R23: la RNA reentrenada con refuerzo de barrancos añade, dentro de los 40 pasos, un veto propio V-RNA-BARRANCO que no
+    # tiene que ver con los eventos; lo que esta prueba fija es el veto del sismo, así que se cuentan aparte
+    assert r["vetos"] == 1 + r["motivos"].count("V-RNA-BARRANCO")
 
 
 def test_triple_orden_semilla_9_termina_sin_ruta_tras_el_veto():

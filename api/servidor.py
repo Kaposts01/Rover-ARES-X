@@ -614,22 +614,41 @@ def _bateria_difuso(sesion, bateria, bateria_pct):
     return _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
 
 
-def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, temperatura: float = 0.0) -> dict:
-    """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2)."""
+def _bateria_para_difuso(sesion, bateria: float, bateria_pct: float = None) -> float:
+    """Valor de batería que recibe el difuso. En la partida jugable (mecánicas activas) el motor le pasa el % de la
+    capacidad (universo 0 a 100); en la evaluación congelada, las unidades del motor, como siempre. `bateria_pct` (el % que
+    usó el motor en un paso) manda si se da; si no, se convierte desde las unidades. Así el laboratorio y /ia/paso ven lo
+    mismo que el motor y la conversión se hace una sola vez."""
+    activa = bool(getattr(getattr(sesion.partida, "mecanicas", None), "activa", False))
+    if not activa:
+        return float(bateria)
+    if bateria_pct is not None:
+        return float(min(100.0, max(0.0, bateria_pct)))
+    return float(min(100.0, max(0.0, 100.0 * float(bateria) / _capacidad_bateria(sesion))))
+
+
+def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, temperatura: float = 0.0,
+                  bateria_pct: float = None) -> dict:
+    """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2). `bateria` va en unidades del motor;
+    `bateria_pct` (opcional) es el % exacto que usó el motor."""
     from difuso import REGLAS, TEMPERATURA_TOLERANCIA
     m = sesion.partida.mision
     # auditoría 22/11: la tolerancia es la del planeta de la partida (la misma que /estado), no la constante general
     termico_p = getattr(sesion.partida, "termico", None)
     tolerancia = float(getattr(termico_p, "tolerancia", TEMPERATURA_TOLERANCIA) or TEMPERATURA_TOLERANCIA)
-    res = m.difuso.inferir(distancia, bateria, inclinacion, temperatura)
+    res = m.difuso.inferir(distancia, _bateria_para_difuso(sesion, bateria, bateria_pct), inclinacion, temperatura)
     universos, curvas, salida_universo, salida_conjuntos = _curvas_difuso_fijas()
     capacidad = _capacidad_bateria(sesion)
+    if bateria_pct is not None:
+        bateria_pct = round(min(100.0, max(0.0, float(bateria_pct))), 1)
+    else:
+        bateria_pct = round(min(100.0, max(0.0, 100.0 * float(bateria) / capacidad)), 1)
     return {
         # `bateria` está en las unidades del motor (la escala que usa el difuso, con universo 0 a 100); `bateria_pct` es
         # la misma carga como porcentaje de la capacidad (lo que muestra el HUD) y `capacidad_bateria` la equivalencia
         "entradas": {"distancia": float(distancia), "bateria": float(bateria), "inclinacion": float(inclinacion),
                      "temperatura": float(temperatura),
-                     "bateria_pct": round(min(100.0, max(0.0, 100.0 * float(bateria) / capacidad)), 1),
+                     "bateria_pct": bateria_pct,
                      "capacidad_bateria": round(capacidad, 2)},
         "universos": universos,
         "curvas": curvas,
@@ -1189,7 +1208,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             salida["paso_ia"] = u["paso"]
             if u["usar_difuso"]:
                 e = u["difuso"]
-                dif = _difuso_datos(sesion, min(e["distancia"], DISTANCIA_MAX), e["bateria"], min(e["inclinacion"], INCLINACION_MAX), e["temperatura"])
+                dif = _difuso_datos(sesion, min(e["distancia"], DISTANCIA_MAX), e["bateria"], min(e["inclinacion"], INCLINACION_MAX),
+                                    e["temperatura"], bateria_pct=e.get("bateria_pct"))
                 dif["intervenido"] = u["difuso_intervenido"]
                 dif["velocidad_usada"] = ultima.get("velocidad")
                 salida["difuso"] = dif
@@ -1203,8 +1223,12 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
               "ultimo_replanteo": _ultimo_replanteo(p), "replanes": int(getattr(m, "replanes", 0) or 0),
               "fallbacks": list(getattr(getattr(m, "_optimizar_ag", None), "fallbacks", []) or [])[-3:]}
         if res is not None:
-            ag.update({"generaciones": res.historial, "viable": bool(res.viable), "evaluados": int(res.evaluados),
-                       "mejor_desglose": _desglose_fitness(res.mejor_desglose)})
+            if hasattr(res, "historial_json"):       # R23: AG con restricciones (planificacion.py)
+                ag.update({"generaciones": res.historial_json(), "viable": bool(res.viable), "evaluados": int(res.evaluados),
+                           "mejor_desglose": _desglose_fitness(res.desglose())})
+            else:
+                ag.update({"generaciones": res.historial, "viable": bool(res.viable), "evaluados": int(res.evaluados),
+                           "mejor_desglose": _desglose_fitness(res.mejor_desglose)})
         salida["ag"] = ag
         from api.narrador import narrar_fila
         vehiculo = getattr(sesion, "modo_planeta", "rover")
@@ -1279,7 +1303,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         valores = [desde + (hasta - desde) * k / (n - 1) for k in range(n)] if n > 1 else [desde]
         filas = []
         for d in valores:
-            res = sesion.partida.mision.difuso.inferir(d, b, i, t)
+            res = sesion.partida.mision.difuso.inferir(d, _bateria_para_difuso(sesion, b), i, t)
             filas.append({"distancia": round(float(d), 3), "velocidad": round(float(res.velocidad), 4),
                           "fallback": bool(res.fallback),
                           "reglas": [{"id": r, "fuerza": round(float(f), 4)} for r, f, _ in res.reglas_activadas]})

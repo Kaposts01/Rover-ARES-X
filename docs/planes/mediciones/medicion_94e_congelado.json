@@ -1,0 +1,1170 @@
+{
+  "escenario": "congelado",
+  "semillas": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "variantes": {
+    "hibrido": {
+      "exitos": 20,
+      "n": 20,
+      "colisiones_total": 0,
+      "semillas_con_colision": 0,
+      "pasos": {
+        "media": 42.2,
+        "mediana": 39.0,
+        "desviacion": 7.495,
+        "rango_intercuartil": 11.25
+      },
+      "colisiones": {
+        "media": 0.0,
+        "mediana": 0.0,
+        "desviacion": 0.0,
+        "rango_intercuartil": 0.0
+      },
+      "bateria_final": {
+        "media": 54.9,
+        "mediana": 56.5,
+        "desviacion": 9.899,
+        "rango_intercuartil": 13.0
+      }
+    },
+    "sin_rna": {
+      "exitos": 20,
+      "n": 20,
+      "colisiones_total": 0,
+      "semillas_con_colision": 0,
+      "pasos": {
+        "media": 42.1,
+        "mediana": 38.5,
+        "desviacion": 7.553,
+        "rango_intercuartil": 11.25
+      },
+      "colisiones": {
+        "media": 0.0,
+        "mediana": 0.0,
+        "desviacion": 0.0,
+        "rango_intercuartil": 0.0
+      },
+      "bateria_final": {
+        "media": 54.95,
+        "mediana": 56.5,
+        "desviacion": 9.934,
+        "rango_intercuartil": 13.0
+      }
+    }
+  },
+  "m2": {
+    "criterio": ">= 5/20",
+    "semillas_que_cuentan": [
+      11,
+      12
+    ],
+    "conteo": 2,
+    "n": 20,
+    "semillas_con_divergencia_directa": [
+      11,
+      12
+    ],
+    "semillas_con_divergencia_directa_no_rna": [],
+    "semillas_con_algun_paso_rna": [
+      11,
+      12
+    ],
+    "por_tipo_de_cambio": {
+      "decision": 2,
+      "velocidad": 2,
+      "ruta": 2
+    },
+    "por_motivo": {
+      "V-RNA-OBSTACULO": 2
+    },
+    "cumple": false
+  },
+  "hash_filas": "84bd168df6d2296278675b78944e24aa00269e2de5515a0d60f4fa09166711bb",
+  "filas": [
+    {
+      "semilla": 1,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 51,
+        "colisiones": 0,
+        "bateria_final": 45.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 51,
+        "colisiones": 0,
+        "bateria_final": 45.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 2.28
+    },
+    {
+      "semilla": 2,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 54.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 54.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.22
+    },
+    {
+      "semilla": 3,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 49,
+        "colisiones": 0,
+        "bateria_final": 54.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 49,
+        "colisiones": 0,
+        "bateria_final": 54.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.2
+    },
+    {
+      "semilla": 4,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 35,
+        "colisiones": 0,
+        "bateria_final": 66.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 35,
+        "colisiones": 0,
+        "bateria_final": 66.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.13
+    },
+    {
+      "semilla": 5,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 62.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 62.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.23
+    },
+    {
+      "semilla": 6,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 55,
+        "colisiones": 0,
+        "bateria_final": 39.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 55,
+        "colisiones": 0,
+        "bateria_final": 39.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.28
+    },
+    {
+      "semilla": 7,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 40,
+        "colisiones": 0,
+        "bateria_final": 55.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 40,
+        "colisiones": 0,
+        "bateria_final": 55.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.35
+    },
+    {
+      "semilla": 8,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 38,
+        "colisiones": 0,
+        "bateria_final": 57.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 38,
+        "colisiones": 0,
+        "bateria_final": 57.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.2
+    },
+    {
+      "semilla": 9,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 52,
+        "colisiones": 0,
+        "bateria_final": 34.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 52,
+        "colisiones": 0,
+        "bateria_final": 34.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.39
+    },
+    {
+      "semilla": 10,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 30,
+        "colisiones": 0,
+        "bateria_final": 71.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 30,
+        "colisiones": 0,
+        "bateria_final": 71.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.06
+    },
+    {
+      "semilla": 11,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 38,
+        "colisiones": 0,
+        "bateria_final": 61.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 62.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 31,
+      "primera_directa": {
+        "paso": 7,
+        "celda": "(13, 3)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-OBSTACULO"
+        ],
+        "motivos_hibrido": "V-RNA-OBSTACULO"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "V-RNA-OBSTACULO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 7,
+          "celda": "(13, 3)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 8,
+          "celda": "(12, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 9,
+          "celda": "(11, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 10,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 11,
+          "celda": "(9, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 12,
+          "celda": "(8, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 13,
+          "celda": "(8, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(8, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 15,
+          "celda": "(8, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(9, 11)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 17,
+          "celda": "(10, 12)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 18,
+          "celda": "(11, 13)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 19,
+          "celda": "(12, 14)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 20,
+          "celda": "(13, 15)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 21,
+          "celda": "(14, 16)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(13, 17)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 23,
+          "celda": "(12, 18)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 24,
+          "celda": "(11, 19)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 25,
+          "celda": "(10, 19)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 26,
+          "celda": "(10, 19)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 27,
+          "celda": "(9, 19)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 28,
+          "celda": "(8, 20)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(7, 21)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 30,
+          "celda": "(6, 22)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 31,
+          "celda": "(5, 23)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 32,
+          "celda": "(5, 24)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 33,
+          "celda": "(4, 25)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 34,
+          "celda": "(3, 26)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 35,
+          "celda": "(2, 27)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 36,
+          "celda": "(1, 28)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 37,
+          "celda": "(0, 29)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        }
+      ],
+      "segundos": 1.25
+    },
+    {
+      "semilla": 12,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 39,
+        "colisiones": 0,
+        "bateria_final": 64.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 38,
+        "colisiones": 0,
+        "bateria_final": 64.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 30,
+      "primera_directa": {
+        "paso": 9,
+        "celda": "(11, 6)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-OBSTACULO"
+        ],
+        "motivos_hibrido": "V-RNA-OBSTACULO"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "V-RNA-OBSTACULO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 9,
+          "celda": "(11, 6)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 10,
+          "celda": "(10, 6)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 11,
+          "celda": "(9, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 12,
+          "celda": "(8, 7)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 13,
+          "celda": "(7, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(6, 9)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 15,
+          "celda": "(5, 10)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(4, 11)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 17,
+          "celda": "(4, 12)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 18,
+          "celda": "(4, 13)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 19,
+          "celda": "(4, 14)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 20,
+          "celda": "(5, 15)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 21,
+          "celda": "(6, 16)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(6, 17)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 23,
+          "celda": "(6, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 24,
+          "celda": "(6, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 25,
+          "celda": "(5, 19)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 26,
+          "celda": "(5, 20)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 27,
+          "celda": "(5, 21)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 28,
+          "celda": "(5, 22)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(5, 23)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 30,
+          "celda": "(6, 24)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 31,
+          "celda": "(7, 25)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 32,
+          "celda": "(6, 26)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 33,
+          "celda": "(5, 26)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 34,
+          "celda": "(4, 26)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 35,
+          "celda": "(3, 27)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 36,
+          "celda": "(2, 27)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 37,
+          "celda": "(1, 28)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 38,
+          "celda": "(0, 29)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        }
+      ],
+      "segundos": 1.26
+    },
+    {
+      "semilla": 13,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 39,
+        "colisiones": 0,
+        "bateria_final": 56.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 39,
+        "colisiones": 0,
+        "bateria_final": 56.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.18
+    },
+    {
+      "semilla": 14,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 59.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 59.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.24
+    },
+    {
+      "semilla": 15,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 57,
+        "colisiones": 0,
+        "bateria_final": 38.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 57,
+        "colisiones": 0,
+        "bateria_final": 38.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.35
+    },
+    {
+      "semilla": 16,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 48,
+        "colisiones": 0,
+        "bateria_final": 49.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 48,
+        "colisiones": 0,
+        "bateria_final": 49.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.3
+    },
+    {
+      "semilla": 17,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 38,
+        "colisiones": 0,
+        "bateria_final": 63.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 38,
+        "colisiones": 0,
+        "bateria_final": 63.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.29
+    },
+    {
+      "semilla": 18,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 39,
+        "colisiones": 0,
+        "bateria_final": 62.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 39,
+        "colisiones": 0,
+        "bateria_final": 62.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.21
+    },
+    {
+      "semilla": 19,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 60.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 37,
+        "colisiones": 0,
+        "bateria_final": 60.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.23
+    },
+    {
+      "semilla": 20,
+      "hibrido": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 48,
+        "colisiones": 0,
+        "bateria_final": 49.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 48,
+        "colisiones": 0,
+        "bateria_final": 49.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 0,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": false,
+      "divergencias": [],
+      "segundos": 1.36
+    }
+  ],
+  "segundos": 26.0
+}

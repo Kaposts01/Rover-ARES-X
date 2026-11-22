@@ -1,0 +1,6122 @@
+{
+  "escenario": "exigente",
+  "semillas": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120
+  ],
+  "variantes": {
+    "hibrido": {
+      "exitos": 0,
+      "n": 20,
+      "colisiones_total": 1,
+      "semillas_con_colision": 1,
+      "pasos": {
+        "media": 42.6,
+        "mediana": 33.5,
+        "desviacion": 27.047,
+        "rango_intercuartil": 29.0
+      },
+      "colisiones": {
+        "media": 0.05,
+        "mediana": 0.0,
+        "desviacion": 0.224,
+        "rango_intercuartil": 0.0
+      },
+      "bateria_final": {
+        "media": 61.3,
+        "mediana": 66.0,
+        "desviacion": 17.104,
+        "rango_intercuartil": 16.0
+      }
+    },
+    "sin_rna": {
+      "exitos": 2,
+      "n": 20,
+      "colisiones_total": 0,
+      "semillas_con_colision": 0,
+      "pasos": {
+        "media": 68.7,
+        "mediana": 77.5,
+        "desviacion": 29.168,
+        "rango_intercuartil": 40.75
+      },
+      "colisiones": {
+        "media": 0.0,
+        "mediana": 0.0,
+        "desviacion": 0.0,
+        "rango_intercuartil": 0.0
+      },
+      "bateria_final": {
+        "media": 40.725,
+        "mediana": 40.0,
+        "desviacion": 22.581,
+        "rango_intercuartil": 37.25
+      }
+    }
+  },
+  "m2": {
+    "criterio": ">= 5/20",
+    "semillas_que_cuentan": [
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      109,
+      110,
+      111,
+      112,
+      113,
+      117,
+      118,
+      120
+    ],
+    "conteo": 14,
+    "n": 20,
+    "semillas_con_divergencia_directa": [
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      116,
+      117,
+      118,
+      119,
+      120
+    ],
+    "semillas_con_divergencia_directa_no_rna": [
+      101,
+      108,
+      114,
+      116,
+      119
+    ],
+    "semillas_con_algun_paso_rna": [
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120
+    ],
+    "por_tipo_de_cambio": {
+      "decision": 14,
+      "velocidad": 14,
+      "ruta": 13
+    },
+    "por_motivo": {
+      "V-RNA-OBSTACULO": 3,
+      "RNA-RIESGO": 11,
+      "V-RNA-BARRANCO": 11
+    },
+    "cumple": true
+  },
+  "hash_filas": "c823c5c056bb5b1fd10e54648df4d6e17c29ecc022b415611786262726d256c6",
+  "filas": [
+    {
+      "semilla": 101,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 42,
+        "colisiones": 0,
+        "bateria_final": 65.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 48,
+        "colisiones": 0,
+        "bateria_final": 67.0,
+        "sitios_visitados": 1
+      },
+      "n_pasos_divergentes": 34,
+      "primera_directa": {
+        "paso": 10,
+        "celda": "(15, 1)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [],
+        "motivos_hibrido": "OK"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 8,
+          "celda": "(16, 0)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(16, 1):0.95"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(16, 1):0.95"
+        },
+        {
+          "paso": 10,
+          "celda": "(15, 1)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 11,
+          "celda": "(15, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(14, 2):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(14, 2):1.00"
+        },
+        {
+          "paso": 12,
+          "celda": "(15, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 13,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(13, 3)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 15,
+          "celda": "(12, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(12, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 17,
+          "celda": "(11, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 18,
+          "celda": "(11, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 19,
+          "celda": "(11, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 20,
+          "celda": "(11, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 21,
+          "celda": "(10, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(10, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 23,
+          "celda": "(9, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 24,
+          "celda": "(8, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 25,
+          "celda": "(8, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 26,
+          "celda": "(8, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 27,
+          "celda": "(7, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 28,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(6, 6)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 30,
+          "celda": "(6, 7)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 31,
+          "celda": "(6, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 32,
+          "celda": "(6, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 33,
+          "celda": "(6, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 34,
+          "celda": "(6, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 35,
+          "celda": "(6, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 36,
+          "celda": "(6, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 37,
+          "celda": "(6, 9)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 38,
+          "celda": "(6, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 39,
+          "celda": "(6, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 40,
+          "celda": "(6, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 41,
+          "celda": "(6, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 42,
+          "celda": "(6, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(5, 11):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(5, 11):1.00"
+        }
+      ],
+      "segundos": 1.52
+    },
+    {
+      "semilla": 102,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 36,
+        "colisiones": 0,
+        "bateria_final": 65.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 114,
+        "colisiones": 0,
+        "bateria_final": 2.0,
+        "sitios_visitados": 0
+      },
+      "n_pasos_divergentes": 25,
+      "primera_directa": {
+        "paso": 12,
+        "celda": "(19, 1)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-OBSTACULO"
+        ],
+        "motivos_hibrido": "V-RNA-OBSTACULO"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "V-RNA-OBSTACULO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 12,
+          "celda": "(19, 1)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 13,
+          "celda": "(19, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 14,
+          "celda": "(19, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 15,
+          "celda": "(18, 1)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(17, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 17,
+          "celda": "(17, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 18,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 19,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(15, 2):0.62"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(15, 2):0.62"
+        },
+        {
+          "paso": 20,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 21,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 22,
+          "celda": "(17, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 23,
+          "celda": "(18, 3)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 24,
+          "celda": "(17, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 25,
+          "celda": "(17, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 26,
+          "celda": "(17, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 27,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 28,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 29,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 30,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(15, 3):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(15, 3):1.00"
+        },
+        {
+          "paso": 31,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 32,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 33,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(15, 2):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(15, 2):1.00"
+        },
+        {
+          "paso": 34,
+          "celda": "(14, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 35,
+          "celda": "(14, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 36,
+          "celda": "(14, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        }
+      ],
+      "segundos": 1.8
+    },
+    {
+      "semilla": 103,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 122,
+        "colisiones": 0,
+        "bateria_final": 8.0,
+        "sitios_visitados": 4
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 80,
+        "colisiones": 0,
+        "bateria_final": 24.5,
+        "sitios_visitados": 4
+      },
+      "n_pasos_divergentes": 69,
+      "primera_directa": {
+        "paso": 12,
+        "celda": "(17, 4)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-OBSTACULO"
+        ],
+        "motivos_hibrido": "V-RNA-OBSTACULO"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "V-RNA-OBSTACULO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 12,
+          "celda": "(17, 4)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 13,
+          "celda": "(17, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(17, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 15,
+          "celda": "(17, 6)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(17, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 17,
+          "celda": "(17, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 18,
+          "celda": "(17, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 19,
+          "celda": "(17, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 20,
+          "celda": "(17, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 21,
+          "celda": "(18, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(19, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 23,
+          "celda": "(19, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 24,
+          "celda": "(19, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 25,
+          "celda": "(19, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 26,
+          "celda": "(19, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 27,
+          "celda": "(19, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 28,
+          "celda": "(19, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 29,
+          "celda": "(19, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 30,
+          "celda": "(19, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 31,
+          "celda": "(19, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 32,
+          "celda": "(19, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 33,
+          "celda": "(19, 11)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 34,
+          "celda": "(19, 11)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 35,
+          "celda": "(19, 12)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 36,
+          "celda": "(19, 13)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 37,
+          "celda": "(19, 14)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 38,
+          "celda": "(19, 15)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 39,
+          "celda": "(19, 15)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 40,
+          "celda": "(18, 16)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 41,
+          "celda": "(18, 17)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 42,
+          "celda": "(18, 17)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 43,
+          "celda": "(18, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 44,
+          "celda": "(18, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 45,
+          "celda": "(18, 18)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 46,
+          "celda": "(18, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(17, 19):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(17, 19):1.00"
+        },
+        {
+          "paso": 47,
+          "celda": "(18, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 48,
+          "celda": "(18, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 49,
+          "celda": "(19, 19)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 50,
+          "celda": "(19, 20)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 51,
+          "celda": "(19, 20)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 52,
+          "celda": "(19, 21)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 53,
+          "celda": "(19, 22)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 54,
+          "celda": "(19, 22)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 55,
+          "celda": "(19, 23)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 56,
+          "celda": "(19, 23)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 57,
+          "celda": "(19, 23)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 58,
+          "celda": "(18, 24)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 59,
+          "celda": "(18, 24)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 60,
+          "celda": "(19, 25)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 61,
+          "celda": "(19, 25)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 62,
+          "celda": "(18, 26)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 63,
+          "celda": "(18, 26)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 64,
+          "celda": "(18, 26)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 65,
+          "celda": "(18, 26)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 66,
+          "celda": "(18, 26)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 67,
+          "celda": "(18, 26)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 68,
+          "celda": "(18, 27)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 69,
+          "celda": "(18, 27)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 70,
+          "celda": "(18, 26)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 71,
+          "celda": "(19, 25)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 72,
+          "celda": "(19, 25)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 73,
+          "celda": "(18, 24)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 74,
+          "celda": "(17, 24)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 75,
+          "celda": "(16, 24)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 76,
+          "celda": "(15, 24)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 77,
+          "celda": "(15, 24)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 78,
+          "celda": "(14, 25)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 79,
+          "celda": "(13, 25)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 80,
+          "celda": "(12, 24)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        }
+      ],
+      "segundos": 2.07
+    },
+    {
+      "semilla": 104,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 50,
+        "colisiones": 0,
+        "bateria_final": 59.0,
+        "sitios_visitados": 2
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 90,
+        "colisiones": 0,
+        "bateria_final": 28.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 40,
+      "primera_directa": {
+        "paso": 11,
+        "celda": "(17, 3)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(16, 3):0.58"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 3):0.58"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 11,
+          "celda": "(17, 3)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(16, 3):0.58"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 3):0.58"
+        },
+        {
+          "paso": 12,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 13,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 14,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 15,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 16,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 17,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 18,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 19,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 20,
+          "celda": "(17, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 21,
+          "celda": "(17, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 22,
+          "celda": "(17, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(17, 6):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(17, 6):1.00"
+        },
+        {
+          "paso": 23,
+          "celda": "(17, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 24,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 25,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(15, 3):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(15, 3):1.00"
+        },
+        {
+          "paso": 26,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 27,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 28,
+          "celda": "(14, 2)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 30,
+          "celda": "(14, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 31,
+          "celda": "(14, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 32,
+          "celda": "(14, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 33,
+          "celda": "(14, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 34,
+          "celda": "(14, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(13, 6):0.91"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(13, 6):0.91"
+        },
+        {
+          "paso": 35,
+          "celda": "(14, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 36,
+          "celda": "(13, 5)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 37,
+          "celda": "(12, 6)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 38,
+          "celda": "(12, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 39,
+          "celda": "(12, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(12, 7):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(12, 7):1.00"
+        },
+        {
+          "paso": 40,
+          "celda": "(11, 7)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 41,
+          "celda": "(11, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 42,
+          "celda": "(12, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 43,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 44,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 45,
+          "celda": "(13, 10)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 46,
+          "celda": "(13, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 47,
+          "celda": "(13, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 48,
+          "celda": "(13, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(12, 11):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(12, 11):1.00"
+        },
+        {
+          "paso": 49,
+          "celda": "(13, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 50,
+          "celda": "(13, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        }
+      ],
+      "segundos": 1.46
+    },
+    {
+      "semilla": 105,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 29,
+        "colisiones": 0,
+        "bateria_final": 64.0,
+        "sitios_visitados": 2
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 52,
+        "colisiones": 0,
+        "bateria_final": 51.0,
+        "sitios_visitados": 2
+      },
+      "n_pasos_divergentes": 4,
+      "primera_directa": {
+        "paso": 17,
+        "celda": "(13, 6)",
+        "origen": "directa",
+        "cambio": "decision+velocidad",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(12, 6):0.84"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(12, 6):0.84"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 17,
+          "celda": "(13, 6)",
+          "origen": "directa",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(12, 6):0.84"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(12, 6):0.84"
+        },
+        {
+          "paso": 21,
+          "celda": "(12, 6)",
+          "origen": "consecuencia",
+          "cambio": "otros_motivos",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 28,
+          "celda": "(9, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(8, 7):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(8, 7):1.00"
+        },
+        {
+          "paso": 29,
+          "celda": "(9, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(10, 8):0.97"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(10, 8):0.97"
+        }
+      ],
+      "segundos": 1.45
+    },
+    {
+      "semilla": 106,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 20,
+        "colisiones": 0,
+        "bateria_final": 70.0,
+        "sitios_visitados": 1
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 27,
+        "colisiones": 0,
+        "bateria_final": 62.5,
+        "sitios_visitados": 1
+      },
+      "n_pasos_divergentes": 9,
+      "primera_directa": {
+        "paso": 9,
+        "celda": "(18, 7)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(18, 8):1.00"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(18, 8):1.00"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 9,
+          "celda": "(18, 7)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(18, 8):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(18, 8):1.00"
+        },
+        {
+          "paso": 10,
+          "celda": "(17, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 11,
+          "celda": "(17, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 12,
+          "celda": "(17, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 13,
+          "celda": "(17, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(18, 10):0.98"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(18, 10):0.98"
+        },
+        {
+          "paso": 14,
+          "celda": "(17, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 15,
+          "celda": "(17, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(18, 10):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(18, 10):1.00"
+        },
+        {
+          "paso": 16,
+          "celda": "(17, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(18, 10):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(18, 10):1.00"
+        },
+        {
+          "paso": 20,
+          "celda": "(18, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(17, 11):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(17, 11):1.00"
+        }
+      ],
+      "segundos": 1.61
+    },
+    {
+      "semilla": 107,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 34,
+        "colisiones": 0,
+        "bateria_final": 73.0,
+        "sitios_visitados": 1
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 78,
+        "colisiones": 0,
+        "bateria_final": 49.0,
+        "sitios_visitados": 4
+      },
+      "n_pasos_divergentes": 23,
+      "primera_directa": {
+        "paso": 13,
+        "celda": "(14, 0)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(13, 0):1.00"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(13, 0):1.00"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 6,
+          "celda": "(15, 0)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(14, 0):0.64"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(14, 0):0.64"
+        },
+        {
+          "paso": 13,
+          "celda": "(14, 0)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(13, 0):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(13, 0):1.00"
+        },
+        {
+          "paso": 14,
+          "celda": "(14, 0)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 15,
+          "celda": "(13, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(13, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 17,
+          "celda": "(13, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(12, 2):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(12, 2):1.00"
+        },
+        {
+          "paso": 18,
+          "celda": "(12, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 19,
+          "celda": "(12, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 20,
+          "celda": "(11, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 21,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 23,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 24,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 25,
+          "celda": "(9, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 26,
+          "celda": "(9, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 27,
+          "celda": "(9, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 28,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 30,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 31,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 32,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 33,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 34,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(8, 5):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(8, 5):1.00"
+        }
+      ],
+      "segundos": 1.4
+    },
+    {
+      "semilla": 108,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 64,
+        "colisiones": 0,
+        "bateria_final": 43.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 56,
+        "colisiones": 0,
+        "bateria_final": 46.0,
+        "sitios_visitados": 1
+      },
+      "n_pasos_divergentes": 33,
+      "primera_directa": {
+        "paso": 25,
+        "celda": "(15, 8)",
+        "origen": "directa",
+        "cambio": "velocidad+ruta",
+        "motivos_rna": [],
+        "motivos_hibrido": "OK"
+      },
+      "tipos_primera_directa": [
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 24,
+          "celda": "(16, 7)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(16, 8):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(16, 8):1.00"
+        },
+        {
+          "paso": 25,
+          "celda": "(15, 8)",
+          "origen": "directa",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 26,
+          "celda": "(15, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 27,
+          "celda": "(15, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 28,
+          "celda": "(16, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(17, 10)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 30,
+          "celda": "(17, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(17, 11):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(17, 11):1.00"
+        },
+        {
+          "paso": 31,
+          "celda": "(18, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 32,
+          "celda": "(19, 11)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 33,
+          "celda": "(19, 11)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 34,
+          "celda": "(19, 11)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 35,
+          "celda": "(18, 12)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 36,
+          "celda": "(18, 12)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 37,
+          "celda": "(18, 12)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(17, 13):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(17, 13):1.00"
+        },
+        {
+          "paso": 38,
+          "celda": "(18, 13)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 39,
+          "celda": "(18, 14)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 40,
+          "celda": "(18, 14)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 41,
+          "celda": "(17, 15)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 42,
+          "celda": "(17, 15)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 43,
+          "celda": "(17, 15)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 44,
+          "celda": "(17, 15)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 45,
+          "celda": "(16, 15)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 46,
+          "celda": "(16, 15)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 47,
+          "celda": "(15, 14)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 48,
+          "celda": "(14, 14)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 49,
+          "celda": "(14, 14)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 50,
+          "celda": "(13, 14)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 51,
+          "celda": "(12, 15)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 52,
+          "celda": "(13, 16)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 53,
+          "celda": "(13, 16)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 54,
+          "celda": "(13, 16)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 55,
+          "celda": "(13, 16)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 56,
+          "celda": "(13, 16)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(14, 17):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(14, 17):1.00"
+        }
+      ],
+      "segundos": 1.66
+    },
+    {
+      "semilla": 109,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 30,
+        "colisiones": 0,
+        "bateria_final": 72.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 94,
+        "colisiones": 0,
+        "bateria_final": 19.0,
+        "sitios_visitados": 2
+      },
+      "n_pasos_divergentes": 29,
+      "primera_directa": {
+        "paso": 2,
+        "celda": "(18, 0)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(17, 0):1.00"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(17, 0):1.00"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 2,
+          "celda": "(18, 0)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(17, 0):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(17, 0):1.00"
+        },
+        {
+          "paso": 3,
+          "celda": "(18, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 4,
+          "celda": "(18, 0)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 5,
+          "celda": "(18, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 6,
+          "celda": "(17, 0)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 7,
+          "celda": "(16, 0)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 8,
+          "celda": "(16, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 9,
+          "celda": "(16, 0)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 10,
+          "celda": "(16, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 11,
+          "celda": "(16, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 12,
+          "celda": "(15, 2)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 13,
+          "celda": "(14, 2)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(14, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 15,
+          "celda": "(13, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 17,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 18,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 19,
+          "celda": "(11, 1)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 20,
+          "celda": "(10, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 21,
+          "celda": "(10, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 22,
+          "celda": "(10, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 23,
+          "celda": "(10, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 24,
+          "celda": "(11, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 25,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 26,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(13, 2):0.99"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(13, 2):0.99"
+        },
+        {
+          "paso": 27,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 28,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 29,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 30,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(11, 2):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(11, 2):1.00"
+        }
+      ],
+      "segundos": 1.66
+    },
+    {
+      "semilla": 110,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 33,
+        "colisiones": 0,
+        "bateria_final": 69.0,
+        "sitios_visitados": 1
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 27,
+        "colisiones": 0,
+        "bateria_final": 74.0,
+        "sitios_visitados": 1
+      },
+      "n_pasos_divergentes": 18,
+      "primera_directa": {
+        "paso": 11,
+        "celda": "(16, 2)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(16, 3):1.00"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 3):1.00"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 7,
+          "celda": "(18, 0)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(17, 1):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(17, 1):1.00"
+        },
+        {
+          "paso": 8,
+          "celda": "(18, 0)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(17, 0):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(17, 0):1.00"
+        },
+        {
+          "paso": 11,
+          "celda": "(16, 2)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(16, 3):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 3):1.00"
+        },
+        {
+          "paso": 12,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 13,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(15, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 15,
+          "celda": "(15, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 16,
+          "celda": "(15, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(14, 5):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(14, 5):1.00"
+        },
+        {
+          "paso": 17,
+          "celda": "(14, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 18,
+          "celda": "(13, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 19,
+          "celda": "(13, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 20,
+          "celda": "(13, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(12, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 23,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 24,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 25,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 26,
+          "celda": "(11, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 27,
+          "celda": "(10, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        }
+      ],
+      "segundos": 1.25
+    },
+    {
+      "semilla": 111,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 21,
+        "colisiones": 0,
+        "bateria_final": 74.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 23,
+        "colisiones": 0,
+        "bateria_final": 75.5,
+        "sitios_visitados": 0
+      },
+      "n_pasos_divergentes": 14,
+      "primera_directa": {
+        "paso": 8,
+        "celda": "(17, 0)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(16, 0):0.93"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 0):0.93"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 8,
+          "celda": "(17, 0)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(16, 0):0.93"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 0):0.93"
+        },
+        {
+          "paso": 9,
+          "celda": "(16, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 10,
+          "celda": "(15, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 11,
+          "celda": "(15, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 12,
+          "celda": "(15, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 13,
+          "celda": "(15, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK;D-RESBALON"
+        },
+        {
+          "paso": 14,
+          "celda": "(15, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(14, 0):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(14, 0):1.00"
+        },
+        {
+          "paso": 15,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 17,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 18,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(16, 4):0.98"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(16, 4):0.98"
+        },
+        {
+          "paso": 19,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 20,
+          "celda": "(17, 2)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 21,
+          "celda": "(17, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(18, 3):0.91"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(18, 3):0.91"
+        }
+      ],
+      "segundos": 1.4
+    },
+    {
+      "semilla": 112,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 22,
+        "colisiones": 0,
+        "bateria_final": 71.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 96,
+        "colisiones": 0,
+        "bateria_final": 11.0,
+        "sitios_visitados": 3
+      },
+      "n_pasos_divergentes": 17,
+      "primera_directa": {
+        "paso": 6,
+        "celda": "(19, 4)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-OBSTACULO"
+        ],
+        "motivos_hibrido": "V-RNA-OBSTACULO"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "V-RNA-OBSTACULO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 6,
+          "celda": "(19, 4)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 7,
+          "celda": "(19, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 8,
+          "celda": "(18, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 9,
+          "celda": "(18, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(17, 7):0.89"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(17, 7):0.89"
+        },
+        {
+          "paso": 10,
+          "celda": "(18, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 11,
+          "celda": "(18, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(18, 7):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(18, 7):1.00"
+        },
+        {
+          "paso": 12,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 13,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 14,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 15,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 16,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 17,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 18,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 19,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 20,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 21,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 22,
+          "celda": "(19, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        }
+      ],
+      "segundos": 1.71
+    },
+    {
+      "semilla": 113,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 83,
+        "colisiones": 0,
+        "bateria_final": 45.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 101,
+        "colisiones": 0,
+        "bateria_final": 16.0,
+        "sitios_visitados": 4
+      },
+      "n_pasos_divergentes": 70,
+      "primera_directa": {
+        "paso": 15,
+        "celda": "(12, 2)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(11, 1):1.00"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(11, 1):1.00"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 14,
+          "celda": "(12, 2)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(11, 3):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(11, 3):1.00"
+        },
+        {
+          "paso": 15,
+          "celda": "(12, 2)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(11, 1):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(11, 1):1.00"
+        },
+        {
+          "paso": 16,
+          "celda": "(12, 1)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 17,
+          "celda": "(11, 0)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 18,
+          "celda": "(11, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 19,
+          "celda": "(11, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 20,
+          "celda": "(11, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 21,
+          "celda": "(10, 0)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(9, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 23,
+          "celda": "(9, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 24,
+          "celda": "(9, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 25,
+          "celda": "(9, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 26,
+          "celda": "(8, 2)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 27,
+          "celda": "(8, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 28,
+          "celda": "(8, 3)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 30,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 31,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 32,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 33,
+          "celda": "(7, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 34,
+          "celda": "(7, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(7, 6):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(7, 6):1.00"
+        },
+        {
+          "paso": 35,
+          "celda": "(6, 6)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 36,
+          "celda": "(6, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 37,
+          "celda": "(6, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 38,
+          "celda": "(6, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 39,
+          "celda": "(6, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 40,
+          "celda": "(5, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 41,
+          "celda": "(5, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 42,
+          "celda": "(4, 7)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 43,
+          "celda": "(4, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 44,
+          "celda": "(3, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 45,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 46,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 47,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 48,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 49,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 50,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-PARADO-SIN-AVANCE"
+        },
+        {
+          "paso": 51,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 52,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 53,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 54,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 55,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 56,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 57,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "D-DIFUSO-LENTO"
+        },
+        {
+          "paso": 58,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(4, 10):0.83"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(4, 10):0.83"
+        },
+        {
+          "paso": 59,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 60,
+          "celda": "(4, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 61,
+          "celda": "(4, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 62,
+          "celda": "(4, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 63,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 64,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 65,
+          "celda": "(3, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 66,
+          "celda": "(3, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 67,
+          "celda": "(3, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 68,
+          "celda": "(3, 7)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 69,
+          "celda": "(4, 6)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 70,
+          "celda": "(3, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 71,
+          "celda": "(3, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 72,
+          "celda": "(3, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 73,
+          "celda": "(3, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 74,
+          "celda": "(4, 3)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 75,
+          "celda": "(4, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(5, 3):0.94"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(5, 3):0.94"
+        },
+        {
+          "paso": 76,
+          "celda": "(5, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 77,
+          "celda": "(5, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 78,
+          "celda": "(6, 3)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 79,
+          "celda": "(6, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 80,
+          "celda": "(6, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 81,
+          "celda": "(6, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 82,
+          "celda": "(6, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 83,
+          "celda": "(6, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        }
+      ],
+      "segundos": 1.82
+    },
+    {
+      "semilla": 114,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 63,
+        "colisiones": 1,
+        "bateria_final": 48.0,
+        "sitios_visitados": 1
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 81,
+        "colisiones": 0,
+        "bateria_final": 31.0,
+        "sitios_visitados": 1
+      },
+      "n_pasos_divergentes": 60,
+      "primera_directa": {
+        "paso": 5,
+        "celda": "(15, 1)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [],
+        "motivos_hibrido": "OK"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 4,
+          "celda": "(16, 0)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(15, 0):0.94"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(15, 0):0.94"
+        },
+        {
+          "paso": 5,
+          "celda": "(15, 1)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 6,
+          "celda": "(15, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 7,
+          "celda": "(14, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 8,
+          "celda": "(14, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 9,
+          "celda": "(13, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 10,
+          "celda": "(12, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 11,
+          "celda": "(12, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 12,
+          "celda": "(12, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 13,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(11, 3):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(11, 3):1.00"
+        },
+        {
+          "paso": 15,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 16,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 17,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 18,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 19,
+          "celda": "(12, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 20,
+          "celda": "(11, 2)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 21,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 23,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 24,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(9, 2):0.98"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(9, 2):0.98"
+        },
+        {
+          "paso": 25,
+          "celda": "(10, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 26,
+          "celda": "(10, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 27,
+          "celda": "(9, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 28,
+          "celda": "(8, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(8, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 30,
+          "celda": "(8, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(7, 1):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(7, 1):1.00"
+        },
+        {
+          "paso": 31,
+          "celda": "(8, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 32,
+          "celda": "(8, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 33,
+          "celda": "(8, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 34,
+          "celda": "(7, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 35,
+          "celda": "(7, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK;V-CELDA-BLOQUEADA"
+        },
+        {
+          "paso": 36,
+          "celda": "(7, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 37,
+          "celda": "(7, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(6, 3):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(6, 3):1.00"
+        },
+        {
+          "paso": 38,
+          "celda": "(7, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 39,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 40,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 41,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 42,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(7, 5):0.94"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(7, 5):0.94"
+        },
+        {
+          "paso": 43,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(9, 5):0.97"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(9, 5):0.97"
+        },
+        {
+          "paso": 44,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 45,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 46,
+          "celda": "(8, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(8, 3):0.99"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(8, 3):0.99"
+        },
+        {
+          "paso": 47,
+          "celda": "(9, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 48,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 49,
+          "celda": "(10, 6)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 50,
+          "celda": "(10, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 51,
+          "celda": "(10, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 52,
+          "celda": "(10, 7)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 53,
+          "celda": "(10, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 54,
+          "celda": "(10, 9)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 55,
+          "celda": "(10, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(10, 10):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(10, 10):1.00"
+        },
+        {
+          "paso": 56,
+          "celda": "(10, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 57,
+          "celda": "(10, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 58,
+          "celda": "(10, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 59,
+          "celda": "(11, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 60,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 61,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 62,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 63,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(13, 9):0.97"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(13, 9):0.97"
+        }
+      ],
+      "segundos": 1.91
+    },
+    {
+      "semilla": 115,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 11,
+        "colisiones": 0,
+        "bateria_final": 78.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 57,
+        "colisiones": 0,
+        "bateria_final": 47.0,
+        "sitios_visitados": 1
+      },
+      "n_pasos_divergentes": 2,
+      "primera_directa": null,
+      "tipos_primera_directa": [],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 5,
+          "celda": "(19, 1)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(18, 1):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(18, 1):1.00"
+        },
+        {
+          "paso": 11,
+          "celda": "(18, 1)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(17, 1):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(17, 1):1.00"
+        }
+      ],
+      "segundos": 1.48
+    },
+    {
+      "semilla": 116,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 21,
+        "colisiones": 0,
+        "bateria_final": 77.0,
+        "sitios_visitados": 1
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 53,
+        "colisiones": 0,
+        "bateria_final": 60.0,
+        "sitios_visitados": 2
+      },
+      "n_pasos_divergentes": 16,
+      "primera_directa": {
+        "paso": 7,
+        "celda": "(17, 0)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [],
+        "motivos_hibrido": "OK"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 6,
+          "celda": "(18, 1)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(17, 2):0.80"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(17, 2):0.80"
+        },
+        {
+          "paso": 7,
+          "celda": "(17, 0)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 8,
+          "celda": "(17, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 9,
+          "celda": "(17, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 10,
+          "celda": "(17, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 11,
+          "celda": "(17, 0)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 12,
+          "celda": "(17, 0)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 13,
+          "celda": "(17, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 15,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 17,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 18,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 19,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 20,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 21,
+          "celda": "(16, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        }
+      ],
+      "segundos": 1.47
+    },
+    {
+      "semilla": 117,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 41,
+        "colisiones": 0,
+        "bateria_final": 61.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 91,
+        "colisiones": 0,
+        "bateria_final": 20.0,
+        "sitios_visitados": 1
+      },
+      "n_pasos_divergentes": 35,
+      "primera_directa": {
+        "paso": 7,
+        "celda": "(17, 3)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(16, 3):0.80"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 3):0.80"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 7,
+          "celda": "(17, 3)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(16, 3):0.80"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 3):0.80"
+        },
+        {
+          "paso": 8,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 9,
+          "celda": "(15, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 10,
+          "celda": "(14, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 11,
+          "celda": "(14, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(13, 4):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(13, 4):1.00"
+        },
+        {
+          "paso": 12,
+          "celda": "(13, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 13,
+          "celda": "(12, 5)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(11, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 15,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 17,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 18,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 19,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 20,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 21,
+          "celda": "(10, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 22,
+          "celda": "(9, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 23,
+          "celda": "(8, 6)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 24,
+          "celda": "(7, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 25,
+          "celda": "(7, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(6, 6):0.83"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(6, 6):0.83"
+        },
+        {
+          "paso": 26,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 27,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(6, 4):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(6, 4):1.00"
+        },
+        {
+          "paso": 28,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 29,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(5, 5):0.86"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(5, 5):0.86"
+        },
+        {
+          "paso": 30,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 31,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 32,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 33,
+          "celda": "(6, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 34,
+          "celda": "(6, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 35,
+          "celda": "(6, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 36,
+          "celda": "(5, 3)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 37,
+          "celda": "(5, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 38,
+          "celda": "(5, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 39,
+          "celda": "(5, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 40,
+          "celda": "(5, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 41,
+          "celda": "(5, 2)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(4, 3):0.66"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(4, 3):0.66"
+        }
+      ],
+      "segundos": 1.84
+    },
+    {
+      "semilla": 118,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 25,
+        "colisiones": 0,
+        "bateria_final": 77.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 106,
+        "colisiones": 0,
+        "bateria_final": 26.0,
+        "sitios_visitados": 2
+      },
+      "n_pasos_divergentes": 21,
+      "primera_directa": {
+        "paso": 7,
+        "celda": "(17, 3)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(16, 4):1.00"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 4):1.00"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 1,
+          "celda": "(19, 0)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(19, 1):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(19, 1):1.00"
+        },
+        {
+          "paso": 2,
+          "celda": "(19, 0)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 7,
+          "celda": "(17, 3)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(16, 4):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(16, 4):1.00"
+        },
+        {
+          "paso": 8,
+          "celda": "(17, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 9,
+          "celda": "(17, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 10,
+          "celda": "(17, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 11,
+          "celda": "(17, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 12,
+          "celda": "(17, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 13,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 15,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(15, 4):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(15, 4):1.00"
+        },
+        {
+          "paso": 16,
+          "celda": "(16, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 17,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 18,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-OBSTACULO-EN-RUTA"
+        },
+        {
+          "paso": 19,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(14, 2):0.85"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(14, 2):0.85"
+        },
+        {
+          "paso": 20,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 21,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 22,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 23,
+          "celda": "(15, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 24,
+          "celda": "(15, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 25,
+          "celda": "(15, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(14, 6):0.92"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(14, 6):0.92"
+        }
+      ],
+      "segundos": 2.76
+    },
+    {
+      "semilla": 119,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 76,
+        "colisiones": 0,
+        "bateria_final": 40.0,
+        "sitios_visitados": 3
+      },
+      "sin_rna": {
+        "estado": "EXITO",
+        "exito": true,
+        "pasos": 77,
+        "colisiones": 0,
+        "bateria_final": 34.0,
+        "sitios_visitados": 4
+      },
+      "n_pasos_divergentes": 66,
+      "primera_directa": {
+        "paso": 12,
+        "celda": "(15, 4)",
+        "origen": "directa",
+        "cambio": "ruta",
+        "motivos_rna": [],
+        "motivos_hibrido": "OK"
+      },
+      "tipos_primera_directa": [
+        "ruta"
+      ],
+      "motivo_atribuido": [],
+      "cuenta_para_m2": false,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 10,
+          "celda": "(15, 3)",
+          "origen": "directa_codigo",
+          "cambio": "otros_motivos",
+          "motivos_rna": [
+            "RNA-RIESGO:(14, 4):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(14, 4):1.00"
+        },
+        {
+          "paso": 12,
+          "celda": "(15, 4)",
+          "origen": "directa",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 13,
+          "celda": "(15, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 14,
+          "celda": "(15, 4)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 15,
+          "celda": "(15, 5)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 16,
+          "celda": "(15, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 17,
+          "celda": "(15, 5)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 18,
+          "celda": "(16, 6)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 19,
+          "celda": "(15, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 20,
+          "celda": "(14, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 21,
+          "celda": "(14, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 22,
+          "celda": "(15, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 23,
+          "celda": "(15, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 24,
+          "celda": "(15, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 25,
+          "celda": "(15, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 26,
+          "celda": "(14, 10)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 27,
+          "celda": "(14, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(13, 10):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(13, 10):1.00"
+        },
+        {
+          "paso": 28,
+          "celda": "(13, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 29,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 30,
+          "celda": "(12, 9)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 31,
+          "celda": "(11, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 32,
+          "celda": "(10, 7)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 33,
+          "celda": "(10, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 34,
+          "celda": "(9, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 35,
+          "celda": "(8, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 36,
+          "celda": "(8, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 37,
+          "celda": "(7, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 38,
+          "celda": "(7, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 39,
+          "celda": "(7, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 40,
+          "celda": "(7, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 41,
+          "celda": "(7, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(6, 7):0.90"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(6, 7):0.90"
+        },
+        {
+          "paso": 42,
+          "celda": "(7, 7)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 43,
+          "celda": "(6, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 44,
+          "celda": "(6, 6)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 45,
+          "celda": "(5, 7)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 46,
+          "celda": "(4, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 47,
+          "celda": "(4, 8)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 48,
+          "celda": "(4, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 49,
+          "celda": "(3, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 50,
+          "celda": "(3, 8)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(2, 9):0.99"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(2, 9):0.99"
+        },
+        {
+          "paso": 51,
+          "celda": "(2, 8)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 52,
+          "celda": "(1, 9)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 53,
+          "celda": "(1, 10)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 54,
+          "celda": "(1, 11)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 55,
+          "celda": "(1, 11)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 56,
+          "celda": "(0, 12)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 57,
+          "celda": "(0, 13)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 58,
+          "celda": "(0, 13)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 59,
+          "celda": "(0, 13)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 60,
+          "celda": "(0, 13)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 61,
+          "celda": "(0, 13)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 62,
+          "celda": "(0, 14)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 63,
+          "celda": "(0, 15)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 64,
+          "celda": "(0, 15)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 65,
+          "celda": "(0, 16)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 66,
+          "celda": "(0, 16)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(0, 17):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(0, 17):1.00"
+        },
+        {
+          "paso": 67,
+          "celda": "(1, 17)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 68,
+          "celda": "(1, 18)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 69,
+          "celda": "(1, 19)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 70,
+          "celda": "(1, 19)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(1, 20):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(1, 20):1.00"
+        },
+        {
+          "paso": 71,
+          "celda": "(1, 19)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 72,
+          "celda": "(1, 19)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 73,
+          "celda": "(1, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 74,
+          "celda": "(1, 18)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 75,
+          "celda": "(1, 19)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 76,
+          "celda": "(1, 19)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        }
+      ],
+      "segundos": 1.61
+    },
+    {
+      "semilla": 120,
+      "hibrido": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 29,
+        "colisiones": 0,
+        "bateria_final": 67.0,
+        "sitios_visitados": 0
+      },
+      "sin_rna": {
+        "estado": "SIN_RUTA",
+        "exito": false,
+        "pasos": 23,
+        "colisiones": 0,
+        "bateria_final": 71.0,
+        "sitios_visitados": 0
+      },
+      "n_pasos_divergentes": 23,
+      "primera_directa": {
+        "paso": 1,
+        "celda": "(19, 0)",
+        "origen": "directa",
+        "cambio": "decision+velocidad+ruta",
+        "motivos_rna": [
+          "V-RNA-BARRANCO",
+          "RNA-RIESGO:(18, 0):1.00"
+        ],
+        "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(18, 0):1.00"
+      },
+      "tipos_primera_directa": [
+        "decision",
+        "velocidad",
+        "ruta"
+      ],
+      "motivo_atribuido": [
+        "RNA-RIESGO",
+        "V-RNA-BARRANCO"
+      ],
+      "cuenta_para_m2": true,
+      "algun_paso_con_motivo_rna": true,
+      "divergencias": [
+        {
+          "paso": 1,
+          "celda": "(19, 0)",
+          "origen": "directa",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(18, 0):1.00"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(18, 0):1.00"
+        },
+        {
+          "paso": 2,
+          "celda": "(19, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 3,
+          "celda": "(19, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 4,
+          "celda": "(19, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 5,
+          "celda": "(18, 1)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 6,
+          "celda": "(17, 1)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 7,
+          "celda": "(17, 1)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "RNA-RIESGO:(16, 1):1.00"
+          ],
+          "motivos_hibrido": "V-BORDE-BARRANCO;RNA-RIESGO:(16, 1):1.00"
+        },
+        {
+          "paso": 8,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 9,
+          "celda": "(16, 2)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(15, 2):0.57"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(15, 2):0.57"
+        },
+        {
+          "paso": 10,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 11,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [
+            "V-RNA-OBSTACULO"
+          ],
+          "motivos_hibrido": "V-RNA-OBSTACULO"
+        },
+        {
+          "paso": 12,
+          "celda": "(15, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 13,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 14,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 15,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 16,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [
+            "V-RNA-BARRANCO",
+            "RNA-RIESGO:(13, 2):0.94"
+          ],
+          "motivos_hibrido": "V-RNA-BARRANCO;RNA-RIESGO:(13, 2):0.94"
+        },
+        {
+          "paso": 17,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 18,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-BORDE-BARRANCO"
+        },
+        {
+          "paso": 19,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 20,
+          "celda": "(14, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 21,
+          "celda": "(13, 3)",
+          "origen": "consecuencia",
+          "cambio": "velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        },
+        {
+          "paso": 22,
+          "celda": "(13, 3)",
+          "origen": "consecuencia",
+          "cambio": "ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "V-RUTA-CON-RIESGO"
+        },
+        {
+          "paso": 23,
+          "celda": "(12, 4)",
+          "origen": "consecuencia",
+          "cambio": "decision+velocidad+ruta",
+          "motivos_rna": [],
+          "motivos_hibrido": "OK"
+        }
+      ],
+      "segundos": 1.26
+    }
+  ],
+  "segundos": 33.1
+}

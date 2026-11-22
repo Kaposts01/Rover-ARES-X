@@ -841,3 +841,20 @@ body.cine-director #cine-cinta { top: calc(9vh - 14px); z-index: 30; }
 .boton-reporte:hover { background: rgba(95, 230, 255, 0.1); }
 #controles a.boton-enlace { display: block; margin-top: 8px; padding: 8px; text-align: center; border-radius: 8px; color: var(--texto); text-decoration: none; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(160, 200, 255, 0.18); font-size: 13px; }
 #controles a.boton-enlace:hover { background: rgba(255, 255, 255, 0.14); }
+/* Primera persona: HUD de cámara de navegación (auditoría 22/11) */
+#hud-navegacion { display: none; position: fixed; inset: 0; z-index: 20; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
+    repeating-linear-gradient(0deg, rgba(120, 255, 200, 0.035) 0 1px, transparent 1px 3px); }
+body.camara-primera #hud-navegacion { display: block; }
+body.cine #hud-navegacion { display: none; }
+.hn-esquina { position: absolute; width: 40px; height: 40px; border: 2px solid rgba(120, 255, 200, 0.75); }
+.hn-si { left: calc(var(--ancho-izq) + 30px); top: 70px; border-right: 0; border-bottom: 0; }
+.hn-sd { right: calc(var(--ancho-panel-ia) + 30px); top: 70px; border-left: 0; border-bottom: 0; }
+.hn-ii { left: calc(var(--ancho-izq) + 30px); bottom: 150px; border-right: 0; border-top: 0; }
+.hn-id { right: calc(var(--ancho-panel-ia) + 30px); bottom: 150px; border-left: 0; border-top: 0; }
+.hn-mira { position: absolute; left: var(--centro); top: 50%; width: 34px; height: 34px; transform: translate(-50%, -50%); border: 1px solid rgba(120, 255, 200, 0.8); border-radius: 50%; }
+.hn-mira::before, .hn-mira::after { content: ""; position: absolute; background: rgba(120, 255, 200, 0.8); }
+.hn-mira::before { left: 50%; top: -10px; bottom: -10px; width: 1px; }
+.hn-mira::after { top: 50%; left: -10px; right: -10px; height: 1px; }
+.hn-rotulo { position: absolute; left: var(--centro); top: 74px; transform: translateX(-50%); font: 11px "Cascadia Mono", Consolas, monospace; letter-spacing: 0.2em; color: rgba(120, 255, 200, 0.9); }
+.barra-mision { flex-wrap: wrap; justify-content: center; max-width: 100%; }

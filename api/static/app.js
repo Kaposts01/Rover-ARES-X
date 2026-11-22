@@ -3322,9 +3322,10 @@ function zoomPaso(factor) {
   const distancia = THREE.MathUtils.clamp(d.length() / factor, controles.minDistance, controles.maxDistance);
   camara.position.copy(controles.target).add(d.setLength(distancia));
 }
-document.getElementById("zoom-mas").addEventListener("click", () => zoomPaso(PASO_ZOOM));
-document.getElementById("zoom-menos").addEventListener("click", () => zoomPaso(1 / PASO_ZOOM));
+document.getElementById("zoom-mas").addEventListener("click", () => { if (modoCamara !== "orbita") fijarModoCamara("orbita"); zoomPaso(PASO_ZOOM); });
+document.getElementById("zoom-menos").addEventListener("click", () => { if (modoCamara !== "orbita") fijarModoCamara("orbita"); zoomPaso(1 / PASO_ZOOM); });
 document.getElementById("encuadrar").addEventListener("click", () => {
+  if (modoCamara !== "orbita") fijarModoCamara("orbita");   // las vistas fijas son de la órbita
   if (!grupoRover.children.length) return;
   camaraSiguiendo = true;
   const p = grupoRover.position;
@@ -3335,6 +3336,7 @@ document.getElementById("encuadrar").addEventListener("click", () => {
 });
 // Mapa completo (todo el terreno y la ruta planificada): vista fija, sin seguir al rover
 document.getElementById("mapa-completo").addEventListener("click", () => {
+  if (modoCamara !== "orbita") fijarModoCamara("orbita");   // las vistas fijas son de la órbita
   if (!mapa) return;
   camaraSiguiendo = false;
   const cx = mapa.columnas / 2;
@@ -3346,6 +3348,7 @@ document.getElementById("mapa-completo").addEventListener("click", () => {
 });
 
 document.getElementById("ver-mapa").addEventListener("click", () => {
+  if (modoCamara !== "orbita") fijarModoCamara("orbita");   // las vistas fijas son de la órbita
   // Vista de mapa: desde arriba, siguiendo al rover (el giro libre sigue disponible)
   if (!grupoRover.children.length) return;
   camaraSiguiendo = true;
@@ -3412,6 +3415,76 @@ function montarBarraMision() {
 try { montarBarraMision(); } catch (e) { console.warn("barra de control: se quedan los botones en el panel", e); }
 new MutationObserver(encuadrarVista).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 encuadrarVista();
+
+// ---------- modos de cámara (auditoría 22/11) ----------
+// Órbita (la de siempre, con OrbitControls), persecución, primera persona desde el mástil y cenital. El cine tiene
+// prioridad. Los modos con el rover escriben la cámara con amortiguación y nunca bajan del terreno.
+const MODOS_CAMARA = [["orbita", "Órbita"], ["persecucion", "Persecución"], ["primera", "Primera persona"], ["cenital", "Cenital"]];
+let modoCamara = "orbita";
+const _camDestino = new THREE.Vector3(), _camMira = new THREE.Vector3(), _camMiraSuave = new THREE.Vector3();
+let _camMiraIniciada = false;
+function camaraDeModo(dt) {
+  const p = grupoRover.position, r = grupoRover.rotation.y;
+  const fx = Math.cos(r), fz = -Math.sin(r);          // avance del rover: +x local (como el director de cine)
+  if (modoCamara === "persecucion") {
+    _camDestino.set(p.x - fx * 4.2, p.y + 2.2, p.z - fz * 4.2);
+    _camMira.set(p.x + fx * 3, p.y + 0.5, p.z + fz * 3);
+  } else if (modoCamara === "primera") {
+    _camDestino.set(p.x + fx * 0.35, p.y + 1.05, p.z + fz * 0.35);
+    _camMira.set(p.x + fx * 8, p.y + 0.6, p.z + fz * 8);
+  } else {                                           // cenital: desde arriba, con el avance hacia arriba de la pantalla
+    _camDestino.set(p.x - fx * 0.01, p.y + 26, p.z - fz * 0.01);
+    _camMira.set(p.x, p.y, p.z);
+  }
+  _camDestino.y = Math.max(_camDestino.y, alturaTerreno(_camDestino.x, _camDestino.z) + 0.35);
+  const k = modoCamara === "primera" ? 1 - Math.exp(-dt * 12) : 1 - Math.exp(-dt * 4);
+  camara.position.lerp(_camDestino, k);
+  if (!_camMiraIniciada) { _camMiraSuave.copy(_camMira); _camMiraIniciada = true; }
+  _camMiraSuave.lerp(_camMira, k);
+  camara.lookAt(_camMiraSuave);
+  controles.target.copy(_camMiraSuave);              // al volver a órbita no hay salto
+}
+function fijarModoCamara(modo) {
+  if (!MODOS_CAMARA.some(([m]) => m === modo)) modo = "orbita";
+  modoCamara = modo;
+  _camMiraIniciada = false;
+  controles.enabled = modo === "orbita";
+  if (modo === "orbita") { camaraSiguiendo = true; controles.update(); }
+  document.body.classList.toggle("camara-primera", modo === "primera");
+  const sel = document.getElementById("modo-camara");
+  if (sel && sel.value !== modo) sel.value = modo;
+  try { localStorage.setItem("ares.camara", modo); } catch (e) { /* sin almacenamiento */ }
+}
+function montarSelectorCamara() {
+  const barra = document.getElementById("barra-mision");
+  if (!barra) return;
+  const etiqueta = document.createElement("label");
+  etiqueta.title = "Modo de cámara (tecla C para cambiar)";
+  etiqueta.append(document.createTextNode("Cámara "));
+  const sel = document.createElement("select"); sel.id = "modo-camara";
+  for (const [v, t] of MODOS_CAMARA) { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.append(o); }
+  sel.addEventListener("change", () => fijarModoCamara(sel.value));
+  etiqueta.append(sel);
+  const cineB = document.getElementById("boton-cine");
+  barra.insertBefore(etiqueta, cineB || null);
+  // HUD de la cámara de navegación (primera persona)
+  const hud = document.createElement("div"); hud.id = "hud-navegacion"; hud.setAttribute("aria-hidden", "true");
+  for (const c of ["si", "sd", "ii", "id"]) { const e = document.createElement("span"); e.className = `hn-esquina hn-${c}`; hud.append(e); }
+  const mira = document.createElement("span"); mira.className = "hn-mira"; hud.append(mira);
+  const rot = document.createElement("span"); rot.className = "hn-rotulo"; rot.textContent = "CÁMARA DE NAVEGACIÓN · MÁSTIL"; hud.append(rot);
+  document.body.append(hud);
+  let guardado = "orbita";
+  try { guardado = localStorage.getItem("ares.camara") || "orbita"; } catch (e) { /* sin almacenamiento */ }
+  fijarModoCamara(guardado);
+}
+try { montarSelectorCamara(); } catch (e) { console.warn("modos de cámara: no se pudo montar el selector", e); }
+// Tecla C: recorre los modos (no actúa mientras se escribe en un campo ni con el director de cine)
+window.addEventListener("keydown", (ev) => {
+  if ((ev.key === "c" || ev.key === "C") && !["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName) && !cineVivo() && !finActiva()) {
+    const i = MODOS_CAMARA.findIndex(([m]) => m === modoCamara);
+    fijarModoCamara(MODOS_CAMARA[(i + 1) % MODOS_CAMARA.length][0]);
+  }
+});
 
 // ---------- bucle ----------
 // Contador de FPS (?fps=1): para medir el rendimiento en el propio navegador y GPU
@@ -3482,6 +3555,8 @@ function animar() {
   if (cineEnVivo && !cinePuede()) cineActivar(false);   // intro, viaje, pausa, pantalla final o manual: el cine cede
   if (cineEnVivo && cineVivo()) {
     cine.director.actualizar(dt);   // el director escribe la cámara; OrbitControls y el seguimiento no actúan
+  } else if (modoCamara !== "orbita" && grupoRover.children.length) {
+    camaraDeModo(dt);               // persecución, primera persona o cenital: la cámara va con el rover
   } else {
   if (camaraSiguiendo && grupoRover.children.length) {
     const p = grupoRover.position;

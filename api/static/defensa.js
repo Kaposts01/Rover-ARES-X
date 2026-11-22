@@ -2,9 +2,10 @@
 // docs/MATRIZ_REQUISITOS_PDF.md) y con cifras EN VIVO de la partida en curso. Solo lee del motor, salvo la acción
 // «Demostrar» de cada paso, que el usuario pulsa a propósito (dar pasos, abrir un laboratorio, lanzar un evento).
 // Todo con textContent (sin innerHTML).
+import { coma as comaFormato } from "./formato.js?v=r14";
 import { textoBateriaDifuso, nombreVariante, plural, Vehiculo } from "/static/textos.js?v=r14";
 
-const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "-" : Number(v).toFixed(d).replace(".", ","));
+const coma = (v, d = 2) => comaFormato(v, d, "-");
 const pct = (v) => (v == null ? "-" : `${coma(v * 100, 1)} %`);
 async function obtener(ruta) { try { const r = await fetch(ruta); return r.ok ? await r.json() : null; } catch (e) { return null; } }
 function el(tag, clase, texto) { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; }
@@ -19,6 +20,29 @@ function resumenComparacion(d) {
   }
   return por;
 }
+
+// Qué pide cada criterio de la consigna, en claro (la ficha muestra el código junto a esta descripción)
+const CRITERIOS = {
+  "RF-01": "configurar planeta, modo, mapa, dificultad y semilla",
+  "RF-03": "ciclos de observar, decidir y actuar con sensores ruidosos",
+  "RF-04": "RNA real, con partición sin fuga de datos",
+  "RF-05": "al menos 3 conjuntos por variable y 8 reglas difusas",
+  "RF-06": "desfusificación y reglas activadas a la vista",
+  "RF-07": "AG con selección, cruce, mutación, elitismo y restricciones",
+  "RF-08": "registro de cada paso con su explicación",
+  "RF-11": "evolución del fitness del AG por generación",
+  "RF-12": "exportar trazas y configuración, y guardar semillas",
+  "RF-13": "fallos de sensor, pérdida de enlace y modo seguro",
+  "RF-14": "comparar el híbrido con al menos 2 ablaciones",
+  "RF-15": "al menos 20 semillas con métricas y dispersión",
+  "CA-01": "navegación normal: 10 pasos o más con telemetría",
+  "CA-02": "obstáculo imprevisto: se detiene, replanifica y lo explica",
+  "CA-04": "en la generación 5, 3 cromosomas o más con su fitness y cruce o mutación",
+  "CA-05": "difuso: de 10 m a 1 m de un obstáculo, la velocidad baja",
+  "CA-06": "RNA: al cambiar los rasgos cambian las probabilidades",
+  "CA-07": "Júpiter con ruedas bloquea el rodaje y propone sonda",
+  "CA-08": "experimento controlado con una técnica desactivada",
+};
 
 // Cada paso: título, criterios, texto para decir, función que arma las líneas «en vivo» y la demostración opcional
 function pasos() {
@@ -118,9 +142,11 @@ export function crearDefensa(acciones) {
     contador.textContent = `${i + 1}/${lista.length}`;
     relleno.style.width = `${((i + 1) / lista.length) * 100}%`;
     titulo.textContent = p.titulo;
-    criterios.replaceChildren(...p.criterios.map((c) => el("span", "def-criterio", c)));
+    // cada ficha lleva el código de la consigna junto a su descripción en claro; la leyenda va primero para verse sin desplazar
+    const hayCodigos = p.criterios.some((c) => /^(RF|CA)-/.test(c));
+    criterios.replaceChildren(...(hayCodigos ? [el("span", "def-criterios-nota", "Criterios de la consigna del trabajo (RF: requisito funcional · CA: criterio de aceptación)")] : []),
+      ...p.criterios.map((c) => { const f = el("span", "def-criterio"); f.append(el("b", null, c)); if (CRITERIOS[c]) f.append(` · ${CRITERIOS[c]}`); return f; }));
     criterios.title = "Criterios de la consigna del trabajo: RF = requisito funcional, CA = criterio de aceptación";
-    if (p.criterios.some((c) => /^(RF|CA)-/.test(c))) criterios.append(el("span", "def-criterios-nota", "Criterios de la consigna (RF: requisito funcional · CA: criterio de aceptación)"));
     texto.textContent = p.texto;
     ant.disabled = i === 0;
     sig.textContent = i === lista.length - 1 ? "Terminar ✓" : "Siguiente ▶";

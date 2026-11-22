@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "/static/vendor/OrbitControls.js";
 import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios, abrirEdicionDifuso } from "/static/laboratorio.js?v=r14";
+import { coma, porcentaje, fraccionAPorcentaje, grados } from "/static/formato.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
@@ -38,6 +39,10 @@ const RUMBO_TECLA = {
 };
 const DELTA = { N: [-1, 0], S: [1, 0], E: [0, 1], O: [0, -1], NE: [-1, 1], NO: [-1, -1], SE: [1, 1], SO: [1, -1] };
 const ESTADOS_TERMINALES = ["EXITO", "FRACASO", "SIN_RUTA", "MODO_SEGURO"];
+// La misión ya terminó según lo último que dijo el motor (respuesta de /mover, /paso, /disparo o /estado). Se mira ANTES de lanzar
+// cualquier petición de la partida: un GET /recomendacion o un POST /paso/mover tras el final devuelven 409. Solo la baja cargarPartida.
+let misionTerminada = false;
+const misionAcabada = () => misionTerminada || Boolean(estado && ESTADOS_TERMINALES.includes(estado.estado));
 
 const elMensaje = document.getElementById("mensaje");
 const escena = document.getElementById("escena");
@@ -1594,15 +1599,29 @@ function actualizarRecomendacion() {
   recomendacionEpoca += 1;
   const caja = document.getElementById("det-rec");
   const modoManual = document.getElementById("modo").value === "manual";
-  if (modoManual && caja && caja.open && estado && !estado.sin_partida && !ESTADOS_TERMINALES.includes(estado.estado)) { consultarRecomendacion(); return; }
+  if (modoManual && caja && caja.open && estado && !estado.sin_partida && !misionAcabada()) { programarRecomendacion(); return; }
   const lista = document.getElementById("rec-lista");
   lista.replaceChildren(Object.assign(document.createElement("li"), { textContent: TEXTO_REC_VACIO }));
+}
+// Pide la recomendación cuando ya no hay movimientos en curso (y la misión sigue); si llegan más teclas, espera a la última.
+let temporizadorRecomendacion = null;
+function programarRecomendacion() {
+  clearTimeout(temporizadorRecomendacion);
+  temporizadorRecomendacion = setTimeout(function intentar() {
+    if (misionAcabada()) { actualizarRecomendacion(); return; }   // ya terminó: solo se limpia la lista
+    if (movimientosEnVuelo > 0 || pasoProcesando) { temporizadorRecomendacion = setTimeout(intentar, 150); return; }
+    consultarRecomendacion();
+  }, 120);
 }
 async function consultarRecomendacion() {
   avisarAccion("recomendacion");
   const lista = document.getElementById("rec-lista");
   const epoca = ++recomendacionEpoca;
   lista.replaceChildren();
+  if (misionAcabada()) {   // la misión terminó: no se pide nada al motor (daría 409)
+    lista.appendChild(Object.assign(document.createElement("li"), { textContent: "La misión terminó: ya no hay recomendaciones." }));
+    return;
+  }
   const datos = await deps_recomendacion();
   if (epoca !== recomendacionEpoca) return;   // el rover ya se movió: esta respuesta es de otra celda
   if (!datos || !datos.propuestas) {
@@ -1648,8 +1667,8 @@ function pintarHud(e) {
   if (botonRover) { botonRover.textContent = enSonda ? "Sonda" : "Rover"; botonRover.title = enSonda ? "Centrar en la sonda" : "Centrar en el rover"; }
   if (enSonda) {
     document.getElementById("sonda-planeta").textContent = planetaActivo;
-    document.getElementById("sonda-temp").textContent = `${e.temperatura_interna} °C (tolerancia ${e.tolerancia} °C)`;
-    document.getElementById("sonda-bateria").textContent = `${(e.bateria_pct ?? e.bateria).toFixed(1)} %`;
+    document.getElementById("sonda-temp").textContent = `${grados(e.temperatura_interna)} (tolerancia ${grados(e.tolerancia)})`;
+    document.getElementById("sonda-bateria").textContent = porcentaje(e.bateria_pct ?? e.bateria);
     document.getElementById("sonda-sobre").textContent = e.pasos_sobre_tolerancia ?? "-";
     document.getElementById("sonda-estado").textContent = nombreEstado(e.estado);
   }
@@ -1662,7 +1681,7 @@ function pintarHud(e) {
   document.getElementById("h-estado").textContent = nombreEstado(e.estado);
   // 22/11: porcentaje de la capacidad del rover (nunca más de 100 %); el motor sigue en sus unidades
   const bpct = e.bateria_pct ?? e.bateria;
-  document.getElementById("h-bateria").textContent = `${bpct.toFixed(1)} %`;
+  document.getElementById("h-bateria").textContent = porcentaje(bpct);
   document.getElementById("h-bateria-barra").style.width = `${Math.max(0, Math.min(100, bpct))}%`;
   try { pintarEnergia(e); } catch (err) { console.warn("bases y pilas: no se pudieron dibujar", err); }
   document.getElementById("h-puntaje").textContent = e.puntaje;
@@ -1687,7 +1706,7 @@ function pintarHud(e) {
 }
 
 function pct(x) {
-  return x === null || x === undefined ? "-" : `${(x * 100).toFixed(1).replace(".", ",")} %`;
+  return fraccionAPorcentaje(x, "-");
 }
 
 function barra(id, valor) {
@@ -1708,9 +1727,9 @@ function decisionesDelPaso(p) {
   else if (d.velocidad == null && !(d.reglas && d.reglas.length)) lineas.push("Difuso: sin dato");
   else {
     const reglas = (d.reglas || []).map(x => (Array.isArray(x)
-      ? `${x[0]} (fuerza ${Number(x[1]).toFixed(2).replace(".", ",")})`
+      ? `${x[0]} (fuerza ${coma(x[1], 2)})`
       : String(x))).join(", ") || "sin regla";
-    const vel = d.velocidad == null ? "sin dato" : Number(d.velocidad).toFixed(3).replace(".", ",");
+    const vel = d.velocidad == null ? "sin dato" : coma(d.velocidad, 3);
     lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
   }
   const ruta = (p.ag || {}).ruta_planeada || [];
@@ -1774,7 +1793,7 @@ function pintarPaneles(p) {
 
   const dif = p.difuso || {};
   document.getElementById("dif-velocidad").textContent =
-    dif.velocidad === null || dif.velocidad === undefined ? "-" : Number(dif.velocidad).toFixed(3);
+    dif.velocidad === null || dif.velocidad === undefined ? "-" : coma(dif.velocidad, 3);
   const lista = document.getElementById("dif-reglas");
   lista.innerHTML = "";
   const reglas = dif.reglas || [];
@@ -1786,7 +1805,7 @@ function pintarPaneles(p) {
   } else {
     for (const r of reglas) {
       const li = document.createElement("li");
-      li.textContent = typeof r === "string" ? r : `${r[0]} (${Number(r[1]).toFixed(2)}): ${r[2]}`;
+      li.textContent = typeof r === "string" ? r : `${r[0]} (${coma(r[1], 2)}): ${r[2]}`;
       lista.appendChild(li);
     }
   }
@@ -1800,7 +1819,7 @@ function pintarPaneles(p) {
   const sup = p.supervisor || {};
   document.getElementById("sup-accion").textContent = sup.accion || "-";
   document.getElementById("res-rna").textContent = `libre ${pct(rna.p_libre)} · celda de enfrente`;   // el panel de IA añade las coordenadas cuando llega /ia/paso
-  document.getElementById("res-dif").textContent = dif.usado === false ? "no usado" : `velocidad ${dif.velocidad == null ? "-" : Number(dif.velocidad).toFixed(3).replace(".", ",")}`;
+  document.getElementById("res-dif").textContent = dif.usado === false ? "no usado" : `velocidad ${coma(dif.velocidad, 3, "-")}`;
   document.getElementById("res-sup").textContent = sup.accion || "-";
   const motivos = document.getElementById("sup-motivos");
   motivos.innerHTML = "";
@@ -1820,7 +1839,7 @@ function pintarPaneles(p) {
   const sen = p.sensores;
   const indicador = document.getElementById("sup-sensores");
   // QA ARX-86: sin «null» en pantalla; durante una falla se muestra «falla» en lugar de las lecturas
-  const dato = (x) => (x == null ? "—" : x);
+  const dato = (x) => (x == null ? "—" : typeof x === "number" ? coma(x, 2) : x);   // coma decimal también en las lecturas de los sensores
   // QA O-5: el rótulo sigue al modelo activo (v2: desnivel/contraste); sin nombres, los de v1
   const rotulo = (i, porDefecto) => ((sen && sen.rasgos_nombres && sen.rasgos_nombres[i]) || porDefecto).replace(/_/g, " ");
   if (indicador) indicador.textContent = !sen ? "-"
@@ -1857,14 +1876,14 @@ function pintarCalor(datos) {
   caja.classList.toggle("oculto", !visible);
   if (!visible) return;
   const t = Math.round(datos.temperatura_interna * 10) / 10;
-  document.getElementById("h-calor").textContent = `${t} °C`;
+  document.getElementById("h-calor").textContent = grados(t);
   const barra = document.getElementById("h-calor-barra");
   barra.style.width = `${Math.min(100, (t / (datos.tolerancia * 1.3)) * 100)}%`;
   barra.style.background = t >= datos.tolerancia ? "#ff5d6c" : t >= datos.tolerancia * 0.66 ? "#ffb454" : "#6ee7a8";
   const sobre = t > datos.tolerancia;
   const nota = datos.aborto_termico_activo === false ? " (aborto térmico desactivado)" : "";
   // registro lateral y no avisar(): el aviso del paso lo taparía en el mismo ciclo (C1 de QA)
-  if (sobre && !calorSobreTolerancia) registrarEvento(`aviso: temperatura interna sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
+  if (sobre && !calorSobreTolerancia) registrarEvento(`aviso: temperatura interna sobre la tolerancia (${grados(datos.tolerancia)})${nota}`);
   calorSobreTolerancia = sobre;
 }
 
@@ -1931,7 +1950,6 @@ async function refrescarEscenarios() {
     (c.hechas >= c.total
       ? `cadena terminada · ${c.total} de ${c.total} · semilla ${estado.semilla} · nivel ${NIVELES[c.nivel - 1]}`
       : `misión ${c.hechas + 1} de ${c.total} · semilla ${estado.semilla} · nivel ${NIVELES[c.nivel - 1]}`);
-  const coma = (x, d) => (x == null ? "—" : x.toFixed(d).replace(".", ","));
   const replanteos = c.replanteos.reduce((x, y) => x + y, 0);
   const metricas = [
     ["éxitos", String(c.exitos), "en esta sesión"],
@@ -2023,10 +2041,10 @@ function consultaHistorial() {
 
 function valoresClave(f) {
   const partes = [];
-  if (f.p_libre != null) partes.push(`libre ${(f.p_libre * 100).toFixed(1).replace(".", ",")} %`);
-  if (f.p_barranco != null) partes.push(`barranco ${(f.p_barranco * 100).toFixed(1).replace(".", ",")} %`);
-  if (f.velocidad != null) partes.push(`v ${Number(f.velocidad).toFixed(3).replace(".", ",")}`);
-  if (f.fitness != null) partes.push(`fitness ${Number(f.fitness).toFixed(2).replace(".", ",")}`);
+  if (f.p_libre != null) partes.push(`libre ${fraccionAPorcentaje(f.p_libre)}`);
+  if (f.p_barranco != null) partes.push(`barranco ${fraccionAPorcentaje(f.p_barranco)}`);
+  if (f.velocidad != null) partes.push(`v ${coma(f.velocidad, 3)}`);
+  if (f.fitness != null) partes.push(`fitness ${coma(f.fitness, 2)}`);
   if (f.ruta_largo) partes.push(`ruta ${f.ruta_largo}`);
   if (f.evento) partes.push(`evento ${f.evento}`);
   if (f.intervencion) partes.push(`intervención ${f.intervencion}`);
@@ -2058,6 +2076,7 @@ async function refrescarEstado() {
   const datos = await llamar("GET", "/estado");
   if (!datos) return;
   estado = datos;
+  if (ESTADOS_TERMINALES.includes(datos.estado)) misionTerminada = true;
   revisarEstadoLogros(datos);   // logros: solo lee el estado, no bloquea
   dibujarSeguro("estado", () => {
     registrarRecorrido(datos.posicion);
@@ -2565,7 +2584,7 @@ function momentosEnPaso(r) {
   cargarMomentos().then((m) => {
     if (!m) return;
     const riesgo = estado && estado.sensores ? estado.sensores.riesgo_enfrente : null;
-    m.alPaso({ paso: ultimoPasoNumero, motivos: r && r.motivos, riesgo });
+    m.alPaso({ paso: pasoActual(), motivos: r && r.motivos, riesgo });
   }).catch(() => { /* sin capturas */ });
 }
 document.getElementById("pausa-borrar-logros").addEventListener("click", async () => {
@@ -2589,7 +2608,7 @@ async function correrFinal(codigo) {
     const { crearFinal } = await import("/static/final_tarjeta.js?v=r14");
     await colaLogros;                                 // los logros del último paso ya están evaluados
     const m = await cargarMomentos();
-    if (m && estado) m.alFinal({ paso: ultimoPasoNumero, codigo });
+    if (m && estado) m.alFinal({ paso: pasoActual(), codigo });
     const logros = await cargarLogros();
     const resultado = normalizarResultado(estado);
     await new Promise((resolver) => {
@@ -2662,7 +2681,7 @@ function reiniciarEstadoDerivado() {
 // Tamaño del mapa (ARX-21): pequeno 20×30, mediano 30×45, grande 40×60 (por defecto: grande)
 async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente(), bateria = null) {
   detenerReproduccion();
-  finAtendido = false; ultimoRecord = null;
+  finAtendido = false; ultimoRecord = null; misionTerminada = false;
   cerrarAvisos();
   reiniciarEventos();
   cargando = true;
@@ -2822,6 +2841,9 @@ function nuevaCadena(nivel, total, veto) {
 }
 // Número del último paso de /paso (pasos de la misión en curso) y de replanteos de la misión actual
 let ultimoPasoNumero = null;
+// Paso real de la misión: el contador del motor (/estado.paso) cuenta también los movimientos a mano; el de /paso solo los de la IA
+// (en una misión manual con tramos de la IA daba «paso 11» cuando el final era el 19).
+const pasoActual = () => (estado && Number.isFinite(estado.paso) ? estado.paso : ultimoPasoNumero);
 
 // Mediana y resumen de la cadena (ARX-77)
 function mediana(valores) {
@@ -2831,7 +2853,6 @@ function mediana(valores) {
   return orden.length % 2 ? orden[m] : (orden[m - 1] + orden[m]) / 2;
 }
 function textoCadena(c) {
-  const coma = (x, d) => (x == null ? "—" : x.toFixed(d).replace(".", ","));
   const total = c.replanteos.reduce((x, y) => x + y, 0);
   const porMision = c.replanteos.length ? c.replanteos.join(" · ") : "—";
   const bateria = mediana(c.bateriaFinal);
@@ -2849,7 +2870,7 @@ async function alFinDeMision(codigo) {
     cadenaAutomatica.hechas += 1;
     if (codigo === "EXITO") cadenaAutomatica.exitos += 1;
     else cadenaAutomatica.fracasos += 1;
-    if (ultimoPasoNumero != null) cadenaAutomatica.pasos.push(ultimoPasoNumero);
+    if (pasoActual() != null) cadenaAutomatica.pasos.push(pasoActual());
     if (estado && typeof estado.bateria === "number") cadenaAutomatica.bateriaFinal.push(estado.bateria);
     cadenaAutomatica.replanteos.push(cadenaAutomatica.replanteosActual);
     cadenaAutomatica.replanteosActual = 0;
@@ -3017,6 +3038,7 @@ async function jugarConfiguracion(cfg) {
   poner("menu-planeta", cfg.planeta); poner("menu-modo-planeta", cfg.vehiculo); poner("menu-tamano", cfg.tamano);
   poner("menu-nivel", cfg.nivel); poner("menu-modo", cfg.control);
   document.getElementById("menu-semilla").value = String(cfg.semilla);
+  document.getElementById("menu-misiones").value = "1";   // repetir un récord es una sola misión con su pantalla final
   cadenaAutomatica = null;
   document.getElementById("iniciar").click();
 }
@@ -3136,12 +3158,20 @@ function ocupado() {
   return false;
 }
 
+// Movimientos a mano en curso (petición y refrescos). Las recomendaciones esperan a que no haya ninguno: antes, con varias teclas
+// seguidas, el refresco de un movimiento lanzaba GET /recomendacion mientras el siguiente ya había terminado la misión (409).
+let movimientosEnVuelo = 0;
 async function mover(rumbo) {
   if (finActiva()) return;
-  if (!mapa || ocupado()) return;
+  if (!mapa || ocupado() || misionAcabada()) return;
   if (enModoManual() && reproduciendo !== null) { detenerReproduccion(); avisar("Control retomado: conduces tú."); }   // mover a mano es retomar el control
+  movimientosEnVuelo += 1;
+  try { await moverUno(rumbo); } finally { movimientosEnVuelo -= 1; }
+}
+async function moverUno(rumbo) {
   const r = await llamar("POST", "/mover", { rumbo });
   if (!r) return;
+  if (ESTADOS_TERMINALES.includes(r.estado)) misionTerminada = true;
   avisar((r.movido ? `Movimiento ${rumbo}.` : `Movimiento ${rumbo} rechazado: ${r.motivo}`) + eventosTexto(r.eventos_combate));
   registrarEvento(r.movido ? `mover ${rumbo}` : `mover ${rumbo} rechazado: ${r.motivo}`);
   if (r.movido) avisarAccion("mover");
@@ -3226,11 +3256,20 @@ document.getElementById("motor-detener").addEventListener("click", () => {
 document.getElementById("motor-menu").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Un paso de la IA: el rover avanza en la escena y los paneles muestran lo que decidió.
+// El paso completo (petición y refrescos) es una sola operación: el reloj de «Reproducir» no lanza otro mientras tanto. Antes, con
+// la petición ya respondida y los refrescos en curso, un tick enviaba un POST /paso más, que daba 409 si el anterior había terminado la misión.
+let pasoProcesando = false;
 async function paso() {
+  if (finActiva()) return false;   // con la pantalla final abierta, los atajos de la partida no responden
+  if (pasoProcesando) return false;
+  pasoProcesando = true;
+  try { return await pasoUno(); } finally { pasoProcesando = false; }
+}
+async function pasoUno() {
   if (finActiva()) return false;   // con la pantalla final abierta, los atajos de la partida no responden
   if (!mapa || ocupado() || pasoEnVuelo) return false;
   // Partida ya terminada: no se envía nada (evita respuestas 409 en la consola)
-  if (estado && ESTADOS_TERMINALES.includes(estado.estado)) {
+  if (misionAcabada()) {
     detenerReproduccion();
     return false;
   }
@@ -3258,7 +3297,7 @@ async function paso() {
   }
   const terminada = ESTADOS_TERMINALES.includes(r.estado);
   const fin = r.accion === "fin";
-  if (terminada || fin) detenerReproduccion();   // antes de esperar al refresco: otro tick del reloj enviaba un /paso más y el motor respondía 409
+  if (terminada || fin) { misionTerminada = true; detenerReproduccion(); }   // antes de esperar al refresco: otro tick del reloj enviaba un /paso más y el motor respondía 409
   if (r.ultimo && r.ultimo.paso != null) ultimoPasoNumero = r.ultimo.paso;
   if (r.accion === "disparar") efectoDisparoAutomatico(r, estadoPrevio);
   if (cadenaAutomatica && r.accion === "replanificar") cadenaAutomatica.replanteosActual += 1;
@@ -3329,10 +3368,11 @@ function eventosTexto(eventos) {
 async function disparar() {
   if (document.body.classList.contains("intro-activa")) return;   // la intro no dispara (QA ARX-97)
   if (finActiva()) return;   // la pantalla final tampoco
-  if (!mapa || ocupado() || !estado) return;
+  if (!mapa || ocupado() || !estado || misionAcabada()) return;
   const rumbo = estado.rumbo || "N";
   const r = await llamar("POST", "/disparo", { rumbo });
   if (!r) return;
+  if (ESTADOS_TERMINALES.includes(r.estado)) misionTerminada = true;
   efectoDisparo(rumbo, r.impacto, puntoDronEnLinea(rumbo));
   avisar((r.impacto ? "¡Impacto!" : "Disparo sin impacto.") + eventosTexto(r.eventos_combate));
   registrarEvento(r.impacto ? "disparo: impacto" : "disparo sin impacto");
@@ -3438,8 +3478,8 @@ let geometriaGrafico = null;     // última geometría dibujada (para el cursor)
 
 function formatoValor(v) {
   const cfg = SERIES[serieGrafico];
-  if (cfg.prob) return `${(v * 100).toFixed(1).replace(".", ",")} %`;
-  return Number(v).toFixed(cfg.decimales).replace(".", ",");
+  if (cfg.prob) return fraccionAPorcentaje(v);
+  return coma(v, cfg.decimales);
 }
 
 // Series por paso desde /serie (contrato CONTRATOS_GRAFICOS.md, §6). /serie ya trae p_libre y p_obstaculo
@@ -3495,7 +3535,7 @@ function dibujarGrafico() {
   }
   const xDe = (n) => x0 + ((n - nMin) / Math.max(1, nMax - nMin)) * (x1 - x0);
   const yDe = (v) => y1 - ((v - yMin) / (yMax - yMin)) * (y1 - y0);
-  const etiqueta = (v) => (cfg.prob ? `${Math.round(v * 100)} %` : Number(v).toFixed(cfg.escala === "auto" ? 1 : 2).replace(".", ","));
+  const etiqueta = (v) => (cfg.prob ? `${Math.round(v * 100)} %` : coma(v, cfg.escala === "auto" ? 1 : 2));
 
   // Rejilla horizontal y etiquetas del eje Y
   ctx.lineWidth = 1;
@@ -3668,7 +3708,7 @@ function cineCargar() {
         objetivo: () => ({ pos: grupoRover.position, rot: grupoRover.rotation.y }),
       });
       const panel = ui.crearPanelCine(document.getElementById("cine-lecturas"));
-      const cinta = ui.crearCintaCine(document.body, { alDesactivar: () => cineActivar(false) });
+      const cinta = ui.crearCintaCine(document.body);
       cine = { datos, director, panel, cinta };
     })().catch((e) => { cineCarga = null; cine = null; console.warn("cine: no se pudo cargar; la partida sigue igual", e); throw e; });
   }
@@ -3699,6 +3739,7 @@ async function cineActivar(on) {
     camaraSiguiendo = false;
     cine.director.activar(true);
     cine.cinta.director(true);
+    cine.cinta.aviso("H o Esc para salir", 3000);   // el atajo se ve 3 s y se desvanece; queda también en el título del botón «Salir del cine»
     return true;
   } catch (e) {
     document.getElementById("cine-director").checked = false; cineFijarPref("ares.cine", false);

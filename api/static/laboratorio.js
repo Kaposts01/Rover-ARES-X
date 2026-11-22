@@ -1,13 +1,14 @@
+import { coma as comaFormato } from "./formato.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import {
-  VARIANTES_POLITICA, nombreVariante, notaVariantes, NOTA_POLITICAS, textoCandidatoAG, textoEvaluacionRNA, textoBateriaDifuso,
+  VARIANTES_POLITICA, nombreVariante, notaVariantes, NOTA_POLITICAS, textoCandidatoAG, lineasExtraCandidatoAG, LAB_AG, textoEvaluacionRNA, textoBateriaDifuso,
   ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso } from "/static/textos.js?v=r14";
 import { crearEditorDifuso } from "/static/difuso_editor.js?v=r14";
 // Laboratorios de los modelos: genético, difuso y RNA, más la comparación de políticas.
 // Datos de los endpoints de docs/CONTRATOS_GRAFICOS.md. Este módulo solo dibuja; el motor está en Python.
 
 const $ = (id) => document.getElementById(id);
-const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "-" : Number(v).toFixed(d).replace(".", ","));
+const coma = (v, d = 2) => comaFormato(v, d, "-");
 const porcentaje = (v) => (v == null ? "-" : `${coma(v * 100, 1)} %`);
 
 // Creación de nodos sin innerHTML: el texto siempre entra con textContent
@@ -153,7 +154,6 @@ let agCandidato = 0;
 const PESOS_AG_DEFECTO = { ciencia: 1.0, distancia: 0.3, energia: 0.2, riesgo: 0.8, tiempo: 0.1 };
 const PESO_AG_MAX = 5;
 let pesosAgTocados = false;   // sin tocar los deslizadores no se envía ningún peso (consulta idéntica a la de siempre)
-const NOTA_PESOS_AG = "estos pesos afectan al laboratorio; en el juego el orden de visita lo fija la ruta más corta validada";
 
 function iniciarPesosAG() {
   const cont = $("ag-pesos");
@@ -185,7 +185,7 @@ function iniciarPesosAG() {
   });
   cont.appendChild(aplicar);
   cont.appendChild(defecto);
-  $("ag-pesos-nota").textContent = NOTA_PESOS_AG;
+  $("ag-pesos-nota").textContent = LAB_AG.notaPesos;
 }
 
 function textoCromosoma(cromosoma) {
@@ -292,6 +292,9 @@ function pintarCandidatos() {
   tabla.appendChild(cuerpo);
   cont2.appendChild(tabla);
   cont2.appendChild(nodo("div", "ayuda", textoCandidatoAG(c)));
+  // campos del AG con restricciones, si el motor los manda (violaciones, paradas, descartes, ciencia): no se depende de ellos
+  const extra = lineasExtraCandidatoAG(c);
+  if (extra.length) cont2.appendChild(nodo("div", "ayuda", extra.map(([n, v]) => (v ? `${n}: ${v}` : n)).join(" · ")));
 }
 
 async function ejecutarAG() {
@@ -303,7 +306,7 @@ async function ejecutarAG() {
   const progreso = $("ag-progreso");
   progreso.classList.remove("oculto");
   const contar = () => {
-    estado.textContent = `Ejecutando el AG… ${Math.round((Date.now() - inicio) / 1000)} s (unos 70 s con 30 generaciones)`;
+    estado.textContent = LAB_AG.calculando(Math.round((Date.now() - inicio) / 1000));
   };
   contar();
   const reloj = setInterval(contar, 1000);
@@ -320,7 +323,9 @@ async function ejecutarAG() {
   }
   agDatos = datos;
   agCandidato = 0;
-  estado.textContent = `${plural(datos.generaciones_ejecutadas, "generación", "generaciones")} · ${plural(datos.cruces, "cruce", "cruces")} · ${plural(datos.mutaciones, "mutación", "mutaciones")}`;
+  const resumenAG = `${plural(datos.generaciones_ejecutadas, "generación", "generaciones")} · ${plural(datos.cruces, "cruce", "cruces")} · ${plural(datos.mutaciones, "mutación", "mutaciones")}`;
+  const segundos = Number.isFinite(Number(datos.tiempo_s)) && datos.tiempo_s !== null ? Number(datos.tiempo_s) : (Date.now() - inicio) / 1000;   // el tiempo real que devuelve el motor; si no lo trae, el medido aquí
+  estado.textContent = LAB_AG.terminado(resumenAG, segundos);
   pintarAG();
 }
 
@@ -518,10 +523,15 @@ function rellenarRasgos(entrada) {
   for (const r of RASGOS) $(`${r.id}-v`).textContent = coma($(r.id).value, 1);
 }
 
+// Una sola fuente de verdad: solo la última consulta de la RNA pinta controles y tabla; una respuesta que llega tarde
+// (de una consulta anterior, p. ej. la de la celda del rover al abrir con «en vivo») se descarta. Devuelve true si pintó.
+let rnaEpoca = 0;
 async function consultarRNA() {
+  const epoca = ++rnaEpoca;
   const q = rnaUsoRover ? "" : `?${parametrosRNA()}`;
   const datos = await deps.llamar("GET", `/rna${q}`);
-  if (!datos) { $("rna-accion").textContent = "Sin respuesta de la RNA (revisa que haya partida)."; return; }
+  if (epoca !== rnaEpoca) return false;
+  if (!datos) { $("rna-accion").textContent = "Sin respuesta de la RNA (revisa que haya partida)."; return false; }
   adaptarControlesRNA(datos.modelo);
   if (rnaUsoRover) rellenarRasgos(datos.entrada);
   for (const r of RASGOS) $(`${r.id}-v`).textContent = coma($(r.id).value, 1);
@@ -564,6 +574,7 @@ async function consultarRNA() {
     (datos.motivos && datos.motivos.length ? ` · motivos: ${nombresMotivos(datos.motivos)}` : "");
 
   pintarActivaciones(datos.activaciones);
+  return true;
 }
 
 // Mapa de calor de una capa: azul para positivo, rojo para negativo, intensidad por magnitud
@@ -595,8 +606,9 @@ function pintarActivaciones(act) {
 }
 
 async function cargarEvaluacion() {
-  const ev = await deps.llamar("GET", "/rna/evaluacion");
   const cont = $("rna-evaluacion");
+  cont.replaceChildren(nodo("div", "ayuda", "Calculando la evaluación del modelo… (la primera vez tarda unos segundos)"));   // sin esto el panel quedaba en blanco
+  const ev = await deps.llamar("GET", "/rna/evaluacion");
   cont.replaceChildren();
   if (!ev) { cont.textContent = "La evaluación no respondió (revisa que haya partida)."; return; }
   const metricas = nodo("div", "lab-metricas");
@@ -753,8 +765,7 @@ export async function seguirPasoLaboratorio() {
       if (d.rna.modelo) adaptarControlesRNA(d.rna.modelo);
       rellenarRasgos(d.rna.entrada);
       rnaUsoRover = false;
-      await consultarRNA();
-      $("rna-accion").textContent = `paso ${d.paso} (en vivo) · ` + $("rna-accion").textContent;
+      if (await consultarRNA()) $("rna-accion").textContent = `paso ${d.paso} (en vivo) · ` + $("rna-accion").textContent;
     }
     if (activa === "difuso" && d.difuso) {
       const e = d.difuso.entradas;

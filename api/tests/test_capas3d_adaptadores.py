@@ -1,4 +1,4 @@
-"""Paquete A: pruebas de los adaptadores JS puros (evolucion_datos.js, holo_datos.js).
+"""Paquete A: pruebas de los adaptadores JS puros (ag_evolucion_datos.js, formato.js, holo_datos.js).
 El repo no tiene runner JS: se ejecuta node sobre el módulo, y se omite si node no existe."""
 import json
 import shutil
@@ -28,33 +28,42 @@ def _ag(poblaciones):
         for i, pob in enumerate(poblaciones)]}
 
 
-def test_evolucion_puntos_rango_y_tope():
+def test_evolucion_laboratorio_rango_tope_y_orden_por_fitness():
+    # lo que la app usa hoy (ag_evolucion_datos.js; evolucion_datos.js ya no existe): la población de GET /ag pasa a rutas
+    # con tope por generación, la mejor primero y los sitios con id estable
     pob = [([[i, i + 1], [i + 2, 0]], float(i)) for i in range(12)]
     ag = _ag([pob, pob])
-    r = _js("evolucion_datos.js", f"m.adaptarAG({json.dumps(ag)}, [3, 4])")
-    assert r["seleccionada"] == 1
+    ctx = {"inicio": [3, 4], "refugio": [0, 29], "sitios": [], "bases": []}
+    r = _js("ag_evolucion_datos.js", f"m.desdeLaboratorio({json.dumps(ag)}, {json.dumps(ctx)})")
+    assert r["estado"] == "ok" and r["fuente"] == "laboratorio" and r["seleccionada"] == 1
     cands = r["generaciones"][0]["candidatos"]
-    assert len(cands) == 8                                   # MAX_CANDIDATOS_POR_GENERACION
-    assert [c["rango"] for c in cands] == list(range(8))
+    assert len(cands) == 6                                   # MAX_RUTAS_POR_GENERACION
+    assert [c["rango"] for c in cands] == list(range(6))
     assert cands[0]["fitness"] == 11.0                       # rango 0 = mejor fitness
-    assert cands[0]["puntos"][0] == [3, 4]                   # empieza en la posición del rover
-    assert cands[0]["puntos"][1:] == [[11, 12], [13, 0]]     # luego el cromosoma en orden
-    assert all(c["factible"] is True for c in cands)
+    assert cands[0]["puntos"][0] == [3, 4] and cands[0]["puntos"][-1] == [0, 29]   # de la salida al refugio
+    assert all(c["rectas"] is True for c in cands)           # sin camino celda a celda, la línea une los sitios en orden
 
 
-def test_evolucion_sin_datos_y_filas_invalidas():
-    assert _js("evolucion_datos.js", "m.adaptarAG({sin_sitios: true}, [0, 0])") is None
+def test_evolucion_laboratorio_sin_datos_y_filas_invalidas():
+    assert _js("ag_evolucion_datos.js", 'm.desdeLaboratorio({sin_sitios: true}, {})["estado"]') == "vacio"
+    assert _js("ag_evolucion_datos.js", 'm.desdeLaboratorio(null, {})["estado"]') == "vacio"
     ag = _ag([[([[1, 1]], 1.0)]])
     ag["generaciones"][0]["poblacion"].append({"cromosoma": [["x", 1]], "fitness": 5, "operacion": "mut"})
     ag["generaciones"][0]["poblacion"].append({"cromosoma": [[2, 2]], "fitness": None, "operacion": "mut"})
-    r = _js("evolucion_datos.js", f"m.adaptarAG({json.dumps(ag)}, null, 3)")
-    assert len(r["generaciones"][0]["candidatos"]) == 1
-    assert r["generaciones"][0]["candidatos"][0]["puntos"] == [[1, 1]]   # sin posición, solo el cromosoma
+    r = _js("ag_evolucion_datos.js", f"m.desdeLaboratorio({json.dumps(ag)}, {{}})")
+    assert len(r["generaciones"][0]["candidatos"]) == 1      # la celda rota y el fitness nulo se descartan
+    assert r["generaciones"][0]["candidatos"][0]["puntos"] == [[1, 1]]   # sin inicio ni refugio, solo el cromosoma
 
 
-def test_evolucion_coordenadas_como_la_capa_de_riesgo():
-    assert _js("evolucion_datos.js", "m.celdaAEscena([2, 5])") == {"x": 5.5, "z": 2.5}
-    assert _js("evolucion_datos.js", "m.celdaAEscena(null)") is None
+def test_formato_numerico_unico_coma_decimal_y_un_decimal_en_porcentaje_y_grados():
+    # una sola función para toda la interfaz (formato.js): coma decimal, 1 decimal en % y °C
+    assert _js("formato.js", 'm.porcentaje(91.9)') == "91,9 %"
+    assert _js("formato.js", 'm.porcentaje(92)') == "92,0 %"
+    assert _js("formato.js", 'm.fraccionAPorcentaje(0.9192)') == "91,9 %"
+    assert _js("formato.js", 'm.grados(18.94)') == "18,9 °C"
+    assert _js("formato.js", 'm.grados(17.92)') == "17,9 °C"
+    assert _js("formato.js", 'm.coma(2.5, 2)') == "2,50"
+    assert _js("formato.js", '[m.coma(null), m.coma(undefined), m.coma("x"), m.porcentaje(null), m.grados(null, "-")]') == ["—", "—", "—", "—", "-"]
 
 
 def test_holo_tres_clases_un_medidor_y_vetos():

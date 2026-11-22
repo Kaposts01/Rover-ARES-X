@@ -1,12 +1,13 @@
 // Controles de la capa «Evolución del AG»: se montan dentro de la pestaña «Genético» del panel derecho.
 // Interruptor de la capa, ▶/⏸, velocidad, deslizador de generación, curvas de fitness (mejor y media) y de diversidad, y la lectura del
 // candidato bajo el puntero. Todo con textContent; los textos viven en textos.js (EVO). Los datos llegan adaptados (ag_evolucion_datos.js).
+import { coma as comaFormato } from "./formato.js?v=r14";
 import { dibujarLineas } from "/static/laboratorio.js?v=r14";
-import { EVO } from "/static/textos.js?v=r14";
+import { EVO, parametroDifusoLegible } from "/static/textos.js?v=r14";
 import { VELOCIDADES_EVO, seriesEvolucion, textoGeneracionEvo, lecturaCandidato } from "/static/ag_evolucion_datos.js?v=r14";
 
 const el = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
-const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "—" : Number(v).toFixed(d).replace(".", ","));
+const coma = (v, d = 2) => comaFormato(v, d, "—");
 
 // acciones: { alActivar(bool), alRecalcular(), alReproducir(), alPausar(), alIr(i), alVelocidad(k) }
 export function crearEvolucionUI(acciones = {}) {
@@ -109,7 +110,7 @@ export function crearEvolucionUI(acciones = {}) {
       const t = evo.tiempoS != null ? ` · ${EVO.calculadoEn} ${coma(evo.tiempoS, 1)} s` : "";
       estado.textContent = `${evo.generaciones.length} ${EVO.generaciones}${evo.planeta ? ` · ${evo.planeta}` : ""}${t}`;
       dl.replaceChildren();
-      for (const [k, v] of evo.parametrosDifuso) { dl.append(el("dt", null, k.replace(/_/g, " ")), el("dd", null, typeof v === "number" ? coma(v, 3) : String(v))); }
+      for (const [k, v] of evo.parametrosDifuso) { const [nombre, texto] = parametroDifusoLegible(k, v); dl.append(el("dt", null, nombre), el("dd", null, texto)); }
       difuso.classList.toggle("oculto", !evo.parametrosDifuso.length);
       this.generacion(indice, evo.generaciones[indice]);
     },

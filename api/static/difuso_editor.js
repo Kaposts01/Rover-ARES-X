@@ -3,13 +3,14 @@
 // El cálculo de la vista previa es local (difuso_reglas_datos.js): al cambiar algo no se espera al servidor. Los cambios válidos se aplican
 // a la partida con PUT /difuso/reglas (con una pequeña espera); «Restaurar» llama a DELETE. Sin soporte en el motor (404), todo queda en
 // vista previa y se dice. Todo con textContent; textos en textos.js (EDIT).
+import { coma as comaFormato } from "./formato.js?v=r14";
 import { EDIT, reglasActivadas, nombreDifuso } from "/static/textos.js?v=r14";
 import {
   adaptarReglas, modeloDeFabrica, clonar, inferir, barrido, superficie, validar, viabilidadAntecedente, diferencias, cuerpoPUT,
 } from "/static/difuso_reglas_datos.js?v=r14";
 
 const el = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
-const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "—" : Number(v).toFixed(d).replace(".", ","));
+const coma = (v, d = 2) => comaFormato(v, d, "—");
 const COLORES = ["#ff5d6c", "#ffb454", "#5fd3ff", "#6ee7a8", "#c79bff"];
 const ESPERA_APLICAR_MS = 600;
 const ENTRADAS_POR_DEFECTO = { distancia: 1, bateria: 90, inclinacion: 2, temperatura: 15 };
@@ -30,7 +31,7 @@ const motivoDe = (r) => (r.cuerpo && (r.cuerpo.motivo || r.cuerpo.detail || r.cu
 // deps: { contenedor, dibujarLineas, preparar, alEstado({personalizadas, soloPrevia, cambios}) }
 export function crearEditorDifuso({ contenedor, dibujarLineas, preparar, alEstado }) {
   let base = null, modelo = null, soloPrevia = false, personalizadas = false, entradas = { ...ENTRADAS_POR_DEFECTO };
-  let temporizador = null, firmaAplicada = "", versionAplicar = 0, mostrarCambio = false, tablaRows = new Map();
+  let ultimaValidacion = [], temporizador = null, firmaAplicada = "", versionAplicar = 0, mostrarCambio = false, tablaRows = new Map();
 
   // ---------- esqueleto ----------
   const raiz = el("div", "dedit");
@@ -39,7 +40,10 @@ export function crearEditorDifuso({ contenedor, dibujarLineas, preparar, alEstad
   const insignia = el("span", "badge-reglas", EDIT.delPlaneta); insignia.id = "dedit-insignia";
   const restaurar = el("button", "secundario", EDIT.restaurar); restaurar.type = "button"; restaurar.id = "dedit-restaurar";
   const mensaje = el("span", "ayuda dedit-mensaje"); mensaje.setAttribute("aria-live", "polite"); mensaje.id = "dedit-mensaje";
-  barra.append(insignia, restaurar, mensaje);
+  const aplicarCaja = el("label", "veto dedit-aplicar"); aplicarCaja.title = EDIT.aplicarAyuda;
+  const aplicarInt = el("input"); aplicarInt.type = "checkbox"; aplicarInt.checked = true; aplicarInt.id = "dedit-aplicar";
+  aplicarCaja.append(aplicarInt, document.createTextNode(` ${EDIT.aplicarInterruptor}`));
+  barra.append(insignia, restaurar, mensaje, aplicarCaja);
   const avisos = el("ul", "dedit-avisos"); avisos.id = "dedit-avisos";
   const bSalida = el("div", "lab-bloque");
   const resumenSalida = el("div", "dedit-resumen"); resumenSalida.id = "dedit-resumen";
@@ -70,8 +74,9 @@ export function crearEditorDifuso({ contenedor, dibujarLineas, preparar, alEstad
   function notificar() { if (alEstado) alEstado({ personalizadas, soloPrevia, cambios: cambios() }); }
   function pintarInsignia() {
     const n = cambios();
-    const activa = soloPrevia ? n > 0 : personalizadas;
-    insignia.textContent = soloPrevia ? (n > 0 ? EDIT.vistaPrevia : EDIT.delPlaneta) : (personalizadas ? EDIT.personalizadas : EDIT.delPlaneta);
+    const previa = soloPrevia || !aplicarInt.checked;   // sin soporte del motor o con el interruptor apagado, los cambios solo se ven aquí
+    const activa = previa ? (n > 0 || personalizadas) : personalizadas;
+    insignia.textContent = previa && n > 0 && JSON.stringify(cuerpoPUT(modelo, base)) !== firmaAplicada ? EDIT.vistaPrevia : (personalizadas ? EDIT.personalizadas : EDIT.delPlaneta);
     insignia.classList.toggle("inactiva", !activa);
     insignia.title = n ? EDIT.cambios(n) : EDIT.sinCambios;
     restaurar.disabled = !(personalizadas || n > 0);
@@ -182,10 +187,12 @@ export function crearEditorDifuso({ contenedor, dibujarLineas, preparar, alEstad
 
   // ---------- aplicar a la partida ----------
   function programarAplicar(validacion) {
+    ultimaValidacion = validacion;
     clearTimeout(temporizador);
     const hayError = validacion.some((m) => m.tipo === "error");
     if (hayError) { mensaje.textContent = EDIT.hayErrores; return; }
     if (soloPrevia) { mensaje.textContent = cambios() ? EDIT.sinSoporte : EDIT.sinCambios; return; }
+    if (!aplicarInt.checked) { versionAplicar++; mensaje.textContent = cambios() ? EDIT.soloVista : EDIT.sinCambios; return; }   // el interruptor corta el envío; lo ya aplicado se queda
     const firma = JSON.stringify(cuerpoPUT(modelo, base));
     if (firma === firmaAplicada) { mensaje.textContent = cambios() ? "" : EDIT.sinCambios; return; }   // lo que se ve ya es lo que tiene la partida
     mensaje.textContent = EDIT.aplicando;
@@ -199,6 +206,10 @@ export function crearEditorDifuso({ contenedor, dibujarLineas, preparar, alEstad
       pintarInsignia(); notificar();
     }, ESPERA_APLICAR_MS);
   }
+  aplicarInt.addEventListener("change", () => {
+    pintarInsignia();
+    if (modelo) programarAplicar(ultimaValidacion);   // al reactivarlo, lo que se ve pasa a la partida; al apagarlo, se cancela el envío pendiente
+  });
   restaurar.addEventListener("click", async () => {
     clearTimeout(temporizador); versionAplicar++;
     mensaje.textContent = EDIT.restaurando;

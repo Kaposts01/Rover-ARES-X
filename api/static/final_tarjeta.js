@@ -1,4 +1,5 @@
 // Pantalla final: capa DOM (estrellas, puntaje, estadísticas, logros, momentos y botones). Todo con textContent.
+import { porcentaje } from "./formato.js?v=r14";
 import {
   ROTULO_PUNTAJE, NOTA_PUNTAJE, ROTULO_FICCION, NOTA_DISTANCIA, NOTA_BARRANCOS, NOTA_VIOLACIONES, AVISO_TERRENO,
   DURACION_CUENTA_MS, DURACION_CONFETI_MS, TECLAS_QUE_PASAN, MAX_MOMENTOS,
@@ -31,8 +32,9 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   const titulo = el("h2", "fn-titulo"); titulo.id = "fn-titulo";
   const subtitulo = el("p", "fn-subtitulo");
   titulos.append(el("div", "fn-kicker", "ARES-X · informe de misión"), titulo, subtitulo);
-  const omitir = boton("secundario fn-omitir", "Omitir");
-  omitir.setAttribute("aria-label", "Omitir la pantalla final (Escape)");
+  const omitir = boton("secundario fn-omitir", "Omitir el informe");
+  omitir.setAttribute("aria-label", "Omitir el informe de la misión y pasar a las opciones (Escape)");
+  omitir.title = "Cierra este informe y pasa a la pantalla de opciones: volver a jugar, otro mapa o salir (Escape)";
   cabecera.append(titulos, omitir);
 
   const estrellasEl = el("div", "fn-estrellas"); estrellasEl.setAttribute("role", "img");
@@ -207,9 +209,9 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
     rejilla.replaceChildren(
       pintarEstadistica("planeta", "Cuerpo", r.planeta || "—"),
       pintarEstadistica("brujula", "Vehículo", r.modo ? Vehiculo(r.modo) : "—"),
-      pintarEstadistica("microscopio", "Ciencia", r.ciencia == null ? "—" : `${formatoDato(r.ciencia * 100)} %`),
+      pintarEstadistica("microscopio", "Ciencia", r.ciencia == null ? "—" : porcentaje(r.ciencia * 100)),
       pintarEstadistica("probeta", "Objetivos muestreados", r.objetivos_muestreados == null || r.objetivos_totales == null ? "—" : `${formatoDato(r.objetivos_muestreados)} / ${formatoDato(r.objetivos_totales)}`),
-      pintarEstadistica("bateria", "Batería final", r.bateria_pct == null ? "—" : `${formatoDato(r.bateria_pct, { decimales: 1 })} %`),
+      pintarEstadistica("bateria", "Batería final", r.bateria_pct == null ? "—" : porcentaje(r.bateria_pct)),
       pintarEstadistica("escudo", "Violaciones / vetos", r.violaciones == null && r.vetos == null ? "—" : `${formatoDato(r.violaciones)} / ${formatoDato(r.vetos)}`),
       pintarEstadistica("montana", "Vetos por barranco (pasos)", formatoDato(r.barrancos_evitados)),
       pintarEstadistica("replanificar", "Replanificaciones", formatoDato(r.replanificaciones)),

@@ -1,3 +1,4 @@
+import { coma as comaFormato } from "./formato.js?v=r14";
 // Condiciones y aspecto de cada planeta: datos y funciones puras (sin DOM ni THREE). Se prueban con node (api/tests/test_textos_ui.py).
 //
 // ADAPTADOR ÚNICO de las mecánicas del planeta. El motor (juego/planetas.py) las entrega de dos maneras y aquí se leen las dos:
@@ -43,11 +44,15 @@ export function gradosDeDireccion(d) {
 export function nombreDireccion(grados) {
   return NOMBRES_CARDINALES[Math.round((((grados % 360) + 360) % 360) / 45) % 8];
 }
+// Escala única del viento, la de las descripciones del motor (juego/planetas.py): Marte 0,40 «moderado», Saturno 0,80 «fuerte»,
+// Neptuno 0,85 y Júpiter 0,90 «muy fuerte». Se aplica siempre a la intensidad del PERFIL del planeta (no a la del nivel ni a la
+// ráfaga), para que la ficha, el HUD y el estado vivo digan lo mismo; la ráfaga se rotula aparte.
 export function nombreFuerza(f) {
   if (f < 0.05) return "en calma";
-  if (f < 0.3) return "suave";
-  if (f < 0.65) return "moderado";
-  return "fuerte";
+  if (f < 0.35) return "suave";
+  if (f < 0.6) return "moderado";
+  if (f < 0.85) return "fuerte";
+  return "muy fuerte";
 }
 export function nombreHielo(n) {
   if (n < 0.05) return "sin hielo";
@@ -55,8 +60,8 @@ export function nombreHielo(n) {
   if (n < 0.65) return "bastante";
   return "mucho";
 }
-const f2 = (v) => v.toFixed(2).replace(".", ",");
-const f1 = (v) => v.toFixed(1).replace(".", ",");
+const f2 = (v) => comaFormato(v, 2);
+const f1 = (v) => comaFormato(v, 1);
 const pct0 = (v) => `${Math.round(v * 100)} %`;
 const veces = (v) => f1(v).replace(",0", "");
 
@@ -86,6 +91,7 @@ export function condicionesPlaneta(origen, planeta) {
     fuerza: acotar(tieneV ? actual : ref.viento, 0, 1),               // para las partículas: nunca más de 1
     actual: tieneV ? actual : ref.viento,                              // sin acotar (la ráfaga puede pasar de 1)
     base: base != null ? base * intensidad : ref.viento,
+    perfil: base != null ? base : ref.viento,                          // intensidad del perfil del planeta (sin nivel ni ráfaga): la que se rotula
     grados: gr != null ? gr : gradosDeDireccion(ref.rumbo_viento),
     rafaga: vivo.rafaga === true,
     rafagaPasos: Math.max(0, Math.round(numero(vivo.rafaga_restante, 0))),
@@ -118,7 +124,7 @@ export function queCambia(origen, planeta) {
   else if (g > 0.5) frases.push(`gravedad de ${f2(g)} g: se gasta más batería por paso y al subir`);
   else frases.push(`gravedad baja (${f2(g)} g): subir cuesta poco`);
   if (c.viento.base < 0.05) frases.push("sin viento");
-  else frases.push(`viento ${nombreFuerza(c.viento.base)} hacia el ${nombreDireccion(c.viento.grados)}${c.viento.rafagaProb ? ", con ráfagas" : ""}: de cara gasta más batería y de costado puede desviar`);
+  else frases.push(`viento ${nombreFuerza(c.viento.perfil)} hacia el ${nombreDireccion(c.viento.grados)}${c.viento.rafagaProb ? ", con ráfagas" : ""}: de cara gasta más batería y de costado puede desviar`);
   if (c.hielo.fraccion > 0) frases.push(`hielo en el ${pct0(c.hielo.fraccion)} del mapa${c.hielo.fragilidad > 1.05 ? " (muy resbaladizo)" : ""}: a velocidad alta el vehículo resbala`);
   if (c.terreno.pendiente > 1.05) frases.push("regolito suelto: las subidas cuestan más");
   if (c.terreno.arrastre > 0) frases.push("atmósfera densa: frena en cada paso");
@@ -134,7 +140,7 @@ export function filasFicha(mecanicas, planeta) {
   const c = condicionesPlaneta(mecanicas, planeta);
   const filas = [
     { etiqueta: "Gravedad", valor: `${f2(c.gravedad.g)} g`, tipo: "mecanica" },
-    { etiqueta: "Viento", valor: c.viento.base < 0.05 ? "en calma" : `${nombreFuerza(c.viento.base)} · ${nombreDireccion(c.viento.grados)}`, tipo: "mecanica" },
+    { etiqueta: "Viento", valor: c.viento.base < 0.05 ? "en calma" : `${nombreFuerza(c.viento.perfil)} · ${nombreDireccion(c.viento.grados)}`, tipo: "mecanica" },
     { etiqueta: "Hielo", valor: c.hielo.fraccion > 0 ? `${pct0(c.hielo.fraccion)} del mapa` : "sin hielo", tipo: "mecanica" },
   ];
   filas.push({ etiqueta: "Al jugar aquí", valor: queCambia(mecanicas, planeta).join("; ") + ".", tipo: "mecanica-nota" });
@@ -145,7 +151,7 @@ export function filasFicha(mecanicas, planeta) {
 export function filasCondiciones(c, paso) {
   const calma = c.viento.base < 0.05 && !c.viento.rafaga;
   const dir = nombreDireccion(c.viento.grados);
-  let textoViento = calma ? "en calma" : `${nombreFuerza(c.viento.fuerza)} · hacia el ${dir}`;
+  let textoViento = calma ? "en calma" : `${nombreFuerza(c.viento.rafaga ? c.viento.fuerza : c.viento.perfil)} · hacia el ${dir}`;   // en ráfaga, la fuerza de la ráfaga en la misma escala;
   if (c.viento.rafaga) textoViento = `ráfaga ${textoViento}${c.viento.rafagaPasos ? ` (${c.viento.rafagaPasos} ${c.viento.rafagaPasos === 1 ? "paso" : "pasos"})` : ""}`;
   const filas = [
     ["Gravedad", `${f2(c.gravedad.g)} g`, c.gravedad.fuente],

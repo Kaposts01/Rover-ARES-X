@@ -6,6 +6,7 @@
 // probabilidades pueden llamarse `probabilidades`, `probs` o `p`, y las claves «obstaculo»/«obstáculo» valen las dos.
 // Si el motor aún no manda el tramo, se muestra la celda que de verdad clasificó la RNA en el paso (`celda` de /ia/paso) con su coordenada
 // explícita: nunca una clasificación sin decir de qué celda es.
+import { fraccionAPorcentaje } from "./formato.js?v=r14";
 import { ubicacionEvento } from "./textos.js?v=r14";
 
 export const CLASES_RNA = ["libre", "obstáculo", "barranco"];
@@ -64,7 +65,7 @@ export function adaptarTramoRNA(d, vehiculo = "rover") {
 
 // Frase de cabecera de la decisión: siempre dice de qué celda habla
 export function titularRNA(f) {
-  const pct = `${(f.confianza * 100).toFixed(1).replace(".", ",")} %`;
+  const pct = fraccionAPorcentaje(f.confianza);
   return `${f.clase} ${pct} · celda (${f.celda[0]}, ${f.celda[1]})`;
 }
 

@@ -1,3 +1,4 @@
+import { coma as comaFormato } from "./formato.js?v=r14";
 // Textos y formatos de la interfaz: funciones puras, sin DOM, que se prueban con node (api/tests/test_textos_ui.py).
 // Aquí viven los nombres que ve el jugador; los valores que compara el código («automatico», «persecucion»...) no cambian.
 
@@ -109,7 +110,7 @@ export function puntajeSimple({ visitados, totales, bateria, vetos }) {
 export function textoBateriaDifuso(entradas) {
   const e = entradas || {};
   const pct = Number(e.bateria_pct), u = Number(e.bateria);
-  const f = (v, d) => (Number.isFinite(v) ? v.toFixed(d).replace(".", ",") : "-");
+  const f = (v, d) => comaFormato(v, d, "-");
   if (!Number.isFinite(pct)) return `${f(u, 0)} u. del motor`;
   return `${f(pct, 1)} % (${f(u, 0)} u. del motor)`;
 }
@@ -151,7 +152,7 @@ export function notaVariantes(variantes) {
 // Resumen de la pantalla de meta: pasos, puntaje y batería
 export function resumenMeta(e) {
   const x = e || {};
-  const f1 = (v) => (typeof v === "number" ? v.toFixed(1).replace(".", ",") : "—");
+  const f1 = (v) => (typeof v === "number" ? comaFormato(v, 1) : "—");
   return [
     ["Pasos", x.paso == null ? "—" : String(x.paso)],
     ["Puntaje simple", x.puntaje == null ? "—" : String(x.puntaje)],
@@ -221,8 +222,66 @@ export const NOMBRE_ACCION = {
 export const nombreAccion = (a) => NOMBRE_ACCION[a] || String(a ?? "—").replace(/_/g, " ");
 
 // Nombres del difuso para mostrar: el motor usa identificadores sin tilde (bateria, critica, rapida…); en pantalla van con tilde
-const NOMBRE_DIFUSO = { bateria: "batería", inclinacion: "inclinación", critica: "crítica", rapida: "rápida", fria: "fría" };
+const NOMBRE_DIFUSO = { bateria: "batería", inclinacion: "inclinación", critica: "crítica", rapida: "rápida", fria: "fría", media: "media", salida: "velocidad de salida" };
 export const nombreDifuso = (x) => NOMBRE_DIFUSO[x] || String(x ?? "");
+
+// Parámetros del difuso que difieren del de defecto (GET /ag/evolucion → parametros_difuso). Claves del motor:
+//   «distancia.cerca», «salida.lenta»…  lista de puntos de la función de pertenencia (3 = triángulo, 4 = trapecio)
+//   «regla.R4»                           peso de la regla (0 = desactivada)
+//   «conduccion.v_hielo», «…v_viento», «…v_pendiente», «…factor_desvio», «…umbral_desvio»   topes y umbrales de conducción
+const UNIDAD_VARIABLE_DIFUSO = { distancia: " m", bateria: " %", inclinacion: " °", temperatura: " °C", salida: "" };
+const NOMBRE_CONDUCCION = {
+  v_hielo: ["Tope de velocidad sobre hielo", "fraccion"], v_viento: ["Tope de velocidad con viento fuerte", "fraccion"],
+  v_pendiente: ["Tope de velocidad en pendiente fuerte", "fraccion"], factor_desvio: ["Reserva de batería exigida para seguir hasta la meta", "veces"],
+  umbral_desvio: ["Batería por debajo de la cual se desvía a una base", "porcentaje"],
+};
+// Devuelve [nombre, texto] listo para mostrar; una clave que no se conoce se muestra tal cual, con guiones bajos como espacios.
+export function parametroDifusoLegible(clave, valor) {
+  const k = String(clave ?? "");
+  const num = (v, d = 2) => comaFormato(v, d, "—");
+  const corto = (v) => num(v, 2).replace(/,?0+$/, "");   // 0,00 → 0 · 15,80 → 15,8 · 45,00 → 45
+  const lista = Array.isArray(valor) ? valor.filter((x) => Number.isFinite(Number(x))) : null;
+  const m = /^([a-z_]+)\.([A-Za-z0-9_]+)$/.exec(k);
+  if (m && lista) {
+    const [, variable, etiqueta] = m;
+    const unidad = UNIDAD_VARIABLE_DIFUSO[variable] ?? "";
+    return [`${nombreDifuso(variable)[0].toUpperCase()}${nombreDifuso(variable).slice(1)} · «${nombreDifuso(etiqueta)}»`,
+      `función de pertenencia con puntos ${lista.map(corto).join(" · ")}${unidad}`];
+  }
+  if (m && m[1] === "regla") return [`Regla ${m[2]}`, Number(valor) === 0 ? "desactivada" : `peso ${corto(valor)} (1 = el de defecto)`];
+  if (m && m[1] === "conduccion" && NOMBRE_CONDUCCION[m[2]]) {
+    const [nombre, tipo] = NOMBRE_CONDUCCION[m[2]];
+    return [nombre, tipo === "porcentaje" ? `${num(Number(valor) * 100, 0)} % de la capacidad` : tipo === "veces" ? `×${corto(valor)}` : `${num(Number(valor) * 100, 0)} % de la velocidad máxima`];
+  }
+  const texto = lista ? lista.map(corto).join(" · ") : typeof valor === "number" ? num(valor, 3) : String(valor);
+  return [k.replace(/[._]/g, " "), texto];
+}
+
+// ---------- Laboratorio genético (ronda 23) ----------
+export const LAB_AG = {
+  calculando: (s) => `Calculando… ${s} s`,
+  terminado: (resumen, s) => `${resumen} · calculado en ${comaFormato(s, 1)} s`,
+  opcionSinParada: "sin parada (todas las generaciones)",
+  notaPesos: "Estos pesos mueven el fitness del laboratorio. En la partida el AG planifica con ventanas de tiempo (cada sitio vale más si se llega dentro de la suya), "
+    + "recargas obligatorias en las bases y sitios opcionales que puede descartar; su fitness es la ciencia recogida menos un coste por pasos y por recargas reparadas, y no usa estos pesos.",
+  factible: "plan factible", infactible: "plan infactible",
+  violaciones: "Restricciones que incumple", paradas: "Paradas de recarga", descartados: "Sitios opcionales descartados", ciencia: "Ciencia recogida", pasos: "Pasos",
+};
+export function lineasExtraCandidatoAG(c) {
+  const x = c || {};
+  const filas = [];
+  const lista = (v) => (Array.isArray(v) ? v : []);
+  if (typeof x.factible === "boolean") filas.push([x.factible ? LAB_AG.factible : LAB_AG.infactible, ""]);
+  const viol = lista(x.violaciones).map((v) => (typeof v === "string" ? v : JSON.stringify(v)));
+  if (viol.length) filas.push([LAB_AG.violaciones, viol.join("; ")]);
+  const paradas = lista(x.paradas).length ? lista(x.paradas).length : lista(x.recargas).length;
+  if (paradas) filas.push([LAB_AG.paradas, String(paradas)]);
+  if (lista(x.sacrificados).length) filas.push([LAB_AG.descartados, String(lista(x.sacrificados).length)]);
+  const ciencia = [x.ciencia, x.ciencia_recogida].find((v) => Number.isFinite(Number(v)) && v !== null);
+  if (ciencia !== undefined) filas.push([LAB_AG.ciencia, comaFormato(ciencia, 2)]);
+  if (Number.isFinite(Number(x.pasos)) && x.pasos !== null) filas.push([LAB_AG.pasos, String(Math.round(Number(x.pasos)))]);
+  return filas;
+}
 
 // ---------- Evolución del AG en el mapa (ronda 23) ----------
 export const EVO = {
@@ -276,6 +335,8 @@ export const EDIT = {
   personalizadas: "Reglas personalizadas activas", delPlaneta: "Reglas del planeta", vistaPrevia: "Reglas personalizadas · solo vista previa",
   restaurar: "Restaurar reglas del planeta", restaurando: "Restaurando…", restauradas: "Reglas del planeta restauradas.",
   aplicando: "Aplicando a la partida…", aplicada: "Aplicadas a la partida en curso.", noAplicada: (m) => `No se aplicó: ${m}`,
+  aplicarInterruptor: "Aplicar a la partida en curso", aplicarAyuda: "Activado: los cambios pasan solos a la partida a los 0,6 s. Desactivado: solo se ven en la vista previa y la partida sigue como está.",
+  soloVista: "Solo vista previa: los cambios no se envían a la partida.",
   sinSoporte: "El motor todavía no acepta reglas personalizadas: los cambios solo se ven aquí, en la vista previa; la partida sigue con las reglas del planeta.",
   hayErrores: "Hay errores que corregir antes de aplicar a la partida.", sinCambios: "Sin cambios respecto a las reglas del planeta.",
   cambios: (n) => `${n} ${n === 1 ? "cambio" : "cambios"} respecto a las reglas del planeta`,

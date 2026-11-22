@@ -82,7 +82,7 @@
 
   <div class="cine-controles">
     <button id="cine-play" class="cine-salir cine-play" type="button" aria-label="Reanudar la simulación (barra espaciadora)" title="Reanudar la simulación (barra espaciadora)">▶</button>
-    <button id="cine-salir" class="cine-salir" type="button" aria-label="Salir del modo cine (Esc)"><span aria-hidden="true">✕</span> Salir del cine</button>
+    <button id="cine-salir" class="cine-salir" type="button" title="Salir del modo cine (H o Esc)" aria-label="Salir del modo cine (H o Esc)"><span aria-hidden="true">✕</span> Salir del cine</button>
   </div>
   <div id="ia-conduce" class="ia-conduce oculto" role="status" aria-live="polite">
     <span class="ia-conduce-punto" aria-hidden="true"></span>
@@ -334,7 +334,7 @@
         <div class="lab-barra">
           <label>Parada sin mejora
             <select id="ag-parada">
-              <option value="">sin parada (30 generaciones)</option>
+              <option value="">sin parada (todas las generaciones)</option>
               <option value="5">5 generaciones</option>
               <option value="10">10 generaciones</option>
             </select>
@@ -659,8 +659,9 @@
         <label class="veto" title="Con el veto, el supervisor no deja avanzar hacia barrancos u obstáculos detectados">
           <input type="checkbox" id="menu-veto" checked> Veto de seguridad (RNA, difuso, AG)
         </label>
-        <label id="menu-misiones-fila" class="oculto">Misiones seguidas (automático)
-          <input id="menu-misiones" type="number" min="1" max="20" value="3">
+        <label id="menu-misiones-fila" class="oculto" title="Con 1 la partida termina en su pantalla final. Con más, el híbrido encadena misiones solo: la primera usa tu semilla y las siguientes, semillas aleatorias; cada una queda en los récords.">Misiones seguidas (1 = una sola)
+          <input id="menu-misiones" type="number" min="1" max="20" value="1">
+          <span class="ayuda">Más de 1 encadena misiones sin parar (las siguientes con semilla aleatoria) y la pantalla final sale al terminar la última.</span>
         </label>
       </section>
 

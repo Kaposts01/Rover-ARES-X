@@ -1,11 +1,12 @@
 // Panel derecho de IA: pestañas Red neuronal / Difuso / Genético / Misión, siempre a la vista durante la partida.
 // Solo lee del motor (GET /rna/red, /rna, /difuso, /ag) y solo pide los datos de la pestaña abierta.
 // Todo con textContent (sin innerHTML). Si algo falla, el panel lo dice y la partida sigue igual.
+import { coma as comaFormato } from "./formato.js?v=r14";
 import { dibujarLineas, preparar } from "/static/laboratorio.js?v=r14";
 import { adaptarTramoRNA, titularRNA, celdasAMarcar, NOTA_SIN_TRAMO } from "/static/rna_tramo_datos.js?v=r14";
 import { reglasActivadas, plural, nombresMotivos, textoBateriaDifuso, ETIQUETA_BATERIA_UNIVERSO } from "/static/textos.js?v=r14";
 
-const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "-" : Number(v).toFixed(d).replace(".", ","));
+const coma = (v, d = 2) => comaFormato(v, d, "-");
 const pct = (v) => (v == null ? "-" : `${coma(v * 100, 1)} %`);
 const CIAN = "#5fe6ff", MAGENTA = "#ff4fd8", COLOR_CLASE = { libre: "#5fe6ff", "obstáculo": "#ffb454", barranco: "#ff5d6c" };
 const COLORES_CONJUNTO = ["#ff5d6c", "#ffb454", "#5fd3ff", "#6ee7a8"];
@@ -226,13 +227,21 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     const p = preparar(rnaLienzo); if (!p) return;
     const { ctx, w, h } = p;
     const capas = capasRed(); if (!capas) return;
-    // márgenes según el texto más largo de cada lado (los rótulos no se cortan)
-    ctx.font = "11px 'Cascadia Mono', Consolas, monospace";
+    // márgenes según el texto más largo de cada lado (los rótulos no se cortan): si no caben, la letra baja de 11 a 9 px y,
+    // como última salvaguarda, el margen puede llegar a la mitad del lienzo
     const ent0 = rnaDatos.entrada || {};
-    const anchoTexto = (lista) => Math.max(0, ...lista.map((t) => ctx.measureText(t).width));
     const textosIzq = capas.nombres.map((n) => `${ETIQUETA_RASGO[n] || n} ${coma(ent0[n], 1)}`);
     const textosDer = capas.clases.map((c, j) => `${c} ${pct(capas.valores[3][j])}`);
-    const margenIzq = Math.min(w * 0.38, anchoTexto(textosIzq) + 20), margenDer = Math.min(w * 0.32, anchoTexto(textosDer) + 24), mt = 14, mb = 14;
+    let tam = 11, margenIzq, margenDer;
+    for (; tam >= 9; tam--) {
+      ctx.font = `${tam}px 'Cascadia Mono', Consolas, monospace`;
+      const anchoTexto = (lista) => Math.max(0, ...lista.map((t) => ctx.measureText(t).width));
+      margenIzq = anchoTexto(textosIzq) + 20; margenDer = anchoTexto(textosDer) + 24;
+      if (margenIzq <= w * 0.4 && margenDer <= w * 0.32) break;
+    }
+    tam = Math.max(9, tam);
+    margenIzq = Math.min(w * 0.5, margenIzq); margenDer = Math.min(w * 0.4, margenDer);
+    const mt = 14, mb = 14;
     const xs = capas.valores.map((_, i) => margenIzq + (i / (capas.valores.length - 1)) * (w - margenIzq - margenDer));
     const ys = capas.valores.map((v) => v.map((_, j) => mt + (v.length === 1 ? 0.5 : j / (v.length - 1)) * (h - mt - mb)));
     const maxAbs = capas.valores.map((v) => Math.max(1e-6, ...v.map((x) => Math.abs(x))));
@@ -280,7 +289,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
       });
     });
     // rótulos: entradas a la izquierda, clases a la derecha, capas abajo
-    ctx.font = "11px 'Cascadia Mono', Consolas, monospace"; ctx.textBaseline = "middle";
+    ctx.font = `${tam}px 'Cascadia Mono', Consolas, monospace`; ctx.textBaseline = "middle";
     ctx.fillStyle = "#a9c6d8"; ctx.textAlign = "right";
     textosIzq.forEach((t, j) => ctx.fillText(t, xs[0] - 10, ys[0][j]));
     ctx.textAlign = "left";

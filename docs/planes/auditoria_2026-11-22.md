@@ -49,7 +49,7 @@ Lo que tenemos igual: evolución del AG en 3D, hologramas, cine y postproceso, l
 | Modos de cámara (seguir, persecución, primera persona, cenital) | 5 modos | hecho: órbita, persecución, primera persona y cenital, más el director de cine |
 | Eventos | 19 (géiser, erupción, desprendimiento, ráfaga, corrosión, restauración de sensores, forzar día…) | 9 |
 | Dron compañero | sí | falta |
-| Defensa oral guiada | sí | falta |
+| Defensa oral guiada | sí | hecho: 11 pasos con los criterios RF/CA de la consigna, cifras en vivo y demostraciones a pedido |
 | Reporte HTML descargable y narrador de pasos | sí | hecho: `/reporte.html` y narrador (panel, subtítulos del cine y reporte) |
 | Sonido | sí | hecho: procedural con Web Audio |
 | Maqueta 3D en miniatura | sí | falta |

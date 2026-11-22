@@ -12,6 +12,7 @@ import { crearHolograma } from "/static/holo3d.js?v=r14";
 import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
 import { crearPanelIA } from "/static/panel_ia.js?v=r14";
 import { crearSonido } from "/static/sonido.js?v=r14";
+import { crearDefensa } from "/static/defensa.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
@@ -31,6 +32,7 @@ let reproduciendo = null;   // id del temporizador de reproducción, o null
 let cargando = false;       // true mientras el motor crea una partida nueva
 let panelIA = null;         // panel derecho de IA (se crea al final del módulo)
 const sonido = crearSonido(); // sonido procedural, apagado hasta que el usuario lo active
+let defensa = null;           // defensa guiada (se crea con la barra de control)
 
 function avisar(texto) {
   elMensaje.textContent = texto;
@@ -1631,6 +1633,7 @@ async function refrescarPaneles() {
   if (!document.getElementById("graficos").classList.contains("plegado")) await refrescarGraficos();
   marcarDesbordes();
   if (panelIA) panelIA.actualizar();                    // el panel de IA muestra la decisión real del paso (/ia/paso)
+  if (defensa) defensa.alPaso();                         // la defensa guiada actualiza sus cifras en vivo
   seguirPasoLaboratorio();                               // y el laboratorio abierto la sigue en vivo si su casilla está marcada
   await refrescarMovilesYEscenario();
 }
@@ -1874,10 +1877,10 @@ function actualizarControlEvento() {
   if (!boton) return;
   boton.disabled = !mapa || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado);
 }
-async function dispararEvento() {
+async function dispararEvento(nombreForzado = null) {
   if (finActiva()) return;
   if (!mapa || ocupado() || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado)) return;
-  const nombre = document.getElementById("evento-nombre").value;
+  const nombre = typeof nombreForzado === "string" ? nombreForzado : document.getElementById("evento-nombre").value;
   const r = await llamar("POST", "/evento", { nombre });
   if (!r) return;
   const detalle = r.detalle || (r.ok ? "hecho" : "sin efecto");
@@ -1887,7 +1890,7 @@ async function dispararEvento() {
   await refrescarEstado();
   await refrescarPaneles();
 }
-document.getElementById("evento-disparar").addEventListener("click", dispararEvento);
+document.getElementById("evento-disparar").addEventListener("click", () => dispararEvento());
 
 // Encuadre inicial (sprint 4): la cámara mira al rover desde detrás y arriba, con el horizonte visible
 function encuadrarInicio() {
@@ -3431,7 +3434,20 @@ function montarBarraMision() {
     const on = sonido.alternar();
     sonidoB.textContent = on ? "🔊 Sonido" : "🔇 Sonido"; sonidoB.setAttribute("aria-pressed", String(on));
   });
-  barra.append(rep, un, vel.closest("label") || vel, cineB, sonidoB);
+  const defensaB = document.createElement("button");
+  defensaB.id = "boton-defensa"; defensaB.type = "button"; defensaB.className = "boton-defensa"; defensaB.textContent = "🎓 Defensa";
+  defensaB.title = "Recorrido guiado de 11 pasos para presentar el trabajo, con cifras en vivo y los criterios de la consigna";
+  defensaB.addEventListener("click", () => {
+    if (!defensa) defensa = crearDefensa({
+      paso: () => paso(),
+      evento: (nombre) => dispararEvento(nombre),
+      abrirLab: (seccion) => { document.getElementById("abrir-laboratorio").click(); const b = document.querySelector(`.lab-tab[data-lab="${seccion}"]`); if (b) b.click(); },
+      abrirPestana: (id) => { if (panelIA) panelIA.abrir(id); },
+      reporte: () => window.open("/reporte.html", "_blank", "noopener"),
+    });
+    if (defensa.abierta) defensa.cerrar(); else defensa.abrir();
+  });
+  barra.append(rep, un, vel.closest("label") || vel, cineB, sonidoB, defensaB);
   dock.prepend(barra);
   if (viejaSim) viejaSim.hidden = true;
   if (viejaRep && viejaRep !== viejaSim && !viejaRep.querySelector("button")) viejaRep.hidden = true;

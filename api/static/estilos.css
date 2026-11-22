@@ -867,3 +867,29 @@ body.cine #subtitulo-ia { display: block; }
 #subtitulo-ia.visible { opacity: 1; }
 .barra-mision .boton-sonido { background: rgba(255, 255, 255, 0.06); color: var(--texto-suave); border: 1px solid var(--borde); }
 .barra-mision .boton-sonido[aria-pressed="true"] { color: #6ee7a8; border-color: rgba(110, 231, 168, 0.5); }
+/* Defensa guiada (auditoría 22/11) */
+.barra-mision .boton-defensa { background: rgba(167, 139, 250, 0.14); color: #d6c8ff; border: 1px solid rgba(167, 139, 250, 0.5); }
+.def-capa { position: fixed; left: calc(var(--ancho-izq) + 24px); top: 64px; z-index: 75; width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 220px); overflow: auto;
+  background: rgba(10, 12, 28, 0.94); border: 1px solid rgba(167, 139, 250, 0.5); border-left: 3px solid #a78bfa; border-radius: 10px; padding: 12px 14px; color: var(--texto); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+.def-capa.oculto { display: none; }
+.def-cabecera { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #c4b5fd; }
+.def-marca { font-weight: 700; letter-spacing: 0.04em; }
+.def-contador { margin-left: auto; font-variant-numeric: tabular-nums; }
+.def-salir { width: auto; margin: 0; padding: 2px 8px; background: none; border: 0; color: var(--texto-suave); cursor: pointer; box-shadow: none; }
+.def-progreso { height: 3px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; margin: 8px 0 10px; overflow: hidden; }
+.def-relleno { height: 100%; background: #a78bfa; transition: width 0.3s; }
+.def-titulo { font-size: 17px; margin: 0 0 6px; }
+.def-criterios { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.def-criterio { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(167, 139, 250, 0.16); color: #ddd6fe; border: 1px solid rgba(167, 139, 250, 0.35); }
+.def-texto { font-size: 13.5px; line-height: 1.55; margin: 0 0 10px; }
+.def-vivo-titulo { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6ee7a8; }
+.def-vivo { margin: 4px 0 12px; padding-left: 18px; font-size: 12.5px; color: #d9f6ff; }
+.def-vivo li { margin: 3px 0; }
+.def-cargando { color: var(--texto-suave); list-style: none; margin-left: -18px; }
+.def-pie { display: flex; gap: 6px; flex-wrap: wrap; }
+.def-boton { width: auto; margin: 0; padding: 7px 12px; border-radius: 7px; background: rgba(255, 255, 255, 0.07); border: 1px solid var(--borde); color: var(--texto); cursor: pointer; font-size: 12.5px; box-shadow: none; }
+.def-boton:disabled { opacity: 0.4; cursor: default; }
+.def-demo { background: rgba(110, 231, 168, 0.14); border-color: rgba(110, 231, 168, 0.5); color: #b7f5d4; }
+.def-siguiente { margin-left: auto; background: #7c5cf0; border-color: #7c5cf0; color: #fff; font-weight: 600; }
+.def-resaltado { outline: 2px solid #a78bfa !important; outline-offset: 3px; box-shadow: 0 0 0 6px rgba(167, 139, 250, 0.18) !important; transition: outline-color 0.3s; }
+@media (max-width: 760px) { .def-capa { left: 16px; top: auto; bottom: 140px; } }

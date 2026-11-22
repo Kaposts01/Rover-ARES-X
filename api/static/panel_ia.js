@@ -13,7 +13,6 @@ const ETIQUETA_RASGO = {
 };
 const ETIQUETA_UNIVERSO = { distancia: "distancia (m)", bateria: "batería (%)", inclinacion: "inclinación (°)", temperatura: "temperatura (°C)" };
 const PESTANAS = [["rna", "RNA", "Red neuronal"], ["difuso", "Difuso", "Lógica difusa"], ["ag", "Genético", "Algoritmo genético"], ["mision", "Misión", "Partida y simulación"]];
-const AG_CADA_N = 8;              // /ag es lo más costoso: se repide al cambiar el plan o cada N actualizaciones
 const ARISTAS_POR_CAPA = 70;      // conexiones dibujadas entre dos capas (las de mayor contribución)
 const CLAVE_ANCHO = "ares.panel.ancho", CLAVE_PESTANA = "ares.panel.pestana", CLAVE_PLEGADO = "ares.panel.plegado";
 
@@ -39,6 +38,16 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   const cuerpo = el("div", "pia-cuerpo");
   raiz.append(asa, cabecera, cuerpo);
 
+  // Cabecera común: el paso, la celda y el rumbo de la decisión que se está mostrando (se ve cambiar paso a paso)
+  const pasoInfo = el("div", "pia-paso", "Sin pasos todavía: pulsa «Un paso» o «Reproducir».");
+  cuerpo.append(pasoInfo);
+  function historial(titulo) {
+    const caja = el("div", "pia-historial");
+    const t = el("div", "pia-mini-titulo", titulo);
+    const lc = el("div", "pia-lienzo-caja pia-lienzo-hist"); const c = el("canvas", "pia-lienzo"); lc.append(c);
+    caja.append(t, lc);
+    return { caja, c };
+  }
   // ---------- secciones ----------
   const secciones = {}, botones = {};
   for (const [id, nombre, largo] of PESTANAS) {
@@ -55,7 +64,8 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   const rnaLeyenda = el("p", "pia-nota", "Cada círculo es una neurona y su brillo es su activación. Las líneas son las conexiones que más pesan en esta decisión: cian excita, magenta inhibe.");
   const rnaProbs = el("div", "pia-barras");
   const rnaRepetir = el("button", "pia-secundario", "↻ Ver pensar otra vez"); rnaRepetir.type = "button";
-  secciones.rna.append(rnaDecision, el("div", "pia-lienzo-caja pia-lienzo-red", null), rnaProbs, rnaLeyenda, rnaRepetir);
+  const rnaHist = historial("últimos pasos · p(barranco) y confianza");
+  secciones.rna.append(rnaDecision, el("div", "pia-lienzo-caja pia-lienzo-red", null), rnaProbs, rnaHist.caja, rnaLeyenda, rnaRepetir);
   secciones.rna.querySelector(".pia-lienzo-red").append(rnaLienzo);
 
   // Difuso
@@ -71,16 +81,19 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   const difTituloSalida = el("div", "pia-mini-titulo", "salida · velocidad (agregado y centroide)");
   const difLienzoSalida = el("canvas", "pia-lienzo"); const difCajaSalida = el("div", "pia-lienzo-caja"); difCajaSalida.append(difLienzoSalida);
   const difReglas = el("ol", "pia-reglas");
-  secciones.difuso.append(difSalida, difRejilla, difTituloSalida, difCajaSalida, el("div", "pia-subtitulo", "Reglas activadas"), difReglas);
+  const difHist = historial("últimos pasos · velocidad del difuso");
+  secciones.difuso.append(difSalida, difHist.caja, difRejilla, difTituloSalida, difCajaSalida, el("div", "pia-subtitulo", "Reglas activadas"), difReglas);
 
   // Genético
-  const agResumen = el("div", "pia-decision", "Abre esta pestaña durante la partida para ver el AG.");
+  const agResumen = el("div", "pia-decision", "Esperando el primer paso…");
+  const agHist = historial("últimos pasos · celdas que faltan de la ruta en juego");
   const agLienzo = el("canvas", "pia-lienzo"); const agCaja = el("div", "pia-lienzo-caja pia-lienzo-ag"); agCaja.append(agLienzo);
   const agLeyenda = el("div", "pia-leyenda");
   for (const [n, c] of [["mejor", "#6ee7a8"], ["media", "#ffb454"], ["peor", "#ff5d6c"]]) { const s = el("span", "pia-ley", n); s.style.setProperty("--c", c); agLeyenda.append(s); }
   const agDatos = el("dl", "pia-datos");
-  const agNota = el("p", "pia-nota", "El AG ordena los sitios científicos pendientes. La línea amarilla de la escena es la ruta que sigue la IA.");
-  secciones.ag.append(agResumen, agCaja, agLeyenda, agDatos, agNota);
+  const agNota = el("p", "pia-nota", "Es el AG del plan en juego: la curva es su última ejecución real y cambia cuando la misión replanifica (sitio visitado, sismo, meteorito, veto). La línea amarilla de la escena es esa ruta.");
+  const agTituloCurva = el("div", "pia-mini-titulo", "fitness por generación · última ejecución");
+  secciones.ag.append(agResumen, agHist.caja, agTituloCurva, agCaja, agLeyenda, agDatos, agNota);
 
   // Misión: los controles de la partida (Partida y simulación) pasan aquí
   if (controles) secciones.mision.append(controles);
@@ -89,9 +102,10 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   let pestana = leer(CLAVE_PESTANA, "rna"); if (!secciones[pestana]) pestana = "rna";
   let plegado = leer(CLAVE_PLEGADO, "0") === "1";
   let ancho = Number(leer(CLAVE_ANCHO, "")) || Math.round(Math.min(560, Math.max(360, window.innerWidth * 0.24)));
-  let red = null, rnaDatos = null, difDatos = null, agDatosUlt = null;
-  let enVuelo = { rna: false, difuso: false, ag: false };
-  let firmaAg = null, cuentaAg = 0, pendienteAg = true;
+  let red = null, rnaDatos = null, difDatos = null, agDatosUlt = null, iaUlt = null;
+  let enVuelo = false, ultimoPaso = null;
+  const HIST_N = 40;
+  const hist = [];   // { paso, pb, conf, vel, faltan, replan }
   let anim = null;   // { t0 } mientras corre el pulso de la red
 
   function anchoReal() { return raiz.classList.contains("oculto") ? 0 : (plegado ? 46 : ancho); }
@@ -122,45 +136,64 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     actualizar({ forzar: true });
   }
 
-  // ---------- datos ----------
-  async function cargarRNA() {
-    if (enVuelo.rna) return; enVuelo.rna = true;
+  // ---------- datos: la decisión real del último paso (GET /ia/paso) ----------
+  async function cargar(forzar = false) {
+    if (enVuelo) return; enVuelo = true;
     try {
-      const datos = await obtener("/rna");
-      if (!datos) { rnaDecision.textContent = "Sin datos de la RNA (no hay partida o el motor no respondió)."; return; }
-      if (!red || !red.modelo || !datos.modelo || red.modelo.perfil !== datos.modelo.perfil) red = await obtener("/rna/red");
-      rnaDatos = datos;
-      pintarRNA(); pulsar();
-    } finally { enVuelo.rna = false; }
-  }
-  async function cargarDifuso() {
-    if (enVuelo.difuso) return; enVuelo.difuso = true;
-    try {
-      const datos = await obtener("/difuso");
-      if (!datos) { difSalida.textContent = "Sin datos del difuso."; return; }
-      difDatos = datos; pintarDifuso();
-    } finally { enVuelo.difuso = false; }
-  }
-  async function cargarAG() {
-    if (enVuelo.ag) return; enVuelo.ag = true;
-    agResumen.textContent = agDatosUlt ? agResumen.textContent : "Calculando el AG…";
-    try {
-      const datos = await obtener("/ag");
-      if (!datos) { agResumen.textContent = "Sin datos del AG."; return; }
-      agDatosUlt = datos; pendienteAg = false; pintarAG();
-    } finally { enVuelo.ag = false; }
+      const d = await obtener("/ia/paso");
+      if (!d) { pasoInfo.textContent = "Sin datos (no hay partida o el motor no respondió)."; return; }
+      iaUlt = d;
+      const nuevo = d.hay_paso && d.paso !== ultimoPaso;
+      if (!d.hay_paso) { pasoInfo.textContent = "Sin pasos todavía: pulsa «Un paso» o «Reproducir»."; }
+      else {
+        const sup = d.supervisor || {};
+        pasoInfo.replaceChildren(el("strong", null, `Paso ${d.paso}`),
+          document.createTextNode(` · celda ${d.posicion ? `(${d.posicion.join(", ")})` : "-"} → ${d.rumbo || "-"} · ${sup.accion || "-"}`),
+          el("span", "pia-motivos", (sup.motivos || []).join(", ")));
+      }
+      if (d.rna) {
+        if (!red || !red.modelo || !d.rna.modelo || red.modelo.perfil !== d.rna.modelo.perfil) red = await obtener("/rna/red");
+        rnaDatos = { ...d.rna, accion: (d.supervisor || {}).accion };
+      } else rnaDatos = null;
+      difDatos = d.difuso || null;
+      agDatosUlt = d.ag || null;
+      if (nuevo) {
+        ultimoPaso = d.paso;
+        const pr = (d.rna && (d.rna.probabilidades_usadas || d.rna.probabilidades)) || {};
+        hist.push({ paso: d.paso, pb: pr.barranco ?? null, conf: Object.keys(pr).length ? Math.max(...Object.values(pr)) : null,
+          vel: d.difuso ? d.difuso.velocidad_usada ?? d.difuso.salida.velocidad : null,
+          faltan: d.ag ? d.ag.celdas_restantes : null, replan: !!(d.ag && d.ag.ultimo_replanteo && d.ag.ultimo_replanteo.paso === d.paso) });
+        if (hist.length > HIST_N) hist.shift();
+      }
+      if (!rnaDatos) rnaDecision.textContent = "La RNA no actuó en este paso (modo sin RNA o sin paso de la IA).";
+      if (!difDatos) difSalida.textContent = "El difuso no actuó en este paso (modo sin difuso o sin paso de la IA).";
+      pintarRNA(); pintarDifuso(); pintarAG(); pintarHistoriales();
+      if (nuevo || forzar) pulsar();
+    } finally { enVuelo = false; }
   }
 
-  // firma: cambia cuando cambia el plan (siguiente objetivo, replanteo o refugio). forzar: al abrir la pestaña.
-  function actualizar({ firma = undefined, forzar = false } = {}) {
-    if (raiz.classList.contains("oculto") || plegado) { if (firma !== undefined && firma !== firmaAg) { firmaAg = firma; pendienteAg = true; } return; }
-    if (firma !== undefined) {
-      cuentaAg += 1;
-      if (firma !== firmaAg || cuentaAg >= AG_CADA_N) { firmaAg = firma; pendienteAg = true; cuentaAg = 0; }
+  // Se llama tras cada paso (y al abrir la pestaña). Una sola petición para las tres técnicas.
+  function actualizar({ forzar = false } = {}) {
+    if (raiz.classList.contains("oculto") || plegado) return;
+    cargar(forzar);
+  }
+
+  // ---------- historial de los últimos pasos (se ve el cambio aunque una sola decisión se parezca a la anterior) ----------
+  function serie(campo) { return hist.map((h, i) => [i, h[campo]]); }
+  function pintarHistoriales() {
+    if (!hist.length) return;
+    const xmax = Math.max(1, hist.length - 1);
+    const marcasReplan = hist.map((h, i) => (h.replan ? { x: i, color: "rgba(255, 200, 87, 0.8)" } : null)).filter(Boolean);
+    const fmtX = (v) => { const h = hist[Math.round(v)]; return h ? String(h.paso) : ""; };
+    if (!secciones.rna.hidden) dibujarLineas(rnaHist.c, { xmin: 0, xmax, ymin: 0, ymax: 1, fmtX, fmtY: (y) => coma(y, 1),
+      series: [{ valores: serie("pb"), color: COLOR_CLASE.barranco, ancho: 2 }, { valores: serie("conf"), color: CIAN, ancho: 1.2, dash: [3, 3] }] });
+    if (!secciones.difuso.hidden) dibujarLineas(difHist.c, { xmin: 0, xmax, ymin: 0, ymax: 1, fmtX, fmtY: (y) => coma(y, 1),
+      series: [{ valores: serie("vel"), color: CIAN, ancho: 2 }] });
+    if (!secciones.ag.hidden) {
+      const f = hist.map((h) => h.faltan).filter((v) => v != null);
+      dibujarLineas(agHist.c, { xmin: 0, xmax, ymin: 0, ymax: Math.max(1, ...f), fmtX, fmtY: (y) => `${Math.round(y)}`,
+        series: [{ valores: serie("faltan"), color: "#ffc857", ancho: 2 }], marcas: marcasReplan });
     }
-    if (pestana === "rna") cargarRNA();
-    else if (pestana === "difuso") cargarDifuso();
-    else if (pestana === "ag" && (pendienteAg || forzar && !agDatosUlt)) cargarAG();
   }
 
   // ---------- dibujo: red neuronal ----------
@@ -305,12 +338,15 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   // ---------- dibujo: genético ----------
   function pintarAG() {
     const d = agDatosUlt; if (!d || secciones.ag.hidden) return;
-    if (d.sin_sitios) { agResumen.textContent = `Sin sitios pendientes: ${d.motivo || "la misión ya los visitó"}.`; agDatos.replaceChildren(); preparar(agLienzo); return; }
     const gens = d.generaciones || [];
     const ult = gens[gens.length - 1] || {};
-    agResumen.replaceChildren(el("strong", null, `mejor fitness ${coma(ult.mejor, 2)}`), document.createTextNode(` · ${d.generaciones_ejecutadas || gens.length} generaciones${d.viable === false ? " · ruta no viable" : ""}`));
+    const rep = d.ultimo_replanteo;
+    agResumen.replaceChildren(
+      el("strong", null, `faltan ${d.celdas_restantes} celdas · sitios ${d.visitados}/${d.sitios}`),
+      document.createTextNode(gens.length ? ` · mejor fitness ${coma(ult.mejor, 2)}${d.viable === false ? " · orden no viable (respaldo)" : ""}` : " · sin ejecución del AG todavía"));
+    agTituloCurva.textContent = rep ? `fitness por generación · última ejecución (replanteo en el paso ${rep.paso}: ${rep.motivo})` : "fitness por generación · plan inicial";
     if (gens.length) {
-      const ys = gens.flatMap((g) => [g.mejor, g.media, g.peor]);
+      const ys = gens.flatMap((g) => [g.mejor, g.media, g.peor]).filter((v) => v != null);
       const lo = Math.min(...ys), hi = Math.max(...ys), m = (hi - lo) * 0.08 || 0.1;
       dibujarLineas(agLienzo, {
         xmin: 0, xmax: Math.max(1, gens.length - 1), ymin: lo - m, ymax: hi + m,
@@ -320,20 +356,21 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
           { valores: gens.map((g, i) => [i, g.peor]), color: "#ff5d6c", ancho: 1, dash: [4, 3] },
         ], fmtX: (v) => `${Math.round(v)}`, fmtY: (v) => coma(v, 2),
       });
-    }
-    const pr = d.parametros || {};
+    } else preparar(agLienzo);
+    const sig = d.objetivos && d.objetivos.length ? `(${d.objetivos[0].join(", ")})` : "refugio";
     const filas = [
-      ["celdas de la ruta", d.mejor_ruta ? d.mejor_ruta.length : "-"], ["población", pr.poblacion], ["cruces", d.cruces], ["mutaciones", d.mutaciones],
-      ["órdenes evaluados", d.ordenes_evaluados], ["prob. cruce / mutación", `${coma(pr.prob_cruce, 2)} / ${coma(pr.prob_mutacion, 2)}`],
+      ["siguiente objetivo", sig], ["orden planificado", (d.objetivos || []).map((o) => `(${o.join(",")})`).join(" → ") || "-"],
+      ["replanteos de la misión", d.replanes], ["órdenes evaluados (última ejecución)", d.evaluados ?? "-"],
     ];
     agDatos.replaceChildren(...filas.flatMap(([k, v]) => [el("dt", null, k), el("dd", null, v == null ? "-" : String(v))]));
-    if (d.fallback) agDatos.append(el("dt", null, "aviso"), el("dd", "pia-alerta", d.fallback));
+    for (const f of d.fallbacks || []) agDatos.append(el("dt", null, "aviso"), el("dd", "pia-alerta", String(f)));
   }
 
   function redibujar() {
     if (pestana === "rna") dibujarRed(null);
     else if (pestana === "difuso") pintarDifuso();
     else if (pestana === "ag") pintarAG();
+    pintarHistoriales();
   }
 
   // ---------- interacción ----------

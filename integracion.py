@@ -203,6 +203,7 @@ class Mision:
         self.sensor = SensorSuite(rng=self.rng, ruido=ruido)
         self.rover = Rover(posicion=mundo.inicio, bateria=bateria)
         self.riesgo = mapa_estimado(mundo, self.rng)
+        self.ultima_ia = None                                   # lo que la IA usó en el último paso (solo registro)
         self._desnivel_suma = np.zeros(mundo.tipo.shape)         # ARX-94f: lecturas acumuladas por celda vecina
         self._desnivel_n = np.zeros(mundo.tipo.shape, dtype=int)
         self._rna_suma = np.zeros(mundo.tipo.shape)               # ARX-94f: p(barranco) acumulada por celda mirada
@@ -327,7 +328,21 @@ class Mision:
         # inferir velocidad
         inclinacion = min(45.0, inclinacion_de_rasgos(rasgos) * GRADOS_POR_GRADIENTE)
         # la velocidad depende de la distancia a lo largo de la ruta, no solo de lo que hay al frente
-        fz = self.difuso.inferir(self._distancia_a_riesgo_en_ruta(), self.rover.bateria, inclinacion)
+        distancia_ruta = self._distancia_a_riesgo_en_ruta()
+        fz = self.difuso.inferir(distancia_ruta, self.rover.bateria, inclinacion)
+        # Solo registro (no consume azar ni cambia decisiones): lo que la IA usó de verdad en este paso, para que la
+        # interfaz muestre la decisión real y no un recálculo de laboratorio (panel de IA, GET /ia/paso)
+        nombres = list(getattr(self.rna, "nombres", []) or [])
+        self.ultima_ia = {
+            "paso": int(self.paso), "posicion": tuple(int(v) for v in pos), "rumbo": rumbo,
+            "celda": tuple(int(v) for v in siguiente),
+            "rasgos": {n: float(v) for n, v in zip(nombres, rasgos)} if len(nombres) == len(rasgos) else None,
+            "probabilidades": {k: float(v) for k, v in probs.items()},
+            "rna_intervenida": self.intervencion_rna is not None and self.usar_rna, "usar_rna": bool(self.usar_rna),
+            "difuso": {"distancia": float(distancia_ruta), "bateria": float(self.rover.bateria),
+                       "inclinacion": float(inclinacion), "temperatura": float(getattr(self, "_ultima_temperatura", 0.0))},
+            "difuso_intervenido": self.intervencion_difuso is not None and self.usar_difuso, "usar_difuso": bool(self.usar_difuso),
+        }
         if self.intervencion_difuso is not None and self.usar_difuso:
             fz = ResultadoDifuso(velocidad=float(self.intervencion_difuso), membresias={},
                                  reglas_activadas=[], agregado=None, universo=None, fallback=True)

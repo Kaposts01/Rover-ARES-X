@@ -76,3 +76,23 @@ def test_rna_red_da_forma_y_pesos_coherentes_con_las_activaciones(cliente):
     for i, W in enumerate(red["pesos"]):
         assert len(W) == red["capas"][i] and all(len(f) == red["capas"][i + 1] for f in W)
     assert set(red["clases"]) == set(act["probabilidades"])
+
+
+def test_ia_del_paso_muestra_lo_que_la_ia_uso_en_ese_paso():
+    # El panel en vivo usa /ia/paso: las entradas son las del paso real, no las de un laboratorio con valores por defecto
+    c = TestClient(crear_app(Sesion(semilla=77, nivel=4)))
+    assert c.get("/ia/paso").json()["hay_paso"] is False
+    inclinaciones = set()
+    for _ in range(10):
+        c.post("/paso")
+        d = c.get("/ia/paso").json()
+        assert d["hay_paso"] is True
+        # el difuso recalculado con las entradas del paso da la misma velocidad que usó el motor
+        assert d["difuso"]["salida"]["velocidad"] == pytest.approx(d["difuso"]["velocidad_usada"], abs=1e-3)
+        # la RNA con los rasgos del paso da las probabilidades que usó el motor
+        for k, v in d["rna"]["probabilidades_usadas"].items():
+            assert d["rna"]["probabilidades"][k] == pytest.approx(v, abs=2e-3)
+        assert d["ag"]["celdas_restantes"] == len(d["ag"]["ruta"]) - 1
+        inclinaciones.add(round(d["difuso"]["entradas"]["inclinacion"], 1))
+    assert len(inclinaciones) > 1      # la inclinación real cambia con el terreno (el laboratorio la deja en 0)
+    assert d["ag"]["generaciones"]     # el AG es el del plan en juego

@@ -827,3 +827,10 @@ body.cine-director #cine-cinta { top: calc(9vh - 14px); z-index: 30; }
 .hud-grid .fila .valor { min-width: 0; overflow-wrap: anywhere; text-align: right; }
 .hud-grid .fila:has(#h-estado) { grid-column: 1 / -1; }
 .hud-grid .fila .valor { overflow-wrap: break-word; }
+/* Panel de IA en vivo: cabecera del paso e historiales */
+.pia-paso { font-size: 12px; padding: 6px 8px; margin: -4px 0 10px; border-bottom: 1px dashed rgba(95, 230, 255, 0.3); color: var(--texto-suave); }
+.pia-paso strong { color: #5fe6ff; margin-right: 2px; }
+.pia-motivos { display: block; font-size: 11px; color: #ffcf85; margin-top: 2px; overflow-wrap: anywhere; }
+.pia-motivos:empty { display: none; }
+.pia-lienzo-hist { height: 86px; }
+.pia-historial { margin: 6px 0 10px; }

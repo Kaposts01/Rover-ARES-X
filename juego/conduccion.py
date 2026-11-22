@@ -22,7 +22,7 @@ from genetico import camino_bfs
 from integracion import barrancos_medidos, camino_valido
 from integracion import ESTADOS_TERMINALES, GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO, UMBRAL_RIESGO_RNA, \
     UMBRAL_VELOCIDAD_MINIMA, _rumbo
-from rna import _rasgos_celda
+from rna import _rasgos_celda, inclinacion_de_rasgos
 from simulador import BARRANCO, MOVIMIENTOS, SensorSuite, paso_fisico
 
 MODOS_CONDUCCION = ("rna", "difuso", "ag")
@@ -233,7 +233,8 @@ def avanzar(partida, modo: str, veto: bool = True) -> dict:
             return _estado_tras_paso(partida, "replanificar", ["D-SIN-CAMINO"], None, 0.0)
         siguiente = tramo[1]
         rumbo = _rumbo(pos, siguiente)
-        inclinacion = min(45.0, abs(obs[rumbo]["rasgos"][2]) * GRADOS_POR_GRADIENTE)
+        # auditoría 22/11: con el perfil v2 el rasgo 2 es el contraste óptico; la pendiente sale como en Mision.paso_mision
+        inclinacion = min(45.0, inclinacion_de_rasgos(obs[rumbo]["rasgos"]) * GRADOS_POR_GRADIENTE)
         fz = m.difuso.inferir(m._distancia_a_riesgo_en_ruta(), partida.rover.bateria, inclinacion)
         v = float(fz.velocidad)
         if m.intervencion_difuso is not None:        # prueba causal (ARX-10) también en el modo difuso (ARX-18.2)

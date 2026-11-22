@@ -544,6 +544,8 @@ class Partida:
                 # temperatura que se pide
                 if termico.ABORTO_TERMICO_ACTIVO and self._en_paso_juego:
                     temperatura = self.termico.t_int
+                if self._en_paso_juego:
+                    self.mision._ultima_temperatura = float(temperatura)   # solo registro: la T que usó el paso
                 return _inferir(distancia, bateria, inclinacion, temperatura)
             self.mision.difuso.inferir = _inferir_con_temperatura
         self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4); antes de planificar: el AG puede anotar AG-FALLBACK-GARANTIA (ARX-92c)

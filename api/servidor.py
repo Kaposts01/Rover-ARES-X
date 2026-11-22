@@ -562,6 +562,9 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
     """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2)."""
     from difuso import CONJUNTOS, REGLAS, SALIDA, TEMPERATURA_TOLERANCIA, _rango
     m = sesion.partida.mision
+    # auditoría 22/11: la tolerancia es la del planeta de la partida (la misma que /estado), no la constante general
+    termico_p = getattr(sesion.partida, "termico", None)
+    tolerancia = float(getattr(termico_p, "tolerancia", TEMPERATURA_TOLERANCIA) or TEMPERATURA_TOLERANCIA)
     res = m.difuso.inferir(distancia, bateria, inclinacion, temperatura)
     universos, curvas = {}, {}
     for var, conjuntos in CONJUNTOS.items():
@@ -581,8 +584,8 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
         "reglas_activadas": [{"id": i, "fuerza": round(float(f), 4), "motivo": mo}
                              for i, f, mo in res.reglas_activadas],
         "aborto": ({"activo": True, "motivo": f"temperatura {temperatura:g} °C por encima de la tolerancia "
-                                              f"({TEMPERATURA_TOLERANCIA:g} °C): abortar o aislar (§12)"}
-                   if temperatura > TEMPERATURA_TOLERANCIA else {"activo": False, "motivo": None}),
+                                              f"({tolerancia:g} °C): abortar o aislar (§12)"}
+                   if temperatura > tolerancia else {"activo": False, "motivo": None}),
         "reglas": [{"id": r["id"], "si": [list(c) for c in r["si"]], "entonces": r["entonces"],
                     "motivo": r["motivo"]} for r in REGLAS],
         "salida": {"velocidad": round(float(res.velocidad), 4), "fallback": bool(res.fallback),
@@ -1078,6 +1081,56 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             actual = rasgos[i]
             entrada[clave] = _valor_rango(dados[param], param, lo, hi, 0.0 if actual != actual else actual)
         return _rna_entrada(sesion, entrada)
+
+    @app.get("/ia/paso")
+    def ia_del_paso():
+        """Lo que la IA usó de verdad en el último paso (solo lectura), para el panel en vivo.
+
+        A diferencia de /rna y /difuso (laboratorios: recalculan con entradas editables o por defecto), aquí las
+        entradas son las del paso: rasgos que vio la RNA, distancia, batería, inclinación y temperatura del difuso.
+        Las activaciones, curvas y reglas se recalculan con esas mismas entradas (son deterministas), así que coinciden
+        con la decisión tomada; si hubo intervención, se informa y se dan además las probabilidades usadas.
+        El AG es el del plan en juego: el último resultado real (historial por generación) y la ruta que se sigue."""
+        sesion = activa()
+        p = sesion.partida
+        m = p.mision
+        u = getattr(m, "ultima_ia", None)
+        filas = m.log.filas
+        ultima = filas[-1] if filas else {}
+        salida = {"paso": int(m.paso), "hay_paso": u is not None,
+                  "supervisor": {"accion": ultima.get("accion"), "motivos": [x for x in str(ultima.get("motivos") or "").split(";") if x]}}
+        if u is not None:
+            rna = None
+            if u["usar_rna"] and u["rasgos"]:
+                try:
+                    rna = _rna_entrada(sesion, u["rasgos"])
+                    rna["probabilidades_usadas"] = u["probabilidades"]
+                    rna["intervenida"] = u["rna_intervenida"]
+                except Exception:   # modelo cambiado entre pasos: se informa sin activaciones
+                    rna = {"probabilidades": u["probabilidades"], "probabilidades_usadas": u["probabilidades"], "intervenida": u["rna_intervenida"]}
+            salida["rna"] = rna
+            salida["celda"] = list(u["celda"]); salida["posicion"] = list(u["posicion"]); salida["rumbo"] = u["rumbo"]
+            salida["paso_ia"] = u["paso"]
+            if u["usar_difuso"]:
+                e = u["difuso"]
+                dif = _difuso_datos(sesion, min(e["distancia"], DISTANCIA_MAX), e["bateria"], min(e["inclinacion"], INCLINACION_MAX), e["temperatura"])
+                dif["intervenido"] = u["difuso_intervenido"]
+                dif["velocidad_usada"] = ultima.get("velocidad")
+                salida["difuso"] = dif
+            else:
+                salida["difuso"] = None
+        res = getattr(getattr(m, "_optimizar_ag", None), "ultimo", None)
+        ruta = [_celda(c) for c in (m.ruta or [])]
+        ag = {"ruta": ruta, "celdas_restantes": max(0, len(ruta) - 1),
+              "objetivos": [_celda(o) for o in (m.objetivos or [])],
+              "visitados": len(m.visitados), "sitios": len(p.mundo.sitios),
+              "ultimo_replanteo": _ultimo_replanteo(p), "replanes": int(getattr(m, "replanes", 0) or 0),
+              "fallbacks": list(getattr(getattr(m, "_optimizar_ag", None), "fallbacks", []) or [])[-3:]}
+        if res is not None:
+            ag.update({"generaciones": res.historial, "viable": bool(res.viable), "evaluados": int(res.evaluados),
+                       "mejor_desglose": _desglose_fitness(res.mejor_desglose)})
+        salida["ag"] = ag
+        return salida
 
     @app.get("/rna/red")
     def red_rna():

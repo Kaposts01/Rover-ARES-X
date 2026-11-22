@@ -1,8 +1,7 @@
 import * as adaptador from "/static/adaptador.js?v=r14";
 import {
   VARIANTES_POLITICA, nombreVariante, notaVariantes, NOTA_POLITICAS, textoCandidatoAG, textoEvaluacionRNA, textoBateriaDifuso,
-  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural,
-} from "/static/textos.js?v=r14";
+  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso } from "/static/textos.js?v=r14";
 import { crearEditorDifuso } from "/static/difuso_editor.js?v=r14";
 // Laboratorios de los modelos: genético, difuso y RNA, más la comparación de políticas.
 // Datos de los endpoints de docs/CONTRATOS_GRAFICOS.md. Este módulo solo dibuja; el motor está en Python.
@@ -267,6 +266,10 @@ function pintarCandidatos() {
   const c = agDatos.candidatos[agCandidato];
   const cont2 = $("ag-desglose");
   cont2.replaceChildren();
+  if (!c) {   // el motor no devolvió candidatos (ningún orden viable con la batería del nivel): sin esto, c.desglose rompía el panel
+    cont2.appendChild(nodo("div", "ayuda", "El AG del laboratorio no encontró ningún orden de visita viable con la batería disponible, así que no hay candidatos que desglosar. El plan que se juega (con paradas de recarga) se ve con «Ver la evolución en el mapa»."));
+    return;
+  }
   const pesos = agDatos.parametros.pesos || {};
   const tabla = nodo("table", "lab-tabla");
   const cab = nodo("tr");
@@ -375,7 +378,7 @@ async function consultarDifuso() {
     const pe = datos.punto_entrada[k];
     const textoEntrada = k === "bateria" ? textoBateriaDifuso(datos.entradas) : coma(entrada, k === "distancia" ? 1 : 0);
     $(`dif-u-${k}-entrada`).textContent = `entrada ${textoEntrada} → ` +
-      Object.keys(pe).map((n) => `${n} ${porcentaje(pe[n])}`).join(" · ");
+      Object.keys(pe).map((n) => `${nombreDifuso(n)} ${porcentaje(pe[n])}`).join(" · ");
   }
 
   const s = datos.salida;
@@ -404,7 +407,7 @@ function pintarReglas(reglas, activadas) {
   for (const r of reglas) {
     const f = fuerzas.get(r.id);
     const fila = nodo("div", "lab-regla" + (f !== undefined ? " activa" : ""));
-    const cab = nodo("div", "", `${r.id} · si ${r.si.map(([v, t]) => `${v} es ${t}`).join(" y ")} → ${r.entonces}`);
+    const cab = nodo("div", "", `${r.id} · si ${r.si.map(([v, t]) => `${nombreDifuso(v)} es ${nombreDifuso(t)}`).join(" y ")} → ${nombreDifuso(r.entonces)}`);
     fila.appendChild(cab);
     const barra = nodo("div", "barra");
     const relleno = nodo("div", "");
@@ -756,7 +759,7 @@ export async function seguirPasoLaboratorio() {
     if (activa === "difuso" && d.difuso) {
       const e = d.difuso.entradas;
       // la batería del control es el % real de la capacidad (el del HUD), no las unidades que recibió el difuso
-      fijarControl("dif-distancia", e.distancia, 1); fijarControl("dif-bateria", e.bateria_pct ?? e.bateria, 0);
+      fijarControl("dif-distancia", e.distancia, 1); fijarControl("dif-bateria", e.bateria_pct ?? e.bateria, 1);   // con un decimal, como el HUD (antes se redondeaba al entero y el rótulo no coincidía)
       fijarControl("dif-inclinacion", e.inclinacion, 0); fijarControl("dif-temperatura", e.temperatura, 0);
       await consultarDifuso();
       const topes = [["distancia", e.distancia, "dif-distancia"], ["inclinación", e.inclinacion, "dif-inclinacion"]]

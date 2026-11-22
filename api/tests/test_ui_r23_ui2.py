@@ -75,7 +75,7 @@ def _evolucion(**cambios):
          "bases": [[16, 7]],
          "generaciones": [
              {"n": 0, "mejor": 5.0, "media": 3.0, "peor": 1.0, "diversidad": 0.9, "candidatos": [
-                 {"orden": ["S2", "S1", "S3"], "recargas": [2], "camino": None, "fitness": 5.0, "factible": False, "violaciones": ["llega tarde a S3"]},
+                 {"orden": ["S2", "S1", "S3"], "recargas": [1], "camino": None, "fitness": 5.0, "factible": False, "violaciones": ["llega tarde a S3"]},
                  {"orden": ["S1", "S2", "S3"], "recargas": [], "camino": None, "fitness": 4.0, "factible": True, "violaciones": []},
                  {"orden": ["S1", "S2", "S3"], "recargas": [], "camino": None, "fitness": 3.5, "factible": True, "violaciones": []}]},
              {"n": 1, "candidatos": [{"orden": ["S3", "S2", "S1"], "fitness": 7.5, "factible": True, "camino": [[19, 0], [16, 7], [8, 7]]}]}],
@@ -93,9 +93,9 @@ def test_la_evolucion_adapta_el_contrato_con_ventanas_recargas_y_lineas_rectas()
     # los dos órdenes idénticos se dibujan una sola vez y se cuenta cuántos eran
     assert [c["fitness"] for c in g0["candidatos"]] == [5.0, 4.0] and g0["candidatos"][1]["copias"] == 2
     c = g0["candidatos"][0]
-    # sin `camino`: inicio → S2 → S1 → (base de recarga antes de S3) → S3 → refugio, con segmentos rectos
+    # sin `camino`: inicio → S2 → S1 → (base de recarga tras S1, el índice 1 del contrato) → S3 → refugio, con segmentos rectos
     assert c["rectas"] is True and c["puntos"] == [[19, 0], [15, 3], [14, 16], [16, 7], [8, 7], [0, 29]]
-    assert c["paradas"] == [{"indice": 2, "celda": [16, 7]}] and c["factible"] is False and c["violaciones"] == ["llega tarde a S3"]
+    assert c["paradas"] == [{"indice": 1, "celda": [16, 7]}] and c["factible"] is False and c["violaciones"] == ["llega tarde a S3"]
     # con `camino` se usa tal cual y las bases usadas son las que pisa
     c1 = r["generaciones"][1]["candidatos"][0]
     assert c1["rectas"] is False and c1["puntos"] == [[19, 0], [16, 7], [8, 7]] and c1["basesUsadas"] == [[16, 7]]
@@ -138,10 +138,29 @@ def test_la_lectura_del_candidato_dice_orden_recargas_fitness_y_restriccion():
             f" return m.lecturaCandidato(g.candidatos[0], e, g); }})()")
     r = _js("ag_evolucion_datos.js", expr)
     filas = {f["clave"]: f for f in r["lineas"]}
-    assert filas["Orden"]["valor"] == "S2 → S1 → recarga → S3" and filas["Recargas"]["valor"] == "antes de S3"
+    assert filas["Orden"]["valor"] == "S2 → S1 → recarga → S3" and filas["Recargas"]["valor"] == "después de S1"
     assert "5,00" in filas["Fitness"]["valor"] and filas["Factible"]["valor"] == "no" and filas["Restricción que viola"]["valor"] == "llega tarde a S3"
-    assert filas["Ventanas"]["valor"] == "S1 0–40 · S3 10–60" and "Candidato 1" in r["titulo"] and "Generación 0" in r["titulo"]
+    assert filas["Ventanas"]["valor"] == "S1: 0–40 · S3: 10–60" and "Candidato 1" in r["titulo"] and "Generación 0" in r["titulo"]
     assert _js("ag_evolucion_datos.js", "m.lecturaCandidato(null, {}, null)") is None
+
+
+@sin_node
+def test_las_recargas_siguen_el_contrato_del_motor_tras_el_indice_y_menos_uno_antes_del_primero():
+    # /ag/evolucion real: ids numéricos, `recargas` = índices tras los cuales se recarga (-1 = antes del primer sitio) y `paradas` con la base
+    crudo = {"inicio": [19, 0], "refugio": [0, 29], "bases": [[16, 7], [7, 19]],
+             "sitios": [{"id": 1, "celda": [14, 16], "valor": 1, "ventana": [0, 40]}, {"id": 2, "celda": [15, 3], "valor": 4, "ventana": None}],
+             "generaciones": [{"n": 0, "candidatos": [{"orden": [2, 1], "recargas": [-1, 1], "camino": None, "fitness": 0.5, "factible": True,
+                                                       "paradas": [{"despues_de": -1, "base": [16, 7]}, {"despues_de": 1, "base": [7, 19]}],
+                                                       "violaciones": ["sitio 1: llega en el paso 58, fuera de su ventana 0–40 (vale 25 %)"]}]}]}
+    expr = (f"(() => {{ const e = m.adaptarEvolucion({json.dumps(crudo)}); const g = e.generaciones[0];"
+            f" return {{ c: g.candidatos[0], l: m.lecturaCandidato(g.candidatos[0], e, g) }}; }})()")
+    r = _js("ag_evolucion_datos.js", expr)
+    assert r["c"]["recargas"] == [-1, 1] and r["c"]["puntos"] == [[19, 0], [16, 7], [15, 3], [14, 16], [7, 19], [0, 29]]
+    assert r["c"]["paradas"] == [{"indice": -1, "celda": [16, 7]}, {"indice": 1, "celda": [7, 19]}]
+    filas = {f["clave"]: f for f in r["l"]["lineas"]}
+    assert filas["Orden"]["valor"] == "recarga → 2 → 1 → recarga" and filas["Recargas"]["valor"] == "antes del primer sitio, después de 1"
+    # factible pero con una ventana perdida: la penalización se lee, sin marcarla como restricción violada
+    assert filas["Factible"]["valor"] == "sí" and "fuera de su ventana" in filas["Penalizaciones"]["valor"] and "Restricción que viola" not in filas
 
 
 @sin_node

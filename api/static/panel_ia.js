@@ -442,6 +442,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     narracion.textContent = "";
     rnaDecision.textContent = "Esperando el primer paso…"; difSalida.textContent = "Esperando el primer paso…"; agResumen.textContent = "Esperando el primer paso…";
     rnaProbs.replaceChildren(); difReglas.replaceChildren(); agDatos.replaceChildren();
+    rnaTramo.replaceChildren(); marcar([]);   // el tramo (y sus marcas en la escena) era de la partida anterior
     for (const c of [rnaLienzo, rnaHist.c, difHist.c, agHist.c, difLienzoSalida, agLienzo, ...Object.values(difLienzos).map((x) => x.c)]) {
       const x = c.getContext && c.getContext("2d"); if (x) { x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height); }
     }

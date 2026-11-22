@@ -60,7 +60,10 @@ export function crearEvolucion(escena, { alturaTerreno, camara, elemento, alCamb
     c.fillStyle = "rgba(8, 14, 26, 0.82)"; c.strokeStyle = orden ? "rgba(255, 207, 99, 0.95)" : "rgba(255, 180, 84, 0.7)"; c.lineWidth = 3;
     const r = 14; c.beginPath(); c.moveTo(r, 4); c.arcTo(316, 4, 316, 80, r); c.arcTo(316, 80, 4, 80, r); c.arcTo(4, 80, 4, 4, r); c.arcTo(4, 4, 316, 4, r); c.fill(); c.stroke();
     c.fillStyle = "#ffe9b8"; c.font = "bold 30px 'Segoe UI', system-ui, sans-serif"; c.textBaseline = "middle";
-    const titulo = `${orden ? `${orden}.` : ""}${e.sitio.id}${e.sitio.valor !== null ? ` · valor ${e.sitio.valor}` : ""}`;
+    // El motor numera los sitios (1, 2…): «9.2» se leería como un decimal, así que se escribe «9.º · sitio 2»
+    const numerico = /^\d+$/.test(String(e.sitio.id));
+    const titulo = `${orden ? (numerico ? `${orden}.º · ` : `${orden}.`) : ""}${numerico ? "sitio " : ""}${e.sitio.id}${e.sitio.valor !== null ? ` · valor ${e.sitio.valor}` : ""}`;
+    for (let px = 30; px >= 20 && c.measureText(titulo).width > 288; px -= 2) c.font = `bold ${px}px 'Segoe UI', system-ui, sans-serif`;
     c.fillText(titulo, 16, 28);
     if (e.sitio.ventana || (datos && datos.hayVentanas)) {   // sin ninguna ventana en los datos, la segunda línea sobra
       c.fillStyle = e.sitio.ventana ? "#9ff0ff" : "#9fb2c8"; c.font = "26px 'Segoe UI', system-ui, sans-serif";

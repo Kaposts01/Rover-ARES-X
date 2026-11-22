@@ -27,8 +27,10 @@ export const nombreEstadoDron = (e) => NOMBRE_ESTADO_DRON[e] || String(e ?? "-")
 // Códigos de motivo del motor en lenguaje claro (frase corta, sin mayúscula inicial)
 export const NOMBRE_MOTIVO = {
   OK: "sin riesgos, avance permitido",
+  RECARGA: "recarga en una base",
   "V-RUTA-CON-RIESGO": "la ruta pasaba por una celda peligrosa",
   "V-RNA-BARRANCO": "la RNA vio un barranco delante",
+  "V-RNA-BARRANCO-CONFIRMADO": "la RNA confirmó un barranco delante",
   "V-RNA-OBSTACULO": "la RNA vio un obstáculo delante",
   "V-BORDE-BARRANCO": "desnivel de barranco justo enfrente",
   "V-OBSTACULO-EN-RUTA": "obstáculo sobre la ruta",
@@ -54,6 +56,8 @@ export const NOMBRE_MOTIVO = {
   "D-DIFUSO-LENTO": "el difuso pidió ir tan lento que se detuvo",
   "D-RODEO": "rodeo de un obstáculo",
   "D-RESBALON": "resbalón en una pendiente",
+  "D-HIELO": "resbalón sobre el hielo",
+  "D-VIENTO": "una ráfaga de viento desvió al vehículo",
   "D-DISPARO-DRON": "disparo a un dron",
   "D-SIN-CAMINO": "sin camino libre",
   "D-SIN-CANDIDATO": "sin celda candidata",
@@ -67,6 +71,7 @@ export const NOMBRE_MOTIVO = {
   "REPLAN-SISMO": "sismo en la ruta",
   "REPLAN-AG-SISMO": "sismo: el AG recalculó el orden",
   "REPLAN-AG-METEORITO": "meteorito: el AG recalculó el orden",
+  "REPLAN-AG-SENAL": "señal biológica: el AG recalculó el orden",
   "CAZA-DRON-BFS": "persigue al dron por la ruta más corta",
   EXITO: "misión cumplida", FRACASO: "la misión fracasó", SIN_RUTA: "no queda ruta posible", MODO_SEGURO: "el vehículo entró en modo seguro",
 };
@@ -215,6 +220,10 @@ export const NOMBRE_ACCION = {
 };
 export const nombreAccion = (a) => NOMBRE_ACCION[a] || String(a ?? "—").replace(/_/g, " ");
 
+// Nombres del difuso para mostrar: el motor usa identificadores sin tilde (bateria, critica, rapida…); en pantalla van con tilde
+const NOMBRE_DIFUSO = { bateria: "batería", inclinacion: "inclinación", critica: "crítica", rapida: "rápida", fria: "fría" };
+export const nombreDifuso = (x) => NOMBRE_DIFUSO[x] || String(x ?? "");
+
 // ---------- Evolución del AG en el mapa (ronda 23) ----------
 export const EVO = {
   titulo: "Evolución del AG en el mapa",
@@ -232,7 +241,7 @@ export const EVO = {
   rectas: "La línea une los sitios en el orden de visita: no es el camino que recorrería el vehículo celda a celda.",
   parametrosDifuso: "Parámetros del difuso que eligió el AG", recalcular: "Volver a calcular desde la posición actual",
   fuenteLab: "El motor todavía no publica la evolución completa: se usan las poblaciones del laboratorio genético. No traen ventanas de tiempo, paradas de recarga ni si cada candidato es factible.",
-  candidato: "Candidato", orden: "Orden", recargas: "Recargas", recarga: "recarga", antesDe: "antes de", sinRecargas: "ninguna",
+  candidato: "Candidato", orden: "Orden", recargas: "Recargas", recarga: "recarga", antesDe: "antes de", despuesDe: "después de", antesDelPrimero: "antes del primer sitio", sinRecargas: "ninguna", penalizaciones: "Penalizaciones",
   fitness: "Fitness", mejorDeLaGeneracion: "la mejor de la generación", factible: "Factible", si: "sí", no: "no", sinDato: "sin dato",
   restriccion: "Restricción que viola", sinDetalle: "el motor no detalla cuál", ventanas: "Ventanas",
   sinRespuesta: "El motor no respondió con la evolución del AG. Revisa que haya partida y vuelve a intentarlo.",

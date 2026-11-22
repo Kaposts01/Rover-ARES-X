@@ -3,7 +3,7 @@
 // El cálculo de la vista previa es local (difuso_reglas_datos.js): al cambiar algo no se espera al servidor. Los cambios válidos se aplican
 // a la partida con PUT /difuso/reglas (con una pequeña espera); «Restaurar» llama a DELETE. Sin soporte en el motor (404), todo queda en
 // vista previa y se dice. Todo con textContent; textos en textos.js (EDIT).
-import { EDIT, reglasActivadas } from "/static/textos.js?v=r14";
+import { EDIT, reglasActivadas, nombreDifuso } from "/static/textos.js?v=r14";
 import {
   adaptarReglas, modeloDeFabrica, clonar, inferir, barrido, superficie, validar, viabilidadAntecedente, diferencias, cuerpoPUT,
 } from "/static/difuso_reglas_datos.js?v=r14";
@@ -16,6 +16,8 @@ const ENTRADAS_POR_DEFECTO = { distancia: 1, bateria: 90, inclinacion: 2, temper
 const NOMBRE_VARIABLE = { distancia: "distancia", bateria: "batería", inclinacion: "inclinación", temperatura: "temperatura" };
 const UNIDAD = { distancia: "m", bateria: "u.", inclinacion: "°", temperatura: "°C" };
 const nombreVar = (v) => NOMBRE_VARIABLE[v] || v;
+// Rótulos con tilde de las etiquetas que el motor nombra sin ella (el valor que se envía no cambia)
+const ROTULO_ETIQUETA = { critica: nombreDifuso("critica"), rapida: nombreDifuso("rapida"), fria: nombreDifuso("fria") };
 
 async function pedir(metodo, ruta, cuerpo) {
   try {
@@ -235,7 +237,7 @@ export function crearEditorDifuso({ contenedor, dibujarLineas, preparar, alEstad
         const libres = vars.filter((x) => x === v || !r.si.some(([u]) => u === x));
         cRegla.append(selector(libres, v, (nv) => { r.si[k] = [nv, Object.keys(modelo.variables[nv].etiquetas)[0]]; recalcular({ estructura: true }); }, `variable ${k + 1}`, NOMBRE_VARIABLE));
         cRegla.append(document.createTextNode(` ${EDIT.es} `));
-        cRegla.append(selector(Object.keys((modelo.variables[v] || { etiquetas: {} }).etiquetas), e, (ne) => { r.si[k] = [v, ne]; recalcular(); }, `etiqueta ${k + 1}`));
+        cRegla.append(selector(Object.keys((modelo.variables[v] || { etiquetas: {} }).etiquetas), e, (ne) => { r.si[k] = [v, ne]; recalcular(); }, `etiqueta ${k + 1}`, ROTULO_ETIQUETA));
         if (r.si.length > 1) { const q = el("button", "dedit-mini", "✕"); q.type = "button"; q.title = EDIT.quitar; q.setAttribute("aria-label", EDIT.quitar); q.addEventListener("click", () => { r.si.splice(k, 1); recalcular({ estructura: true }); }); cRegla.append(q); }
       });
       if (r.si.length < vars.length) {
@@ -244,7 +246,7 @@ export function crearEditorDifuso({ contenedor, dibujarLineas, preparar, alEstad
         cRegla.append(" ", mas);
       }
       cRegla.append(document.createTextNode(` → ${EDIT.entonces} `));
-      cRegla.append(selector(salidas, r.entonces, (n) => { r.entonces = n; recalcular(); }, "velocidad de salida"));
+      cRegla.append(selector(salidas, r.entonces, (n) => { r.entonces = n; recalcular(); }, "velocidad de salida", ROTULO_ETIQUETA));
       if (r.texto) cRegla.append(el("div", "ayuda dedit-texto", r.texto));
       const cPeso = el("td", "dedit-celda-peso");
       const rango = el("input"); rango.type = "range"; rango.min = "0"; rango.max = "1"; rango.step = "0.05"; rango.value = String(Math.min(1, Math.max(0, r.peso))); rango.setAttribute("aria-label", `${EDIT.colPeso} ${r.id}`);
@@ -279,7 +281,7 @@ export function crearEditorDifuso({ contenedor, dibujarLineas, preparar, alEstad
       const campos = el("div", "dedit-campos");
       const refs = {};
       Object.entries(v.etiquetas).forEach(([et, pts], i) => {
-        const f = el("div", "dedit-campo"); const t = el("span", "dedit-etq", et); t.style.setProperty("--c", COLORES[i % 5]); f.append(t);
+        const f = el("div", "dedit-campo"); const t = el("span", "dedit-etq", nombreDifuso(et)); t.style.setProperty("--c", COLORES[i % 5]); f.append(t);
         refs[et] = pts.map((val, k) => {
           const inp = el("input", "dedit-num"); inp.type = "number"; inp.step = String(Math.max(0.01, (v.universo[1] - v.universo[0]) / 200)); inp.value = String(val);
           inp.setAttribute("aria-label", `${et} de ${nombreVar(nombre)}, punto ${k + 1}`);

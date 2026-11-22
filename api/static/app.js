@@ -1673,6 +1673,7 @@ function pintarHud(e) {
   const vivos = (e.npcs || []).map((n) => nombreEstadoDron(n.estado));
   document.getElementById("h-drones").textContent = vivos.length ? vivos.join(", ") : "ninguno";
   document.getElementById("modo").value = e.modo;
+  pintarRotulosReproduccion();   // el rótulo de «Reproducir» depende del modo: sin esto, una partida en Híbrido arrancaba con «Dejar que la IA conduzca»
   document.getElementById("veto").checked = e.veto !== false;
 
   const aviso = document.getElementById("intervencion-aviso");

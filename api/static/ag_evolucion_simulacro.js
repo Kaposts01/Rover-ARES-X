@@ -20,7 +20,8 @@ export function simularEvolucion(ctx, { generaciones = 24, poblacion = 24, semil
   sitios.forEach((s, i) => { const t = dist(inicio, s.celda); s.ventana = i % 2 === 0 ? [Math.max(0, t - 4), t + 14 + 3 * i] : [t + 6, t + 30 + 4 * i]; });
   const baseCerca = (p) => bases.reduce((m, b) => (!m || dist(b, p) < dist(m, p) ? b : m), null);
 
-  // Evalúa un orden: recarga antes del sitio cuando el tramo supera la autonomía restante (si hay base)
+  // Evalúa un orden: recarga antes del sitio cuando el tramo supera la autonomía restante (si hay base). Como en el contrato,
+  // `recargas` guarda el índice del sitio TRAS el cual se recarga (-1 = antes del primero)
   function evaluar(orden) {
     let pos = inicio, t = 0, bateria = autonomia, valor = 0, largo = 0;
     const recargas = [], violaciones = [];
@@ -29,7 +30,7 @@ export function simularEvolucion(ctx, { generaciones = 24, poblacion = 24, semil
       let d = dist(pos, s.celda);
       if (d > bateria) {
         const b = baseCerca(pos);
-        if (b) { const dd = dist(pos, b) + dist(b, s.celda); recargas.push(i); t += dd; largo += dd; bateria = autonomia - dist(b, s.celda); pos = s.celda; d = 0; }
+        if (b) { const dd = dist(pos, b) + dist(b, s.celda); recargas.push(i - 1); t += dd; largo += dd; bateria = autonomia - dist(b, s.celda); pos = s.celda; d = 0; }
         else { violaciones.push(`no alcanza la batería para llegar a ${id}`); t += d; largo += d; bateria = 0; pos = s.celda; d = 0; }
       } else { t += d; largo += d; bateria -= d; pos = s.celda; }
       if (t < s.ventana[0]) t = s.ventana[0];                 // espera a que abra la ventana

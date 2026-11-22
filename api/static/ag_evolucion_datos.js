@@ -4,7 +4,7 @@
 //   { planeta, inicio:[f,c], refugio:[f,c],
 //     sitios:[{id, celda:[f,c], valor, ventana:[desde,hasta]|null}], bases:[[f,c],...],
 //     generaciones:[{n, mejor, media, peor, diversidad,
-//                    candidatos:[{orden:[id,...], recargas:[indice_en_orden,...], camino:[[f,c],...]|null,
+//                    candidatos:[{orden:[id,...], recargas:[indice_en_orden TRAS el cual se recarga; -1 = antes del primero], paradas:[{despues_de, base:[f,c]}], camino:[[f,c],...]|null,
 //                                 fitness, factible, violaciones:["texto",...]}]}],
 //     mejor:{...candidato...}, parametros_difuso:{nombre:valor,...}, tiempo_s }
 //   {hay_plan:false} o 404 si no hay partida -> estado vacío.
@@ -58,21 +58,26 @@ function normalizarCandidato(c, ctx) {
   const orden = (Array.isArray(c.orden) ? c.orden : []).map((x) => String(x)).filter((id) => porId.has(id));
   if (!orden.length) return null;
   const n = orden.length;
-  const recargas = [...new Set((Array.isArray(c.recargas) ? c.recargas : []).map(num).filter((i) => i !== null && Number.isInteger(i) && i >= 0 && i < n))].sort((a, b) => a - b);
+  // Contrato del motor: `recargas` = índices de `orden` TRAS los cuales se para a recargar; -1 = antes del primer sitio.
+  // `paradas` trae lo mismo con la base elegida ({despues_de, base}); sin ella se usa la base más cercana.
+  const recargas = [...new Set((Array.isArray(c.recargas) ? c.recargas : []).map(num).filter((i) => i !== null && Number.isInteger(i) && i >= -1 && i < n))].sort((a, b) => a - b);
   const camino = Array.isArray(c.camino) ? c.camino.filter(celdaValida).map(aCelda) : [];
-  // Polilínea recta de respaldo: inicio → sitios (con la base más cercana antes de cada recarga) → refugio
+  const baseDelMotor = new Map();
+  for (const p of Array.isArray(c.paradas) ? c.paradas : []) {
+    if (p && typeof p === "object" && num(p.despues_de) !== null && celdaValida(p.base)) baseDelMotor.set(Number(p.despues_de), aCelda(p.base));
+  }
+  // Polilínea recta de respaldo: inicio → sitios (con la base de recarga tras el sitio que toca) → refugio
   const puntos = [];
   const paradas = [];
-  const base = (p) => (ctx.bases.length ? baseMasCercana(ctx.bases, p) : null);
+  const base = (i, p) => baseDelMotor.get(i) || (ctx.bases.length && p ? baseMasCercana(ctx.bases, p) : null);
+  const parar = (i) => {
+    if (!recargas.includes(i)) return;
+    const b = base(i, puntos.length ? puntos[puntos.length - 1] : (orden.length ? porId.get(orden[0]).celda : null));
+    if (b) { puntos.push(b); paradas.push({ indice: i, celda: b }); }
+  };
   if (ctx.inicio) puntos.push(ctx.inicio);
-  orden.forEach((id, i) => {
-    const destino = porId.get(id).celda;
-    if (recargas.includes(i)) {
-      const b = base(puntos.length ? puntos[puntos.length - 1] : destino);
-      if (b) { puntos.push(b); paradas.push({ indice: i, celda: b }); }
-    }
-    puntos.push(destino);
-  });
+  parar(-1);
+  orden.forEach((id, i) => { puntos.push(porId.get(id).celda); parar(i); });
   if (ctx.refugio) puntos.push(ctx.refugio);
   // Con camino real, las bases usadas son las que el camino pisa
   let basesUsadas = paradas.map((p) => p.celda);
@@ -201,16 +206,18 @@ export const textoVentana = (s) => (s.ventana ? `ventana ${s.ventana[0]}–${s.v
 export function lecturaCandidato(c, evo, g) {
   if (!c) return null;
   const porId = new Map((evo.sitios || []).map((s) => [s.id, s]));
-  const recargaAntes = new Set(c.recargas);
-  const pasos = c.orden.map((id, i) => `${recargaAntes.has(i) ? `${EVO.recarga} → ` : ""}${id}`);
+  const recargaTras = new Set(c.recargas);   // índices de `orden` tras los cuales se recarga; -1 = antes del primer sitio
+  const pasos = c.orden.map((id, i) => `${id}${recargaTras.has(i) ? ` → ${EVO.recarga}` : ""}`);
+  if (recargaTras.has(-1)) pasos.unshift(EVO.recarga);
   const lineas = [
     { clave: EVO.orden, valor: pasos.join(" → ") },
-    { clave: EVO.recargas, valor: c.recargas.length ? c.recargas.map((i) => `${EVO.antesDe} ${c.orden[i]}`).join(", ") : EVO.sinRecargas },
+    { clave: EVO.recargas, valor: c.recargas.length ? c.recargas.map((i) => (i < 0 ? EVO.antesDelPrimero : `${EVO.despuesDe} ${c.orden[i]}`)).join(", ") : EVO.sinRecargas },
     { clave: EVO.fitness, valor: `${f2(c.fitness)}${c.rango === 0 ? ` (${EVO.mejorDeLaGeneracion})` : ""}${c.copias > 1 ? ` · ${EVO.copias(c.copias)}` : ""}` },
     { clave: EVO.factible, valor: c.factible === true ? EVO.si : c.factible === false ? EVO.no : EVO.sinDato, tipo: c.factible === false ? "mal" : c.factible === true ? "bien" : "" },
   ];
   if (c.factible === false) lineas.push({ clave: EVO.restriccion, valor: c.violaciones.length ? c.violaciones.join("; ") : EVO.sinDetalle, tipo: "mal" });
-  const ventanas = c.orden.map((id) => porId.get(id)).filter((s) => s && s.ventana).map((s) => `${s.id} ${s.ventana[0]}–${s.ventana[1]}`);
+  else if (c.violaciones.length) lineas.push({ clave: EVO.penalizaciones, valor: c.violaciones.join("; ") });   // factible, pero pierde ventanas o sacrifica sitios opcionales
+  const ventanas = c.orden.map((id) => porId.get(id)).filter((s) => s && s.ventana).map((s) => `${s.id}: ${s.ventana[0]}–${s.ventana[1]}`);
   if (ventanas.length) lineas.push({ clave: EVO.ventanas, valor: ventanas.join(" · ") });
   return { titulo: `${EVO.candidato} ${c.rango + 1}${g ? ` · ${EVO.generacion} ${g.n}` : ""}`, lineas, rectas: c.rectas };
 }

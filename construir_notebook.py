@@ -136,6 +136,23 @@ with open("mision_resumen.json", "w", encoding="utf-8") as f:
 print("Exportado: mision_traza.csv y mision_resumen.json")
 """
 
+CELDA_FIGURAS = """# Figuras 2D del informe (matriz de confusión y ablación). Se muestran solo si ya fueron generadas
+# con scripts/generar_figuras.py; esta celda no las calcula.
+from pathlib import Path
+from IPython.display import Image, display
+
+# La carpeta se busca desde el directorio actual (ares_x/ o su carpeta madre); si falta, solo se avisa.
+_carpeta = next((c for c in (Path("docs/figuras"), Path("ares_x/docs/figuras")) if c.is_dir()), None)
+if _carpeta is None:
+    print("Figuras no encontradas: ejecutar el notebook desde ares_x/ y generarlas con scripts/generar_figuras.py")
+else:
+    for _nombre in ("matriz_confusion.png", "ablacion.png"):
+        if (_carpeta / _nombre).exists():
+            display(Image(filename=str(_carpeta / _nombre)))
+        else:
+            print("Figura no generada:", _nombre)
+"""
+
 CELDA_CONCLUSIONES = """## 7. Resultados, limitaciones y conclusiones
 
 **Experimento (20 semillas, mapas de Marte, movimiento en 8 direcciones)**
@@ -208,6 +225,7 @@ def construir():
         nbf.v4.new_markdown_cell(CELDA_DEMO),
         nbf.v4.new_code_cell(CELDA_DEMO_CODIGO),
         nbf.v4.new_code_cell(CELDA_EXPORTAR),
+        nbf.v4.new_code_cell(CELDA_FIGURAS),
         nbf.v4.new_markdown_cell(CELDA_CONCLUSIONES),
     ]
     nb["cells"] = celdas

@@ -46,12 +46,12 @@ Lo que tenemos igual: evolución del AG en 3D, hologramas, cine y postproceso, l
 | Función | En el ejemplo | Aquí |
 |---|---|---|
 | Laboratorios que siguen la misión en vivo | sí | hecho: panel y laboratorio (casilla «Seguir la misión en vivo») |
-| Modos de cámara (seguir, persecución, primera persona, cenital) | 5 modos | órbita más director de cine |
+| Modos de cámara (seguir, persecución, primera persona, cenital) | 5 modos | hecho: órbita, persecución, primera persona y cenital, más el director de cine |
 | Eventos | 19 (géiser, erupción, desprendimiento, ráfaga, corrosión, restauración de sensores, forzar día…) | 9 |
 | Dron compañero | sí | falta |
 | Defensa oral guiada | sí | falta |
-| Reporte HTML descargable y narrador de pasos | sí | reporte hecho (`/reporte.html`); el narrador falta |
-| Sonido | sí | falta |
+| Reporte HTML descargable y narrador de pasos | sí | hecho: `/reporte.html` y narrador (panel, subtítulos del cine y reporte) |
+| Sonido | sí | hecho: procedural con Web Audio |
 | Maqueta 3D en miniatura | sí | falta |
 | Comparar políticas en vivo | sí | desde JSON precalculado |
 | Reejecutar con la misma semilla (determinismo) | sí | falta |

@@ -48,7 +48,7 @@ export function normalizarResultado(estado) {
     ciencia: vis != null && tot != null && tot > 0 ? Math.min(1, Math.max(0, vis / tot)) : null,
     objetivos_muestreados: vis,
     objetivos_totales: tot,
-    bateria_pct: num(e.bateria),
+    bateria_pct: num(e.bateria_pct ?? e.bateria),
     violaciones: col == null && sobre == null ? null : (col || 0) + (sobre || 0),
     vetos: num(e.vetos),
     barrancos_evitados: num(e.barrancos_evitados),

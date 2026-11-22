@@ -130,6 +130,14 @@ AMBIENTE_FACTOR_POR_NIVEL = {1: 1.3, 2: 1.3, 3: 1.2, 4: 1.1, 5: 1.0}   # margen 
 FACTOR_DESVIO = 2.0                                              # ARX-59: desvío con el peor caso de tormenta
 RESERVA_DESVIO = 5.0                                          # batería de reserva para el desvío a estación
 RECARGA_PASOS = 3                                             # pasos parado para recargar en una estación
+# 22/11 (pedido del usuario): en la partida jugable hay bases de recarga y pilas sin endurecer la garantía ni cambiar
+# el mapa elegido. La capacidad del rover es su batería inicial (la interfaz la muestra como 100 %).
+BASES_RECARGA_JUGABLES = True
+FACTOR_DESVIO_JUGABLE = 1.3                                   # margen para ir a la base (ARX-59 usaba 2,0: peor tormenta)
+UMBRAL_DESVIO_JUGABLE = 0.6                                   # no se desvía a una base con más del 60 % de la capacidad
+PILAS_JUGABLES = True
+PILA_FRACCION = 0.10                                          # una pila da el 10 % de la capacidad
+PILAS_MAPA_GRANDE = 5                                         # pilas en el mapa grande; más chico, proporcional (mín. 2)
 # ARX-79 (ev3-d75 A): batería inicial del mapa más grande que el pequeño = batería por nivel × RAZON_BATERIA_GRANDE.
 # R = mediana de pasos de las victorias del grande (77,5) / mediana del pequeño (52,0) = 1,49 (ver ARX-79_calibracion.md).
 RAZON_BATERIA_GRANDE = 1.49
@@ -152,6 +160,23 @@ def _alcanzables(mundo, origen) -> set:
                 vistas.add(v)
                 pila.append(v)
     return vistas
+
+
+def _colocar_pilas(mundo, semilla: int, n: int, estaciones=()) -> list:
+    """22/11: pilas de batería en celdas libres alcanzables, lejos del inicio y del refugio y fuera de sitios y
+    bases. Generador propio (no altera los demás). Determinista con la semilla del mundo."""
+    if n <= 0:
+        return []
+    inicio = tuple(int(x) for x in mundo.inicio)
+    refugio = tuple(int(x) for x in mundo.refugio)
+    ocupadas = {tuple(int(v) for v in s) for s in mundo.sitios} | {tuple(e) for e in estaciones}
+    candidatas = [p for p in sorted(_alcanzables(mundo, inicio))
+                  if _cheb(p, inicio) >= 3 and _cheb(p, refugio) >= 3 and p not in ocupadas]
+    if not candidatas:
+        return []
+    rng = np.random.default_rng([int(semilla), 3141])
+    idx = rng.choice(len(candidatas), size=min(n, len(candidatas)), replace=False)
+    return [candidatas[int(i)] for i in sorted(idx)]
 
 
 def _colocar_estaciones(mundo, semilla: int, n: int) -> list:
@@ -222,10 +247,14 @@ def _plan_con_paradas(origen, seq, bateria, bateria_max, estaciones, largo, tram
     """
     camino, pos, bat = [origen], origen, float(bateria)
     mc = MARGEN_CAZA if margen_caza_pasos is None else margen_caza_pasos
-    for destino in seq:
+    for i, destino in enumerate(seq):
         extra = mc if destino in cazas else 0
         d = largo(pos, destino)
-        if d is not None and d * factor <= bat:
+        # 22/11: el último tramo directo debe dejar la reserva final; si no la deja, se prueba pasando por una base
+        # (antes se tomaba el directo y el plan entero se descartaba por la reserva, aunque una base lo salvara).
+        # Sin bases da lo mismo que antes: en ambos casos no hay plan.
+        reserva = MARGEN_ENERGIA if i == len(seq) - 1 else 0.0
+        if d is not None and d * factor + extra + reserva <= bat:
             bat -= d * factor + extra
             camino.extend(tramo(pos, destino)[1:])
         else:
@@ -489,6 +518,21 @@ class Partida:
         # ARX-59: estaciones de recarga y batería máxima (la partida jugable las usa; las evaluaciones congeladas no)
         self.bateria_max = BATERIA_MAX_POR_NIVEL[nivel] if con_estaciones else None
         self.estaciones = _colocar_estaciones(mundo, self.semilla_mundo, n_est) if con_estaciones else []
+        self.capacidad_bateria = float(self.mision.rover.bateria)   # 22/11: la interfaz muestra la batería sobre esto
+        self.factor_desvio = FACTOR_DESVIO
+        self.umbral_recarga = 1.0                                   # recarga si la batería está bajo este tanto del máximo
+        escala_area = (self.filas * self.columnas) / (40 * 60)
+        if garantia and not con_estaciones and BASES_RECARGA_JUGABLES:
+            # bases de recarga sobre el mapa ya elegido (la garantía no las usa: el mapa es el mismo de siempre)
+            self.bateria_max = self.capacidad_bateria
+            self.estaciones = _colocar_estaciones(mundo, self.semilla_mundo, max(1, round(ESTACIONES_POR_NIVEL[nivel] * escala_area)))
+            self.factor_desvio = FACTOR_DESVIO_JUGABLE
+            self.umbral_recarga = 0.9                               # de paso por una base casi llena, no se detiene
+        elif con_estaciones:
+            self.capacidad_bateria = float(self.bateria_max)
+        self.pilas = (_colocar_pilas(mundo, self.semilla_mundo, max(2, round(PILAS_MAPA_GRANDE * escala_area)), self.estaciones)
+                      if garantia and PILAS_JUGABLES else [])
+        self.pilas_recogidas = 0
         self.recargas_hechas = 0
         self.meteoritos_activos = bool(garantia)   # ARX-30: meteoritos solo en la partida jugable (las evaluaciones no)
         self.meteoritos = []                       # impactos de la partida: paso, impacto y zona de riesgo
@@ -783,14 +827,37 @@ class Partida:
             if ruta and len(ruta) - 1 + MARGEN_ENERGIA <= self.rover.bateria:
                 m.objetivos = faltan + [self.mundo.refugio]
                 m.ruta = ruta
+                self._planear_con_senal(False)   # 22/11: la ruta por el mapa real no conoce la señal pendiente
                 m.estado = "EXPLORACION"
                 self._avisar(f"Faltan objetivos: sitios {len(m.visitados)}/{total}")
+            elif ruta and self._ir_a_recargar_por_sitios(faltan):
+                self._avisar("Batería baja para los sitios que faltan: la misión va a recargar a una base")
             elif ruta:
                 m.estado = "FRACASO"
                 self._avisar("Batería insuficiente para llegar a los sitios científicos restantes")
             else:
                 m.estado = "FRACASO"
                 self._avisar("Sin ruta a los sitios científicos restantes")
+
+    def _ir_a_recargar_por_sitios(self, faltan) -> bool:
+        """22/11: con bases de recarga, faltar batería para los sitios restantes no es un fracaso si el rover no está
+        lleno y alcanza una base: va a recargar y después retoma los sitios. True si quedó comprometido con una base."""
+        if not self.estaciones or self.bateria_max is None or self.rover.bateria >= self.bateria_max * self.umbral_recarga:
+            return False
+        pos = tuple(int(v) for v in self.rover.posicion)
+        mascara = self.mision.riesgo < 0.5
+        opciones = []
+        for s_ in self.estaciones:
+            t = camino_bfs(pos, s_, mascara)
+            if t is not None and len(t) - 1 <= self.rover.bateria:
+                opciones.append((len(t) - 1, s_))
+        if not opciones:
+            return False
+        self._comprometido = min(opciones)[1]
+        # los sitios siguen pendientes (si no, la misión volvería a darse por terminada en el refugio y no se movería)
+        self.mision.objetivos = list(faltan) + [tuple(int(v) for v in self.mundo.refugio)]
+        self._mover_al_compromiso(pos, mascara)
+        return self.mision.estado == "EXPLORACION"
 
     def _recuperar_sin_ruta(self) -> None:
         """Falso positivo del sensor (INFORME §6, semilla 4036 en Fácil): la misión termina en SIN_RUTA porque el
@@ -809,6 +876,7 @@ class Partida:
         for c in ruta:                       # el mapa real dice que la ruta es libre: se limpia la creencia de riesgo
             if self.mundo.tipo[c] == LIBRE:
                 m.riesgo[c] = 0.0
+        self._planear_con_senal(False)       # 22/11: la ruta por el mapa real no conoce la señal pendiente
         self._avisar("Replanteo por el mapa real tras quedarse sin ruta estimada")
 
     def _caza_con_bfs(self) -> bool:
@@ -1005,8 +1073,22 @@ class Partida:
         return r
 
     # ---------- recarga (ARX-59) ----------
+    def _recoger_pila(self) -> None:
+        """22/11: si el rover está sobre una pila, la recoge: +10 % de la capacidad, sin pasar de ella."""
+        if not self.pilas:
+            return
+        pos = tuple(int(v) for v in self.rover.posicion)
+        if pos not in self.pilas:
+            return
+        self.pilas.remove(pos)
+        self.pilas_recogidas += 1
+        antes = float(self.rover.bateria)
+        self.rover.bateria = min(self.capacidad_bateria, antes + PILA_FRACCION * self.capacidad_bateria)
+        self._avisar(f"Pila recogida: +{round(100 * (self.rover.bateria - antes) / self.capacidad_bateria)} % de batería")
+
     def _tras_paso_estacion(self) -> None:
         """Si el rover acaba de llegar a una estación con batería por debajo del máximo, se recarga en RECARGA_PASOS."""
+        self._recoger_pila()
         if not self.estaciones:
             return
         pos = tuple(int(v) for v in self.rover.posicion)
@@ -1020,7 +1102,7 @@ class Partida:
             return
         if pos != self._ultima_estacion:
             self._ultima_estacion = pos
-            if self.rover.bateria < self.bateria_max:
+            if self.rover.bateria < self.bateria_max * self.umbral_recarga:
                 self._recargando = RECARGA_PASOS
 
     def _proximo_punto(self):
@@ -1040,11 +1122,15 @@ class Partida:
         m = self.mision
         if not self.estaciones or self._recargando > 0 or self.estado in ESTADOS_TERMINALES:
             return
+        # 22/11: en la partida jugable no se desvía a una base mientras le quede más del 60 % (evita desvíos tempranos)
+        if (self._comprometido is None and self.factor_desvio == FACTOR_DESVIO_JUGABLE and self.bateria_max
+                and self.rover.bateria > UMBRAL_DESVIO_JUGABLE * self.bateria_max):
+            return
         pos = tuple(int(v) for v in self.rover.posicion)
         if pos in self.estaciones:
             return
         mascara = m.riesgo < 0.5
-        f = FACTOR_DESVIO                   # peor caso de tormenta: 2 de batería por paso (1 base + 1 extra)
+        f = self.factor_desvio              # ARX-59: 2,0 (peor tormenta); partida jugable con bases: 1,3
         bat = self.rover.bateria
 
         def largo(a, b):

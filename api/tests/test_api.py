@@ -285,3 +285,10 @@ def test_panel_difuso_marca_no_usado_en_rna_y_ag(cliente, modo, usado):
     assert difuso["usado"] is usado
     if not usado:
         assert difuso["velocidad"] is None and difuso["reglas"] is None
+
+
+def test_estado_da_la_bateria_como_porcentaje_de_la_capacidad(cliente):
+    # 22/11: la interfaz ya no muestra más del 100 %: bateria_pct es sobre la capacidad (la batería inicial)
+    e = cliente.get("/estado").json()
+    assert e["bateria_pct"] == pytest.approx(100.0) and e["capacidad_bateria"] > 0
+    assert isinstance(e["pilas"], list) and isinstance(e["estaciones"], list)

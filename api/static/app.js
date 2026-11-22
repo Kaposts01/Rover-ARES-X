@@ -83,6 +83,8 @@ function ofrecerErrorMotor(motivo, reintentar) {
 document.getElementById("error-reintentar").addEventListener("click", async () => {
   document.getElementById("error-motor").classList.add("oculto");
   if (reintentarMotor) await reintentarMotor();
+  await refrescarEstado();     // 22/11: antes el reintento descartaba la respuesta y la pantalla no se repintaba
+  await refrescarPaneles();
 });
 document.getElementById("error-reiniciar").addEventListener("click", async () => {
   document.getElementById("error-motor").classList.add("oculto");
@@ -790,6 +792,67 @@ function agregarGrietas(celdas) {
   }
 }
 
+// ---------- bases de recarga y pilas (22/11) ----------
+// Las bases son fijas en la partida; las pilas desaparecen al recogerlas (con un destello). Vienen de /estado.
+const grupoEnergia = new THREE.Group();
+scene.add(grupoEnergia);
+const energiaMalla = new Map();   // "b:f,c" o "p:f,c" -> objeto 3D
+const matBase = new THREE.MeshStandardMaterial({ color: 0x2b3446, metalness: 0.6, roughness: 0.4 });
+const matBaseLuz = new THREE.MeshBasicMaterial({ color: 0x6ee7a8, toneMapped: false });
+const matPilaCuerpo = new THREE.MeshStandardMaterial({ color: 0x1d2633, metalness: 0.5, roughness: 0.35 });
+const matPilaBanda = new THREE.MeshBasicMaterial({ color: 0x9cff57, toneMapped: false });
+function crearBaseRecarga() {
+  const g = new THREE.Group();
+  const plataforma = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.08, 6), matBase);
+  const anillo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.025, 8, 36), matBaseLuz); anillo.rotation.x = Math.PI / 2; anillo.position.y = 0.05;
+  const poste = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.6, 8), matBase); poste.position.set(0.32, 0.3, 0);
+  const foco = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), matBaseLuz); foco.position.set(0.32, 0.62, 0);
+  const rayo = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.16, 3), matBaseLuz); rayo.position.y = 0.2; rayo.rotation.z = 0.4;
+  g.add(plataforma, anillo, poste, foco, rayo);
+  g.userData.anim = (t) => { anillo.scale.setScalar(1 + 0.06 * Math.sin(t * 3)); rayo.rotation.y = t * 1.5; foco.visible = Math.sin(t * 4) > -0.6; };
+  return g;
+}
+function crearPila() {
+  const g = new THREE.Group();
+  const cuerpo = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.26, 16), matPilaCuerpo);
+  const banda = new THREE.Mesh(new THREE.CylinderGeometry(0.093, 0.093, 0.08, 16), matPilaBanda); banda.position.y = 0.04;
+  const polo = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.04, 12), matPilaBanda); polo.position.y = 0.15;
+  const pila = new THREE.Group(); pila.add(cuerpo, banda, polo); pila.position.y = 0.3; pila.rotation.z = 0.35;
+  g.add(pila);
+  g.userData.anim = (t) => { pila.rotation.y = t * 1.6; pila.position.y = 0.3 + Math.sin(t * 2.2) * 0.05; };
+  return g;
+}
+function destelloPila(pos) {
+  const m = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.16, 32), new THREE.MeshBasicMaterial({ color: 0x9cff57, transparent: true, side: THREE.DoubleSide, toneMapped: false }));
+  m.rotation.x = -Math.PI / 2; m.position.copy(pos).add(new THREE.Vector3(0, 0.05, 0)); scene.add(m);
+  const t0 = performance.now();
+  const cuadro = () => {
+    const u = (performance.now() - t0) / 700;
+    m.scale.setScalar(1 + u * 6); m.material.opacity = Math.max(0, 1 - u);
+    if (u < 1) requestAnimationFrame(cuadro); else { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }
+  };
+  requestAnimationFrame(cuadro);
+}
+function pintarEnergia(e) {
+  if (!mapa || !e || e.sin_partida) return;
+  const deseadas = new Map();
+  for (const [f, c] of e.estaciones || []) deseadas.set(`b:${f},${c}`, [f, c, "base"]);
+  for (const [f, c] of e.pilas || []) deseadas.set(`p:${f},${c}`, [f, c, "pila"]);
+  for (const [k, obj] of energiaMalla) {
+    if (deseadas.has(k)) continue;
+    if (k.startsWith("p:")) destelloPila(obj.position);   // recogida
+    grupoEnergia.remove(obj); energiaMalla.delete(k);
+  }
+  for (const [k, [f, c, tipo]] of deseadas) {
+    if (energiaMalla.has(k)) continue;
+    const obj = tipo === "base" ? crearBaseRecarga() : crearPila();
+    const x = c + 0.5, z = f + 0.5;
+    obj.position.set(x, alturaTerreno(x, z), z);
+    grupoEnergia.add(obj); energiaMalla.set(k, obj);
+  }
+}
+function limpiarEnergia() { for (const obj of energiaMalla.values()) grupoEnergia.remove(obj); energiaMalla.clear(); }
+
 // 22/11: el barranco del evento se hunde a la vista (1,2 s) con polvo y rocas, y luego queda como las grietas del sismo
 function animarBarranco(celdas) {
   const suelo = grupoMapa.children[0];
@@ -847,6 +910,7 @@ function animarBarranco(celdas) {
 function construirMapa(datos) {
   limitesMapa = { columnas: datos.columnas, filas: datos.filas };
   liberarMapa();
+  limpiarEnergia();
   grupoMapa.clear();
   animados = [];
   halos = [];
@@ -1508,14 +1572,17 @@ function pintarHud(e) {
   if (enSonda) {
     document.getElementById("sonda-planeta").textContent = planetaActivo;
     document.getElementById("sonda-temp").textContent = `${e.temperatura_interna} °C (tolerancia ${e.tolerancia} °C)`;
-    document.getElementById("sonda-bateria").textContent = `${e.bateria.toFixed(1)} %`;
+    document.getElementById("sonda-bateria").textContent = `${(e.bateria_pct ?? e.bateria).toFixed(1)} %`;
     document.getElementById("sonda-sobre").textContent = e.pasos_sobre_tolerancia ?? "-";
     document.getElementById("sonda-estado").textContent = e.estado;
   }
   document.getElementById("h-semilla").textContent = e.semilla;
   document.getElementById("h-estado").textContent = e.estado;
-  document.getElementById("h-bateria").textContent = `${e.bateria.toFixed(1)} %`;
-  document.getElementById("h-bateria-barra").style.width = `${Math.max(0, Math.min(100, e.bateria))}%`;
+  // 22/11: porcentaje de la capacidad del rover (nunca más de 100 %); el motor sigue en sus unidades
+  const bpct = e.bateria_pct ?? e.bateria;
+  document.getElementById("h-bateria").textContent = `${bpct.toFixed(1)} %`;
+  document.getElementById("h-bateria-barra").style.width = `${Math.max(0, Math.min(100, bpct))}%`;
+  try { pintarEnergia(e); } catch (err) { console.warn("bases y pilas: no se pudieron dibujar", err); }
   document.getElementById("h-puntaje").textContent = e.puntaje;
   document.getElementById("h-municion").textContent = e.municion;
   document.getElementById("h-modo").textContent = e.modo;
@@ -1922,6 +1989,12 @@ function aplicarEnlaceYSenal(datos) {
   // ARX-30c: tras recargar en mitad de un corte, el enlace caído enciende la interferencia sin esperar al evento de /moviles
   if (datos.enlace && datos.enlace.activo === true) efectos.activarInterferencia(true);
   if ("senal" in datos && datos.senal === null) efectos.quitarSenalBiologica(scene);
+  // 22/11: el anillo solo llegaba con el evento de /moviles del mismo paso; si se lo saltó (reproducción en marcha o
+  // recarga de la página), se dibuja aquí desde /estado.senal
+  if (Array.isArray(datos.senal) && !efectos.senalDibujada()) {
+    const [f, c] = datos.senal, x = c + 0.5, z = f + 0.5;
+    efectos.marcarSenalBiologica(scene, [x, alturaTerreno(x, z), z]);
+  }
   if ("senal" in datos && ultimosObjetivos) pintarObjetivos(ultimosObjetivos);   // la línea de señal sigue a /estado
 }
 
@@ -2717,6 +2790,12 @@ function efectoDisparoAutomatico(r, previo) {
   const destino = (dronId != null && puntoDronPorId(dronId)) || (celda && puntoDronEnCelda(celda, previo)) || puntoDronEnLinea(rumbo);
   efectoDisparo(rumbo, impacto, destino);
 }
+function mostrarCalculando(si) {
+  let n = document.getElementById("motor-calculando");
+  if (!n) { n = document.createElement("div"); n.id = "motor-calculando"; n.setAttribute("role", "status");
+    n.textContent = "El motor está calculando (replanteo del AG)… la partida sigue"; document.body.append(n); }
+  n.classList.toggle("visible", !!si);
+}
 function avisarMotorLento() {
   detenerReproduccion();
   document.getElementById("motor-lento").classList.remove("oculto");
@@ -2744,11 +2823,17 @@ async function paso() {
   let r;
   pasoEnVuelo = true;
   const generacion = generacionInicio;
-  const temporizador = setTimeout(avisarMotorLento, 2000);   // más de 2 s sin respuesta: aviso
+  // 22/11: un replanteo del AG en mapa grande puede tardar varios segundos. Antes, a los 2 s se abría un diálogo que
+  // detenía la reproducción y parecía el fin de la partida («Reintentar» la continuaba). Ahora: aviso suave que no
+  // detiene nada a los 1,5 s, y el diálogo solo si el motor no responde en 25 s.
+  const avisoSuave = setTimeout(() => mostrarCalculando(true), 1500);
+  const temporizador = setTimeout(avisarMotorLento, 25000);
   try {
     r = await llamar("POST", "/paso");
   } finally {
     clearTimeout(temporizador);
+    clearTimeout(avisoSuave);
+    mostrarCalculando(false);
     pasoEnVuelo = false;
   }
   if (generacion !== generacionInicio) return false;   // se salió de la partida con el paso en vuelo: no se pinta nada ni se abre la pantalla final
@@ -3631,6 +3716,7 @@ function animar() {
     for (const eje of ruedasGiro) eje.rotation.z -= avance / 0.1;
   }
   if (evolucion) evolucion.animar(dt);
+  for (const obj of energiaMalla.values()) if (obj.userData.anim) obj.userData.anim(tiempo);
   if (holograma && holoDatos) holograma.anclar(grupoRover.position, camara);
   if (cabezaRover) cabezaRover.rotation.y = Math.sin(tiempo * 0.5) * 0.6;
 

@@ -27,7 +27,7 @@ function pasos() {
       vivo: async () => { const e = await obtener("/estado"); return e && !e.sin_partida ? [`Partida en curso: ${e.planeta} · semilla ${e.semilla} · nivel ${e.nivel}`] : ["Sin partida: inicia una misión para ver las cifras en vivo."]; } },
     { titulo: "Configuración de la misión", criterios: ["RF-01", "CA-07"], resaltar: "#hud",
       texto: "Se elige planeta, tamaño de mapa, nivel y semilla. La semilla hace la partida reproducible. En los gigantes gaseosos el sistema bloquea el rover con ruedas y propone la sonda.",
-      vivo: async () => { const e = await obtener("/estado"); return e && !e.sin_partida ? [`Planeta ${e.planeta} con ${e.modo_planeta}`, `Batería inicial y actual: ${coma(e.bateria, 1)} %`, `Sitios científicos: ${e.sitios_visitados}/${e.sitios_totales}`] : []; } },
+      vivo: async () => { const e = await obtener("/estado"); return e && !e.sin_partida ? [`Planeta ${e.planeta} con ${e.modo_planeta}`, `Batería: ${coma(e.bateria_pct ?? e.bateria, 1)} % de la capacidad · bases de recarga: ${(e.estaciones || []).length} · pilas en el mapa: ${(e.pilas || []).length}`, `Sitios científicos: ${e.sitios_visitados}/${e.sitios_totales}`] : []; } },
     { titulo: "El ciclo observar → decidir → actuar", criterios: ["RF-03", "CA-01"], resaltar: "#barra-mision",
       texto: "En cada paso el rover lee sensores ruidosos, la RNA clasifica la celda de enfrente, el difuso fija la velocidad, el AG mantiene el plan y el supervisor aprueba o veta. El narrador lo explica en una frase.",
       vivo: async () => { const d = await obtener("/ia/paso"); return d && d.hay_paso ? [d.narracion] : ["Pulsa «Demostrar» para dar tres pasos."]; },

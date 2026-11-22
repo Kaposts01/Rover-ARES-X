@@ -128,8 +128,7 @@ def _replanear_ag(partida) -> None:
     """
     m = partida.mision
     if partida._objetivo is not None:
-        _replanear_ag(partida)
-        return
+        return          # 22/11: antes se llamaba a sí misma sin salida (RecursionError → 500); el objetivo del jugador no se toca
     origen = partida.rover.posicion
     pendientes = {p: v for p, v in partida.mundo.sitios.items() if p not in m.visitados}
     ruta = m._optimizar_ag(origen, pendientes) if pendientes else []
@@ -146,6 +145,7 @@ def _replanear_ag(partida) -> None:
         m.replanes += 1
     else:
         m.ruta = _ruta_bfs(partida, origen)
+    partida._planear_con_senal(False)   # 22/11: el plan del AG no conoce la señal pendiente (dejaba la partida en SIN_RUTA)
 
 
 def _ejecutar(partida, rumbo: str, destino) -> bool:

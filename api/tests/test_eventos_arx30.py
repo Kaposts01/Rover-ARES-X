@@ -370,14 +370,9 @@ def test_senal_con_drones_obligatorios_no_deja_sin_ganar_las_repros_de_qa(semill
     assert _jugar(app, cliente, 3) == "EXITO"               # con señal: se gana (la señal se acepta o se rechaza)
 
 
-@pytest.mark.parametrize("nivel", [
-    pytest.param(3, marks=pytest.mark.xfail(strict=True, reason=(
-        "ARX-94f, fallo conocido: semilla 4, nivel 3, pequeño. Con los sensores de 94b/94c el rover gasta más pasos "
-        "de los que prevé la garantía y un meteorito (-5 %) lo deja sin batería a 2 celdas del refugio; ocurre también "
-        "sin señal. Reservar el daño en la garantía lo corrige pero cambia el mapa elegido en muchas semillas y deja "
-        "sin mapa ganable al nivel 5 pequeño: hay que rebalancear la garantía (margen, batería, estaciones)."))),
-    5,
-])
+# 22/11: el fallo conocido de ARX-94f (semilla 4, nivel 3: sin batería a 2 celdas del refugio tras un meteorito) lo
+# resuelven las bases de recarga de la partida jugable: el rover recarga y gana. Vuelve a ser una prueba normal.
+@pytest.mark.parametrize("nivel", [3, 5])
 def test_ninguna_senal_aceptada_con_drones_deja_sin_ganar(nivel):
     from juego.partida import EVENTOS_SOPORTADOS
     for semilla in range(1, 7):

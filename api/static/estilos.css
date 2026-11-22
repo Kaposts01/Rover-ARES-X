@@ -909,3 +909,6 @@ body.cine #subtitulo-ia { display: block; }
 #meta .meta-acciones #meta-salir { background: transparent; color: #ff8a95; border: 1px solid rgba(255, 93, 108, 0.6); }
 #meta .meta-acciones #meta-salir:hover { background: rgba(255, 93, 108, 0.12); }
 #meta .meta-acciones .boton-reporte { color: #5fe6ff; border: 1px solid rgba(95, 230, 255, 0.45); text-decoration: none; }
+#motor-calculando { position: fixed; left: var(--centro); top: 52px; transform: translateX(-50%); z-index: 40; padding: 6px 14px; border-radius: 999px;
+  background: rgba(10, 20, 36, 0.9); border: 1px solid rgba(95, 230, 255, 0.4); color: #bff4ff; font-size: 12.5px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+#motor-calculando.visible { opacity: 1; }

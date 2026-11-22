@@ -269,6 +269,12 @@ def _estado(sesion: Sesion) -> dict:
         "bateria": round(float(p.rover.bateria), 2),
         "bateria_max": p.bateria_max,                # ARX-59: None en las evaluaciones congeladas
         "recargas": int(p.recargas_hechas),          # recargas completadas en la estación
+        # 22/11: la batería como porcentaje de la capacidad del rover (nunca más de 100 %), bases y pilas que quedan
+        "capacidad_bateria": round(float(getattr(p, "capacidad_bateria", 100.0) or 100.0), 2),
+        "bateria_pct": round(min(100.0, 100.0 * float(p.rover.bateria) / float(getattr(p, "capacidad_bateria", 100.0) or 100.0)), 1),
+        "estaciones": [[int(f), int(c)] for f, c in getattr(p, "estaciones", [])],
+        "pilas": [[int(f), int(c)] for f, c in getattr(p, "pilas", [])],
+        "pilas_recogidas": int(getattr(p, "pilas_recogidas", 0)),
         "puntaje": p.puntaje(),
         "modo": sesion.modo,
         "ambiente": p.ambiente,
@@ -868,6 +874,25 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         return JSONResponse(status_code=500, content={"ok": False, "motivo": "error interno"})
 
     app.mount("/static", StaticFiles(directory=CARPETA_STATIC), name="static")
+
+    # 22/11: el motor no es seguro entre hilos. La interfaz lanza lecturas (/estado, /paneles, /recomendacion…) mientras
+    # corre /paso, y eso daba errores 500 que abrían «El motor no respondió». Las peticiones al motor se atienden de a
+    # una; los archivos estáticos no esperan.
+    # Candado de hilos (no asyncio.Lock): sirve aunque cada cliente use su propio bucle de eventos, como en las pruebas.
+    import threading
+    import anyio
+    candado_motor = threading.Lock()
+
+    @app.middleware("http")
+    async def _un_paso_a_la_vez(request: Request, call_next):
+        ruta = request.url.path
+        if ruta == "/" or ruta.startswith("/static/"):
+            return await call_next(request)
+        await anyio.to_thread.run_sync(candado_motor.acquire)   # espera sin bloquear el bucle
+        try:
+            return await call_next(request)
+        finally:
+            candado_motor.release()
 
     @app.middleware("http")
     async def _sin_cache_interfaz(request: Request, call_next):

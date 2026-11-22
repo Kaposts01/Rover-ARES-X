@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -132,3 +133,25 @@ def test_resumen_tiene_las_claves_de_mision():
     p = Partida(semilla=11)
     assert {"estado", "pasos", "sitios_visitados", "sitios_totales", "bateria_final",
             "vetos", "replanes", "colisiones", "barrancos_pisados"} <= set(p.resumen())
+
+
+def test_pila_suma_el_diez_por_ciento_de_la_capacidad_sin_pasarse():
+    # 22/11: pilas en la partida jugable; recogerla suma el 10 % de la capacidad (la batería inicial), con tope
+    p = Partida(semilla=11)
+    assert p.pilas and p.estaciones and p.bateria_max == p.capacidad_bateria
+    celda = p.pilas[0]
+    p.rover.bateria = 0.5 * p.capacidad_bateria
+    p.rover.posicion = celda
+    p._recoger_pila()
+    assert p.rover.bateria == pytest.approx(0.6 * p.capacidad_bateria)
+    assert celda not in p.pilas and p.pilas_recogidas == 1
+    p.rover.bateria = 0.97 * p.capacidad_bateria
+    p.rover.posicion = p.pilas[0]
+    p._recoger_pila()
+    assert p.rover.bateria == pytest.approx(p.capacidad_bateria)          # nunca más del 100 %
+
+
+def test_las_evaluaciones_no_tienen_bases_ni_pilas():
+    from juego import comparacion
+    p = comparacion.partida_variante(1, "hibrido", "congelado")
+    assert p.pilas == [] and p.estaciones == []

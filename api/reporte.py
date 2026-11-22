@@ -81,6 +81,7 @@ def construir_html(datos: dict) -> str:
     log = datos.get("filas_log") or []
     hist = datos.get("historial") or []
     t = resumen_tecnicas(log)
+    capacidad = float(est.get("capacidad_bateria") or 100.0) or 100.0
     generado = datos.get("generado") or datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     filas_resumen = [
         ("Planeta y vehículo", f"{est.get('planeta', '-')} · {est.get('modo_planeta', '-')}"),
@@ -88,7 +89,8 @@ def construir_html(datos: dict) -> str:
         ("Modo de control", est.get("modo", "-")),
         ("Resultado", est.get("estado", "-")),
         ("Pasos de la misión", est.get("paso", "-")),
-        ("Batería final", f"{_num(est.get('bateria'), 1)} %"),
+        ("Batería final (de la capacidad)", f"{_num(est.get('bateria_pct', est.get('bateria')), 1)} %"),
+        ("Pilas recogidas · recargas en base", f"{est.get('pilas_recogidas', 0)} · {est.get('recargas', 0)}"),
         ("Sitios científicos", f"{est.get('sitios_visitados', '-')}/{est.get('sitios_totales', '-')}"),
         ("Vetos · replanteos · choques", f"{est.get('vetos', '-')} · {est.get('replanes', '-')} · {est.get('colisiones', '-')}"),
         ("Velocidad media (difuso)", _num(t["velocidad_media"], 3)),
@@ -97,7 +99,8 @@ def construir_html(datos: dict) -> str:
     resumen = "".join(f"<tr><th>{_e(k)}</th><td>{_e(v)}</td></tr>" for k, v in filas_resumen)
     avisos = "".join(f"<li>{_e(a)}</li>" for a in (est.get("avisos") or [])) or "<li>Sin avisos.</li>"
     graficos = "".join([
-        svg_serie([f.get("bateria") for f in log], "#5fd3ff", 0, None, "Batería (%) por paso"),
+        svg_serie([None if f.get("bateria") is None else min(100.0, 100.0 * float(f["bateria"]) / capacidad) for f in log],
+                  "#5fd3ff", 0, 100, "Batería (% de la capacidad) por paso"),
         svg_serie([f.get("velocidad") for f in log], "#6ee7a8", 0, 1, "Velocidad decidida por el difuso"),
         svg_serie([f.get("p_barranco") for f in log], "#ff5d6c", 0, 1, "p(barranco) según la RNA"),
         svg_serie([f.get("fitness_ag") for f in log], "#ffc857", None, None, "Fitness del plan del AG en juego"),

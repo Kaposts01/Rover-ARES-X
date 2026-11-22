@@ -202,6 +202,9 @@ export function marcarSenalBiologica(escena, posicion) {
   marcadorBio.style.display = "block";
 }
 
+// 22/11: ¿hay un anillo de señal dibujado y en qué celda? (para dibujarlo desde /estado si se perdió el evento)
+export function senalDibujada() { return anillo ? anillo.userData.celda || true : null; }
+
 export function quitarSenalBiologica(escena) {
   if (anillo) escena.remove(anillo);
   anillo = null;

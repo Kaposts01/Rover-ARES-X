@@ -77,5 +77,38 @@ La respuesta añade `escenario_recomendado: "jugable_dificil"` y `escenarios_dis
 
 - `recargas` es el índice del sitio **tras** el cual se recarga (pedido del coordinador de interfaz); `-1` = antes del primero. Se añade `paradas` con la base.
 - `camino` solo viene en el mejor de cada generación y en las generaciones 0 y última (el resto `null`), para que el JSON no pase de ~160 KB.
-- `/ag` (laboratorio con pesos) sigue siendo el del AG de orden anterior; el AG con restricciones se ve en `/ag/evolucion` y en `/ia/paso` (`ag.generaciones`).
+- ~~`/ag` sigue siendo el del AG de orden anterior~~ (corregido tras el QA final, ver «Correcciones tras el QA final»): en la partida jugable `/ag` corre el AG con restricciones.
 - `salida` del GET lleva `universo:[0,1]` y `etiquetas` (misma forma que cada variable).
+
+
+## Correcciones tras el QA final (rama `r23/fix-motor`)
+
+### GET /ag (laboratorio genético)
+En la partida jugable (`plan_activo`) corre `planificacion.AGRestringido` (60 × 60, ~1 s en el mapa pequeño) sobre el estado de ahora: posición, batería,
+paso, mapa estimado, sitios pendientes con ventanas y opcionales, y bases. Sin plan restringido (escenarios congelados) sigue el AG de orden anterior.
+Se conserva todo lo que lee la interfaz: `parametros.{poblacion,generaciones,pesos,parada_sin_mejora}`, `generaciones[]` con `generacion`, `mejor`,
+`media`, `peor`, `cruces`, `mutaciones` (de esa generación) y `poblacion` (`[{cromosoma:[[f,c]...], fitness, operacion}]`: los 5 a 6 mejores
+**distintos** de la generación, no los 60 individuos), `candidatos[]` con `orden`, `cromosoma` (celdas), `pasos` (lista de `null`: no hay punto de paso por
+tramo), `fitness`, `desglose`, más `mejor_ruta`, `mejor_desglose`, `cruces`, `mutaciones`, `generaciones_ejecutadas`, `viable`, `ordenes_evaluados`.
+Campos nuevos: `modo:"restricciones"`, `tiempo_s`, `evaluaciones`, `ultima_mejora`, `inicio`, `refugio`, `bases`, `sitios` (id, celda, valor, ventana,
+obligatorio), `bateria`, `capacidad`, `factor_energia`, `paso`; por generación `diversidad` y `distintos`; por candidato `ids` (orden por id de sitio),
+`recargas`, `paradas`, `camino` (solo el mejor), `violaciones`, `sacrificados`, `ciencia`, `pasos_recorridos`, `ventanas_perdidas`, `recargas_hechas`;
+`operacion` ∈ {heuristica, inicial, elite, copia, cruce, copia+mutacion, cruce+mutacion, inmigrante}; `parametros.fitness` y `parametros.nota_pesos`.
+Pesos: sin tocarlos el fitness es el del juego; con pesos distintos del defecto, ciencia, distancia y riesgo escalan los términos del juego por
+(peso ÷ peso por defecto) y energía y tiempo entran con un coeficiente base de 0,02 (`Problema.fitness_pesos`). `desglose`: ciencia (valor × calidad de
+ventana ÷ total), distancia (pasos ÷ pasos de referencia), energía (recargas ÷ (sitios + 1)), riesgo (recargas reparadas ÷ (sitios + 1)), tiempo (ventanas
+perdidas ÷ sitios con ventana), inviabilidad (0 o 1).
+
+### GET /comparar (ficha y tabla)
+Cada ficha de paso lleva `ciencia_recogida` (valor × calidad de ventana), `ciencia_maxima` y **`ciencia_fraccion`** (0 a 1). La tabla final añade la fila
+`{"clave":"ciencia_fraccion","a":..,"b":..,"ganador":..}` entre `puntaje` y `bateria_pct`.
+
+### Planetas: `viento_rotulo`
+`GET /planetas` (`mecanicas.viento_rotulo`), `estado.planeta_mecanicas.perfil.viento_rotulo` y `estado.planeta_mecanicas.estado.viento_rotulo` traen el rótulo del viento con la misma escala
+(`planetas.ESCALA_VIENTO`: < 0,05 en calma, < 0,25 suave, < 0,50 moderado, < 0,75 fuerte, si no muy fuerte) sobre la intensidad nominal del perfil
+(con la ráfaga, sin la escala del nivel). Antes la interfaz rotulaba el viento vivo (0,85 × 0,75 de nivel = 0,64) como «moderado» y el perfil decía «muy fuerte».
+
+### Otros
+- `rna.tramo[].marcada` también sale en la celda de distancia 1 (riesgo ≥ 0,5 tras el paso); las celdas con riesgo conocido siguen en el tramo (antes se saltaban).
+- El evento `barranco` solo cambia el mundo real: el mapa estimado lo marca la percepción (anticipación de la RNA o sensores), no el evento.
+- Las respuestas de más de 4 KB se comprimen con gzip si el cliente manda `Accept-Encoding: gzip` (`/ag/evolucion`: 354 KB → ~12 KB en mapa grande).

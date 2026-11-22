@@ -49,7 +49,7 @@ def test_mismas_semillas_dan_el_mismo_mapa_en_ambos_lados_y_se_corre_hasta_el_fi
     fin = _correr(cli, d["id"])
     assert fin["tabla"] is not None and fin["tabla"]["ganador"] in ("a", "b", "empate")
     claves = [f["clave"] for f in fin["tabla"]["filas"]]
-    assert claves == ["resultado", "pasos", "puntaje", "bateria_pct", "sitios_visitados", "vetos", "colisiones"]
+    assert claves == ["resultado", "pasos", "puntaje", "ciencia_fraccion", "bateria_pct", "sitios_visitados", "vetos", "colisiones"]
     for l in fin["lados"]:
         assert l["estado"] in TERMINALES
 

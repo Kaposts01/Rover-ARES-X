@@ -176,13 +176,16 @@ def test_ag_expone_generaciones_candidatos_y_operaciones(cliente):
     r = cliente.get("/ag")
     assert r.status_code == 200, r.text
     datos = r.json()
+    # R23: en la partida jugable el laboratorio corre el AG con restricciones (60 × 60); `poblacion` son los mejores candidatos distintos
+    # de la generación (5 a 6), no los 60 individuos
     assert datos["parametros"]["poblacion"] >= 30 and datos["parametros"]["generaciones"] >= 30
-    assert len(datos["generaciones"]) == 30
+    assert datos["modo"] == "restricciones"
+    assert len(datos["generaciones"]) == datos["parametros"]["generaciones"]
     gen = datos["generaciones"][5]
-    assert len(gen["poblacion"]) == 30
+    assert 3 <= len(gen["poblacion"]) <= 6
     assert {"cromosoma", "fitness", "operacion"} <= set(gen["poblacion"][0])
     assert len(gen["top"]) == 3
-    assert len(datos["candidatos"]) == 3
+    assert len(datos["candidatos"]) >= 3
     assert {"fitness", "ciencia", "distancia", "energia", "riesgo", "tiempo", "inviabilidad"} <= set(
         datos["candidatos"][0]["desglose"])
     assert datos["cruces"] > 0 and datos["mutaciones"] > 0

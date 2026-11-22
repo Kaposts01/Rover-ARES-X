@@ -71,3 +71,24 @@ no se resolvió).
 Con el difuso de defecto (sin evolucionar) la misma medición en Marte dio 100, 100, 90, 80 y 60 %: el difuso evolucionado de Marte no cambia la dificultad por encima del error (±10 a ±15 puntos).
 
 Cómo reproducir: `python scripts/medir_dificultad.py --tamano pequeno --planetas Marte,Tierra --semillas 20 --politica hibrido`.
+
+
+## Recalibración tras corregir el replanteo parado (QA final, rama `r23/fix-motor`)
+
+Causas de las partidas que fracasaban o no terminaban (ver `R23_contratos_api.md`, «Correcciones»): (1) el refugio quedaba encerrado en el mapa estimado por
+lecturas falsas (riesgo 1 sobre celdas libres) y el recurso «ir a la base más cercana» mandaba a la base donde el rover ya estaba (ruta de una celda: replanteo
+en cada paso, batería gastándose parado); (2) la reserva de batería para cazar drones (crece con el gasto real) hacía infactible el plan completo incluso con la
+batería llena en una base. Arreglo: se libera el camino real encerrado (`_liberar_ruta_real`), plan reducido por etapas (`ETAPAS_DEGRADADO`: media reserva de
+caza, sin reserva, sitios opcionales), salvaguarda de quietud (`PASOS_QUIETO_MAXIMO` = 8 pasos sin moverse escalan el escape y al final fin con motivo) y fin
+con motivo si un plan reducido vuelve dos veces al refugio con obligatorios pendientes.
+
+Con eso Marte N4 y N5 subieron por encima de sus metas (100 % y 75 %), así que `BATERIA_POR_NIVEL` pasa a 100, 94, 88, 64, 60 y la compensación de la Tierra a 0,2
+(`COMPENSACION_POR_PLANETA`). Híbrido, mapa pequeño, semillas 1 a 20:
+
+| Planeta | N1 | N2 | N3 | N4 | N5 |
+|---|---|---|---|---|---|
+| Marte | 100 % | 100 % | 85 % | 85 % | 60 % |
+| Tierra | 100 % | 100 % | 95 % | 80 % | 55 % |
+
+Marte con 34 semillas (N3 a N5): 91, 79 y 59 %; 102 partidas, 0 sin terminar en 500 pasos. N1 y N2 no son comparables entre niveles a ±10 puntos. Los demás planetas
+conservan su compensación completa y no se revalidaron con las nuevas baterías de N4 y N5.

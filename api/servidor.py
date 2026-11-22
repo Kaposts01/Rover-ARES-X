@@ -719,6 +719,84 @@ def _pesos_ag(sesion, pedidos: dict) -> dict:
     return pesos
 
 
+def _ag_laboratorio_restricciones(p, pesos: dict, parada_sin_mejora) -> dict:
+    """GET /ag en la partida jugable (R23): el AG con restricciones (`planificacion.AGRestringido`) sobre el estado de ahora:
+    posición, batería, paso, mapa estimado, sitios pendientes (con ventanas y opcionales) y bases. Mismo contrato que el laboratorio
+    anterior (parametros.pesos, generaciones con poblacion, candidatos con orden, pasos, cromosoma y desglose) más campos nuevos."""
+    import planificacion
+    from genetico import PESOS_POR_DEFECTO
+    from juego import partida as jp
+    pendientes = {c: v for c, v in p.mundo.sitios.items() if c not in p.mision.visitados}
+    origen = tuple(int(v) for v in p.rover.posicion)
+    prob = p._problema_plan(origen, pendientes)
+    tocados = {k: float(v) for k, v in pesos.items() if abs(float(v) - PESOS_POR_DEFECTO[k]) > 1e-12}
+    prob.pesos = dict(pesos) if tocados else None      # sin tocar los pesos: el fitness del juego, tal cual
+    pob, gens = jp.AG_PLAN_INICIAL
+    ag = planificacion.AGRestringido(prob, poblacion=pob, generaciones=gens, semilla=int(p.mision.semilla),
+                                     parada_sin_mejora=parada_sin_mejora)
+    res = ag.optimizar()
+    por_id = {s.id: s for s in prob.sitios}
+
+    def celdas(ids):
+        return [[int(por_id[i].celda[0]), int(por_id[i].celda[1])] for i in ids]
+
+    def candidato(plan, con_camino=False):
+        c = p.candidato_json(prob, plan, con_camino)
+        comp = prob.componentes(plan.ciencia, plan.pasos, plan.recargas, plan.reparaciones, plan.ventanas_falladas)
+        return {**c, "ids": c["orden"], "orden": celdas(c["orden"]), "cromosoma": celdas(c["orden"]),
+                "pasos": [None] * len(c["orden"]),                # el AG con restricciones no usa punto de paso por tramo
+                "pasos_recorridos": c["pasos"],
+                "desglose": {"fitness": float(plan.fitness), "ciencia": comp["ciencia"], "distancia": comp["distancia"],
+                             "energia": comp["energia"], "riesgo": comp["riesgo"], "tiempo": comp["tiempo"],
+                             "inviabilidad": 0.0 if plan.factible else 1.0},
+                "ventanas_perdidas": int(plan.ventanas_falladas), "recargas_hechas": int(plan.recargas)}
+
+    generaciones, cr_ant, mu_ant = [], 0, 0
+    for h in res.historial:
+        cands = [candidato(pl) for pl in h["candidatos"]]
+        pobl = [{"cromosoma": c["cromosoma"], "fitness": c["fitness"], "operacion": op, "factible": c["factible"]}
+                for c, op in zip(cands, h["operaciones"])]
+        generaciones.append({"generacion": int(h["n"]), "n": int(h["n"]), "mejor": float(h["mejor"]), "media": float(h["media"]),
+                             "peor": float(h["peor"]), "diversidad": round(float(h["diversidad"]), 4), "distintos": int(h["distintos"]),
+                             "cruces": int(h["cruces"]) - cr_ant, "mutaciones": int(h["mutaciones"]) - mu_ant,
+                             "poblacion": pobl,
+                             "top": [{"cromosoma": c["cromosoma"], "fitness": c["fitness"]} for c in cands[:3]]})
+        cr_ant, mu_ant = int(h["cruces"]), int(h["mutaciones"])
+    mejor = candidato(res.mejor, con_camino=True)
+    otros = [candidato(pl) for pl in res.historial[-1]["candidatos"]]
+    mejores = [mejor] + [c for c in otros if c["ids"] != mejor["ids"]][:5]
+    jugada = prob.ruta(res.mejor) or []
+    return {
+        "modo": "restricciones",
+        "parametros": {"poblacion": pob, "generaciones": gens, "k_puntos": None, "prob_cruce": ag.prob_cruce,
+                       "prob_mutacion": ag.prob_mutacion, "elite": ag.elite, "torneo": ag.torneo, "semilla": int(p.mision.semilla),
+                       "pesos": dict(pesos), "parada_sin_mejora": parada_sin_mejora, "umbral_diversidad": ag.umbral_diversidad,
+                       "punto_de_paso": False,
+                       "fitness": "ponderado con los pesos del laboratorio" if tocados else "el del juego",
+                       "nota_pesos": "ciencia = valor por calidad de ventana; distancia = pasos; energía = recargas; riesgo = recargas "
+                                     "reparadas (no planeadas); tiempo = ventanas perdidas. Con los pesos por defecto el fitness es el del juego"},
+        "generaciones": generaciones,
+        "candidatos": mejores,
+        "mejor_ruta": [_celda(c) for c in jugada],
+        "mejor_desglose": mejor["desglose"],
+        "cruces": int(ag.cruces), "mutaciones": int(ag.mutaciones),
+        "generaciones_ejecutadas": len(res.historial),
+        "viable": bool(res.mejor.factible), "ordenes_evaluados": int(res.evaluaciones),
+        "fallback": None,
+        "orden_en_juego": {"metodo": "AG con restricciones (orden, selección y recargas)", "respaldo": None,
+                           "pesos": dict(PESOS_POR_DEFECTO)},
+        # campos nuevos del AG con restricciones
+        "tiempo_s": round(float(res.tiempo_s), 3), "evaluaciones": int(res.evaluaciones), "ultima_mejora": int(res.ultima_mejora),
+        "inicio": [int(v) for v in prob.inicio], "refugio": [int(v) for v in prob.refugio],
+        "bases": [[int(b[0]), int(b[1])] for b in prob.bases],
+        "sitios": [{"id": int(s.id), "celda": [int(s.celda[0]), int(s.celda[1])], "valor": float(s.valor),
+                    "ventana": list(s.ventana) if s.ventana else None, "unidad_ventana": "pasos", "obligatorio": bool(s.obligatorio)}
+                   for s in prob.sitios],
+        "bateria": round(float(prob.bateria), 2), "capacidad": float(prob.capacidad), "factor_energia": round(float(prob.factor), 3),
+        "paso": int(prob.t0),
+    }
+
+
 def _escenarios_comparacion():
     try:
         from juego.comparacion import ESCENARIOS
@@ -970,6 +1048,11 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             respuesta.headers["Cache-Control"] = "no-cache"
         return respuesta
 
+    # R23: las respuestas grandes (/ag/evolucion pesa 150 a 350 KB en JSON, /ag unos 90 KB) viajan comprimidas cuando el cliente lo
+    # acepta (Accept-Encoding: gzip, como todos los navegadores): 354 KB pasan a unos 12 KB sin cambiar el contrato.
+    from fastapi.middleware.gzip import GZipMiddleware
+    app.add_middleware(GZipMiddleware, minimum_size=4096, compresslevel=5)
+
     @app.get("/")
     def pagina():
         return FileResponse(os.path.join(CARPETA_STATIC, "index.html"))
@@ -1131,12 +1214,22 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         pendientes = {c: v for c, v in p.mundo.sitios.items() if c not in p.mision.visitados}
         if not pendientes:
             return {"sin_sitios": True, "motivo": "no quedan sitios científicos pendientes"}
+        # R23: en la partida jugable el laboratorio corre el AG con restricciones (ventanas, recargas, opcionales) sobre el estado de
+        # ahora; el AG de orden anterior queda solo para las partidas sin plan restringido (escenarios congelados)
+        con_restricciones = bool(p.plan_activo and getattr(p, "sitios_plan", None))
         clave = (p.mision.semilla, tuple(sorted(pendientes)), tuple(p.rover.posicion),
-                 p.mision.riesgo.tobytes(), parada_sin_mejora, tuple(sorted(pesos.items())))
+                 p.mision.riesgo.tobytes(), parada_sin_mejora, tuple(sorted(pesos.items())),
+                 (int(p.mision.paso), round(float(p.rover.bateria), 3)) if con_restricciones else None)
         if clave in _cache_ag:
             return _cache_ag[clave]
         if parada_sin_mejora is not None and (isinstance(parada_sin_mejora, bool) or parada_sin_mejora < 1):
             raise ErrorApi(400, "parada_sin_mejora debe ser un entero mayor que 0")
+        if con_restricciones:
+            salida = _ag_laboratorio_restricciones(p, pesos, parada_sin_mejora)
+            if len(_cache_ag) >= 16:
+                _cache_ag.pop(next(iter(_cache_ag)))
+            _cache_ag[clave] = salida
+            return salida
         # ARX-92c: el laboratorio corre el MISMO AG sobre el orden que decide la partida (mismo envoltorio, pesos del lab)
         from juego.partida import (AG_ORDEN_CON_PASO, AVISO_FALLBACK, METODO_AG_ORDEN, UMBRAL_EMPATE,
                                    _ag_con_todos_los_sitios)

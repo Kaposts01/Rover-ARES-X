@@ -11,7 +11,9 @@ Solo valen para la partida jugable: la evaluación congelada sigue con la bater�
 """
 
 # Batería inicial del mapa pequeño (20x30), por nivel; el mapa grande la multiplica por RAZON_BATERIA_GRANDE.
-BATERIA_POR_NIVEL = {1: 100.0, 2: 94.0, 3: 88.0, 4: 80.0, 5: 70.0}
+# R23 (QA final): N4 y N5 bajan de 80/70 a 64/60: tras corregir el replanteo parado (partidas que antes fracasaban por quedarse quietas) Marte N4 y N5
+# quedaron por encima de sus metas (100 % y 75 %).
+BATERIA_POR_NIVEL = {1: 100.0, 2: 94.0, 3: 88.0, 4: 64.0, 5: 60.0}
 # Escala de todas las mecánicas del planeta (1,0 = el perfil tal cual).
 INTENSIDAD_POR_NIVEL = {1: 0.4, 2: 0.6, 3: 0.75, 4: 0.9, 5: 1.1}
 # Ruido de los sensores (σ relativo; 0,1 es el nominal con que se entrenó la RNA).
@@ -26,10 +28,17 @@ GARANTIA_CON_BASES_Y_PLANETA = True
 PASOS_REFERENCIA = 70
 
 
+# Fracción de la compensación que recibe cada planeta (1,0 = el sobrecoste completo; por defecto 1,0). R23, QA final: con el problema
+# nuevo (8 a 12 sitios, ventanas, recargas) la compensación completa dejaba a la Tierra muy por encima de las metas (100/90/80 % en
+# N3 a N5 frente a 85–95/65–85/40–65): da más batería de la que cuestan sus mecánicas, porque el AG y las bases ya absorben parte.
+COMPENSACION_POR_PLANETA = {"Tierra": 0.2}
+
+
 def bateria_inicial(nivel: int, planeta: str = "Marte") -> float:
     """Batería inicial de la partida jugable pequeña: la del nivel más la compensación del sobrecoste medio del planeta."""
     from juego import planetas
     extra = planetas.sobrecosto_medio(planeta, INTENSIDAD_POR_NIVEL[nivel]) - planetas.sobrecosto_medio("Marte", INTENSIDAD_POR_NIVEL[nivel])
+    extra *= COMPENSACION_POR_PLANETA.get(planeta, 1.0)
     return float(round(BATERIA_POR_NIVEL[nivel] + max(0.0, extra) * PASOS_REFERENCIA, 1))
 
 

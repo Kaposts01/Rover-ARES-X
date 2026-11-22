@@ -340,3 +340,90 @@ def test_la_formula_del_puntaje_simple_coincide_con_la_del_motor():
     e = c.get("/estado").json()
     esperado = _js(f"m.puntajeSimple({json.dumps(dict(visitados=e['sitios_visitados'], totales=e['sitios_totales'], bateria=e['bateria'], vetos=e['vetos']))})")
     assert esperado == e["puntaje"]
+
+
+# ---------- 13. eventos con señal visible y condiciones del planeta (ronda 23, interfaz) ----------
+def _js_modulo(archivo: str, expresion: str):
+    codigo = (f"import * as m from {json.dumps((ESTATICOS / archivo).as_uri())};"
+              f"console.log(JSON.stringify({expresion}));")
+    r = subprocess.run([NODE, "--input-type=module", "-"], input=codigo, capture_output=True, text=True,
+                       encoding="utf-8", timeout=30)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+@sin_node
+def test_la_ubicacion_de_un_evento_dice_celda_distancia_y_rumbo():
+    f = lambda c, v, veh="rover": _js(f"m.ubicacionEvento({json.dumps(c)}, {json.dumps(v)}, {json.dumps(veh)})")
+    assert f([19, 2], [19, 0]) == "fila 19, columna 2 · a 2 celdas al este del rover"
+    assert f([17, 4], [19, 0], "sonda") == "fila 17, columna 4 · a 4 celdas al noreste de la sonda"
+    assert f([19, 0], [19, 0]).endswith("justo donde está el rover")
+    assert f([3, 3], None) == "fila 3, columna 3"
+    assert _js("m.direccionEntre([5, 5], [8, 5])") == "sur" and _js("m.direccionEntre([5, 5], [5, 2])") == "oeste"
+
+
+@sin_node
+def test_el_aviso_de_un_evento_dice_donde_pasa_y_si_no_tuvo_efecto():
+    t = _js('m.avisoEvento("barranco", "barranco", {ok: true, detalle: "barranco en (19, 2)", celdas: [[19, 2]]}, [19, 0], "rover")')
+    assert t == "Evento barranco: barranco en (19, 2) · a 2 celdas al este del rover"   # sin repetir fila y columna
+    t = _js('m.avisoEvento("falla_sensor", "falla de sensor", {ok: true, detalle: "la IA se detiene 3 pasos"}, [19, 0], "rover")')
+    assert t == "Evento falla de sensor: la IA se detiene 3 pasos"
+    t = _js('m.avisoEvento("senal_biologica", "señal biológica", {ok: false, detalle: "batería insuficiente para la señal"}, [19, 0], "rover")')
+    assert t == "Evento señal biológica sin efecto: batería insuficiente para la señal"
+    assert _js('m.celdasDeEvento("sismo", {grietas: [[1, 2], [3, 4]]})') == [[1, 2], [3, 4]]
+    assert _js('m.celdasDeEvento("meteorito", {impacto: [18, 2]})') == [[18, 2]]
+    assert _js('m.celdasDeEvento("noche", {ok: true})') == []
+
+
+@sin_node
+def test_todo_evento_de_la_lista_tiene_marca_en_la_escena():
+    html = _html_sin_comentarios()
+    opciones = re.findall(r'<option value="([a-z_]+)">', html[html.index('id="evento-nombre"'):html.index('id="evento-disparar"')])
+    assert set(opciones) == {"barranco", "falla_sensor", "bateria_baja", "tormenta", "noche", "meteorito", "sismo", "baja_conectividad", "senal_biologica"}
+    marcas = _js("m.MARCA_EVENTO")
+    for nombre in opciones:
+        assert nombre in marcas and marcas[nombre]["rotulo"] and marcas[nombre]["sobre"] in ("celda", "vehiculo")
+
+
+@sin_node
+def test_las_condiciones_del_planeta_usan_el_motor_si_existe_y_si_no_la_referencia():
+    sin = _js_modulo("planeta_datos.js", 'm.condicionesPlaneta(null, "Neptuno")')
+    assert sin["gravedad"]["fuente"] == "referencia" and sin["viento"]["fuente"] == "referencia" and sin["hielo"]["fuente"] == "referencia"
+    assert sin["viento"]["fuerza"] == 1 and sin["hielo"]["nivel"] > 0.5
+    est = {"planeta_mecanicas": {"gravedad": 0.5, "viento": {"fuerza": 0.25, "direccion": "NE"}, "hielo": {"nivel": 0.4}}}
+    con = _js_modulo("planeta_datos.js", f'm.condicionesPlaneta({json.dumps(est)}, "Marte")')
+    assert con["gravedad"] == {"g": 0.5, "fuente": "motor"}
+    assert con["viento"] == {"fuerza": 0.25, "grados": 45, "fuente": "motor"} and con["hielo"] == {"nivel": 0.4, "fuente": "motor"}
+    # claves a medias o inválidas: cada una cae a su referencia sin romper las demás
+    raro = {"planeta_mecanicas": {"gravedad": "mucha", "viento": 7, "hielo": True}}
+    c = _js_modulo("planeta_datos.js", f'm.condicionesPlaneta({json.dumps(raro)}, "Tierra")')
+    assert c["gravedad"]["fuente"] == "referencia" and c["viento"]["fuerza"] == 1 and c["hielo"]["nivel"] == 0.8
+    assert _js_modulo("planeta_datos.js", 'm.condicionesPlaneta({}, "Plutón").gravedad.g') == 1
+    filas = _js_modulo("planeta_datos.js", 'm.filasCondiciones(m.condicionesPlaneta(null, "Mercurio"))')
+    assert [f[0] for f in filas] == ["Gravedad", "Viento", "Hielo"] and filas[1][1] == "en calma"
+
+
+@sin_node
+def test_cada_planeta_tiene_perfil_propio_sin_rocas_en_neptuno():
+    perfiles = _js_modulo("planeta_datos.js", "m.PERFILES")
+    assert set(perfiles) == {"Marte", "Mercurio", "Venus", "Tierra", "Saturno", "Urano", "Neptuno", "Júpiter"}
+    assert len({p["firma"] for p in perfiles.values()}) == 8      # cada uno con su rasgo propio
+    assert perfiles["Neptuno"]["rasgos"]["obstaculo"] == "nube_o_hielo"
+    for gigante in ("Júpiter", "Saturno", "Urano", "Neptuno"):
+        assert perfiles[gigante]["rasgos"]["obstaculo"] != "roca"
+    assert perfiles["Neptuno"]["suelo"] != 0x3f6fd6    # ya no es el azul saturado de antes
+
+
+def test_el_cine_oculta_todos_los_paneles_y_deja_un_boton_para_salir():
+    css = (ESTATICOS / "estilos.css").read_text(encoding="utf-8")
+    regla = re.search(r"body\.cine #registro[^{]*\{", css).group(0)
+    for pieza in ("#columna", "#controles", "#dock", "#mensaje", ".fn-avisos"):
+        assert pieza in regla
+    assert 'id="cine-salir"' in _html_sin_comentarios()
+    assert "#panel-ia" in css[css.index("body.cine #panel-ia"):][:80]
+
+
+def test_la_intro_tiene_lista_de_planetas_y_zonas_de_clic_generosas():
+    js = (ESTATICOS / "intro3d.js").read_text(encoding="utf-8")
+    assert "in-lista" in js and "ZONA_FACTOR" in js and "velOrbital" in js
+    assert "zona" in js and "intersectObjects(cuerpos.map((k) => k.zona)" in js

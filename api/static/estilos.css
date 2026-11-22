@@ -621,7 +621,7 @@ body.cine .cn-cinta-boton { display: none; }   /* ya existe «Salir» */
 #controles #controles-toggle { background: none; box-shadow: none; color: var(--acento); margin: 0 0 8px; padding: 2px 0; width: 100%; border: 0; filter: none; }
 
 /* ---------- columna única izquierda: HUD y decisión separados por filetes (vuelta 13) ---------- */
-#columna { background: rgba(10, 14, 24, 0.5); border: 0; border-radius: var(--radio); box-shadow: var(--sombra);
+#columna { background: rgba(10, 14, 24, 0.84); backdrop-filter: blur(5px); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra);
   padding: 12px 14px; gap: 0; width: 264px; max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgba(95, 211, 255, 0.45) transparent; }
 #columna > .caja { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
 #columna #hud { padding-bottom: 10px; }
@@ -964,3 +964,11 @@ body.cine .evento-etiqueta { display: none !important; }
   background: repeating-linear-gradient(105deg, transparent 0 22px, rgba(220, 230, 255, 0.16) 22px 23px, transparent 23px 46px); animation: tormentaViento 0.7s linear infinite; }
 @keyframes tormentaViento { from { transform: translate(0, 0); } to { transform: translate(-46px, 40px); } }
 @media (prefers-reduced-motion: reduce) { #ambiente-velo.tormenta::before, .destello { animation: none; } }
+
+/* ---------- condiciones del planeta en el HUD (gravedad, viento, hielo) ---------- */
+.condiciones { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--separador); }
+.cond-titulo { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--acento); margin: 0 0 4px; }
+.cond-filas .fila { font-size: 12px; padding: 2px 0; }
+.cond-ref { font-size: 10px; font-weight: 400; color: var(--texto-suave); letter-spacing: 0.04em; }
+.cond-firma { font-size: 11px; line-height: 1.4; color: var(--texto-suave); margin-top: 4px; font-style: italic; }
+body.cine .condiciones { display: none; }

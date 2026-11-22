@@ -25,8 +25,9 @@ function crearTexturaPlaneta(planeta) {
   // Gigantes gaseosos: bandas de nubes con su paleta
   const BANDAS_GIGANTE = {
     Saturno: ["#e9d8a6", "#f5ead0", "#c9b07a", "#efe0b0"],
-    Urano: ["#9fdde0", "#c4eef0", "#7fc8cc", "#b6e6e8"],
-    Neptuno: ["#3f6fd6", "#2f58b0", "#5a86e0", "#24459a"],
+    Urano: ["#a7d6d8", "#c8e8ea", "#86c0c4", "#bcdfe0"],
+    // Neptuno: azules grisáceos y de media luminosidad (antes un azul puro saturado que se comía el contraste del HUD)
+    Neptuno: ["#6a86ad", "#5a7499", "#7f9bc0", "#4f678c"],
   };
   if (planeta === "Venus") {
     // Venus: llanuras ocres con grietas de lava incandescente y charcos

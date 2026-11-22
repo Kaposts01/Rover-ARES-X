@@ -18,6 +18,8 @@ import {
   textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
 } from "/static/textos.js?v=r14";
 import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
+import { condicionesPlaneta, filasCondiciones, perfilPlaneta } from "/static/planeta_datos.js?v=r14";
+import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
@@ -692,6 +694,11 @@ function liberarMapa() {
   }
   grupoMapa.traverse((o) => { if (o.isInstancedMesh) { try { o.dispose(); } catch (e) { /* ya liberado */ } } });
 }
+// Arbustos de la Tierra y piedras o cristales de borde: material y geometría únicos (no se crean de nuevo en cada evento ni mapa)
+const matArbusto = new THREE.MeshStandardMaterial({ color: 0x4f7a3a, roughness: 0.95 });
+const geoBordeRoca = new THREE.DodecahedronGeometry(0.1, 0);
+const geoBordeCristal = new THREE.ConeGeometry(0.06, 0.34, 5);   // en los gigantes el borde de un sumidero es de hielo, no de roca
+const matBordeCristal = new THREE.MeshStandardMaterial({ color: 0xd6efff, roughness: 0.2, flatShading: true, transparent: true, opacity: 0.85, emissive: 0x2f5f78, emissiveIntensity: 0.5 });
 // Canto rodado: icosaedro deformado por una función de la posición (los vértices repetidos se mueven igual y no se abren
 // grietas) y con la base aplanada para que apoye en el suelo. Caras planas a propósito: se lee como roca fracturada.
 const geometriasRoca = new Map();
@@ -780,9 +787,10 @@ function agregarGrietas(celdas) {
     sombra.needsUpdate = true;
     suelo.geometry.computeVertexNormals();
   }
-  const piedras = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.1, 0), materiales.borde, bordes.length);
+  const gigante = ES_GIGANTE(planetaActivo);
+  const piedras = new THREE.InstancedMesh(gigante ? geoBordeCristal : geoBordeRoca, gigante ? matBordeCristal : materiales.borde, bordes.length);
   bordes.forEach((b, i) => {
-    p.set(b.x, alturaTerreno(b.x, b.z) + 0.02, b.z);
+    p.set(b.x, alturaTerreno(b.x, b.z) + (gigante ? 0.12 : 0.02), b.z);
     e.setScalar(b.s);
     piedras.setMatrixAt(i, m.compose(p, b.q, e));
   });
@@ -967,6 +975,7 @@ function construirMapa(datos) {
 
   // Rocas y piedras de borde como instancias (rendimiento): un dibujo por tipo en lugar de una malla por piedra
   const rocas = [];
+  const arbustos = [];
   const bordes = [];
   const mtxX = new THREE.Matrix4();
   const rotX = new THREE.Quaternion();
@@ -978,8 +987,17 @@ function construirMapa(datos) {
       const x = c + 0.5;
       const z = f + 0.5;
       const y = alturaTerreno(x, z);
+      const rasgoObstaculo = perfilPlaneta(planetaActivo).rasgos.obstaculo;
       if (t === TIPO_OBSTACULO && ES_GIGANTE(planetaActivo)) {
-        grupoMapa.add(crearVortice(x, y, z));
+        // cada gigante tiene lo suyo: Júpiter vórtices; Saturno bruma dorada; Urano cristales; Neptuno nubes y formaciones de hielo (ninguna roca)
+        grupoMapa.add(rasgoObstaculo === "vortice" ? crearVortice(x, y, z) : crearObstaculoGigante(THREE, rasgoObstaculo, x, y, z, (k) => azar(f, c, 200 + k)));
+      } else if (t === TIPO_OBSTACULO && rasgoObstaculo === "arbusto" && azar(f, c, 300) < 0.6) {
+        // Tierra: la mayoría de los obstáculos son arbustos (blobs verdes), el resto rocas
+        const tam = 0.26 + azar(f, c, 301) * 0.2;
+        escalaX.set(tam * 1.5, tam * 0.9, tam * 1.4);
+        posX.set(x + (azar(f, c, 302) - 0.5) * 0.3, y + tam * 0.45, z + (azar(f, c, 303) - 0.5) * 0.3);
+        rotX.setFromEuler(new THREE.Euler(0, azar(f, c, 304) * 6, 0));
+        arbustos.push(new THREE.Matrix4().compose(posX, rotX, escalaX));
       } else if (t === TIPO_OBSTACULO) {
         // 2 o 3 rocas facetadas por celda
         const n = 2 + Math.floor(azar(f, c, 1) * 2);
@@ -1005,7 +1023,9 @@ function construirMapa(datos) {
     }
   }
   if (rocas.length) grupoMapa.add(instanciarRocas(materiales.roca, rocas, { semilla: datos.columnas * 7 + datos.filas }));
-  if (bordes.length) grupoMapa.add(instanciarRocas(materiales.borde, bordes.map((mb) => mb.clone().scale(new THREE.Vector3(0.1, 0.1, 0.1))), { detalle: 1, sombra: false, semilla: 5 }));
+  if (arbustos.length) grupoMapa.add(instanciarRocas(matArbusto, arbustos, { detalle: 1, semilla: 17 }));
+  if (bordes.length && ES_GIGANTE(planetaActivo)) grupoMapa.add(instanciar(geoBordeCristal, matBordeCristal, bordes.map((mb) => mb.clone().scale(new THREE.Vector3(1.4, 1.4, 1.4)))));
+  else if (bordes.length) grupoMapa.add(instanciarRocas(materiales.borde, bordes.map((mb) => mb.clone().scale(new THREE.Vector3(0.1, 0.1, 0.1))), { detalle: 1, sombra: false, semilla: 5 }));
 
   for (const s of datos.sitios) {
     const [f, c] = s.pos;
@@ -1051,8 +1071,9 @@ function construirMapa(datos) {
   camara.position.set(datos.columnas / 2, 22, datos.filas / 2 + 16);
   camara.lookAt(controles.target);
   controles.maxDistance = Math.max(60, escala * 1.5);   // mapa grande: que quepa completo sin perder el límite de 60
-  scene.fog.near = escala * 0.9;
-  scene.fog.far = escala * 2.4;
+  const lejosNiebla = perfilPlaneta(planetaActivo).nieblaLejos;   // Venus y los gigantes: bruma densa; Mercurio: sin atmósfera
+  scene.fog.near = escala * 0.9 * Math.min(1, lejosNiebla / 2.4);
+  scene.fog.far = escala * lejosNiebla;
   sol.target.position.set(datos.columnas / 2, 0, datos.filas / 2);
   sol.position.copy(sol.target.position).addScaledVector(DIR_SOL, 60);
   const lado = escala * 0.75 + 8;
@@ -1605,6 +1626,8 @@ function pintarHud(e) {
   }
   const velo = document.getElementById("ambiente-velo");   // noche o tormenta en curso: el velo de la escena (el motor cuenta los pasos que quedan)
   if (velo) { velo.className = e.ambiente === "noche" || e.ambiente === "tormenta" ? e.ambiente : ""; }
+  ambientePlaneta.reforzar(e.ambiente === "tormenta" ? 2.2 : 1);   // la tormenta levanta el viento mientras dura
+  aplicarCondiciones(e);
   document.getElementById("h-semilla").textContent = e.semilla;
   document.getElementById("h-estado").textContent = nombreEstado(e.estado);
   // 22/11: porcentaje de la capacidad del rover (nunca más de 100 %); el motor sigue en sus unidades
@@ -2176,7 +2199,7 @@ const PALETAS_PLANETA = {
   "Júpiter": { suelo: 0xe6cba2, arriba: [0.34, 0.24, 0.12], horizonte: [0.9, 0.74, 0.5], niebla: 0xe6c896, sol: 0xffe6c0, roca: 0xe6d6b8, borde: 0xe6d6b8, guijarro: 0xf2e6cc },
 };
 function aplicarAspecto(planeta) {
-  const p = PALETAS_PLANETA[planeta] || PALETAS_PLANETA.Marte;
+  const p = perfilPlaneta(planeta);   // aspecto de la escena (planeta_datos.js); PALETAS_PLANETA solo queda para el color de los planetas de la intro
   document.querySelector("#hud h1").textContent = `ARES-X · ${planeta}`;
   if (grupoMapa.children[0] && grupoMapa.children[0].material) grupoMapa.children[0].material.color.setHex(p.suelo);
   materiales.roca.color.setHex(p.roca);      // rocas del planeta: Marte café rojizo, Mercurio gris
@@ -2186,8 +2209,43 @@ function aplicarAspecto(planeta) {
   materialCielo.uniforms.horizonte.value.set(...p.horizonte);
   scene.fog.color.setHex(p.niebla);
   sol.color.setHex(p.sol);
+  sol.intensity = p.intensidadSol;
   luzCielo.groundColor.setHex(p.niebla).multiplyScalar(0.55);
   luzCielo.color.setRGB(p.arriba[0], p.arriba[1], p.arriba[2]).lerp(new THREE.Color(0xdfe8ff), 0.6);
+  aplicarCondiciones(estado, true);
+}
+
+// ---------- condiciones del planeta (gravedad, viento, hielo) ----------
+// Único punto donde se leen: planeta_datos.condicionesPlaneta(estado.planeta_mecanicas, con valores de referencia si el motor no las manda).
+// De aquí salen el bloque del HUD, las partículas de viento, los centelleos y el brillo del hielo en el suelo.
+const ambientePlaneta = crearAmbientePlaneta({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z), camara, renderer });
+let condicionesActuales = null, firmaCondiciones = "";
+function aplicarCondiciones(e, forzar = false) {
+  const planeta = (e && e.planeta) || planetaActivo;
+  const c = condicionesPlaneta(e, planeta);
+  const firma = `${planeta}|${JSON.stringify(c)}`;
+  if (!forzar && firma === firmaCondiciones) return;
+  firmaCondiciones = firma; condicionesActuales = c;
+  ambientePlaneta.configurar(planeta, c);
+  const suelo = grupoMapa.children[0];   // hielo: el suelo se vuelve más liso y brilla bajo el sol
+  if (suelo && suelo.material && suelo.material.isMeshStandardMaterial) {
+    suelo.material.roughness = 0.95 - 0.5 * c.hielo.nivel;
+    suelo.material.metalness = 0.12 * c.hielo.nivel;
+  }
+  const caja = document.getElementById("condiciones");
+  if (!caja) return;
+  const filas = caja.querySelector(".cond-filas");
+  filas.replaceChildren(...filasCondiciones(c).map(([etiqueta, valor, fuente]) => {
+    const f = document.createElement("div"); f.className = "fila";
+    const a = document.createElement("span"); a.textContent = etiqueta;
+    const v = document.createElement("span"); v.className = "valor"; v.textContent = valor;
+    v.title = fuente === "motor" ? "Dato del motor" : "Valor de referencia del cliente: el motor aún no manda esta condición";
+    f.append(a, v);
+    if (fuente !== "motor") { const r = document.createElement("small"); r.className = "cond-ref"; r.textContent = "ref."; v.append(" ", r); }
+    return f;
+  }));
+  const firma2 = caja.querySelector(".cond-firma");
+  if (firma2) firma2.textContent = perfilPlaneta(planeta).firma;
 }
 
 // Lo último que confirmó el motor: planeta y tipo de vehículo
@@ -3957,6 +4015,7 @@ function animar() {
   efectos.actualizarMovibles(tiempo, dt);
   marcasEvento.actualizar(tiempo);
   actualizarEtiquetaEvento();
+  if (mapa && grupoRover.children.length) ambientePlaneta.actualizar(dt, tiempo, grupoRover.position);
   if (intro && intro.activo) intro.render(); else if (viaje && viaje.activo) viaje.render();
   else if (cinePost && cinePost.activo) {
     try { cinePost.render(scene, camara, camara.position.distanceTo(grupoRover.position)); }

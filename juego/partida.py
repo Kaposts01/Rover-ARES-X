@@ -16,12 +16,14 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from genetico import GeneticPlanner, camino_bfs  # noqa: E402
+import anticipacion  # noqa: E402
 import planificacion  # noqa: E402
 from integracion import (ESTADOS_TERMINALES, MARGEN_ENERGIA,  # noqa: E402
                          GRADOS_POR_GRADIENTE, PASOS_PARADO_MAXIMO,
                          Decision, Mision, _rumbo, camino_valido)
 from difuso import ResultadoDifuso, aplanar_membresias  # noqa: E402
-from juego import dificultad, planetas, termico  # noqa: E402
+from difuso import FuzzyController  # noqa: E402
+from juego import dificultad, difuso_planetas, planetas, termico  # noqa: E402
 from rna import _rasgos_celda, inclinacion_de_rasgos  # noqa: E402
 from simulador import (BARRANCO, LIBRE, MOVIMIENTOS, OBSTACULO, SensorSuite,  # noqa: E402
                        generar_mundo, paso_fisico)
@@ -330,6 +332,14 @@ FACTOR_SEGURIDAD_PLAN = 1.08          # margen sobre el factor de energía del p
 # El veto inmediato V-RNA-BARRANCO no cambia: sigue vetando con la lectura del paso. Las bases, los sitios, el inicio y el refugio
 # son conocidos (mapa orbital): la RNA no los marca nunca (una lectura sobre ellos es un falso positivo).
 CONFIRMAR_RNA_JUGABLE = True
+# R23 (RNA con anticipación, anticipacion.py): en la partida jugable la RNA también clasifica las celdas de la ruta a 2, 3 y 4 pasos.
+# Una celda con p(barranco) >= UMBRAL_ANT_PRECAUCION frena el paso (tope de velocidad); si la media de sus observaciones (al menos
+# dos) llega a UMBRAL_ANT_MARCA, queda como riesgo y se replantea la ruta antes de llegar. Umbrales sobre probabilidades corregidas
+# por la proporción real de clases; con ellos el recall a 2/3/4 celdas es ~61/47/34 % con ~1 % de falsos (ver docs/planes/R23_ag.md).
+ANTICIPACION_JUGABLE = True
+UMBRAL_ANT_PRECAUCION = 0.10
+UMBRAL_ANT_MARCA = 0.30
+VELOCIDAD_PRECAUCION = 0.30
 OBSERVACIONES_RNA_CONFIRMA = 2
 
 
@@ -404,6 +414,8 @@ def _ag_restringido(partida, heuristica: str = None, anotar=None):
             optimizar.ultimo = None
         else:
             pob, gens = AG_PLAN_INICIAL if partida._plan_inicial_pendiente else AG_PLAN_REPLANTEO
+            if not partida._plan_inicial_pendiente:           # pocos sitios pendientes: espacio chico, menos esfuerzo
+                pob, gens = min(pob, max(16, 8 * prob.n)), min(gens, max(10, 4 * prob.n + 6))
             semillas = partida._cromosomas_semilla(prob)
             ag = planificacion.AGRestringido(prob, poblacion=pob, generaciones=gens, semilla=m.semilla + 7919 * m.replanes,
                                              semillas_cromosomas=semillas)
@@ -592,7 +604,7 @@ class Partida:
     def __init__(self, semilla: int = 11, bateria: float = None, nivel: int = 1,
                  eventos_activos=EVENTOS_SOPORTADOS, filas: int = FILAS_BASE, columnas: int = COLUMNAS_BASE,
                  garantia: bool = True, planeta: str = termico.PLANETA_POR_DEFECTO, n_sitios: int = None,
-                 plan_restringido: bool = None):
+                 plan_restringido: bool = None, difuso_evolucionado: bool = None, ajustes_difuso: dict = None):
         _t0_construccion = time.perf_counter()      # tiempo de pared, igual que _cronometrado
         self.tiempo_computo_s = 0.0
         self._cronometro_nivel = 0
@@ -675,6 +687,7 @@ class Partida:
         self.estaciones = _colocar_estaciones(mundo, self.semilla_mundo, n_est) if con_estaciones else []
         self.capacidad_bateria = float(self.mision.rover.bateria)   # 22/11: la interfaz muestra la batería sobre esto
         self.factor_desvio = FACTOR_DESVIO
+        self._desvio_jugable = False                                 # True con las bases de la partida jugable
         self.umbral_recarga = 1.0                                   # recarga si la batería está bajo este tanto del máximo
         self.recarga_parcial = False                                # True solo con las bases de la partida jugable (R23)
         escala_area = (self.filas * self.columnas) / (40 * 60)
@@ -686,6 +699,7 @@ class Partida:
                 dificultad.n_bases(nivel, self.filas, self.columnas) if self.plan_activo
                 else max(1, round(ESTACIONES_POR_NIVEL[nivel] * escala_area)))
             self.factor_desvio = FACTOR_DESVIO_JUGABLE
+            self._desvio_jugable = True
             self.umbral_recarga = 0.9                               # de paso por una base casi llena, no se detiene
             self.recarga_parcial = not self.plan_activo             # R23: la base carga solo lo necesario (con plan: llena)
         elif con_estaciones:
@@ -736,6 +750,11 @@ class Partida:
         # ARX-90: regla de percepción (método ligado: sobrevive a copy y deepcopy de la partida)
         self.mision._actualizar_mapa_estimado = self._actualizar_mapa_percepcion
         self.confirmar_rna = bool(garantia) and CONFIRMAR_RNA_JUGABLE      # R23: ver CONFIRMAR_RNA_JUGABLE
+        self.anticipacion_activa = bool(garantia) and ANTICIPACION_JUGABLE
+        self._ant_suma = np.zeros(mundo.tipo.shape)    # p(barranco) acumulada por celda mirada a 2-4 pasos
+        self._ant_n = np.zeros(mundo.tipo.shape, dtype=int)
+        self._ant_ultima = []                           # clasificación del tramo del último paso (para /ia/paso)
+        self._precaucion_ant = False
         if garantia:
             self.mision._riesgo_por_rna = self._riesgo_por_rna_partida      # método ligado: sobrevive a copy y deepcopy
         self._falla_restante = 0           # pasos de IA detenida por falla de sensor
@@ -762,26 +781,27 @@ class Partida:
         self._en_paso_juego = False                                       # ev3-d88 B: ver _paso_de_juego
         self._entrada_difuso = None                                       # R23: lo último que recibió el difuso en un paso
         self._en_sugerencia = False                                       # R23: sugerencia() ve lo mismo que el paso real
+        # R23 (AG evoluciona el difuso): parámetros del planeta, evolucionados fuera de línea (juego/difuso_planetas.json)
+        self.conduccion = {}                       # topes de velocidad y umbrales de desvío; vacío = difuso por defecto
+        self.parametros_difuso = {}                # lo que difiere del difuso por defecto (para GET /ag/evolucion)
+        self.difuso_evolucionado = False
+        ajustes = ajustes_difuso
+        if ajustes is None and bool(garantia) and (difuso_evolucionado is None or difuso_evolucionado):
+            ajustes = difuso_planetas.cargar(planeta)
+        elif difuso_evolucionado is False and ajustes_difuso is None:
+            ajustes = None
+        self._params_difuso_planeta = (ajustes or {}).get("difuso")        # lo que restaura DELETE /difuso/reglas
+        if ajustes:
+            self.mision.difuso = FuzzyController(params=ajustes.get("difuso"))
+            self.mision.difuso.personalizado = False        # «personalizadas» es lo que edita el usuario, no lo evolucionado
+            self.conduccion = dict(ajustes.get("conduccion") or {})
+            self.difuso_evolucionado = True
+            self.parametros_difuso = {**self.mision.difuso.parametros_planos(), **{f"conduccion.{k}": v for k, v in self.conduccion.items()}}
+        if self.conduccion.get("factor_desvio") and self._desvio_jugable:
+            self.factor_desvio = float(self.conduccion["factor_desvio"])
+        self._umbral_desvio = float(self.conduccion.get("umbral_desvio", UMBRAL_DESVIO_JUGABLE))
         if self._termico_activo or self.mecanicas.activa:
-            _inferir = self.mision.difuso.inferir
-
-            def _inferir_con_juego(distancia, bateria, inclinacion, temperatura=0.0):
-                # ev3-d88 B: solo durante el paso de juego se usa la T_int; el laboratorio /difuso responde con la
-                # temperatura que se pide
-                if self._en_paso_juego or self._en_sugerencia:
-                    if termico.ABORTO_TERMICO_ACTIVO and self._termico_activo and self._en_paso_juego:
-                        temperatura = self.termico.t_int
-                    if self.mecanicas.activa:
-                        inclinacion = self._inclinacion_con_hielo(inclinacion)   # R23: el hielo se ve como pendiente
-                        # R23: el universo del difuso es 0 a 100: recibe el porcentaje de la capacidad, no las unidades del motor
-                        bateria = self.bateria_pct_difuso(bateria)
-                if self._en_paso_juego:
-                    self._entrada_difuso = {"distancia": float(distancia), "bateria": float(bateria),
-                                            "inclinacion": float(inclinacion), "temperatura": float(temperatura)}
-                if self._en_paso_juego and self._termico_activo:
-                    self.mision._ultima_temperatura = float(temperatura)   # solo registro: la T que usó el paso
-                return _inferir(distancia, bateria, inclinacion, temperatura)
-            self.mision.difuso.inferir = _inferir_con_juego
+            self._envolver_difuso()
         self.avisos = []                   # avisos para la interfaz, p. ej. «Faltan objetivos: sitios 2/4» (N4); antes de planificar: el AG puede anotar AG-FALLBACK-GARANTIA (ARX-92c)
         # Mision() ya planificó con el AG original: se replanifica con el envoltorio que exige todos los sitios
         self.mision.objetivos = []
@@ -875,6 +895,57 @@ class Partida:
             return self._sugerencia_sin_efectos()
         finally:
             self._en_sugerencia = previo
+
+    def _envolver_difuso(self) -> None:
+        """Hace que el difuso de la misión vea lo que ve en juego: la T_int, el hielo como pendiente, la batería en % y los
+        topes de velocidad de la conducción evolucionada. Método ligado (sobrevive a copy y deepcopy). Hay que volver a llamarlo
+        si se cambia `mision.difuso` (PUT /difuso/reglas)."""
+        self.mision.difuso.inferir = self._inferir_con_juego
+
+    def poner_difuso(self, controlador) -> None:
+        """Cambia el controlador difuso de la partida en curso (PUT/DELETE /difuso/reglas) y lo vuelve a envolver. Solo esta
+        partida: no se guarda en disco ni toca las evaluaciones ni los escenarios de comparación."""
+        self.mision.difuso = controlador
+        self._envolver_difuso()
+
+    def restaurar_difuso(self) -> None:
+        """Vuelve al difuso del planeta (el evolucionado si lo hay, si no el de defecto)."""
+        ctrl = FuzzyController(params=self._params_difuso_planeta) if self._params_difuso_planeta else FuzzyController()
+        ctrl.personalizado = False
+        self.poner_difuso(ctrl)
+
+    def _inferir_con_juego(self, distancia, bateria, inclinacion, temperatura=0.0):
+        # ev3-d88 B: solo durante el paso de juego se usa la T_int; el laboratorio /difuso responde con la temperatura que se pide
+        inclinacion_real = inclinacion
+        if self._en_paso_juego or self._en_sugerencia:
+            if termico.ABORTO_TERMICO_ACTIVO and self._termico_activo and self._en_paso_juego:
+                temperatura = self.termico.t_int
+            if self.mecanicas.activa:
+                inclinacion = self._inclinacion_con_hielo(inclinacion)   # R23: el hielo se ve como pendiente
+                # R23: el universo del difuso es 0 a 100: recibe el porcentaje de la capacidad, no las unidades del motor
+                bateria = self.bateria_pct_difuso(bateria)
+        if self._en_paso_juego:
+            self._entrada_difuso = {"distancia": float(distancia), "bateria": float(bateria),
+                                    "inclinacion": float(inclinacion), "temperatura": float(temperatura)}
+        if self._en_paso_juego and self._termico_activo:
+            self.mision._ultima_temperatura = float(temperatura)   # solo registro: la T que usó el paso
+        res = FuzzyController.inferir(self.mision.difuso, distancia, bateria, inclinacion, temperatura)
+        if self._precaucion_ant and (self._en_paso_juego or self._en_sugerencia):
+            res.velocidad = min(res.velocidad, VELOCIDAD_PRECAUCION)      # R23: frena antes de un posible barranco
+        if self.conduccion and (self._en_paso_juego or self._en_sugerencia) and self.mecanicas.activa:
+            res.velocidad = self._topes_conduccion(res.velocidad, inclinacion_real)
+        return res
+
+    def _topes_conduccion(self, v: float, inclinacion: float) -> float:
+        """Topes de velocidad evolucionados por planeta: sobre hielo, con viento y en pendiente fuerte."""
+        c, ruta = self.conduccion, self.mision.ruta
+        if len(ruta) > 1 and self.mecanicas.hay_hielo(ruta[1]):
+            v = min(v, float(c.get("v_hielo", 1.0)))
+        if self.mecanicas.viento_actual >= difuso_planetas.UMBRAL_VIENTO:
+            v = min(v, float(c.get("v_viento", 1.0)))
+        if inclinacion >= difuso_planetas.UMBRAL_PENDIENTE_GRADOS:
+            v = min(v, float(c.get("v_pendiente", 1.0)))
+        return v
 
     def bateria_pct_difuso(self, bateria: float) -> float:
         """R23: batería en % de la capacidad (0 a 100), la unidad del universo del difuso."""
@@ -1395,8 +1466,8 @@ class Partida:
         if not self.estaciones or self._recargando > 0 or self.estado in ESTADOS_TERMINALES:
             return
         # 22/11: en la partida jugable no se desvía a una base mientras le quede más del 60 % (evita desvíos tempranos)
-        if (self._comprometido is None and self.factor_desvio == FACTOR_DESVIO_JUGABLE and self.bateria_max
-                and self.rover.bateria > UMBRAL_DESVIO_JUGABLE * self.bateria_max):
+        if (self._comprometido is None and self._desvio_jugable and self.bateria_max
+                and self.rover.bateria > self._umbral_desvio * self.bateria_max):
             return
         pos = tuple(int(v) for v in self.rover.posicion)
         if pos in self.estaciones:
@@ -1507,6 +1578,7 @@ class Partida:
                            or o == self.senal_activa] + [self.mundo.refugio]
             m._planear()
         self._revisar_energia_plan()
+        self._anticipar()
         self._ir_a_estacion_si_falta_bateria()
         if self._ruta_inconsistente():
             # corrección defensiva: se replanifica desde la posición real antes de decidir
@@ -1526,6 +1598,8 @@ class Partida:
                 self._resbalar_si_corresponde(pos_previa, filas_previas, visitados_previos)
             self._efectos_planeta(tuple(int(v) for v in pos_previa), filas_previas)
             ui = m.ultima_ia
+            if ui and ui.get("paso") == m.paso:
+                ui["tramo"] = self._tramo_clasificado(ui)
             if self.mecanicas.activa and ui and ui.get("paso") == m.paso and self._entrada_difuso:
                 # R23: lo que vio el difuso: la inclinación (con el hielo) y la batería en % de la capacidad, aparte de las unidades
                 ui["difuso"] = {**ui["difuso"], "inclinacion": self._entrada_difuso["inclinacion"],
@@ -1761,17 +1835,18 @@ class Partida:
         """Guarda la evolución del AG del plan inicial en el formato de GET /ag/evolucion (no se recalcula en cada llamada)."""
         def cand(plan, con_camino):
             ordenes = [n[2] for n in plan.nodos if n[0] == "sitio"]
-            recargas, vistos = [], 0
+            recargas, paradas, vistos = [], [], 0
             for n in plan.nodos:
                 if n[0] == "sitio":
                     vistos += 1
                 elif n[0] == "base":
-                    recargas.append(vistos)
+                    recargas.append(vistos - 1)      # índice en `orden` del sitio tras el cual se recarga (-1: antes del primero)
+                    paradas.append({"despues_de": vistos - 1, "base": [int(n[1][0]), int(n[1][1])]})
             camino = None
             if con_camino:
                 ruta = prob.ruta(plan)
                 camino = [[int(c[0]), int(c[1])] for c in ruta] if ruta else None
-            return {"orden": [int(i) for i in ordenes], "recargas": recargas, "camino": camino,
+            return {"orden": [int(i) for i in ordenes], "recargas": recargas, "paradas": paradas, "camino": camino,
                     "fitness": round(float(plan.fitness), 5), "factible": bool(plan.factible),
                     "violaciones": prob.textos(plan), "sacrificados": [int(i) for i in plan.sacrificados],
                     "ciencia": round(float(plan.ciencia), 4), "pasos": int(plan.pasos)}
@@ -1787,7 +1862,8 @@ class Partida:
             "hay_plan": True, "planeta": self.planeta,
             "inicio": [int(v) for v in prob.inicio], "refugio": [int(v) for v in prob.refugio],
             "sitios": [{"id": int(s.id), "celda": [int(s.celda[0]), int(s.celda[1])], "valor": float(s.valor),
-                        "ventana": list(s.ventana) if s.ventana else None, "obligatorio": bool(s.obligatorio)}
+                        "ventana": list(s.ventana) if s.ventana else None, "unidad_ventana": "pasos",
+                        "obligatorio": bool(s.obligatorio)}
                        for s in prob.sitios],
             "bases": [[int(b[0]), int(b[1])] for b in prob.bases],
             "generaciones": gens, "mejor": cand(res.mejor, True),
@@ -1881,6 +1957,56 @@ class Partida:
         m.ruta = ruta if camino_valido(ruta, m.riesgo) else []
         return bool(m.ruta) and m.ruta[-1] == refugio
 
+    # ---------- RNA con anticipación (R23) ----------
+    def _anticipar(self) -> None:
+        """Clasifica con la RNA de anticipación las celdas de la ruta a 2, 3 y 4 pasos (lecturas con ruido creciente, generador
+        propio). Una celda con p(barranco) alta frena el paso; con la media de al menos dos observaciones sobre el umbral, queda como
+        riesgo y se replantea la ruta antes de llegar a ella. No hace nada sin RNA (ablación sin_rna) ni fuera de la partida jugable."""
+        self._ant_ultima, self._precaucion_ant = [], False
+        m = self.mision
+        if not (self.anticipacion_activa and m.usar_rna) or len(m.ruta) < 3 or self.estado in ESTADOS_TERMINALES:
+            return
+        pos = tuple(int(v) for v in self.rover.posicion)
+        if tuple(int(v) for v in m.ruta[0]) != pos:
+            return
+        rna = anticipacion.rna_anticipacion(round(float(m.sensor.ruido), 3))
+        conocidas = self._celdas_conocidas()
+        marcada = False
+        for k in anticipacion.DISTANCIAS:
+            if len(m.ruta) <= k:
+                break
+            celda = tuple(int(v) for v in m.ruta[k])
+            anterior = tuple(int(v) for v in m.ruta[k - 1])
+            if celda in conocidas or m.riesgo[celda] >= 0.5:
+                continue
+            rng = np.random.default_rng([int(self.semilla), 7777, int(m.paso), k])
+            probs = rna.probabilidades(anticipacion.rasgos_anticipacion(
+                self.mundo, pos, anterior, celda, k, rng, float(m.sensor.ruido), self._ambiente))
+            pb = float(probs.get("barranco", 0.0))
+            self._ant_suma[celda] += pb
+            self._ant_n[celda] += 1
+            media = float(self._ant_suma[celda] / self._ant_n[celda])
+            marca = self._ant_n[celda] >= 2 and media >= UMBRAL_ANT_MARCA
+            if marca:
+                m.riesgo[celda] = max(m.riesgo[celda], 0.6)
+                marcada = True
+            if pb >= UMBRAL_ANT_PRECAUCION or marca:
+                self._precaucion_ant = True
+            self._ant_ultima.append({"celda": [celda[0], celda[1]], "distancia": int(k), "probabilidades": probs,
+                                     "media_observaciones": round(media, 4), "observaciones": int(self._ant_n[celda]),
+                                     "marcada": bool(marca)})
+        if marcada:
+            m._planear()
+
+    def _tramo_clasificado(self, ui) -> list:
+        """Clasificación por celda del tramo de ruta del paso: la celda siguiente (RNA original, distancia 1) y las de 2 a 4 pasos
+        (RNA de anticipación). Cada elemento: {celda, distancia, probabilidades, fuente}."""
+        tramo = [{"celda": [int(ui["celda"][0]), int(ui["celda"][1])], "distancia": 1,
+                  "probabilidades": dict(ui["probabilidades"]), "fuente": "rna"}]
+        tramo += [{"celda": e["celda"], "distancia": e["distancia"], "probabilidades": dict(e["probabilidades"]),
+                   "fuente": "anticipacion", "marcada": e["marcada"]} for e in self._ant_ultima]
+        return tramo
+
     # ---------- RNA: confirmación y celdas conocidas (R23) ----------
     def _celdas_conocidas(self) -> set:
         """Celdas que el rover conoce por el mapa orbital y son libres: bases, sitios, inicio y refugio."""
@@ -1911,6 +2037,11 @@ class Partida:
             p = float(suma / n)
         if p > UMBRAL_RIESGO_RNA and p > m.riesgo[celda]:
             dec.motivos.append(f"RNA-RIESGO:{celda}:{p:.2f}")
+            if dec.accion == "avanzar":
+                # la confirmación llegó en este mismo paso con una lectura actual bajo el umbral: no se avanza hacia una celda
+                # que acaba de quedar como barranco (el rover quedaría sobre una celda de riesgo y sin ruta)
+                dec.accion, dec.velocidad = "replanificar", 0.0
+                dec.motivos.append("V-RNA-BARRANCO-CONFIRMADO")
         m.riesgo[celda] = max(m.riesgo[celda], p)
 
     # ---------- regla de percepción (ARX-90) ----------

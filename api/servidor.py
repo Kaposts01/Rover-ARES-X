@@ -582,6 +582,27 @@ def _valor_entrada(texto, nombre: str, minimo: float, maximo: float):
     return v
 
 
+def _curvas_difuso(ctrl):
+    """Curvas del controlador dado (el de defecto, el evolucionado del planeta o el editado por el usuario)."""
+    return _curvas_de_puntos(json.dumps([ctrl.entrada_pts, ctrl.salida_pts], sort_keys=True))
+
+
+@functools.lru_cache(maxsize=16)
+def _curvas_de_puntos(clave: str):
+    from difuso import _rango, funcion_de_puntos
+    entrada, salida = json.loads(clave)
+    universos, curvas = {}, {}
+    for var, etiquetas in entrada.items():
+        lo, hi = _rango(var)
+        xs = np.linspace(lo, hi, 101)
+        universos[var] = {"min": float(lo), "max": float(hi)}
+        curvas[var] = {"x": [round(float(x), 3) for x in xs],
+                       "conjuntos": {n: [round(float(funcion_de_puntos(p)(x)), 4) for x in xs] for n, p in etiquetas.items()}}
+    ys = np.linspace(0.0, 1.0, 101)
+    return (universos, curvas, [round(float(y), 3) for y in ys],
+            {n: [round(float(funcion_de_puntos(p)(y)), 4) for y in ys] for n, p in salida.items()})
+
+
 @functools.lru_cache(maxsize=1)
 def _curvas_difuso_fijas():
     """Universos y curvas de pertenencia (entradas y salida): no dependen del paso, se calculan una vez por proceso.
@@ -637,7 +658,7 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
     termico_p = getattr(sesion.partida, "termico", None)
     tolerancia = float(getattr(termico_p, "tolerancia", TEMPERATURA_TOLERANCIA) or TEMPERATURA_TOLERANCIA)
     res = m.difuso.inferir(distancia, _bateria_para_difuso(sesion, bateria, bateria_pct), inclinacion, temperatura)
-    universos, curvas, salida_universo, salida_conjuntos = _curvas_difuso_fijas()
+    universos, curvas, salida_universo, salida_conjuntos = _curvas_difuso(m.difuso)
     capacidad = _capacidad_bateria(sesion)
     if bateria_pct is not None:
         bateria_pct = round(min(100.0, max(0.0, float(bateria_pct))), 1)
@@ -660,7 +681,9 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
                                               f"({tolerancia:g} °C): abortar o aislar (§12)"}
                    if temperatura > tolerancia else {"activo": False, "motivo": None}),
         "reglas": [{"id": r["id"], "si": [list(c) for c in r["si"]], "entonces": r["entonces"],
-                    "motivo": r["motivo"]} for r in REGLAS],
+                    "motivo": r["motivo"], "peso": float(r.get("peso", 1.0)), "activa": bool(r.get("activa", True))}
+                   for r in m.difuso.reglas],
+        "personalizadas": bool(m.difuso.personalizado),
         "salida": {"velocidad": round(float(res.velocidad), 4), "fallback": bool(res.fallback),
                    "universo": salida_universo,
                    "conjuntos": salida_conjuntos,
@@ -1152,6 +1175,42 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         _cache_ag[clave] = salida
         return salida
 
+    @app.get("/ag/evolucion")
+    def evolucion_ag():
+        """R23: evolución del AG del plan inicial de la partida (generaciones con mejor, media, peor, diversidad y los mejores
+        candidatos distintos, con recargas y camino). Se guarda al calcular el plan; no se recalcula en cada llamada.
+        404 con `{hay_plan: false}` si no hay partida o no hay plan con restricciones."""
+        sesion = app.state.sesion
+        ev = getattr(getattr(sesion, "partida", None), "evolucion_inicial", None) if sesion is not None else None
+        if not ev:
+            return JSONResponse(status_code=404, content={"hay_plan": False, "motivo": "no hay evolución del AG: sin partida o sin plan con restricciones"})
+        return ev
+
+    @app.get("/difuso/reglas")
+    def difuso_reglas():
+        """R23: puntos de las funciones de pertenencia y reglas (con peso y estado) del difuso de la partida en curso."""
+        return activa().partida.mision.difuso.como_dict()
+
+    @app.put("/difuso/reglas")
+    def difuso_reglas_editar(cuerpo: dict):
+        """R23: valida y aplica reglas editadas (`reglas` completas, `variables` y `salida` solo con lo que cambia) a la partida en
+        curso. 400 con `motivo` si no es válido. No se guarda en disco ni afecta a las evaluaciones."""
+        p = activa().partida
+        ctrl = p.mision.difuso.copia()
+        try:
+            ctrl.aplicar(cuerpo)
+        except ValueError as exc:
+            raise ErrorApi(400, str(exc))
+        p.poner_difuso(ctrl)
+        return ctrl.como_dict()
+
+    @app.delete("/difuso/reglas")
+    def difuso_reglas_restaurar():
+        """R23: restaura el difuso del planeta (el evolucionado si lo hay, si no el de defecto)."""
+        p = activa().partida
+        p.restaurar_difuso()
+        return p.mision.difuso.como_dict()
+
     @app.get("/rna")
     def diagnostico_rna(proximidad: str = None, desnivel: str = None, contraste: str = None,
                         vibracion: str = None, borde: str = None, gradiente: str = None):
@@ -1203,6 +1262,12 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                     rna["intervenida"] = u["rna_intervenida"]
                 except Exception:   # modelo cambiado entre pasos: se informa sin activaciones
                     rna = {"probabilidades": u["probabilidades"], "probabilidades_usadas": u["probabilidades"], "intervenida": u["rna_intervenida"]}
+            if rna is not None and u.get("tramo"):
+                # R23: clasificación por celda del tramo (celda siguiente + 2 a 4 pasos), por distancia, máximo 4
+                rna["tramo"] = sorted(({"celda": list(t["celda"]), "probabilidades": t["probabilidades"],
+                                        "distancia": int(t["distancia"]), "fuente": t.get("fuente"),
+                                        "marcada": bool(t.get("marcada", False))} for t in u["tramo"]),
+                                      key=lambda t: t["distancia"])[:4]
             salida["rna"] = rna
             salida["celda"] = list(u["celda"]); salida["posicion"] = list(u["posicion"]); salida["rumbo"] = u["rumbo"]
             salida["paso_ia"] = u["paso"]

@@ -43,6 +43,10 @@ COSTO_DESLIZ = 1.0                 # % de batería que cuesta un resbalón sobre
 P_RESBALON_HIELO = 0.9             # prob. = P_RESBALON_HIELO * velocidad * intensidad del nivel * fragilidad_hielo
 VELOCIDAD_SIN_RESBALON = 0.3       # por debajo, el avance es lento y no resbala (igual que la pendiente, ARX-28c)
 VELOCIDAD_MANUAL = 0.5             # velocidad que se supone al conducir a mano o con una técnica que no fija velocidad
+COSTO_TIEMPO_LENTO = 0.15          # % extra por paso a velocidad 0,25 (a 0,5 o más no hay): el consumo de base (calefactor,
+                                   # instrumentos) corre más tiempo por celda cuando se avanza despacio. Sin él, ir lo más lento
+                                   # posible sería siempre lo mejor (la velocidad no cuesta tiempo de partida) y el difuso no tendría
+                                   # nada que decidir; con él, el mejor tope de velocidad depende del planeta (viento, hielo, pendiente)
 HIELO_EQUIV_GRADOS = 18.0          # el rover detecta el hielo de la celda siguiente: el difuso lo ve como esta pendiente extra
 
 # Direcciones del viento (hacia dónde sopla)
@@ -179,7 +183,7 @@ class MecanicasPlaneta:
         Devuelve {"gravedad", "pendiente", "arrastre", "viento", "total"}; el total no pasa de EXTRA_MAXIMO_PASO.
         """
         if not self.activa:
-            return {"gravedad": 0.0, "pendiente": 0.0, "arrastre": 0.0, "viento": 0.0, "total": 0.0}
+            return {"gravedad": 0.0, "pendiente": 0.0, "arrastre": 0.0, "viento": 0.0, "lento": 0.0, "total": 0.0}
         p, k = self.perfil, self.intensidad
         origen, destino = (int(origen[0]), int(origen[1])), (int(destino[0]), int(destino[1]))
         gravedad = max(0.0, COEF_GRAVEDAD_PLANA * (p.gravedad_g - G_REF)) * k
@@ -196,8 +200,10 @@ class MecanicasPlaneta:
                 escala = COEF_VIENTO * w * (0.5 + float(velocidad))
                 viento = -AHORRO_VIENTO_COLA * escala * coseno if coseno > 0 else escala * (-coseno)
                 viento = float(max(-AHORRO_VIENTO_COLA * escala, viento))
-        total = float(min(EXTRA_MAXIMO_PASO, max(0.0, gravedad + pendiente + arrastre + viento)))
-        return {"gravedad": gravedad, "pendiente": pendiente, "arrastre": arrastre, "viento": viento, "total": total}
+        lento = COSTO_TIEMPO_LENTO * max(0.0, 0.5 / max(float(velocidad), 0.2) - 1.0) * k
+        total = float(min(EXTRA_MAXIMO_PASO, max(0.0, gravedad + pendiente + arrastre + viento + lento)))
+        return {"gravedad": gravedad, "pendiente": pendiente, "arrastre": arrastre, "viento": viento, "lento": lento,
+                "total": total}
 
     # ---------- perturbaciones ----------
     def perturbar(self, origen, destino, velocidad: float, transitable) -> tuple:

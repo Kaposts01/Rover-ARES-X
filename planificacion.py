@@ -644,7 +644,9 @@ class AGRestringido:
                 firmas_n = set(nueva)
                 sin_mejora = 0
             n_inm = int(round(self.inmigrantes * self.poblacion * (2.0 if adaptativa else 1.0)))
-            while len(nueva) < self.poblacion - n_inm:
+            intentos_gen = 0
+            while len(nueva) < self.poblacion - n_inm and intentos_gen < self.poblacion * 25:
+                intentos_gen += 1
                 padres = []
                 for _ in range(2):
                     idx = rng.choice(len(pob), size=min(self.torneo, len(pob)), replace=False)
@@ -670,6 +672,8 @@ class AGRestringido:
                 if h not in firmas_n:
                     firmas_n.add(h)
                     nueva.append(h)
+            while len(nueva) < self.poblacion:        # espacio de búsqueda más chico que la población (pocos sitios): se completa
+                nueva.append(nueva[len(nueva) % max(len(nueva), 1)])
             pob = nueva
         planes = sorted((self.cache[c] for c in pob), key=lambda q: -q.fitness)
         mejor = max(self.cache.values(), key=lambda q: q.fitness)

@@ -141,12 +141,16 @@ CELDA_FIGURAS = """# Figuras 2D del informe (matriz de confusión y ablación). 
 from pathlib import Path
 from IPython.display import Image, display
 
-for _nombre in ("matriz_confusion.png", "ablacion.png"):
-    _ruta = Path("docs") / "figuras" / _nombre
-    if _ruta.exists():
-        display(Image(filename=str(_ruta)))
-    else:
-        print("Figura no generada:", _nombre)
+# La carpeta se busca desde el directorio actual (ares_x/ o su carpeta madre); si falta, solo se avisa.
+_carpeta = next((c for c in (Path("docs/figuras"), Path("ares_x/docs/figuras")) if c.is_dir()), None)
+if _carpeta is None:
+    print("Figuras no encontradas: ejecutar el notebook desde ares_x/ y generarlas con scripts/generar_figuras.py")
+else:
+    for _nombre in ("matriz_confusion.png", "ablacion.png"):
+        if (_carpeta / _nombre).exists():
+            display(Image(filename=str(_carpeta / _nombre)))
+        else:
+            print("Figura no generada:", _nombre)
 """
 
 CELDA_CONCLUSIONES = """## 7. Resultados, limitaciones y conclusiones

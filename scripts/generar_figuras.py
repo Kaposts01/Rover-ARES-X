@@ -1,7 +1,7 @@
 """Genera docs/figuras/matriz_confusion.png y docs/figuras/ablacion.png.
 
 Uso (desde ares_x/):  python scripts/generar_figuras.py [escenario] [--version HASH]
-Cada figura lleva un pie con la versión de main con que se generó (por defecto, git rev-parse --short main).
+Cada figura lleva un pie con la versión de main y lo que se usó (la matriz se calcula al generar; la ablación sale del JSON publicado) (por defecto, git rev-parse --short main).
 La ablación sale de docs/COMPARACION_POLITICAS[_<escenario>].json (sin escenario: el exigente). La matriz de confusión
 se calcula con la misma configuración del notebook (60 mapas, 400 muestras por mapa, semilla 42), generando los mapas
 de a uno y en un solo hilo, y se evalúa en los mapas de prueba.
@@ -40,8 +40,15 @@ def version_de_main():
         return "versión desconocida"
 
 
-def _pie(version):
-    return f"Datos publicados de main {version}; regenerar tras ARX-94f" if version != "versión desconocida"         else "Datos publicados: versión desconocida; regenerar tras ARX-94f"
+def pie_matriz(version, n_mapas):
+    return (f"Calculado con el código de main {version}; regenerar tras ARX-94f\n"
+            f"RNA v1 actual, 60 mapas (semillas 0-59), prueba retenida: {n_mapas} mapas (51-59); "
+            "no es la evaluación v2 de ARX-94")
+
+
+def pie_ablacion(version):
+    return (f"Datos publicados de main {version}; regenerar tras ARX-94f\n"
+            "Semillas 1-20 del experimento (ya vistas al desarrollar)")
 
 
 def figura_matriz(version):
@@ -50,14 +57,14 @@ def figura_matriz(version):
     X_te, y_te = _por_mapa(te)
     res = NeuralPerception(semilla=42).entrenar(X_tr, y_tr).evaluar(X_te, y_te)
     return plot_matriz_confusion(res.matriz_confusion, list(CLASES.values()),
-                                 titulo=f"Matriz de confusión de la RNA (prueba: {len(te)} mapas)", pie=_pie(version))
+                                 titulo=f"Matriz de confusión de la RNA (prueba: {len(te)} mapas)", pie=pie_matriz(version, len(te)))
 
 
 def figura_ablacion(escenario, version):
     nombre = "COMPARACION_POLITICAS.json" if escenario == "base" else f"COMPARACION_POLITICAS_{escenario}.json"
     with open(os.path.join(RAIZ, "docs", nombre), encoding="utf-8") as f:
         datos = json.load(f)
-    return plot_ablacion(datos["variantes"], escenario=datos.get("escenario"), pie=_pie(version))
+    return plot_ablacion(datos["variantes"], escenario=datos.get("escenario"), pie=pie_ablacion(version))
 
 
 if __name__ == "__main__":

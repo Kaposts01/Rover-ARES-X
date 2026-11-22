@@ -28,7 +28,8 @@ ROTULOS_VARIANTES = {
 
 def _pie(fig, pie):
     if pie:
-        fig.get_layout_engine().set(rect=(0, 0.04, 1, 0.96))  # deja sitio al pie
+        base = 0.03 * (1 + pie.count(chr(10))) + 0.01
+        fig.get_layout_engine().set(rect=(0, base, 1, 1 - base))  # deja sitio al pie
         fig.text(0.99, 0.005, pie, ha="right", va="bottom", fontsize=7, color="#555555")
 
 

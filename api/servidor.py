@@ -1504,6 +1504,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             return {"ok": True, "tecnica": "difuso", "valor": float(datos.valor)}
         raise ErrorApi(400, f"técnica inválida: {datos.tecnica!r}; usa rna, difuso o apagar")
 
+    from api import extras   # ronda 23: comparación lado a lado y récords (rutas /comparar y /records)
+    extras.instalar(app, sys.modules[__name__])
     return app
 
 

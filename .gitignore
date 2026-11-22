@@ -5,3 +5,6 @@ __pycache__/
 .venv/
 .ipynb_checkpoints/
 .env
+
+# Datos locales (récords por semilla)
+datos_local/

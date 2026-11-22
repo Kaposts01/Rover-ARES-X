@@ -22,6 +22,12 @@ def cliente():
     return TestClient(crear_app(Sesion(semilla=11)))
 
 
+@pytest.fixture
+def cliente_sismo():
+    # ARX-94f: semilla 3 (con el mundo v2 la 11 no deja ninguna grieta sobre la ruta en los intentos; con MUNDO_V1 la 11 sí)
+    return TestClient(crear_app(Sesion(semilla=3)))
+
+
 # ---------- ARX-14: menú de inicio ----------
 
 def test_al_arrancar_no_hay_partida_y_estado_lo_indica(sin_partida):
@@ -423,8 +429,9 @@ def test_csv_anterior_sin_columnas_nuevas_sigue_siendo_legible():
     assert filas[0]["accion"] == "mover" and "fitness_ag" not in filas[0]
 
 
-def test_historial_usa_el_estado_visible_tras_un_sismo_con_grieta_en_la_ruta(cliente):
+def test_historial_usa_el_estado_visible_tras_un_sismo_con_grieta_en_la_ruta(cliente_sismo):
     # ARX-33b: la fila del historial y /estado muestran el mismo estado en el mismo paso
+    cliente = cliente_sismo
     sesion = cliente.app.state.sesion
     cliente.post("/paso")
     for _ in range(80):
@@ -441,8 +448,9 @@ def test_historial_usa_el_estado_visible_tras_un_sismo_con_grieta_en_la_ruta(cli
     assert estado == "REPLANIFICACION" and ultima["estado"] == estado
 
 
-def test_estado_expone_el_ultimo_replanteo_del_ag_tras_un_sismo(cliente):
+def test_estado_expone_el_ultimo_replanteo_del_ag_tras_un_sismo(cliente_sismo):
     # ARX-31b: ultimo_replanteo en /estado y el evento replanteo_ag en /moviles
+    cliente = cliente_sismo
     sesion = cliente.app.state.sesion
     assert cliente.get("/estado").json()["ultimo_replanteo"] is None
     cliente.post("/paso")

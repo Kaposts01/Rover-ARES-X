@@ -28,7 +28,8 @@ def test_alerta_con_intervencion_difuso_baja():
 
 
 def test_replanificacion_tras_sismo_con_grieta_en_la_ruta():
-    p = _con_un_paso()
+    # ARX-94f: semilla 3 (con el mundo v2 la 11 no deja ninguna grieta sobre la ruta en los intentos; con MUNDO_V1 la 11 sí)
+    p = _con_un_paso(semilla=3)
     for semilla_rng in range(60):
         ruta = {tuple(x) for x in p.mision.ruta}
         antes = len(p.sismos)

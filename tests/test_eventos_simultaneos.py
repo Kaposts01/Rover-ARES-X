@@ -60,8 +60,9 @@ def test_par_tormenta_baja_conectividad_dos_corridas_iguales(semilla):
     assert _corrida(PAR, semilla, 12) == _corrida(PAR, semilla, 12)
 
 
-def test_triple_orden_de_vetos_y_avisos_fijado_semilla_3():
-    r = _corrida(TRIPLE, 3, 40)
+def test_triple_orden_de_vetos_y_avisos_fijado_semilla_18():
+    # ARX-94f: con el mundo v2 la semilla 18 reproduce el escenario que daba la 3 (la 3 sigue fijándolo con MUNDO_V1)
+    r = _corrida(TRIPLE, 18, 40)
     assert r["resultados"] == [("sismo", True), ("bateria_baja", True), ("meteorito", True)]
     assert r["avisos_tras_eventos"] == ["Sismo: grietas nuevas cerca del rover",
                                         "Meteorito: impacto en una zona de riesgo cercana"]
@@ -71,8 +72,9 @@ def test_triple_orden_de_vetos_y_avisos_fijado_semilla_3():
     assert r["vetos"] == 1
 
 
-def test_triple_orden_semilla_7_termina_sin_ruta_tras_el_veto():
-    r = _corrida(TRIPLE, 7, 40)
+def test_triple_orden_semilla_9_termina_sin_ruta_tras_el_veto():
+    # ARX-94f: con el mundo v2 la semilla 9 reproduce el escenario que daba la 7 (la 7 sigue fijándolo con MUNDO_V1)
+    r = _corrida(TRIPLE, 9, 40)
     assert r["motivos"] == ["REPLAN-AG-SISMO", "V-RUTA-CON-RIESGO"]
     assert r["vetos"] == 1
     assert r["estado"] == "SIN_RUTA"

@@ -44,7 +44,8 @@ def test_bateria_baja_no_replanea_con_ag():
 
 
 def test_sismo_con_grieta_en_la_ruta_replanea_con_ag():
-    p = _partida()
+    # ARX-94f: semilla 3 (con el mundo v2 la 11 no deja ninguna grieta sobre la ruta en los intentos; con MUNDO_V1 la 11 sí)
+    p = _partida(semilla=3)
     for _ in range(80):
         ruta, antes, replanes = _ruta(p), len(p.sismos), p.mision.replanes
         p.disparar_evento("sismo")

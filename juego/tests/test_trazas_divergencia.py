@@ -1,7 +1,7 @@
 """ARX-28b: la traza de divergencias del escenario exigente debe atribuir diferencias a cada técnica (M2).
 
 Dos pruebas: una lee la traza de 20 semillas ya generada (docs/TRAZA_DIVERGENCIAS_exigente.csv, rápida) y otra
-recalcula la semilla 4 en vivo (en ella divergen las tres técnicas) para que el CSV no pueda quedar desfasado del código.
+recalcula una semilla en vivo (la 1 con el mundo v2; era la 4 con MUNDO_V1) en la que divergen las tres técnicas para que el CSV no pueda quedar desfasado del código.
 """
 import csv
 import os
@@ -43,8 +43,9 @@ def test_traza_20_semillas_tiene_divergencias_de_cada_tecnica():
     assert any(x["cambio"] != "otros_motivos" for x in filas if x["tecnica"] == "AG" and x["origen"] == "directa")
 
 
-def test_traza_en_vivo_semilla_4_diverge_en_las_tres_tecnicas():
-    filas = comparacion.trazar_divergencias([4], "exigente")
+def test_traza_en_vivo_semilla_1_diverge_en_las_tres_tecnicas():
+    # ARX-94f: con el mundo v2 la semilla 1 es la que hace divergir las tres técnicas (la 4 lo hacía con MUNDO_V1)
+    filas = comparacion.trazar_divergencias([1], "exigente")
     por_tecnica = _semillas_con_divergencia_directa(filas)
     for t in TECNICAS:
-        assert por_tecnica[t] == {4}, f"sin divergencia directa de {t} en la semilla 4"
+        assert por_tecnica[t] == {1}, f"sin divergencia directa de {t} en la semilla 1"

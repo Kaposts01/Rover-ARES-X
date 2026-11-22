@@ -14,6 +14,7 @@
 //
 // RESPALDO (mientras el motor no publique /ag/evolucion): desdeLaboratorio() convierte la respuesta de GET /ag del laboratorio
 // genético (generaciones con población de cromosomas = celdas de sitios) a la misma forma, con los sitios y las bases de /mapa.
+import { coma as comaFormato } from "./formato.js?v=r14";
 import { EVO } from "./textos.js?v=r14";
 
 export const MAX_RUTAS_POR_GENERACION = 6;     // las mejores que se dibujan por generación (la población trae ~30)
@@ -144,7 +145,7 @@ export function adaptarEvolucion(datos, { fuente = "motor", max = MAX_RUTAS_POR_
   if (!generaciones.length) return vacio(EVO.sinGeneraciones);
   const ultima = generaciones[generaciones.length - 1];
   const mejor = normalizarCandidato(datos.mejor, ctx) || ultima.candidatos[0];
-  const pd = datos.parametros_difuso && typeof datos.parametros_difuso === "object" ? Object.entries(datos.parametros_difuso).filter(([, v]) => esNum(v) || typeof v === "string") : [];
+  const pd = datos.parametros_difuso && typeof datos.parametros_difuso === "object" ? Object.entries(datos.parametros_difuso).filter(([, v]) => esNum(v) || typeof v === "string" || (Array.isArray(v) && v.length > 0 && v.every(esNum))) : [];   // las listas (puntos de pertenencia) también se muestran
   return {
     estado: "ok", fuente, planeta: typeof datos.planeta === "string" ? datos.planeta : null,
     inicio: ctx.inicio, refugio: ctx.refugio, sitios, bases: ctx.bases,
@@ -197,7 +198,7 @@ export function desdeLaboratorio(ag, ctx = {}, opciones = {}) {
 }
 
 // ---------- lecturas para la interfaz ----------
-const f2 = (v) => (v === null || v === undefined ? "—" : Number(v).toFixed(2).replace(".", ","));
+const f2 = (v) => comaFormato(v, 2);
 export const textoGeneracionEvo = (g, i, total) => `Generación ${g ? g.n : i} de ${total - 1} · mejor ${f2(g && g.mejor)} · media ${f2(g && g.media)}`;
 
 export const textoVentana = (s) => (s.ventana ? `ventana ${s.ventana[0]}–${s.ventana[1]}` : "sin ventana de tiempo");

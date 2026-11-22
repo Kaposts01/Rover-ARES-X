@@ -1,4 +1,5 @@
 // Récords por semilla: textos y formatos puros (sin DOM), que se prueban con node.
+import { coma as comaFormato } from "./formato.js?v=r14";
 import { nombreModo, nombreEstado, Vehiculo, plural } from "./textos.js?v=r14";
 
 export const NIVELES = ["Muy fácil", "Fácil", "Medio", "Difícil", "Hardcore"];
@@ -17,7 +18,7 @@ export const rotuloOrigen = (o) => ROTULO_ORIGEN[o] || String(o ?? "—");
 export const politicaDe = (r) => (r && r.origen === "ia" ? nombreModo(r.modo) : r && r.origen === "asistida" ? "Manual + IA" : "Manual");
 
 export const textoResultado = (r) => (r && r.resultado ? nombreEstado(r.resultado) : "—");
-const coma = (v, d = 1) => (typeof v === "number" ? v.toFixed(d).replace(".", ",") : "—");
+const coma = (v, d = 1) => (typeof v === "number" ? comaFormato(v, d) : "—");
 export const textoBateria = (r) => `${coma(r && r.bateria_pct, 1)} %`;
 
 export function fechaLegible(iso) {
@@ -53,7 +54,8 @@ export function textoNuevoRecord(resp) {
     };
   }
   if (r.resultado !== "EXITO") {
-    return { nuevo: false, titulo: "Misión guardada en los récords", detalle: `La semilla ${r.semilla} no se superó esta vez; los récords solo cuentan misiones con éxito.` };
+    // Mismo criterio en título y detalle: el intento queda en la lista, pero no cuenta como récord porque no tuvo éxito
+    return { nuevo: false, titulo: "Intento guardado, sin récord", detalle: `La semilla ${r.semilla} no se superó esta vez (${nombreEstado(r.resultado).toLowerCase()}); el intento queda en la lista, pero los récords solo cuentan misiones con éxito.` };
   }
   const mejor = resp.mejor_anterior;
   return {

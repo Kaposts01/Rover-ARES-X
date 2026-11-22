@@ -1,4 +1,5 @@
 // Comparar dos políticas lado a lado: textos y cálculos puros (sin DOM), que se prueban con node.
+import { coma as comaFormato, porcentaje, grados } from "./formato.js?v=r14";
 import { nombreVariante, ayudaVariante, nombreAccion, nombresMotivos, nombreEstado, plural } from "./textos.js?v=r14";
 
 // Políticas que se pueden enfrentar. «solo_*»: una sola técnica conduce, con el supervisor; el resto son variantes del híbrido.
@@ -51,21 +52,58 @@ export const FILAS_TABLA = {
   resultado: { rotulo: "Resultado", f: (v) => estadoLado(v) },
   pasos: { rotulo: "Pasos", f: (v) => String(v) },
   puntaje: { rotulo: "Puntaje de juego", f: (v) => String(v) },
-  bateria_pct: { rotulo: "Batería final", f: (v) => `${Number(v).toFixed(1).replace(".", ",")} %` },
+  bateria_pct: { rotulo: "Batería final", f: (v) => porcentaje(v) },
   sitios_visitados: { rotulo: "Sitios visitados", f: (v) => String(v) },
   vetos: { rotulo: "Vetos del supervisor", f: (v) => String(v) },
   colisiones: { rotulo: "Choques", f: (v) => String(v) },
+  ciencia: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia: v }) || { texto: "—" }).texto },
+  ciencia_pct: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia_pct: v }) || { texto: "—" }).texto },
+  ciencia_recogida: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia_recogida: v }) || { texto: "—" }).texto },
 };
+// Ciencia recogida (métrica propia de cada lado, la añade el motor). Se lee con tolerancia de nombres y de forma:
+// un número (fracción 0..1, porcentaje 0..100 en `ciencia_pct`, o puntos) o un objeto {fraccion, recogida, maxima}. Sin dato: null.
+export const CLAVES_CIENCIA = ["ciencia", "ciencia_pct", "ciencia_recogida"];
+const esNum = (v) => v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
+export function leerCiencia(origen) {
+  if (!origen || typeof origen !== "object") return null;
+  for (const clave of CLAVES_CIENCIA) {
+    const v = origen[clave];
+    if (v && typeof v === "object") {
+      const frac = esNum(v.fraccion) ? Number(v.fraccion) : esNum(v.recogida) && esNum(v.maxima) && Number(v.maxima) > 0 ? Number(v.recogida) / Number(v.maxima) : null;
+      if (frac !== null) return { orden: frac, texto: `${comaFormato(frac * 100, 1)} %${esNum(v.recogida) && esNum(v.maxima) ? ` (${comaFormato(v.recogida, 1)} de ${comaFormato(v.maxima, 0)})` : ""}` };
+    } else if (esNum(v)) {
+      const n = Number(v);
+      if (clave === "ciencia_pct") return { orden: n / 100, texto: porcentaje(n) };
+      return n >= 0 && n <= 1 ? { orden: n, texto: porcentaje(n * 100) } : { orden: n, texto: `${comaFormato(n, 1)} puntos` };
+    }
+  }
+  return null;
+}
+export const hayCiencia = (lados) => (lados || []).some((l) => leerCiencia(l) || ((l && l.pasos) || []).some((p) => leerCiencia(p)));
+// Ciencia del lado en el paso k: la de la ficha de ese paso o, si el lado ya terminó, la del resumen final
+export function cienciaEn(lado, k) {
+  const f = fichaEn(lado, k);
+  return leerCiencia(f) || (lado && lado.terminado && k >= ((lado.pasos || []).length) ? leerCiencia(lado) : null);
+}
 export const NOTA_TABLA = "Gana la que cumple la misión; entre iguales, más puntaje. En cada fila, gana quien tiene más (sitios, puntaje, batería) o menos (pasos, vetos, choques). Los pasos solo se comparan si las dos terminaron igual.";
-export function filasTabla(tabla, nombreA, nombreB) {
+// `lados` (opcional): si la tabla del motor no trae la fila de ciencia pero los dos lados sí la traen, se añade; sin dato, no hay fila.
+export function filasTabla(tabla, nombreA, nombreB, lados = null) {
   if (!tabla) return [];
-  return tabla.filas.map((f) => {
+  const filas = tabla.filas.map((f) => {
     const def = FILAS_TABLA[f.clave] || { rotulo: f.clave, f: String };
     return {
       clave: f.clave, rotulo: def.rotulo, a: def.f(f.a), b: def.f(f.b), ganador: f.ganador,
       texto: f.ganador === "a" ? nombreA : f.ganador === "b" ? nombreB : f.ganador === "empate" ? "empate" : "—",
     };
   });
+  if (lados && lados.length === 2 && !filas.some((f) => CLAVES_CIENCIA.includes(f.clave))) {
+    const ca = leerCiencia(lados[0]) || cienciaEn(lados[0], Infinity), cb = leerCiencia(lados[1]) || cienciaEn(lados[1], Infinity);
+    if (ca && cb) {
+      const ganador = Math.abs(ca.orden - cb.orden) < 1e-9 ? "empate" : ca.orden > cb.orden ? "a" : "b";
+      filas.push({ clave: "ciencia", rotulo: "Ciencia recogida", a: ca.texto, b: cb.texto, ganador, texto: ganador === "a" ? nombreA : ganador === "b" ? nombreB : "empate" });
+    }
+  }
+  return filas;
 }
 export function veredicto(tabla, nombreA, nombreB) {
   if (!tabla) return "";

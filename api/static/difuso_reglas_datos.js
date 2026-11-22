@@ -13,6 +13,7 @@
 // etiqueta de salida se toma la mayor fuerza, se recorta la etiqueta, se agrega con el máximo y la velocidad es el centroide (201
 // puntos). Sin ninguna regla activada la salida es la de respaldo (0). El peso multiplica la fuerza: es la lectura que aquí se hace del
 // contrato («peso 0..1»); si el motor lo interpreta distinto, los números de la vista previa y los del motor pueden diferir.
+import { coma as comaFormato } from "./formato.js?v=r14";
 import { EDIT } from "./textos.js?v=r14";
 
 export const RESOLUCION = 201;
@@ -143,7 +144,7 @@ export function viabilidadAntecedente(regla, m) {
   return { viable: true, motivo: "" };
 }
 
-const f1 = (v) => Number(v).toFixed(2).replace(/\.?0+$/, "").replace(".", ",");
+const f1 = (v) => comaFormato(v, 2).replace(/,?0+$/, "");
 function validarPuntos(nombre, et, pts, universo, mensajes) {
   const donde = `«${et}» de ${nombre}`;
   for (let i = 1; i < pts.length; i++) {

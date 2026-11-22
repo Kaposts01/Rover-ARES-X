@@ -1,10 +1,11 @@
 // Comparar dos políticas lado a lado con la misma semilla: dos minimapas 2D sincronizados paso a paso (canvas ligero),
 // controles comunes y, al final, una tabla con el ganador por métrica. Las dos partidas viven aparte en el servidor
 // (rutas /comparar): no tocan la partida que se está jugando.
+import { porcentaje } from "./formato.js?v=r14";
 import { el, boton, campo, selector, crearCapa } from "./vx_ui.js?v=r14";
 import {
   opcionesPoliticas, nombrePolitica, ayudaPolitica, estadoLado, fichaEn, rutaHasta, pasosDisponibles, ambosTerminados,
-  textoDecision, textoDivergencia, TEXTO_SIN_DIVERGENCIA_AUN, TEXTO_SIN_DIVERGENCIA_FIN, filasTabla, veredicto, NOTA_TABLA,
+  textoDecision, textoDivergencia, TEXTO_SIN_DIVERGENCIA_AUN, TEXTO_SIN_DIVERGENCIA_FIN, filasTabla, veredicto, NOTA_TABLA, hayCiencia, cienciaEn,
   validarFormulario, VELOCIDADES, tamanoCelda,
 } from "./comparar_datos.js?v=r14";
 import { nombreAccion, nombresMotivos, plural, Vehiculo } from "./textos.js?v=r14";
@@ -52,8 +53,9 @@ export function crearComparar({ valores = () => ({}), planetas = () => [] } = {}
     const canvas = el("canvas", "vx-mini"); canvas.setAttribute("role", "img");
     const lista = el("dl", "vx-stats");
     const filasStats = {};
-    for (const [clave, rotulo] of [["paso", "Paso"], ["bateria", "Batería"], ["sitios", "Sitios visitados"], ["vetos", "Vetos"], ["choques", "Choques"], ["estado", "Estado"]]) {
+    for (const [clave, rotulo] of [["paso", "Paso"], ["bateria", "Batería"], ["sitios", "Sitios visitados"], ["ciencia", "Ciencia recogida"], ["vetos", "Vetos"], ["choques", "Choques"], ["estado", "Estado"]]) {
       const dt = el("dt", "", rotulo), dd = el("dd", "", "—");
+      if (clave === "ciencia") { dt.classList.add("oculto"); dd.classList.add("oculto"); filasStats.cienciaDt = dt; }   // solo se muestra si el motor la manda
       lista.append(dt, dd); filasStats[clave] = dd;
     }
     const decision = el("div", "vx-decision");
@@ -211,8 +213,11 @@ export function crearComparar({ valores = () => ({}), planetas = () => [] } = {}
     const i = id === "a" ? 0 : 1, L = lados[id], lado = datos.lados[i], f = fichaEn(lado, k);
     const total = datos.inicio[i].sitios_totales;
     L.filasStats.paso.textContent = String(f ? Math.min(k, lado.pasos.length) : 0);
-    L.filasStats.bateria.textContent = `${(f ? f.bateria_pct : datos.inicio[i].bateria_pct).toFixed(1).replace(".", ",")} %`;
+    L.filasStats.bateria.textContent = porcentaje(f ? f.bateria_pct : datos.inicio[i].bateria_pct);
     L.filasStats.sitios.textContent = `${f ? f.sitios_visitados : 0} de ${total}`;
+    const conCiencia = hayCiencia(datos.lados);
+    L.filasStats.ciencia.classList.toggle("oculto", !conCiencia); L.filasStats.cienciaDt.classList.toggle("oculto", !conCiencia);
+    if (conCiencia) { const ci = cienciaEn(lado, k); L.filasStats.ciencia.textContent = ci ? ci.texto : (f ? "—" : "0 %"); }
     L.filasStats.vetos.textContent = String(f ? f.vetos : 0);
     L.filasStats.choques.textContent = String(f ? f.colisiones : 0);
     L.filasStats.estado.textContent = f ? (lado.terminado && k >= lado.pasos.length ? `${estadoLado(lado.estado)} (terminó)` : estadoLado(f.estado)) : "En la salida";
@@ -246,7 +251,7 @@ export function crearComparar({ valores = () => ({}), planetas = () => [] } = {}
     const cab = el("tr"); cab.append(el("th", "", "Métrica"), el("th", "vx-a", `A · ${nA}`), el("th", "vx-b", `B · ${nB}`), el("th", "", "Mejor"));
     const th = el("thead"); th.append(cab);
     const cuerpo = el("tbody");
-    for (const f of filasTabla(datos.tabla, nA, nB)) {
+    for (const f of filasTabla(datos.tabla, nA, nB, datos.lados)) {
       const tr = el("tr");
       const ca = el("td", f.ganador === "a" ? "vx-gana" : "", f.a), cb = el("td", f.ganador === "b" ? "vx-gana" : "", f.b);
       tr.append(el("td", "", f.rotulo), ca, cb, el("td", "", f.texto));

@@ -77,3 +77,9 @@ def test_ablacion_ceros_y_vacio_no_fallan():
     fig = plot_ablacion({})
     assert "Sin datos de ablación" in _textos(fig)
     assert plot_ablacion({"otra_variante": {}}).axes[0].get_yticklabels()[0].get_text() == "Otra variante"
+
+
+def test_pie_de_version_en_ambas_figuras():
+    pie = "Datos publicados de main abc1234; regenerar tras ARX-94f"
+    assert pie in [t.get_text() for t in plot_matriz_confusion([[1, 0], [0, 1]], ["a", "b"], pie=pie).texts]
+    assert pie in [t.get_text() for t in plot_ablacion(_variantes(), pie=pie).texts]

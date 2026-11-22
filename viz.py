@@ -26,7 +26,13 @@ ROTULOS_VARIANTES = {
 }
 
 
-def plot_matriz_confusion(matriz, etiquetas, titulo="Matriz de confusión de la RNA"):
+def _pie(fig, pie):
+    if pie:
+        fig.get_layout_engine().set(rect=(0, 0.04, 1, 0.96))  # deja sitio al pie
+        fig.text(0.99, 0.005, pie, ha="right", va="bottom", fontsize=7, color="#555555")
+
+
+def plot_matriz_confusion(matriz, etiquetas, titulo="Matriz de confusión de la RNA", pie=None):
     """Matriz de confusión con conteos y porcentaje por fila (real). Filas = clase real, columnas = predicha."""
     arr = np.asarray(matriz, dtype=float)
     if arr.ndim != 2 or arr.shape[0] != arr.shape[1] or arr.shape[0] != len(etiquetas):
@@ -49,6 +55,7 @@ def plot_matriz_confusion(matriz, etiquetas, titulo="Matriz de confusión de la 
             color = "white" if pct[i, j] > 0.5 else "black"
             ax.text(j, i, f"{int(arr[i, j])}\n{pct[i, j] * 100:.1f} %", ha="center", va="center",
                     color=color, fontsize=11, fontweight="bold" if i == j else "normal")
+    _pie(fig, pie)
     return fig
 
 
@@ -56,7 +63,7 @@ def _rotulo(variante):
     return ROTULOS_VARIANTES.get(variante, str(variante).replace("_", " ").capitalize())
 
 
-def plot_ablacion(variantes, escenario=None):
+def plot_ablacion(variantes, escenario=None, pie=None):
     """Compara variantes: tasa de éxito, pasos y colisiones por misión.
 
     `variantes` es el diccionario publicado en la comparación de políticas: nombre -> {tasa_exito, n,
@@ -102,4 +109,5 @@ def plot_ablacion(variantes, escenario=None):
     sub = f" · {escenario}" if escenario else ""
     n_txt = f" · {ns.pop()} semillas por variante" if len(ns) == 1 else ""
     fig.suptitle(f"Ablación de políticas{sub}{n_txt}")
+    _pie(fig, pie)
     return fig

@@ -20,3 +20,8 @@ corta voraz también a 75 %; sin la RNA se mantiene en 100 %.
 
 Colores: paleta Okabe-Ito (naranja `#E69F00` y azul `#0072B2`), distinguible con daltonismo; ningún dato depende solo
 del color.
+
+## Versión de los datos
+
+Cada PNG lleva al pie «Datos publicados de main <hash>; regenerar tras ARX-94f». Hay que regenerarlas tras ARX-94f,
+porque las cifras publicadas cambian con el rediseño de sensores. Ver `docs/planes/ARX-100_figuras.md`.

@@ -81,12 +81,7 @@ document.getElementById("error-reiniciar").addEventListener("click", async () =>
   document.getElementById("error-motor").classList.add("oculto");
   if (estado && !estado.sin_partida) await conCarga(() => cargarPartida(estado.semilla, estado.nivel), { transicion: true });
 });
-document.getElementById("error-menu").addEventListener("click", () => {
-  cerrarAvisos();
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("error-menu").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // ---------- utilidades de diseño ----------
 // Ruido determinista por celda: el mismo mapa y la misma semilla siempre se ven igual
@@ -2101,11 +2096,13 @@ async function correrViaje() {
     viaje = null;
   }
 }
-// Introducción con el sistema solar (solo cliente: no escribe nada en el motor). Preferencia en localStorage («ares.intro», activada por defecto);
-// una vez por sesión del navegador (sessionStorage «ares.intro.visto»). Elegir un planeta solo rellena el asistente: la partida empieza con «Iniciar».
+// Introducción con el sistema solar = pantalla de inicio (solo cliente: no escribe nada en el motor). Aparece al abrir la app, al volver al inicio
+// y al salir de una partida. Preferencia en localStorage («ares.intro», activada por defecto; apagada = se va directo al asistente).
+// Elegir un planeta solo rellena el asistente: la partida empieza con «Iniciar».
 let intro = null;
 let introCorriendo = false;
 let tarjetaIntro = null;
+let generacionInicio = 0;   // sube al salir de una partida: un /paso en vuelo que llegue después no pinta nada
 function introActivada() {
   try { return localStorage.getItem("ares.intro") !== "0"; } catch (e) { return true; }
 }
@@ -2113,18 +2110,23 @@ function fijarIntroActivada(on) {
   try { localStorage.setItem("ares.intro", on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ }
   document.querySelectorAll(".casilla-intro").forEach((c) => { c.checked = on; });
 }
-function introVistaEnSesion() {
-  try { return sessionStorage.getItem("ares.intro.visto") === "1"; } catch (e) { return false; }
-}
-function marcarIntroVista() {
-  try { sessionStorage.setItem("ares.intro.visto", "1"); } catch (e) { /* sin almacenamiento */ }
-}
 document.querySelectorAll(".casilla-intro").forEach((c) => {
   c.checked = introActivada();
   c.addEventListener("change", () => fijarIntroActivada(c.checked));
 });
-// forzada: botón «Ver intro» (ignora la casilla y la marca de sesión). Si algo falla, el asistente sigue igual (nunca lanza ni se queda colgado).
-async function correrIntro({ forzada = false } = {}) {
+// Todos los caminos que llevan al asistente de inicio pasan por aquí: deja la partida en pausa y limpia, abre el asistente y muestra el sistema solar.
+function volverAlInicio(motivo = "salir") {
+  generacionInicio += 1;
+  cerrarAvisos();            // meta, pausa, avisos; con pausaActiva = false
+  detenerReproduccion();
+  cadenaAutomatica = null;
+  document.getElementById("controles").classList.add("oculto");
+  document.getElementById("manual").classList.add("oculto");
+  document.getElementById("menu").classList.remove("oculto");
+  correrIntro({ motivo });
+}
+// motivo: «abrir» | «inicio» | «salir» | «manual» («Ver intro», ignora la casilla). Si algo falla, el asistente sigue igual (nunca lanza ni se queda colgado).
+async function correrIntro({ motivo = "abrir" } = {}) {
   if (introCorriendo) return;
   let guarda = null, inactividad = null, limpiarActividad = null;
   const controlesAntes = controles.enabled;
@@ -2133,9 +2135,8 @@ async function correrIntro({ forzada = false } = {}) {
     const reducido = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const webgl = !!(renderer && renderer.getContext && renderer.getContext());
     const { debeMostrarIntro, elegirCuerpo, datosCuerpo, GUARDA_PRIMER_CUADRO_S, CIERRE_INACTIVIDAD_S } = await import("/static/intro_datos.js?v=r14");
-    if (!forzada && !debeMostrarIntro({ activada: introActivada(), vistaEnSesion: introVistaEnSesion(), reducido, webgl })) return;
+    if (!debeMostrarIntro({ motivo, activada: introActivada(), reducido, webgl })) return;
     if (!webgl || !planetasDatos) return;
-    marcarIntroVista();   // una vez por sesión: también si falla o se omite
     const [{ crearIntro }, { crearTarjetaIntro }] = await Promise.all([import("/static/intro3d.js?v=r14"), import("/static/intro_tarjeta.js?v=r14")]);
     if (!tarjetaIntro) tarjetaIntro = crearTarjetaIntro(document.body);
     controles.enabled = false;   // la cámara de la partida no se mueve mientras dura la intro
@@ -2182,7 +2183,7 @@ async function correrIntro({ forzada = false } = {}) {
   }
 }
 const botonVerIntro = document.getElementById("menu-ver-intro");
-if (botonVerIntro) botonVerIntro.addEventListener("click", () => { correrIntro({ forzada: true }); });
+if (botonVerIntro) botonVerIntro.addEventListener("click", () => { correrIntro({ motivo: "manual" }); });
 
 // Pantalla final (solo cliente: no escribe nada en el motor). Preferencia en localStorage («ares.final», activada por defecto).
 // Puntaje de juego, estrellas, logros y mejores momentos; si algo falla, se abre la meta como siempre.
@@ -2394,9 +2395,7 @@ function mostrarMision(semilla, nivel) {
   document.getElementById("resumen-texto").textContent =
     `semilla ${semilla} · nivel ${NIVELES[nivel - 1]} · ${modo.options[modo.selectedIndex].text}`;
 }
-document.getElementById("reconfigurar").addEventListener("click", () => {
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("reconfigurar").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Controles manuales plegables (en móvil quedan plegados por defecto)
 document.getElementById("manual-toggle").addEventListener("click", (ev) => {
@@ -2530,10 +2529,7 @@ async function alFinDeMision(codigo) {
   const pedido = accionFinal; accionFinal = null;
   if (pedido === "repetir") { cadenaAutomatica = null; await nuevaDesdeMeta(estado.semilla, estado.nivel); return; }
   if (pedido === "otro") {
-    cadenaAutomatica = null;
-    document.getElementById("controles").classList.add("oculto");
-    document.getElementById("manual").classList.add("oculto");
-    document.getElementById("menu").classList.remove("oculto");
+    volverAlInicio("salir");   // «Explorar otro cuerpo»: de vuelta al sistema solar
     return;
   }
   mostrarMeta(codigo, cadenaTerminada);
@@ -2597,12 +2593,7 @@ for (const b of document.querySelectorAll("#meta-dificultad button")) {
 document.getElementById("meta-confirmar").addEventListener("click", () => {
   nuevaDesdeMeta(metaMapa === "otro" ? null : estado.semilla, metaNivel);
 });
-document.getElementById("meta-salir").addEventListener("click", () => {
-  document.getElementById("meta").classList.add("oculto");
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("meta-salir").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Menú de pausa (ARX-61): Esc abre y cierra; los controles de juego quedan bloqueados mientras está abierto
 let pausaActiva = false;
@@ -2632,12 +2623,7 @@ document.getElementById("pausa-velocidad").addEventListener("change", (ev) => {
 document.getElementById("pausa-camara").addEventListener("change", (ev) => {
   camaraSiguiendo = ev.target.checked;
 });
-document.getElementById("pausa-salir").addEventListener("click", () => {
-  cerrarPausa();
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("pausa-salir").addEventListener("click", () => { volverAlInicio("salir"); });
 
 document.getElementById("menu-modo").addEventListener("change", (ev) => {
   document.getElementById("menu-misiones-fila").classList.toggle("oculto", ev.target.value !== "automatico");
@@ -2783,13 +2769,7 @@ document.getElementById("motor-detener").addEventListener("click", () => {
   document.getElementById("motor-lento").classList.add("oculto");
   detenerReproduccion();
 });
-document.getElementById("motor-menu").addEventListener("click", () => {
-  cerrarAvisos();
-  detenerReproduccion();
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("motor-menu").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Un paso de la IA: el rover avanza en la escena y los paneles muestran lo que decidió.
 async function paso() {
@@ -2803,6 +2783,7 @@ async function paso() {
   const estadoPrevio = estado;
   let r;
   pasoEnVuelo = true;
+  const generacion = generacionInicio;
   const temporizador = setTimeout(avisarMotorLento, 2000);   // más de 2 s sin respuesta: aviso
   try {
     r = await llamar("POST", "/paso");
@@ -2810,6 +2791,7 @@ async function paso() {
     clearTimeout(temporizador);
     pasoEnVuelo = false;
   }
+  if (generacion !== generacionInicio) return false;   // se salió de la partida con el paso en vuelo: no se pinta nada ni se abre la pantalla final
   if (!r) {
     detenerReproduccion();
     return false;
@@ -2852,13 +2834,7 @@ document.getElementById("sin-resultado-reintentar").addEventListener("click", as
   document.getElementById("sin-resultado").classList.add("oculto");
   if (estado) await conCarga(() => cargarPartida(estado.semilla, estado.nivel), { transicion: true });
 });
-document.getElementById("sin-resultado-menu").addEventListener("click", () => {
-  cerrarAvisos();
-  detenerReproduccion();
-  document.getElementById("controles").classList.add("oculto");
-  document.getElementById("manual").classList.add("oculto");
-  document.getElementById("menu").classList.remove("oculto");
-});
+document.getElementById("sin-resultado-menu").addEventListener("click", () => { volverAlInicio("salir"); });
 
 // Registro lateral (ARX-63): últimos 10 eventos, el más nuevo arriba. El 11 saca al más antiguo.
 const REGISTRO_MAX = 10;
@@ -3407,7 +3383,7 @@ animar();
 
 iniciarLaboratorios({ llamar, avisar });
 
-// Al abrir: la intro (una vez por sesión) cuando ya se conocen los planetas; si falla, el asistente queda tal cual
-planetasListos.then(() => correrIntro(), () => { /* sin /planetas no hay intro */ });
+// Al abrir: la intro (pantalla de inicio) cuando ya se conocen los planetas; si falla, el asistente queda tal cual
+planetasListos.then(() => correrIntro({ motivo: "abrir" }), () => { /* sin /planetas no hay intro */ });
 
 // Arranque (ARX-14): sin partida; el menú pide semilla y nivel. No se crea nada hasta pulsar Iniciar.

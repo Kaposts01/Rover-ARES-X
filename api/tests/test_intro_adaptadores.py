@@ -35,14 +35,32 @@ def test_solo_los_ocho_perfiles_en_orden():
 
 def test_debe_mostrar_intro():
     f = lambda **k: _js(f"m.debeMostrarIntro({json.dumps(k)})")
-    base = dict(activada=True, vistaEnSesion=False, reducido=False, webgl=True)
-    assert f(**base) is True
-    assert f(**{**base, "activada": False}) is False
-    assert f(**{**base, "vistaEnSesion": True}) is False
-    assert f(**{**base, "webgl": False}) is False
-    assert f(**{**base, "reducido": True}) is True      # movimiento reducido: se muestra, pero estática
-    assert _js("m.debeMostrarIntro()") is False
+    base = dict(activada=True, reducido=False, webgl=True)
+    for motivo in ("abrir", "inicio", "salir"):       # abrir la app, volver al inicio, salir de una partida
+        assert f(**base, motivo=motivo) is True
+        assert f(**{**base, "activada": False}, motivo=motivo) is False      # casilla apagada: directo al asistente
+        assert f(**{**base, "webgl": False}, motivo=motivo) is False
+        assert f(**{**base, "reducido": True}, motivo=motivo) is True        # movimiento reducido: se muestra, pero estática
+    assert f(**base, motivo="repetir") is False        # «Volver a jugar» no pasa por la intro
+    assert f(**{**base, "activada": False}, motivo="manual") is True         # «Ver intro» ignora la casilla
+    assert f(**{**base, "webgl": False}, motivo="manual") is False
+    assert f(**base) is False and _js("m.debeMostrarIntro()") is False
+    assert "CLAVE_VISTA" not in (ESTATICOS / "intro_datos.js").read_text(encoding="utf-8")
     assert _js("m.modoIntro(true)") == "estatico" and _js("m.modoIntro(false)") == "animado"
+
+
+def test_sin_marca_de_sesion_y_todos_los_caminos_vuelven_al_inicio():
+    app = (ESTATICOS / "app.js").read_text(encoding="utf-8")
+    assert "ares.intro.visto" not in app and "sessionStorage" not in app
+    assert 'correrIntro({ motivo: "abrir" })' in app
+    # los siete caminos de salida al asistente usan volverAlInicio (ninguno muestra el menú por su cuenta)
+    assert len(re.findall(r'volverAlInicio\("salir"\)', app)) >= 7
+    cuerpo = re.search(r"function volverAlInicio\(.*?\n\}", app, re.S).group(0)
+    assert "detenerReproduccion()" in cuerpo and "cerrarAvisos()" in cuerpo and "correrIntro(" in cuerpo
+    fuera = app.replace(cuerpo, "")
+    assert 'getElementById("menu").classList.remove("oculto")' not in fuera
+    # «Volver a jugar» (repetir) no llama a la intro
+    assert re.search(r'pedido === "repetir"\) \{[^}]*nuevaDesdeMeta', app) and "motivo: \"repetir\"" not in app
 
 
 def test_elegir_cuerpo():

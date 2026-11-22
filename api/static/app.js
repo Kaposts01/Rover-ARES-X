@@ -1,7 +1,7 @@
 // ARES-X · escena 3D del rover (ARX-04, ARX-05 y ARX-20: diseño realista). El motor está en Python; aquí solo se dibuja y se envían acciones.
 import * as THREE from "three";
 import { OrbitControls } from "/static/vendor/OrbitControls.js";
-import { iniciarLaboratorios, seguirPasoLaboratorio } from "/static/laboratorio.js?v=r14";
+import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
@@ -13,6 +13,18 @@ import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
 import { crearPanelIA } from "/static/panel_ia.js?v=r14";
 import { crearSonido } from "/static/sonido.js?v=r14";
 import { crearDefensa } from "/static/defensa.js?v=r14";
+import {
+  reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
+  textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
+} from "/static/textos.js?v=r14";
+import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
+import { crearRecords } from "/static/records.js?v=r14";
+import { textoNuevoRecord } from "/static/records_datos.js?v=r14";
+import { crearComparar } from "/static/comparar.js?v=r14";
+import { crearTutorial } from "/static/tutorial.js?v=r14";
+import { TEXTO_CAMBIO_MODO } from "/static/tutorial_datos.js?v=r14";
+import { condicionesPlaneta, filasCondiciones, perfilPlaneta } from "/static/planeta_datos.js?v=r14";
+import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
 const TIPO_OBSTACULO = 1;
@@ -235,6 +247,7 @@ let cabezaRover = null; // cabeza de cámara del mástil (se mueve sola)
 let roverDestino = null;
 let planetaActivo = "Marte";     // planeta de la partida actual (aspecto y sonda)
 let modoPlanetaActivo = "rover"; // "rover" o "sonda"
+const vehiculoActual = () => vehiculoDe(modoPlanetaActivo);   // nombre para los textos: «rover» o «sonda»
 let sondaRover = null;           // sonda 3D cuando el modo es sonda (gigantes)// posición y rumbo a los que avanza el rover suavemente
 
 const materiales = {
@@ -686,6 +699,11 @@ function liberarMapa() {
   }
   grupoMapa.traverse((o) => { if (o.isInstancedMesh) { try { o.dispose(); } catch (e) { /* ya liberado */ } } });
 }
+// Arbustos de la Tierra y piedras o cristales de borde: material y geometría únicos (no se crean de nuevo en cada evento ni mapa)
+const matArbusto = new THREE.MeshStandardMaterial({ color: 0x4f7a3a, roughness: 0.95 });
+const geoBordeRoca = new THREE.DodecahedronGeometry(0.1, 0);
+const geoBordeCristal = new THREE.ConeGeometry(0.06, 0.34, 5);   // en los gigantes el borde de un sumidero es de hielo, no de roca
+const matBordeCristal = new THREE.MeshStandardMaterial({ color: 0xd6efff, roughness: 0.2, flatShading: true, transparent: true, opacity: 0.85, emissive: 0x2f5f78, emissiveIntensity: 0.5 });
 // Canto rodado: icosaedro deformado por una función de la posición (los vértices repetidos se mueven igual y no se abren
 // grietas) y con la base aplanada para que apoye en el suelo. Caras planas a propósito: se lee como roca fracturada.
 const geometriasRoca = new Map();
@@ -774,9 +792,10 @@ function agregarGrietas(celdas) {
     sombra.needsUpdate = true;
     suelo.geometry.computeVertexNormals();
   }
-  const piedras = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.1, 0), materiales.borde, bordes.length);
+  const gigante = ES_GIGANTE(planetaActivo);
+  const piedras = new THREE.InstancedMesh(gigante ? geoBordeCristal : geoBordeRoca, gigante ? matBordeCristal : materiales.borde, bordes.length);
   bordes.forEach((b, i) => {
-    p.set(b.x, alturaTerreno(b.x, b.z) + 0.02, b.z);
+    p.set(b.x, alturaTerreno(b.x, b.z) + (gigante ? 0.12 : 0.02), b.z);
     e.setScalar(b.s);
     piedras.setMatrixAt(i, m.compose(p, b.q, e));
   });
@@ -868,13 +887,13 @@ function animarBarranco(celdas) {
       for (let i = 0; i < pos.count; i++) if (Math.hypot(pos.getX(i) - cx, pos.getZ(i) - cz) < 1.6) cerca.push(i);
     }
     // polvo y rocas
-    const N = 70, pp = new Float32Array(N * 3), vel = [];
+    const N = 110, pp = new Float32Array(N * 3), vel = [];
     for (let i = 0; i < N; i++) {
       pp.set([cx + (Math.random() - 0.5) * 0.6, y0 + 0.05, cz + (Math.random() - 0.5) * 0.6], i * 3);
       vel.push([(Math.random() - 0.5) * 1.6, 0.8 + Math.random() * 1.6, (Math.random() - 0.5) * 1.6]);
     }
     const gPolvo = new THREE.BufferGeometry(); gPolvo.setAttribute("position", new THREE.BufferAttribute(pp, 3));
-    const mPolvo = new THREE.PointsMaterial({ color: 0xc9a27e, size: 0.16, transparent: true, opacity: 0.85, depthWrite: false });
+    const mPolvo = new THREE.PointsMaterial({ color: 0xe6d2b4, size: 0.24, transparent: true, opacity: 0.95, depthWrite: false });   // claro: se ve también sobre suelos oscuros o azules
     const polvo = new THREE.Points(gPolvo, mPolvo); scene.add(polvo);
     const rocas = [];
     for (let k = 0; k < 5; k++) {
@@ -895,7 +914,7 @@ function animarBarranco(celdas) {
       }
       const dt = 1 / 60;
       for (let i = 0; i < N; i++) { pp[i * 3] += vel[i][0] * dt; pp[i * 3 + 1] += vel[i][1] * dt; pp[i * 3 + 2] += vel[i][2] * dt; vel[i][1] -= 1.6 * dt; }
-      gPolvo.attributes.position.needsUpdate = true; mPolvo.opacity = 0.85 * (1 - u);
+      gPolvo.attributes.position.needsUpdate = true; mPolvo.opacity = 0.95 * (1 - u);
       for (const r of rocas) { r.userData.v.y -= 4 * dt; r.position.addScaledVector(r.userData.v, dt); r.rotation.x += 0.2; }
       if (u < 1) { requestAnimationFrame(cuadro); return; }
       scene.remove(polvo); gPolvo.dispose(); mPolvo.dispose();
@@ -911,6 +930,7 @@ function construirMapa(datos) {
   limitesMapa = { columnas: datos.columnas, filas: datos.filas };
   liberarMapa();
   limpiarEnergia();
+  marcasEvento.limpiar(); encuadreEvento = null;   // las marcas de eventos de la partida anterior no pasan a la nueva
   grupoMapa.clear();
   animados = [];
   halos = [];
@@ -960,6 +980,7 @@ function construirMapa(datos) {
 
   // Rocas y piedras de borde como instancias (rendimiento): un dibujo por tipo en lugar de una malla por piedra
   const rocas = [];
+  const arbustos = [];
   const bordes = [];
   const mtxX = new THREE.Matrix4();
   const rotX = new THREE.Quaternion();
@@ -971,8 +992,17 @@ function construirMapa(datos) {
       const x = c + 0.5;
       const z = f + 0.5;
       const y = alturaTerreno(x, z);
+      const rasgoObstaculo = perfilPlaneta(planetaActivo).rasgos.obstaculo;
       if (t === TIPO_OBSTACULO && ES_GIGANTE(planetaActivo)) {
-        grupoMapa.add(crearVortice(x, y, z));
+        // cada gigante tiene lo suyo: Júpiter vórtices; Saturno bruma dorada; Urano cristales; Neptuno nubes y formaciones de hielo (ninguna roca)
+        grupoMapa.add(rasgoObstaculo === "vortice" ? crearVortice(x, y, z) : crearObstaculoGigante(THREE, rasgoObstaculo, x, y, z, (k) => azar(f, c, 200 + k)));
+      } else if (t === TIPO_OBSTACULO && rasgoObstaculo === "arbusto" && azar(f, c, 300) < 0.6) {
+        // Tierra: la mayoría de los obstáculos son arbustos (blobs verdes), el resto rocas
+        const tam = 0.26 + azar(f, c, 301) * 0.2;
+        escalaX.set(tam * 1.5, tam * 0.9, tam * 1.4);
+        posX.set(x + (azar(f, c, 302) - 0.5) * 0.3, y + tam * 0.45, z + (azar(f, c, 303) - 0.5) * 0.3);
+        rotX.setFromEuler(new THREE.Euler(0, azar(f, c, 304) * 6, 0));
+        arbustos.push(new THREE.Matrix4().compose(posX, rotX, escalaX));
       } else if (t === TIPO_OBSTACULO) {
         // 2 o 3 rocas facetadas por celda
         const n = 2 + Math.floor(azar(f, c, 1) * 2);
@@ -998,7 +1028,9 @@ function construirMapa(datos) {
     }
   }
   if (rocas.length) grupoMapa.add(instanciarRocas(materiales.roca, rocas, { semilla: datos.columnas * 7 + datos.filas }));
-  if (bordes.length) grupoMapa.add(instanciarRocas(materiales.borde, bordes.map((mb) => mb.clone().scale(new THREE.Vector3(0.1, 0.1, 0.1))), { detalle: 1, sombra: false, semilla: 5 }));
+  if (arbustos.length) grupoMapa.add(instanciarRocas(matArbusto, arbustos, { detalle: 1, semilla: 17 }));
+  if (bordes.length && ES_GIGANTE(planetaActivo)) grupoMapa.add(instanciar(geoBordeCristal, matBordeCristal, bordes.map((mb) => mb.clone().scale(new THREE.Vector3(1.4, 1.4, 1.4)))));
+  else if (bordes.length) grupoMapa.add(instanciarRocas(materiales.borde, bordes.map((mb) => mb.clone().scale(new THREE.Vector3(0.1, 0.1, 0.1))), { detalle: 1, sombra: false, semilla: 5 }));
 
   for (const s of datos.sitios) {
     const [f, c] = s.pos;
@@ -1044,8 +1076,9 @@ function construirMapa(datos) {
   camara.position.set(datos.columnas / 2, 22, datos.filas / 2 + 16);
   camara.lookAt(controles.target);
   controles.maxDistance = Math.max(60, escala * 1.5);   // mapa grande: que quepa completo sin perder el límite de 60
-  scene.fog.near = escala * 0.9;
-  scene.fog.far = escala * 2.4;
+  const lejosNiebla = perfilPlaneta(planetaActivo).nieblaLejos;   // Venus y los gigantes: bruma densa; Mercurio: sin atmósfera
+  scene.fog.near = escala * 0.9 * Math.min(1, lejosNiebla / 2.4);
+  scene.fog.far = escala * lejosNiebla;
   sol.target.position.set(datos.columnas / 2, 0, datos.filas / 2);
   sol.position.copy(sol.target.position).addScaledVector(DIR_SOL, 60);
   const lado = escala * 0.75 + 8;
@@ -1523,24 +1556,41 @@ function pintarModoDesc(modo) {
   document.getElementById("modo-desc").textContent = MODO_DESC[modo] || "";
   document.getElementById("menu-modo-desc").textContent = MODO_DESC[document.getElementById("menu-modo").value] || "";
   document.getElementById("det-rec").classList.toggle("oculto", modo !== "manual");   // recomendaciones solo en manual
+  pintarRotulosReproduccion();
 }
 document.getElementById("menu-modo").addEventListener("change", (ev) => {
   document.getElementById("menu-modo-desc").textContent = MODO_DESC[ev.target.value] || "";
 });
 
 // Recomendaciones (ARX-54, contrato §12): lo que haría cada modelo, sin mover el rover
-const NOMBRE_MODELO = { hibrido: "híbrido", rna: "RNA", difuso: "difuso", ag: "AG" };
-async function consultarRecomendacion() {
+const NOMBRE_MODELO = { hibrido: "Híbrido", rna: "RNA", difuso: "Difuso", ag: "AG" };
+const TEXTO_REC_VACIO = "Pulsa el botón para ver qué haría cada modelo en esta celda.";
+let recomendacionEpoca = 0;   // sube con cada paso o partida: una respuesta tardía de una celda anterior no se muestra
+// Las recomendaciones valen para UNA celda: tras cada movimiento o paso se recalculan (si el cuadro está abierto) o se
+// borran y se pide consultar de nuevo, para que nunca se vea el «rumbo» de una posición anterior.
+function actualizarRecomendacion() {
+  recomendacionEpoca += 1;
+  const caja = document.getElementById("det-rec");
+  const modoManual = document.getElementById("modo").value === "manual";
+  if (modoManual && caja && caja.open && estado && !estado.sin_partida && !ESTADOS_TERMINALES.includes(estado.estado)) { consultarRecomendacion(); return; }
   const lista = document.getElementById("rec-lista");
+  lista.replaceChildren(Object.assign(document.createElement("li"), { textContent: TEXTO_REC_VACIO }));
+}
+async function consultarRecomendacion() {
+  avisarAccion("recomendacion");
+  const lista = document.getElementById("rec-lista");
+  const epoca = ++recomendacionEpoca;
   lista.replaceChildren();
   const datos = await deps_recomendacion();
+  if (epoca !== recomendacionEpoca) return;   // el rover ya se movió: esta respuesta es de otra celda
   if (!datos || !datos.propuestas) {
     lista.appendChild(Object.assign(document.createElement("li"), { textContent: "Sin recomendación (revisa que haya partida y modo manual)." }));
     return;
   }
+  if (Array.isArray(datos.posicion)) lista.appendChild(Object.assign(document.createElement("li"), { textContent: `Para la celda (${datos.posicion.join(", ")})` }));
   for (const p of datos.propuestas) {
     const li = document.createElement("li");
-    const rumbo = p.rumbo ? ` · rumbo ${p.rumbo}` : " · no mueve el rover";
+    const rumbo = p.rumbo ? ` · rumbo ${p.rumbo}` : ` · no mueve el ${vehiculoActual()}`;
     li.textContent = `${NOMBRE_MODELO[p.modelo] || p.modelo}: ${p.accion}${rumbo}. ${p.razon}`;
     lista.appendChild(li);
   }
@@ -1553,14 +1603,14 @@ document.getElementById("rec-consultar").addEventListener("click", consultarReco
 function pintarHud(e) {
   pintarModoDesc(e.modo);
   const modoSel = document.getElementById("modo");
-  const nombreModo = modoSel.options[modoSel.selectedIndex] ? modoSel.options[modoSel.selectedIndex].text : e.modo;
-  document.getElementById("resumen-texto").textContent = `semilla ${e.semilla} · nivel ${NIVELES[(e.nivel || 1) - 1]} · ${nombreModo}`;
+  const textoModo = modoSel.options[modoSel.selectedIndex] ? modoSel.options[modoSel.selectedIndex].text : nombreModo(e.modo);
+  document.getElementById("resumen-texto").textContent = `semilla ${e.semilla} · nivel ${NIVELES[(e.nivel || 1) - 1]} · ${textoModo}`;
   if (!modoDemoEstados) pintarEstadoBadge(e.estado);
   // Título con el planeta: /estado.planeta, luego /planetas.activo.planeta, y por último el valor local
   const planetaVisible = e.planeta || (planetasDatos && planetasDatos.activo && planetasDatos.activo.planeta);
   if (planetaVisible) {
     planetaActivo = planetaVisible;
-    const modoVisible = e.modo_planeta === "sonda" ? " · sonda" : (e.modo_planeta === "rover" ? " · rover" : "");
+    const modoVisible = e.modo_planeta === "sonda" || e.modo_planeta === "rover" ? ` · ${Vehiculo(e.modo_planeta)}` : "";
     document.querySelector("#hud h1").textContent = `ARES-X · ${planetaVisible}${modoVisible}`;
   }
   // ARX-85 (ev3-d61 A): en modo sonda, pantalla de sonda con sus lecturas y sin controles de rodaje
@@ -1571,6 +1621,7 @@ function pintarHud(e) {
   // 22/11: la sonda no se conduce a mano, pero sí se puede encuadrar y ver capas: solo se oculta el pad de conducción
   // (antes se ocultaba todo el bloque y con la sonda no había forma de recentrar la cámara)
   if (padConduccion) padConduccion.style.display = enSonda ? "none" : "";
+  document.getElementById("manual").classList.toggle("sin-pad", enSonda);   // sin pad, los botones de vista se reparten en dos filas
   const botonRover = document.getElementById("encuadrar");
   if (botonRover) { botonRover.textContent = enSonda ? "Sonda" : "Rover"; botonRover.title = enSonda ? "Centrar en la sonda" : "Centrar en el rover"; }
   if (enSonda) {
@@ -1578,10 +1629,14 @@ function pintarHud(e) {
     document.getElementById("sonda-temp").textContent = `${e.temperatura_interna} °C (tolerancia ${e.tolerancia} °C)`;
     document.getElementById("sonda-bateria").textContent = `${(e.bateria_pct ?? e.bateria).toFixed(1)} %`;
     document.getElementById("sonda-sobre").textContent = e.pasos_sobre_tolerancia ?? "-";
-    document.getElementById("sonda-estado").textContent = e.estado;
+    document.getElementById("sonda-estado").textContent = nombreEstado(e.estado);
   }
+  const velo = document.getElementById("ambiente-velo");   // noche o tormenta en curso: el velo de la escena (el motor cuenta los pasos que quedan)
+  if (velo) { velo.className = e.ambiente === "noche" || e.ambiente === "tormenta" ? e.ambiente : ""; }
+  ambientePlaneta.reforzar(e.ambiente === "tormenta" ? 2.2 : 1);   // la tormenta levanta el viento mientras dura
+  aplicarCondiciones(e);
   document.getElementById("h-semilla").textContent = e.semilla;
-  document.getElementById("h-estado").textContent = e.estado;
+  document.getElementById("h-estado").textContent = nombreEstado(e.estado);
   // 22/11: porcentaje de la capacidad del rover (nunca más de 100 %); el motor sigue en sus unidades
   const bpct = e.bateria_pct ?? e.bateria;
   document.getElementById("h-bateria").textContent = `${bpct.toFixed(1)} %`;
@@ -1589,10 +1644,10 @@ function pintarHud(e) {
   try { pintarEnergia(e); } catch (err) { console.warn("bases y pilas: no se pudieron dibujar", err); }
   document.getElementById("h-puntaje").textContent = e.puntaje;
   document.getElementById("h-municion").textContent = e.municion;
-  document.getElementById("h-modo").textContent = e.modo;
+  document.getElementById("h-modo").textContent = nombreModo(e.modo);
   document.getElementById("h-paso").textContent = e.paso ?? "-";
   document.getElementById("h-cooldown").textContent = e.cooldown ?? "-";
-  const vivos = (e.npcs || []).map((n) => n.estado);
+  const vivos = (e.npcs || []).map((n) => nombreEstadoDron(n.estado));
   document.getElementById("h-drones").textContent = vivos.length ? vivos.join(", ") : "ninguno";
   document.getElementById("modo").value = e.modo;
   document.getElementById("veto").checked = e.veto !== false;
@@ -1635,10 +1690,10 @@ function decisionesDelPaso(p) {
     lineas.push(`Difuso: reglas ${reglas}, velocidad ${vel}`);
   }
   const ruta = (p.ag || {}).ruta_planeada || [];
-  lineas.push(ruta.length ? `Planificador: ruta de ${ruta.length} celdas` : "Planificador: sin ruta");
+  lineas.push(ruta.length ? `Planificador: ruta de ${plural(ruta.length, "celda", "celdas")}` : "Planificador: sin ruta");
   const supv = p.supervisor || {};
   const vetos = (supv.motivos || []).filter(m => String(m).startsWith("V-"));
-  lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto ${vetos.join(", ")}` : ""}`);
+  lineas.push(`Supervisor: ${supv.accion || "sin dato"}${vetos.length ? ` · veto: ${nombresMotivos(vetos)}` : ""}`);
   return lineas;
 }
 
@@ -1701,7 +1756,7 @@ function pintarPaneles(p) {
   const reglas = dif.reglas || [];
   if (dif.usado === false) {
     document.getElementById("dif-velocidad").textContent = "no usado en este modo";
-    lista.innerHTML = "<li>el difuso no mueve el rover en este modo</li>";
+    lista.innerHTML = `<li>el difuso no mueve el ${vehiculoActual()} en este modo</li>`;
   } else if (reglas.length === 0) {
     lista.innerHTML = "<li>sin reglas activadas</li>";
   } else {
@@ -1714,8 +1769,8 @@ function pintarPaneles(p) {
 
   const ag = p.ag || {};
   const n = (ag.ruta_planeada || []).length;
-  document.getElementById("ag-ruta").textContent = n ? `${n} celdas hasta el objetivo` : "sin ruta";
-  document.getElementById("res-ag").textContent = n ? `${n} celdas` : "sin ruta";
+  document.getElementById("ag-ruta").textContent = n ? `${plural(n, "celda", "celdas")} hasta el objetivo` : "sin ruta";
+  document.getElementById("res-ag").textContent = n ? plural(n, "celda", "celdas") : "sin ruta";
 
   document.getElementById("h-paso").textContent = p.paso ?? "-";
   const sup = p.supervisor || {};
@@ -1727,7 +1782,8 @@ function pintarPaneles(p) {
   motivos.innerHTML = "";
   for (const m of (sup.motivos || ["-"])) {
     const li = document.createElement("li");
-    li.textContent = m;
+    li.textContent = m === "-" ? m : nombreMotivo(m);
+    if (m !== "-") li.title = `Código del motor: ${m}`;
     motivos.appendChild(li);
   }
   // ARX-88: el porqué del paso con datos reales (M17): RNA, difuso, planificador y supervisor
@@ -1754,6 +1810,7 @@ async function refrescarPaneles() {
     if (p) pintarPaneles(p);
   });
   await refrescarHistorial();
+  actualizarRecomendacion();                            // las recomendaciones eran de la celda anterior
   // Los gráficos solo se piden si el panel está abierto
   if (!document.getElementById("graficos").classList.contains("plegado")) await refrescarGraficos();
   marcarDesbordes();
@@ -1783,7 +1840,7 @@ function pintarCalor(datos) {
   const sobre = t > datos.tolerancia;
   const nota = datos.aborto_termico_activo === false ? " (aborto térmico desactivado)" : "";
   // registro lateral y no avisar(): el aviso del paso lo taparía en el mismo ciclo (C1 de QA)
-  if (sobre && !calorSobreTolerancia) registrarEvento(`aviso: Calor interno sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
+  if (sobre && !calorSobreTolerancia) registrarEvento(`aviso: temperatura interna sobre la tolerancia (${datos.tolerancia} °C)${nota}`);
   calorSobreTolerancia = sobre;
 }
 
@@ -1835,6 +1892,7 @@ async function refrescarMovilesYEscenario() {
   const datos = await adaptador.moviles();
   if (datos && Array.isArray(datos.eventos_del_paso) && datos.eventos_del_paso.some((x) => x && x.nombre === "meteorito")) revisarLogro({ tipo: "meteorito" });
   aplicarMoviles(datos, scene, alturaTerreno, (texto) => avisar(texto), agregarGrietas);
+  señalarEventosDelPaso(datos);
   aplicarEnlaceYSenal(estado);
   await refrescarEscenarios();
 }
@@ -1954,14 +2012,15 @@ async function refrescarHistorial() {
   const datos = await llamar("GET", "/historial" + (q ? "?" + q : ""));
   if (!datos) return;
   document.getElementById("hist-csv").href = "/historial.csv" + (q ? "?" + q : "");
-  document.getElementById("hist-total").textContent = `${datos.total} filas`;
+  document.getElementById("hist-total").textContent = plural(datos.total, "fila", "filas");
   const cuerpo = document.getElementById("hist-cuerpo");
   cuerpo.replaceChildren();
   for (const f of datos.filas.slice(-200)) {
     const tr = document.createElement("tr");
-    for (const texto of [f.n, f.modo, f.accion, f.tecnica, f.motivo || "-", valoresClave(f)]) {
+    for (const texto of [f.n, nombreModo(f.modo), f.accion, nombreTecnica(f.tecnica), nombresMotivos((f.motivo || "").split(";")) || "-", valoresClave(f)]) {
       const td = document.createElement("td");
       td.textContent = String(texto);
+      if (texto === nombresMotivos((f.motivo || "").split(";")) && f.motivo) td.title = `Códigos del motor: ${f.motivo}`;
       tr.appendChild(td);
     }
     cuerpo.appendChild(tr);
@@ -2008,18 +2067,121 @@ function actualizarControlEvento() {
   if (!boton) return;
   boton.disabled = !mapa || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado);
 }
+// ---------- señal visible de cada evento (ronda 23) ----------
+// Todo evento lanzado deja: una marca en la celda afectada (o sobre el vehículo si es global), un aviso con su ubicación y, si
+// queda fuera de cuadro, una flecha en el borde del hueco libre y un breve encuadre de la cámara.
+const marcasEvento = crearMarcasEvento({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z) });
+const etiquetaEvento = document.getElementById("evento-etiqueta");
+let textoEtiquetaEvento = "";
+let encuadreEvento = null;   // { punto, hasta }: mientras dura, la cámara sigue este punto y no al vehículo
+const _vEvento = new THREE.Vector3();
+function celdaVehiculo() { return estado && Array.isArray(estado.posicion) ? estado.posicion : null; }
+// Zona de la pantalla que dejan libre la columna, el panel de IA y la franja inferior (la misma que usa encuadrarVista)
+function huecoLibre() {
+  const W = window.innerWidth, H = window.innerHeight;
+  let l = 8, r = W - 8, t = 60, b = H - 8;
+  if (!document.body.classList.contains("cine")) {
+    const col = document.getElementById("columna"), dock = document.getElementById("dock");
+    if (col && col.getClientRects().length > 0 && W > 760) l = col.getBoundingClientRect().right + 8;
+    if (panelIA && !panelIA.elemento.classList.contains("oculto") && W > 760) r = W - panelIA.ancho - 20;
+    if (dock && dock.getClientRects().length > 0) b = Math.min(b, dock.getBoundingClientRect().top - 8);
+  }
+  if (r - l < 120 || b - t < 120) return { l: 8, r: W - 8, t: 8, b: H - 8 };
+  return { l, r, t, b };
+}
+// Posición en pantalla de un punto del mundo y si queda fuera del hueco libre (o detrás de la cámara)
+function proyectarEvento(pos) {
+  _vEvento.copy(pos).project(camara);
+  const W = window.innerWidth, H = window.innerHeight, h = huecoLibre();
+  const x = ((_vEvento.x + 1) / 2) * W, y = ((1 - _vEvento.y) / 2) * H, detras = _vEvento.z > 1;
+  return { x, y, detras, h, fuera: detras || x < h.l || x > h.r || y < h.t || y > h.b };
+}
+function encuadrarEventoEn(punto, ms) {
+  if (modoCamara !== "orbita" || cineVivo()) return;   // los modos con el vehículo y el director mandan sobre la cámara
+  encuadreEvento = { punto: punto.clone(), hasta: performance.now() + ms };
+  camaraSiguiendo = true;
+}
+// Marca el evento en la escena. celdas: [[fila, columna]]; sin celdas, sobre el vehículo
+function señalarEvento(nombre, celdas, { encuadrar = true, renovar = true } = {}) {
+  const info = MARCA_EVENTO[nombre];
+  if (!info) return;
+  const enCelda = info.sobre === "celda" && celdas.length > 0;
+  const n = marcasEvento.marcar({ celdas: enCelda ? celdas : [], puntos: enCelda ? [] : [grupoRover.position], rotulo: info.rotulo, color: info.color, renovar });
+  if (!n) return;
+  const donde = enCelda ? ubicacionEvento(celdas[0], celdaVehiculo(), vehiculoDe(estado && estado.modo_planeta)) : "";
+  textoEtiquetaEvento = donde ? `${info.rotulo} · ${donde.replace(/^fila \d+, columna \d+ · /, "")}` : info.rotulo;
+  const m = marcasEvento.principal();
+  if (encuadrar && enCelda && m && proyectarEvento(m.base).fuera) encuadrarEventoEn(m.base.clone().lerp(grupoRover.position, 0.35), 2600);
+}
+// Rótulo y flecha: sobre la marca si se ve; en el borde del hueco libre apuntando hacia ella si queda fuera de cuadro
+function actualizarEtiquetaEvento() {
+  if (!etiquetaEvento) return;
+  const m = marcasEvento.principal();
+  if (!m || document.body.classList.contains("cine")) { if (!etiquetaEvento.classList.contains("oculto")) etiquetaEvento.classList.add("oculto"); return; }
+  const base = proyectarEvento(m.base), arriba = proyectarEvento(m.pos);
+  const p = base.fuera ? base : arriba;
+  let x = p.x, y = p.y, ang = 0;
+  if (base.fuera) {
+    const h = base.h, cx = (h.l + h.r) / 2, cy = (h.t + h.b) / 2;
+    let dx = base.x - cx, dy = base.y - cy;
+    if (base.detras) { dx = -dx; dy = -dy; }
+    if (Math.abs(dx) < 1e-3 && Math.abs(dy) < 1e-3) dy = 1;
+    const k = Math.min(((h.r - h.l) / 2 - 70) / Math.max(Math.abs(dx), 1e-3), ((h.b - h.t) / 2 - 18) / Math.max(Math.abs(dy), 1e-3));
+    x = cx + dx * k; y = cy + dy * k; ang = Math.atan2(dy, dx);
+  }
+  etiquetaEvento.classList.remove("oculto");
+  etiquetaEvento.classList.toggle("fuera", base.fuera);
+  etiquetaEvento.style.setProperty("--ang", `${ang}rad`);
+  etiquetaEvento.style.setProperty("--color", `#${m.color.toString(16).padStart(6, "0")}`);
+  etiquetaEvento.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, ${base.fuera ? "-50%" : "-100%"})`;
+  const texto = etiquetaEvento.querySelector(".ev-texto");
+  if (texto.textContent !== textoEtiquetaEvento) texto.textContent = textoEtiquetaEvento;
+}
+etiquetaEvento.addEventListener("click", () => {
+  const m = marcasEvento.principal();
+  if (m) encuadrarEventoEn(m.base, 3500);
+});
+// Meteorito y sismo que genera la propia partida (no solo los del panel): también llevan marca
+function señalarEventosDelPaso(datos) {
+  if (!datos || !Array.isArray(datos.eventos_del_paso)) return;
+  for (const ev of datos.eventos_del_paso) {
+    const nombre = ev && typeof ev.nombre === "string" ? ev.nombre : "";
+    if ((nombre === "meteorito" || nombre === "sismo") && MARCA_EVENTO[nombre]) {
+      const celdas = celdasDeEvento(nombre, { celdas: ev.celdas });
+      if (celdas.length) señalarEvento(nombre, celdas, { encuadrar: false, renovar: false });
+    }
+  }
+}
+function destellarBateria() {
+  const b = document.getElementById("h-bateria-barra");
+  if (!b) return;
+  b.classList.remove("destello"); void b.offsetWidth; b.classList.add("destello");
+}
+
 async function dispararEvento(nombreForzado = null) {
   if (finActiva()) return;
-  if (!mapa || ocupado() || !estado || estado.sin_partida || ESTADOS_TERMINALES.includes(estado.estado)) return;
   const nombre = typeof nombreForzado === "string" ? nombreForzado : document.getElementById("evento-nombre").value;
+  const opcion = [...document.getElementById("evento-nombre").options].find((o) => o.value === nombre);
+  const rotuloEvento = opcion ? opcion.textContent : nombre;   // «falla de sensor», no «falla_sensor»
+  // Antes un evento ignorado no decía nada: ahora se explica por qué no se lanzó
+  if (!mapa || !estado || estado.sin_partida) { avisar(`Evento ${rotuloEvento} sin efecto: no hay una partida en curso.`); return; }
+  if (ESTADOS_TERMINALES.includes(estado.estado)) { avisar(`Evento ${rotuloEvento} sin efecto: la misión ya terminó.`); return; }
+  if (ocupado()) { avisar(`Evento ${rotuloEvento} sin efecto: ${pausaActiva ? "la partida está en pausa" : "hay una operación en curso"}; inténtalo de nuevo.`); return; }
   const r = await llamar("POST", "/evento", { nombre });
   if (!r) return;
-  const detalle = r.detalle || (r.ok ? "hecho" : "sin efecto");
+  const texto = avisoEvento(nombre, rotuloEvento, r, celdaVehiculo(), vehiculoDe(estado.modo_planeta));
   if (nombre === "barranco" && r.ok) revisarLogro({ tipo: "barranco" });
-  if (nombre === "barranco" && r.ok && Array.isArray(r.celdas)) animarBarranco(r.celdas);
-  avisar(`Evento ${nombre}: ${detalle}`);
-  registrarEvento(`evento ${nombre}: ${detalle}`);
+  if (r.ok) {
+    const celdas = celdasDeEvento(nombre, r);
+    if (nombre === "barranco" && celdas.length) animarBarranco(celdas);
+    if (nombre !== "senal_biologica") señalarEvento(nombre, celdas);   // la señal se marca con su celda real al refrescar el estado
+    if (nombre === "bateria_baja") destellarBateria();
+  }
+  avisar(texto);
+  if (r.ok) avisarAccion("evento");
+  registrarEvento(texto.charAt(0).toLowerCase() + texto.slice(1));
   await refrescarEstado();
+  if (r.ok && nombre === "senal_biologica" && estado && Array.isArray(estado.senal)) señalarEvento(nombre, [estado.senal]);
   await refrescarPaneles();
 }
 document.getElementById("evento-disparar").addEventListener("click", () => dispararEvento());
@@ -2045,7 +2207,7 @@ const PALETAS_PLANETA = {
   "Júpiter": { suelo: 0xe6cba2, arriba: [0.34, 0.24, 0.12], horizonte: [0.9, 0.74, 0.5], niebla: 0xe6c896, sol: 0xffe6c0, roca: 0xe6d6b8, borde: 0xe6d6b8, guijarro: 0xf2e6cc },
 };
 function aplicarAspecto(planeta) {
-  const p = PALETAS_PLANETA[planeta] || PALETAS_PLANETA.Marte;
+  const p = perfilPlaneta(planeta);   // aspecto de la escena (planeta_datos.js); PALETAS_PLANETA solo queda para el color de los planetas de la intro
   document.querySelector("#hud h1").textContent = `ARES-X · ${planeta}`;
   if (grupoMapa.children[0] && grupoMapa.children[0].material) grupoMapa.children[0].material.color.setHex(p.suelo);
   materiales.roca.color.setHex(p.roca);      // rocas del planeta: Marte café rojizo, Mercurio gris
@@ -2055,8 +2217,43 @@ function aplicarAspecto(planeta) {
   materialCielo.uniforms.horizonte.value.set(...p.horizonte);
   scene.fog.color.setHex(p.niebla);
   sol.color.setHex(p.sol);
+  sol.intensity = p.intensidadSol;
   luzCielo.groundColor.setHex(p.niebla).multiplyScalar(0.55);
   luzCielo.color.setRGB(p.arriba[0], p.arriba[1], p.arriba[2]).lerp(new THREE.Color(0xdfe8ff), 0.6);
+  aplicarCondiciones(estado, true);
+}
+
+// ---------- condiciones del planeta (gravedad, viento, hielo) ----------
+// Único punto donde se leen: planeta_datos.condicionesPlaneta(estado.planeta_mecanicas, con valores de referencia si el motor no las manda).
+// De aquí salen el bloque del HUD, las partículas de viento, los centelleos y el brillo del hielo en el suelo.
+const ambientePlaneta = crearAmbientePlaneta({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z), camara, renderer });
+let condicionesActuales = null, firmaCondiciones = "";
+function aplicarCondiciones(e, forzar = false) {
+  const planeta = (e && e.planeta) || planetaActivo;
+  const c = condicionesPlaneta(e, planeta);
+  const firma = `${planeta}|${JSON.stringify(c)}`;
+  if (!forzar && firma === firmaCondiciones) return;
+  firmaCondiciones = firma; condicionesActuales = c;
+  ambientePlaneta.configurar(planeta, c);
+  const suelo = grupoMapa.children[0];   // hielo: el suelo se vuelve más liso y brilla bajo el sol
+  if (suelo && suelo.material && suelo.material.isMeshStandardMaterial) {
+    suelo.material.roughness = 0.95 - 0.5 * c.hielo.nivel;
+    suelo.material.metalness = 0.12 * c.hielo.nivel;
+  }
+  const caja = document.getElementById("condiciones");
+  if (!caja) return;
+  const filas = caja.querySelector(".cond-filas");
+  filas.replaceChildren(...filasCondiciones(c).map(([etiqueta, valor, fuente]) => {
+    const f = document.createElement("div"); f.className = "fila";
+    const a = document.createElement("span"); a.textContent = etiqueta;
+    const v = document.createElement("span"); v.className = "valor"; v.textContent = valor;
+    v.title = fuente === "motor" ? "Dato del motor" : "Valor de referencia del cliente: el motor aún no manda esta condición";
+    f.append(a, v);
+    if (fuente !== "motor") { const r = document.createElement("small"); r.className = "cond-ref"; r.textContent = "ref."; v.append(" ", r); }
+    return f;
+  }));
+  const firma2 = caja.querySelector(".cond-firma");
+  if (firma2) firma2.textContent = perfilPlaneta(planeta).firma;
 }
 
 // Lo último que confirmó el motor: planeta y tipo de vehículo
@@ -2180,6 +2377,7 @@ function volverAlInicio(motivo = "salir") {
   document.getElementById("controles").classList.add("oculto");
   document.getElementById("manual").classList.add("oculto");
   document.getElementById("menu").classList.remove("oculto");
+  tutorial.cerrar(); tutorial.cerrarOferta();
   if (panelIA) panelIA.mostrar(false);
   correrIntro({ motivo });
 }
@@ -2336,11 +2534,13 @@ async function correrFinal(codigo) {
           alCerrar: () => cerrarFinal && cerrarFinal(null),
           alRepetir: () => cerrarFinal && cerrarFinal("repetir"),
           alOtroPlaneta: () => cerrarFinal && cerrarFinal("otro"),
+          alVerRecords: () => abrirRecords({ semilla: estado ? estado.semilla : "" }),
         });
       }
       document.body.classList.add("final-activa");
       tarjetaFinal.mostrar(resultado, m ? m.lista() : [], {
         logrosNuevos: [...logrosNuevos], logros: logros ? logros.lista() : [], activada: finActivada(), alCambiarCasilla: fijarFinActivada,
+        record: textoNuevoRecord(ultimoRecord),
       });
       const reiniciarInactividad = () => {
         clearTimeout(inactividad);
@@ -2373,9 +2573,26 @@ function configuracionVigente() {
     veto: document.getElementById("veto").checked,
   };
 }
+// Una partida nueva vacía TODO el estado derivado de la anterior: bitácora lateral, historial y gráficos, tira de
+// decisiones, recomendaciones, panel de IA (gráficos «últimos pasos», decisión y narración), laboratorios y contadores.
+function reiniciarEstadoDerivado() {
+  document.getElementById("registro").replaceChildren();
+  document.getElementById("hist-cuerpo").replaceChildren();
+  document.getElementById("hist-total").textContent = "";
+  tiraPasos = []; pintarTira();
+  filasGraficos = []; cursorGrafico = null; geometriaGrafico = null;
+  try { dibujarGrafico(); } catch (e) { /* panel plegado */ }
+  recomendacionEpoca += 1;
+  document.getElementById("rec-lista").replaceChildren(Object.assign(document.createElement("li"), { textContent: TEXTO_REC_VACIO }));
+  ultimoPasoNumero = null; calorSobreTolerancia = false; ultimosObjetivos = null;
+  try { reiniciarLaboratorios(); } catch (e) { console.warn("laboratorios: no se pudieron reiniciar", e); }
+  try { if (panelIA) panelIA.reiniciar(); } catch (e) { console.warn("panel de IA: no se pudo reiniciar", e); }
+  try { document.getElementById("subtitulo-ia") && (document.getElementById("subtitulo-ia").textContent = ""); } catch (e) { /* sin subtítulo */ }
+}
 // Tamaño del mapa (ARX-21): pequeno 20×30, mediano 30×45, grande 40×60 (por defecto: grande)
 async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente(), bateria = null) {
   detenerReproduccion();
+  finAtendido = false; ultimoRecord = null;
   cerrarAvisos();
   reiniciarEventos();
   cargando = true;
@@ -2402,7 +2619,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     estado = datos;
     revisarLogro({ tipo: "inicio", planeta: datos.planeta, modo: datos.modo_planeta });
     if (momentosPantalla) momentosPantalla.reiniciar();
-    document.getElementById("registro").replaceChildren();
+    reiniciarEstadoDerivado();   // lo que se calculó con la misión anterior no puede verse en la nueva
     recorridoRover = [];
     avisosVistos.clear();
     const mp = await llamar("GET", "/mapa");
@@ -2422,7 +2639,7 @@ async function cargarPartida(semilla, nivel, tamano = document.getElementById("t
     actualizarControlEvento();
     await refrescarPaneles();
     await refrescarEscenarios();
-    avisar(`Partida nueva en ${planetaActivo}${modoPlanetaActivo === "sonda" ? " (sonda)" : ""}: semilla ${estado.semilla}, nivel ${NIVELES[nivel - 1]}.`);
+    avisar(`Partida nueva en ${planetaActivo}${modoPlanetaActivo === "sonda" ? " (Sonda)" : ""}: semilla ${estado.semilla}, nivel ${NIVELES[nivel - 1]}.`);
     return true;
   } finally {
     cargando = false;
@@ -2530,8 +2747,11 @@ function textoCadena(c) {
 const semillaAleatoria = () => 1 + (crypto.getRandomValues(new Uint32Array(1))[0] % 999999);
 
 async function alFinDeMision(codigo) {
+  if (finAtendido) return;
+  finAtendido = true;
   detenerReproduccion();
   cerrarAvisos();
+  await registrarRecord();   // ronda 23: queda en los récords por semilla (el servidor decide si es nuevo récord)
   if (cadenaAutomatica) {
     cadenaAutomatica.hechas += 1;
     if (codigo === "EXITO") cadenaAutomatica.exitos += 1;
@@ -2544,7 +2764,7 @@ async function alFinDeMision(codigo) {
   }
   if (cadenaAutomatica && cadenaAutomatica.misiones > 0) {
     cadenaAutomatica.misiones -= 1;
-    avisar(`Misión terminada (${codigo}). La siguiente empieza en 3 s…`);
+    avisar(`Misión terminada (${nombreEstado(codigo)}). La siguiente empieza en 3 s…`);
     await esperar(3000);   // sin preguntar: espera 3 s y sigue con la siguiente
     const { nivel, veto } = cadenaAutomatica;
     // Misma configuración con la que se arrancó la cadena, no la que muestre el panel en ese momento
@@ -2563,6 +2783,7 @@ async function alFinDeMision(codigo) {
   const cadenaTerminada = cadenaAutomatica;
   await correrFinal(codigo);   // la pantalla final va antes de la meta; nunca lanza y, si falla o se omite, sigue la meta
   const pedido = accionFinal; accionFinal = null;
+  if (pedido === "jugar" && configPendiente) { const c = configPendiente; configPendiente = null; cadenaAutomatica = null; await jugarConfiguracion(c); return; }
   if (pedido === "repetir") { cadenaAutomatica = null; await nuevaDesdeMeta(estado.semilla, estado.nivel); return; }
   if (pedido === "otro") {
     volverAlInicio("salir");   // «Explorar otro cuerpo»: de vuelta al sistema solar
@@ -2580,7 +2801,7 @@ async function nuevaDesdeMeta(semilla, nivel) {
   if (ok) mostrarMision(estado.semilla, nivel);
 }
 
-// Pantalla de meta combinada (ARX-74): mapa y dificultad se eligen sin actuar; «Confirmar» arranca lo elegido
+// Pantalla de meta combinada: mapa y dificultad se eligen sin actuar; «Iniciar la misión elegida» arranca lo elegido
 let metaMapa = "repetir";
 let metaNivel = 1;
 function pintarMetaElecciones() {
@@ -2595,6 +2816,16 @@ function mostrarMeta(codigo, cadena = null) {
   const resumen = document.getElementById("meta-cadena");
   resumen.classList.toggle("oculto", !cadena);
   resumen.textContent = cadena ? `Cadena automática: ${cadena.hechas} ${cadena.hechas === 1 ? "misión" : "misiones"} · ${cadena.exitos} ${cadena.exitos === 1 ? "éxito" : "éxitos"} · ${cadena.fracasos} ${cadena.fracasos === 1 ? "fracaso" : "fracasos"} · ${textoCadena(cadena)}` : "";
+  // Resumen de la misión que acaba de terminar: pasos, puntaje y batería (el puntaje explica cómo se calcula)
+  const resumenLista = document.getElementById("meta-resumen");
+  resumenLista.replaceChildren(...resumenMeta(estado).map(([nombre, valor]) => {
+    const li = document.createElement("li");
+    li.textContent = `${nombre}: ${valor}`;
+    return li;
+  }));
+  const rec = textoNuevoRecord(ultimoRecord);
+  if (rec) { const li = document.createElement("li"); li.textContent = `${rec.nuevo ? "★ " : ""}${rec.titulo}`; if (rec.nuevo) li.className = "nuevo-record"; li.title = rec.detalle; resumenLista.appendChild(li); }
+  document.getElementById("meta-puntaje-ayuda").textContent = AYUDA_PUNTAJE_SIMPLE;
   const lista = document.getElementById("meta-objetivos");
   lista.replaceChildren();
   for (const c of (ultimosObjetivos && ultimosObjetivos.condiciones) || []) {
@@ -2606,7 +2837,7 @@ function mostrarMeta(codigo, cadena = null) {
   }
   document.getElementById("meta-titulo").textContent = cadena
     ? "Cadena automática terminada"
-    : codigo === "EXITO" ? "¡Meta alcanzada!" : `Misión terminada: ${codigo}`;
+    : codigo === "EXITO" ? "¡Meta alcanzada!" : `Misión terminada: ${nombreEstado(codigo)}`;
   metaMapa = "repetir";
   metaNivel = estado.nivel;
   pintarMetaElecciones();
@@ -2665,6 +2896,87 @@ document.getElementById("menu-modo").addEventListener("change", (ev) => {
   document.getElementById("menu-misiones-fila").classList.toggle("oculto", ev.target.value !== "automatico");
 });
 
+// ---------- ronda 23: récords por semilla, comparar políticas y tutorial del modo manual ----------
+let ultimoRecord = null;        // respuesta de /records/registrar de la misión que acaba de terminar
+let finAtendido = false;        // la misión actual ya pasó por alFinDeMision (los pasos manuales también la terminan)
+let configPendiente = null;     // «Jugar esta semilla» pedido desde la pantalla final
+let tutorialPendiente = false;  // el botón «Tutorial» del menú arranca una partida manual y abre el recorrido
+
+async function registrarRecord() {
+  ultimoRecord = null;
+  try {
+    const r = await fetch("/records/registrar", { method: "POST" });
+    if (r.ok) ultimoRecord = await r.json();
+  } catch (e) { /* sin récord: la misión sigue su curso */ }
+}
+// La misión se puede terminar con un movimiento o un disparo del jugador, no solo con un paso de la IA
+function revisarFinManual() {
+  if (finAtendido || !estado || !ESTADOS_TERMINALES.includes(estado.estado)) return;
+  alFinDeMision(estado.estado);
+}
+
+const vistaRecords = crearRecords({ alJugar: (cfg) => jugarConfiguracion(cfg) });
+function abrirRecords(opciones = {}) { vistaRecords.abrir(opciones); }
+// Empieza una misión con la semilla y las condiciones de un récord, usando el mismo camino que el asistente del menú
+async function jugarConfiguracion(cfg) {
+  if (finActiva() && cerrarFinal) { configPendiente = cfg; cerrarFinal("jugar"); return; }   // la pantalla final se cierra y después arranca
+  const poner = (id, valor) => { const c = document.getElementById(id); c.value = String(valor); c.dispatchEvent(new Event("change")); };
+  poner("menu-planeta", cfg.planeta); poner("menu-modo-planeta", cfg.vehiculo); poner("menu-tamano", cfg.tamano);
+  poner("menu-nivel", cfg.nivel); poner("menu-modo", cfg.control);
+  document.getElementById("menu-semilla").value = String(cfg.semilla);
+  cadenaAutomatica = null;
+  document.getElementById("iniciar").click();
+}
+
+const vistaComparar = crearComparar({
+  valores: () => {
+    const enPartida = document.getElementById("menu").classList.contains("oculto") && estado && !estado.sin_partida;
+    if (enPartida) return { planeta: vigente.planeta, vehiculo: vigente.vehiculo, tamano: document.getElementById("tamano").value, nivel: estado.nivel, semilla: estado.semilla };
+    return { planeta: document.getElementById("menu-planeta").value, vehiculo: document.getElementById("menu-modo-planeta").value, nivel: document.getElementById("menu-nivel").value };
+  },
+  planetas: () => [...document.getElementById("menu-planeta").options].map((o) => [o.value, o.textContent]),
+});
+
+// Tutorial: cada paso deja visible el panel que necesita
+const tutorial = crearTutorial({
+  vehiculo: () => vehiculoDe(vigente.vehiculo || (estado && estado.modo_planeta)),
+  preparar: (clave) => {
+    const abrir = (id, boton) => { const c = document.getElementById(id); if (c && c.classList.contains("plegado")) document.getElementById(boton).click(); };
+    if (clave === "controles") { abrir("manual", "manual-toggle"); abrir("controles", "controles-toggle"); }
+    if (clave === "misión" && panelIA) panelIA.abrir("mision");   // los eventos viven en la pestaña Misión del panel derecho
+    if (clave === "recomendaciones") {
+      abrir("decision", "decision-toggle");
+      const d = document.getElementById("det-rec"); if (d) d.open = true;
+    }
+  },
+});
+const avisarAccion = (tipo) => window.dispatchEvent(new CustomEvent("ares:accion", { detail: { tipo } }));
+
+async function asegurarModoManual() {
+  if (document.getElementById("modo").value === "manual") return;
+  avisar(TEXTO_CAMBIO_MODO);
+  detenerReproduccion();
+  document.getElementById("modo").value = "manual";
+  const datos = await llamar("POST", "/modo", { modo: "manual", veto: document.getElementById("veto").checked });
+  if (datos) { estado = datos; pintarHud(datos); await refrescarPaneles(); }
+}
+document.querySelectorAll(".tutorial-abrir").forEach((b) => b.addEventListener("click", async () => {
+  if (!estado || estado.sin_partida || ocupado()) return;
+  await asegurarModoManual();
+  tutorial.cerrarOferta();
+  tutorial.iniciar();
+}));
+document.getElementById("menu-tutorial").addEventListener("click", () => {
+  const modo = document.getElementById("menu-modo");
+  modo.value = "manual"; modo.dispatchEvent(new Event("change"));
+  tutorialPendiente = true;
+  document.getElementById("iniciar").click();
+});
+document.getElementById("menu-records").addEventListener("click", () => abrirRecords());
+document.getElementById("menu-comparar").addEventListener("click", () => vistaComparar.abrir());
+document.getElementById("pol-comparar-vivo").addEventListener("click", () => vistaComparar.abrir());
+document.getElementById("meta-records").addEventListener("click", () => abrirRecords({ semilla: estado ? estado.semilla : "" }));
+
 // Menú de inicio (ARX-14): hasta que el jugador inicia una partida, la página no crea ninguna.
 // Aplica la configuración del asistente: semilla, nivel, modo y veto.
 document.getElementById("iniciar").addEventListener("click", async () => {
@@ -2689,6 +3001,8 @@ document.getElementById("iniciar").addEventListener("click", async () => {
   mostrarMision(estado.semilla, nivel);
   document.getElementById("menu").classList.add("oculto");
   document.getElementById("menu-semilla").value = "";   // el siguiente inicio vuelve a ser aleatorio, salvo que se escriba una
+  if (tutorialPendiente) { tutorialPendiente = false; tutorial.iniciar(); }
+  else if (config.control === "manual") setTimeout(() => tutorial.ofrecer(), 700);   // la primera vez en manual se ofrece el recorrido
 });
 ["hist-modo", "hist-tecnica", "hist-motivo"].forEach((id) =>
   document.getElementById(id).addEventListener("change", () => refrescarHistorial()));
@@ -2732,12 +3046,15 @@ function ocupado() {
 async function mover(rumbo) {
   if (finActiva()) return;
   if (!mapa || ocupado()) return;
+  if (enModoManual() && reproduciendo !== null) { detenerReproduccion(); avisar("Control retomado: conduces tú."); }   // mover a mano es retomar el control
   const r = await llamar("POST", "/mover", { rumbo });
   if (!r) return;
   avisar((r.movido ? `Movimiento ${rumbo}.` : `Movimiento ${rumbo} rechazado: ${r.motivo}`) + eventosTexto(r.eventos_combate));
   registrarEvento(r.movido ? `mover ${rumbo}` : `mover ${rumbo} rechazado: ${r.motivo}`);
+  if (r.movido) avisarAccion("mover");
   await refrescarEstado();
   await refrescarPaneles();
+  revisarFinManual();
 }
 
 // Cierra todos los avisos y capas: se llama al crear una partida o al entrar en cualquier carga (N9)
@@ -2758,8 +3075,9 @@ function mostrarAvisosNuevos(lista) {
   for (const aviso of vigentes) {
     if (avisosVistos.has(aviso)) continue;
     avisosVistos.add(aviso);
-    avisar(aviso);
-    registrarEvento(`aviso: ${aviso}`);
+    const claro = limpiarAviso(aviso, vehiculoActual());   // sin el código interno delante y con el vehículo real
+    avisar(claro);
+    registrarEvento(`aviso: ${claro}`);
   }
   // Un aviso que deja de estar vigente se olvida: si vuelve, se muestra otra vez
   for (const aviso of [...avisosVistos]) if (!vigentes.includes(aviso)) avisosVistos.delete(aviso);
@@ -2847,6 +3165,7 @@ async function paso() {
   }
   const terminada = ESTADOS_TERMINALES.includes(r.estado);
   const fin = r.accion === "fin";
+  if (terminada || fin) detenerReproduccion();   // antes de esperar al refresco: otro tick del reloj enviaba un /paso más y el motor respondía 409
   if (r.ultimo && r.ultimo.paso != null) ultimoPasoNumero = r.ultimo.paso;
   if (r.accion === "disparar") efectoDisparoAutomatico(r, estadoPrevio);
   if (cadenaAutomatica && r.accion === "replanificar") cadenaAutomatica.replanteosActual += 1;
@@ -2856,9 +3175,9 @@ async function paso() {
   if (terminada) sonido.fin(r.estado === "EXITO");
   await refrescarPaneles();
   momentosEnPaso(r);
-  const motivos = (r.motivos || []).join(", ");
-  avisar(`Paso ${pasoDe(r)}: ${r.accion} · ${motivos}` + eventosTexto(r.eventos_combate));
-  registrarEvento(`paso ${pasoDe(r)}: ${r.accion} · ${motivos}`);
+  const motivos = nombresMotivos(r.motivos);
+  avisar(`Paso ${pasoDe(r)}: ${r.accion}${motivos ? ` · ${motivos}` : ""}` + eventosTexto(r.eventos_combate));
+  registrarEvento(`paso ${pasoDe(r)}: ${r.accion}${motivos ? ` · ${motivos}` : ""}`);
   mostrarAvisosNuevos(estado && estado.avisos);   // después del aviso del paso, para que no lo tape
   (r.eventos_combate || []).forEach((e) => registrarEvento(`combate: ${e}`));
   if (cine && cineVivo() && !terminada && !fin) {
@@ -2868,7 +3187,7 @@ async function paso() {
   }
   if (terminada) {
     detenerReproduccion();
-    avisar(`Fin de la partida: ${r.estado}.`);
+    avisar(`Fin de la partida: ${nombreEstado(r.estado)}.`);
     alFinDeMision(r.estado);
     return false;
   }
@@ -2926,15 +3245,28 @@ async function disparar() {
   registrarEvento(r.impacto ? "disparo: impacto" : "disparo sin impacto");
   await refrescarEstado();
   await refrescarPaneles();
+  revisarFinManual();
 }
 
-const ROTULO_PLAY = "▶ Reproducir", ROTULO_PAUSA = "❚❚ Pausa";
+// En manual, «Reproducir» pone a la IA a conducir: el botón lo dice, y mientras conduce hay un aviso fijo para retomar el control.
+// (Ronda 23.) El servidor ve esos pasos como de la IA en una partida manual y la marca como asistida para los récords.
+const enModoManual = () => document.getElementById("modo").value === "manual";
+function pintarRotulosReproduccion() {
+  const manual = enModoManual(), corre = reproduciendo !== null;
+  const r = document.getElementById("reproducir"), un = document.getElementById("paso"), cp = document.getElementById("cine-play");
+  if (r) r.textContent = corre ? (manual ? "❚❚ Retomar el control" : "❚❚ Pausa") : (manual ? "▶ Dejar que la IA conduzca" : "▶ Reproducir");
+  if (r) r.title = manual ? "En modo manual, la IA conduce sola hasta que retomes el control. La misión contará como asistida por la IA en los récords." : "";
+  if (un) { un.textContent = manual ? "⏭ Un paso de la IA" : "⏭ Un paso"; un.title = manual ? "La IA da un paso por ti; la misión contará como asistida por la IA" : "Avanza un paso de la IA"; }
+  if (cp) { cp.textContent = corre ? "⏸" : "▶"; cp.setAttribute("aria-label", corre ? "Pausar la simulación (barra espaciadora)" : "Reanudar la simulación (barra espaciadora)"); cp.title = cp.getAttribute("aria-label"); }
+  const aviso = document.getElementById("ia-conduce");
+  if (aviso) aviso.classList.toggle("oculto", !(manual && corre));
+}
 function detenerReproduccion() {
   if (reproduciendo !== null) {
     clearInterval(reproduciendo);
     reproduciendo = null;
-    document.getElementById("reproducir").textContent = ROTULO_PLAY;
   }
+  pintarRotulosReproduccion();
 }
 
 function alternarReproduccion() {
@@ -2943,17 +3275,17 @@ function alternarReproduccion() {
     return;
   }
   const ms = Number(document.getElementById("velocidad").value);
-  document.getElementById("reproducir").textContent = ROTULO_PAUSA;
   reproduciendo = setInterval(() => { paso(); }, ms);
+  pintarRotulosReproduccion();
 }
 
 // ---------- intervención (ARX-10) ----------
 // Qué se espera ver con cada intervención (22/11: la sección se explicaba mal)
 const EXPLICACION_INTERVENCION = {
   ninguna: "",
-  "rna-barranco": "Qué mirar: aunque el terreno esté libre, el supervisor vetará el avance (V-RNA-BARRANCO) y el rover replanificará. Prueba que la RNA puede frenar al rover.",
-  "rna-libre": "Qué mirar: la RNA ya no avisa de barrancos; si el rover se sigue frenando ante uno, es el telémetro del supervisor (V-BORDE-BARRANCO). Prueba qué protección depende de la RNA y cuál no.",
-  difuso: "Qué mirar: la velocidad queda fija en el valor elegido (0 = el rover se detiene). Prueba que el difuso es quien decide la velocidad.",
+  "rna-barranco": "Qué mirar: aunque el terreno esté libre, el supervisor vetará el avance por el barranco que cree ver la RNA y el vehículo replanificará. Prueba que la RNA puede frenarlo.",
+  "rna-libre": "Qué mirar: la RNA ya no avisa de barrancos; si el vehículo se sigue frenando ante uno, es el telémetro del supervisor, que mide el desnivel. Prueba qué protección depende de la RNA y cuál no.",
+  difuso: "Qué mirar: la velocidad queda fija en el valor elegido (0 = el vehículo se detiene). Prueba que el difuso es quien decide la velocidad.",
 };
 function actualizarCampoIntervencion() {
   const tecnica = document.getElementById("int-tecnica").value;
@@ -3321,7 +3653,7 @@ function cineCortePaso() {
 // Botón «Cine» de la barra: oculta los paneles (como H) y enciende el director en cualquier modo de conducción.
 // Reproducir encadena tomas automáticas; Un paso corta a un plano cercano; H, Esc, el botón o tocar la escena salen.
 async function cineDesdeBarra() {
-  if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); cineOcultoPorH = false; sincronizarCine(); return; }
+  if (cineVivo()) { salirCine(); return; }
   cineForzado = true;
   const yaOculto = document.body.classList.contains("cine");
   document.body.classList.add("cine"); cineOcultoPorH = !yaOculto;
@@ -3334,6 +3666,16 @@ async function cineDesdeBarra() {
   }
   sincronizarCine();
 }
+// Salida única del modo cine (botón «Salir», Esc, H, «Seguir»): apaga el director, quita la clase y deja cada panel como estaba
+function salirCine() {
+  if (cine && cineVivo()) cineActivar(false);
+  document.body.classList.remove("cine");
+  cineOcultoPorH = false; cineForzado = false;
+  sincronizarCine();
+}
+document.getElementById("cine-salir").addEventListener("click", () => salirCine());
+document.getElementById("cine-play").addEventListener("click", (ev) => { alternarReproduccion(); ev.currentTarget.blur(); });   // arranca o pausa sin salir del cine
+document.getElementById("ia-retomar").addEventListener("click", () => { detenerReproduccion(); avisar("Control retomado: conduces tú."); });
 // Estado visible del cine: bandas negras y botón pulsado mientras el director está en vivo
 let cineVivoAntes = null;
 function sincronizarCine() {
@@ -3372,10 +3714,11 @@ for (const tipo of ["pointerdown", "wheel"]) {
 window.addEventListener("keydown", (ev) => {
   if (finActiva()) return;   // con la pantalla final abierta no responde ningún atajo de la partida
   // Con el director en vivo solo valen Esc y H; el resto de atajos del juego (espacio, flechas, WASD, zoom) no hacen nada
+  if (ev.key === "Escape" && !pausaActiva && document.body.classList.contains("cine") && document.getElementById("laboratorio").classList.contains("oculto")) { ev.preventDefault(); salirCine(); return; }   // Esc sale del cine (con o sin director) antes de abrir la pausa
   if (cineVivo()) {
     if (ev.key === "Escape") { cineActivar(false); return; }
     if (!(ev.key === "h" || ev.key === "H") || ["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) {
-      if (ev.key === " " && ev.target === document.body) ev.preventDefault();
+      if (ev.key === " " && ev.target === document.body) { ev.preventDefault(); alternarReproduccion(); }   // en el cine, la barra espaciadora arranca o pausa
       return;
     }
   }
@@ -3391,7 +3734,7 @@ window.addEventListener("keydown", (ev) => {
   if (pausaActiva) return;
   // H: modo cine, oculta los paneles y deja la escena (no actúa mientras se escribe en un campo)
   if ((ev.key === "h" || ev.key === "H") && !["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) {
-    if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); cineOcultoPorH = false; return; }   // H otra vez: el director se desactiva
+    if (cineVivo()) { salirCine(); return; }   // H otra vez: el director se desactiva
     document.body.classList.toggle("cine");
     if (document.body.classList.contains("cine") && document.getElementById("cine-director").checked) {
       cineOcultoPorH = true;
@@ -3401,7 +3744,7 @@ window.addEventListener("keydown", (ev) => {
   }
   if (ev.key === " ") {
     ev.preventDefault();
-    disparar();
+    if (document.body.classList.contains("cine")) alternarReproduccion(); else disparar();   // en el cine (sin director) también arranca o pausa
     return;
   }
   const rumbo = RUMBO_TECLA[ev.key];
@@ -3450,7 +3793,7 @@ document.getElementById("modo").addEventListener("change", async (ev) => {
   if (datos) {
     estado = datos;
     pintarHud(datos);
-    avisar(`Modo ${datos.modo}.`);
+    avisar(`Modo ${nombreModo(datos.modo)}.`);
     await refrescarPaneles();
     pintarTira();   // H-7: la tira aparece u oculta según el modo, sin esperar un paso nuevo
     }
@@ -3545,8 +3888,12 @@ function encuadrarVista() {
   let izq = 0, der = 0;
   if (!document.body.classList.contains("cine") && W > 760) {
     const col = document.getElementById("columna");
-    if (col && col.offsetParent !== null) izq = col.getBoundingClientRect().right;
+    // (offsetParent es siempre null en elementos fixed: con él la columna nunca contaba y el vehículo quedaba detrás de ella)
+    if (col && col.getClientRects().length > 0) izq = col.getBoundingClientRect().right;
     if (panelIA && !panelIA.elemento.classList.contains("oculto")) der = panelIA.ancho + 12;
+    // la zona de vista (ficha de la sonda y controles) ocupa el borde derecho del hueco: el centro óptico se corre para que el vehículo no quede detrás
+    const zona = document.getElementById("zona-vista");
+    if (zona && zona.getClientRects().length > 0 && !document.getElementById("manual").classList.contains("oculto")) der += zona.getBoundingClientRect().width + 12;
   }
   const desplazamiento = Math.round((der - izq) / 2);
   if (desplazamiento) camara.setViewOffset(W, H, desplazamiento, 0, W, H); else camara.clearViewOffset();
@@ -3573,7 +3920,7 @@ function montarBarraMision() {
   const barra = document.createElement("div");
   barra.id = "barra-mision"; barra.className = "barra-mision"; barra.setAttribute("role", "toolbar"); barra.setAttribute("aria-label", "Control de la simulación");
   const viejaSim = document.getElementById("simulacion"), viejaRep = rep.closest("section");
-  rep.textContent = ROTULO_PLAY; un.textContent = "⏭ Un paso"; un.title = "Avanza un paso de la IA";
+  pintarRotulosReproduccion();
   const cineB = document.createElement("button");
   cineB.id = "boton-cine"; cineB.type = "button"; cineB.className = "boton-cine"; cineB.textContent = "🎬 Cine";
   cineB.title = "Modo cine: cámara de director sin paneles. Reproducir encadena tomas; Un paso corta a un plano cercano. H o Esc para salir.";
@@ -3610,12 +3957,15 @@ function montarBarraMision() {
   if (viejaRep && viejaRep !== viejaSim && !viejaRep.querySelector("button")) viejaRep.hidden = true;
 }
 try { montarBarraMision(); } catch (e) { console.warn("barra de control: se quedan los botones en el panel", e); }
+// El aviso «La IA está conduciendo» vive en la franja inferior, justo sobre la barra de control, para que no tape el mensaje ni la bitácora
+try { const dock = document.getElementById("dock"), aviso = document.getElementById("ia-conduce"), barra = document.getElementById("barra-mision"); if (dock && aviso) dock.insertBefore(aviso, barra || dock.firstChild); } catch (e) { /* queda flotando arriba */ }
 new MutationObserver(encuadrarVista).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+for (const id of ["manual", "menu"]) new MutationObserver(encuadrarVista).observe(document.getElementById(id), { attributes: true, attributeFilter: ["class"] });   // los controles aparecen al iniciar la partida
 encuadrarVista();
 
 // 22/11: «⌖ Seguir» / tecla F: la cámara vuelve a seguir al vehículo (rover o sonda) en cualquier modo y momento
 function seguirVehiculo() {
-  if (cineVivo()) { cineActivar(false); document.body.classList.remove("cine"); }
+  if (cineVivo()) salirCine();
   if (modoCamara === "orbita") document.getElementById("encuadrar").click();   // recentra y deja el seguimiento activo
   camaraSiguiendo = true;
 }
@@ -3767,7 +4117,8 @@ function animar() {
     camaraDeModo(dt);               // persecución, primera persona o cenital: la cámara va con el rover
   } else {
   if (camaraSiguiendo && grupoRover.children.length) {
-    const p = grupoRover.position;
+    if (encuadreEvento && performance.now() > encuadreEvento.hasta) encuadreEvento = null;
+    const p = encuadreEvento ? encuadreEvento.punto : grupoRover.position;   // breve encuadre de un evento fuera de cuadro
     const delta = new THREE.Vector3(p.x, p.y + 0.25, p.z).sub(controles.target).multiplyScalar(1 - Math.exp(-dt * 5));
     controles.target.add(delta);
     camara.position.add(delta);
@@ -3784,6 +4135,9 @@ function animar() {
   camara.position.add(desplazamiento);
   efectos.actualizarMarcadores(tiempo, camara);
   efectos.actualizarMovibles(tiempo, dt);
+  marcasEvento.actualizar(tiempo);
+  actualizarEtiquetaEvento();
+  if (mapa && grupoRover.children.length) ambientePlaneta.actualizar(dt, tiempo, grupoRover.position);
   if (intro && intro.activo) intro.render(); else if (viaje && viaje.activo) viaje.render();
   else if (cinePost && cinePost.activo) {
     try { cinePost.render(scene, camara, camara.position.distanceTo(grupoRover.position)); }

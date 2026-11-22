@@ -2,6 +2,7 @@
 // Solo lee del motor (GET /rna/red, /rna, /difuso, /ag) y solo pide los datos de la pestaña abierta.
 // Todo con textContent (sin innerHTML). Si algo falla, el panel lo dice y la partida sigue igual.
 import { dibujarLineas, preparar } from "/static/laboratorio.js?v=r14";
+import { reglasActivadas, plural, nombresMotivos, textoBateriaDifuso, ETIQUETA_BATERIA_UNIVERSO } from "/static/textos.js?v=r14";
 
 const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "-" : Number(v).toFixed(d).replace(".", ","));
 const pct = (v) => (v == null ? "-" : `${coma(v * 100, 1)} %`);
@@ -11,7 +12,7 @@ const ETIQUETA_RASGO = {
   proximidad_frontal_m: "proximidad (m)", desnivel_frontal_m: "desnivel (m)", contraste_optico: "contraste",
   vibracion: "vibración", borde_barranco: "borde", gradiente_altura_m: "gradiente (m)",
 };
-const ETIQUETA_UNIVERSO = { distancia: "distancia (m)", bateria: "batería (%)", inclinacion: "inclinación (°)", temperatura: "temperatura (°C)" };
+const ETIQUETA_UNIVERSO = { distancia: "distancia (m)", bateria: ETIQUETA_BATERIA_UNIVERSO, inclinacion: "inclinación (°)", temperatura: "temperatura (°C)" };
 const PESTANAS = [["rna", "RNA", "Red neuronal"], ["difuso", "Difuso", "Lógica difusa"], ["ag", "Genético", "Algoritmo genético"], ["mision", "Misión", "Partida y simulación"]];
 const ARISTAS_POR_CAPA = 70;      // conexiones dibujadas entre dos capas (las de mayor contribución)
 const CLAVE_ANCHO = "ares.panel.ancho", CLAVE_PESTANA = "ares.panel.pestana", CLAVE_PLEGADO = "ares.panel.plegado";
@@ -104,7 +105,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   let plegado = leer(CLAVE_PLEGADO, "0") === "1";
   let ancho = Number(leer(CLAVE_ANCHO, "")) || Math.round(Math.min(560, Math.max(360, window.innerWidth * 0.24)));
   let red = null, rnaDatos = null, difDatos = null, agDatosUlt = null, iaUlt = null;
-  let enVuelo = false, ultimoPaso = null;
+  let enVuelo = false, ultimoPaso = null, epoca = 0;   // epoca: sube con cada partida nueva; una respuesta de la anterior se descarta
   const HIST_N = 40;
   const hist = [];   // { paso, pb, conf, vel, faltan, replan }
   let anim = null;   // { t0 } mientras corre el pulso de la red
@@ -140,8 +141,10 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   // ---------- datos: la decisión real del último paso (GET /ia/paso) ----------
   async function cargar(forzar = false) {
     if (enVuelo) return; enVuelo = true;
+    const miEpoca = epoca;
     try {
       const d = await obtener("/ia/paso");
+      if (miEpoca !== epoca) return;   // llegó de la partida anterior
       if (!d) { pasoInfo.textContent = "Sin datos (no hay partida o el motor no respondió)."; return; }
       iaUlt = d;
       const nuevo = d.hay_paso && d.paso !== ultimoPaso;
@@ -152,10 +155,11 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
         const sup = d.supervisor || {};
         pasoInfo.replaceChildren(el("strong", null, `Paso ${d.paso}`),
           document.createTextNode(` · celda ${d.posicion ? `(${d.posicion.join(", ")})` : "-"} → ${d.rumbo || "-"} · ${sup.accion || "-"}`),
-          el("span", "pia-motivos", (sup.motivos || []).join(", ")));
+          el("span", "pia-motivos", nombresMotivos(sup.motivos)));
       }
       if (d.rna) {
         if (!red || !red.modelo || !d.rna.modelo || red.modelo.perfil !== d.rna.modelo.perfil) red = await obtener("/rna/red");
+        if (miEpoca !== epoca) return;
         rnaDatos = { ...d.rna, accion: (d.supervisor || {}).accion };
       } else rnaDatos = null;
       difDatos = d.difuso || null;
@@ -314,17 +318,18 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     const d = difDatos; if (!d || secciones.difuso.hidden) return;
     const s = d.salida || {};
     difSalida.replaceChildren(el("strong", null, `velocidad ${coma(s.velocidad, 3)}`),
-      document.createTextNode(s.fallback ? " · sin reglas: valor de respaldo" : ` · ${(d.reglas_activadas || []).length} reglas activadas`));
+      document.createTextNode(s.fallback ? " · sin reglas: valor de respaldo" : ` · ${reglasActivadas((d.reglas_activadas || []).length)}`));
     if (d.aborto && d.aborto.activo) difSalida.append(el("div", "pia-alerta", d.aborto.motivo));
     for (const [k, { c, v }] of Object.entries(difLienzos)) {
       const cur = d.curvas && d.curvas[k]; if (!cur) continue;
       const x = d.entradas[k];
-      v.textContent = ` ${coma(x, k === "distancia" ? 1 : 0)}`;
+      // la batería se rotula con el % real de la capacidad (el del HUD) y, entre paréntesis, lo que recibió el difuso
+      v.textContent = k === "bateria" ? ` ${textoBateriaDifuso(d.entradas)}` : ` ${coma(x, k === "distancia" ? 1 : 0)}`;
       const nombres = Object.keys(cur.conjuntos);
       dibujarLineas(c, {
         xmin: d.universos[k].min, xmax: d.universos[k].max, ymin: 0, ymax: 1,
         series: nombres.map((n, i) => ({ valores: cur.x.map((xx, j) => [xx, cur.conjuntos[n][j]]), color: COLORES_CONJUNTO[i % 4], ancho: 1.6 })),
-        marcas: [{ x, color: "rgba(255,255,255,0.75)" }], fmtY: (y) => coma(y, 1), fmtX: (xx) => coma(xx, 0),
+        marcas: [{ x: Math.min(d.universos[k].max, Math.max(d.universos[k].min, x)), color: "rgba(255,255,255,0.75)" }], fmtY: (y) => coma(y, 1), fmtX: (xx) => coma(xx, 0),
       });
     }
     const nombres = Object.keys(s.conjuntos || {});
@@ -345,11 +350,11 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     const ult = gens[gens.length - 1] || {};
     const rep = d.ultimo_replanteo;
     agResumen.replaceChildren(
-      el("strong", null, `faltan ${d.celdas_restantes} celdas · sitios ${d.visitados}/${d.sitios}`),
+      el("strong", null, `faltan ${plural(d.celdas_restantes, "celda", "celdas")} · sitios ${d.visitados}/${d.sitios}`),
       document.createTextNode(gens.length ? ` · mejor fitness ${coma(ult.mejor, 2)}${d.viable === false ? " · orden no viable (respaldo)" : ""}` : " · sin ejecución del AG todavía"));
     // ultimo_replanteo solo anota los replanteos por eventos (sismo, meteorito…); los de rutina (sitio visitado, veto) no
     agTituloCurva.textContent = rep ? `fitness por generación · última ejecución (replanteo por evento en el paso ${rep.paso}: ${rep.motivo})`
-      : (d.replanes ? `fitness por generación · última ejecución del AG (${d.replanes} replanteos en la misión)` : "fitness por generación · plan inicial");
+      : (d.replanes ? `fitness por generación · última ejecución del AG (${plural(d.replanes, "replanteo", "replanteos")} en la misión)` : "fitness por generación · plan inicial");
     if (gens.length) {
       const ys = gens.flatMap((g) => [g.mejor, g.media, g.peor]).filter((v) => v != null);
       const lo = Math.min(...ys), hi = Math.max(...ys), m = (hi - lo) * 0.08 || 0.1;
@@ -390,6 +395,19 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   asa.addEventListener("pointerup", soltar); asa.addEventListener("pointercancel", soltar);
   let reajuste = null;
   window.addEventListener("resize", () => { clearTimeout(reajuste); reajuste = setTimeout(() => { aplicarAncho(); redibujar(); }, 120); });
+  // Partida nueva: se vacía todo lo derivado de la misión anterior (historial de los gráficos, decisión mostrada, narración)
+  function reiniciar() {
+    epoca += 1; hist.length = 0; ultimoPaso = null; iaUlt = null; rnaDatos = null; difDatos = null; agDatosUlt = null; red = null; anim = null;
+    pasoInfo.textContent = "Sin pasos todavía: pulsa «Un paso» o «Reproducir».";
+    narracion.textContent = "";
+    rnaDecision.textContent = "Esperando el primer paso…"; difSalida.textContent = "Esperando el primer paso…"; agResumen.textContent = "Esperando el primer paso…";
+    rnaProbs.replaceChildren(); difReglas.replaceChildren(); agDatos.replaceChildren();
+    for (const c of [rnaLienzo, rnaHist.c, difHist.c, agHist.c, difLienzoSalida, agLienzo, ...Object.values(difLienzos).map((x) => x.c)]) {
+      const x = c.getContext && c.getContext("2d"); if (x) { x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height); }
+    }
+    for (const { v } of Object.values(difLienzos)) v.textContent = "";
+    if (!raiz.classList.contains("oculto") && !plegado) actualizar({ forzar: true });
+  }
   // Visibilidad: el panel solo existe en la partida (la app lo muestra u oculta)
   function mostrar(si) {
     const antes = !raiz.classList.contains("oculto");
@@ -401,5 +419,5 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   document.body.append(raiz);
   aplicarPlegado();
   abrir(pestana);
-  return { actualizar, mostrar, abrir, get ancho() { return anchoReal(); }, elemento: raiz };
+  return { actualizar, mostrar, abrir, reiniciar, get ancho() { return anchoReal(); }, elemento: raiz };
 }

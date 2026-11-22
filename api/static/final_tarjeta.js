@@ -5,10 +5,11 @@ import {
   tituloFinal, puntajeFinal, desglosePuntaje, estrellas, formatoDato, confetiPermitido,
 } from "./final_datos.js?v=r14";
 import { icono, insignia, estrella } from "./final_iconos.js?v=r14";
+import { Vehiculo, nombreEstado } from "./textos.js?v=r14";
 
 const reducidoAhora = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
-export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, alRepetir = null, alOtroPlaneta = null } = {}) {
+export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, alRepetir = null, alOtroPlaneta = null, alVerRecords = null } = {}) {
   if (!contenedor) throw new Error("crearFinal necesita un contenedor");
   const el = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
   const boton = (clase, texto, ico) => {
@@ -43,6 +44,12 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   const desglose = el("ul", "fn-desglose");
   puntajeCaja.append(puntajeEtiqueta, puntajeValor, rotuloPuntaje, notaPuntaje, desglose);
 
+  // Récord de la misión (ronda 23): «nuevo récord» resaltado, o dónde quedó entre las marcas de la semilla
+  const recordEl = el("section", "fn-record oculto");
+  const recordTitulo = el("h3", "fn-record-titulo"), recordTexto = el("p", "fn-record-texto");
+  const verRecords = boton("secundario fn-btn", "Ver récords");
+  recordEl.append(recordTitulo, recordTexto, verRecords);
+
   const rejilla = el("div", "fn-rejilla");
   const notasEstadisticas = el("div", "fn-notas");
 
@@ -70,7 +77,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   const casilla = document.createElement("input"); casilla.type = "checkbox"; casilla.className = "casilla-final"; casilla.checked = true;
   etiquetaCasilla.append(casilla, document.createTextNode(" Mostrar la pantalla final"));
 
-  panel.append(confeti, cabecera, estrellasEl, puntajeCaja, rejilla, notasEstadisticas, seccionNuevos, seccionTodos, seccionMomentos, aviso, acciones, etiquetaCasilla);
+  panel.append(confeti, cabecera, estrellasEl, puntajeCaja, recordEl, rejilla, notasEstadisticas, seccionNuevos, seccionTodos, seccionMomentos, aviso, acciones, etiquetaCasilla);
   raiz.append(panel);
   contenedor.append(raiz);
 
@@ -87,6 +94,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   const llamar = (fn) => { if (typeof fn === "function") fn(); };
   const onTecla = (e) => {
     if (!visible) return;
+    if (document.querySelector(".vx-capa:not(.oculto)")) return;   // con la vista de récords encima, las teclas son de esa vista
     if (e.key === "Escape") {
       e.preventDefault(); e.stopPropagation();
       if (!visor.classList.contains("oculto")) cerrarVisor(); else llamar(alContinuar);
@@ -111,6 +119,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   cerrar.addEventListener("click", () => llamar(alCerrar || alContinuar));
   jugar.addEventListener("click", () => llamar(alRepetir));
   explorar.addEventListener("click", () => llamar(alOtroPlaneta));
+  verRecords.addEventListener("click", () => llamar(alVerRecords));
 
   function pararAnimaciones() {
     clearInterval(temporizadorCuenta); clearInterval(temporizadorConfeti);
@@ -164,14 +173,14 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   }
 
   // resultado: de normalizarResultado. momentos: [{titulo, texto, paso, imagen}]. opciones: { logrosNuevos, logros, activada, alCambiarCasilla }
-  function mostrar(resultado, momentos = [], { logrosNuevos = [], logros = [], activada = true, alCambiarCasilla = null } = {}) {
+  function mostrar(resultado, momentos = [], { logrosNuevos = [], logros = [], activada = true, alCambiarCasilla = null, record = null } = {}) {
     if (!vivo) return;
     const r = resultado || {};
     try { if (!foco) foco = document.activeElement; } catch (e) { foco = null; }
     const reducido = reducidoAhora();
     pararAnimaciones();
     titulo.textContent = tituloFinal(r.codigo);
-    subtitulo.textContent = [r.planeta || "—", r.modo || "—", r.motivo_final || r.codigo || "—"].join(" · ");
+    subtitulo.textContent = [r.planeta || "—", r.modo ? Vehiculo(r.modo) : "—", nombreEstado(r.motivo_final || r.codigo || "—")].join(" · ");
     const n = estrellas(r);
     pintarEstrellas(n);
     const total = puntajeFinal(r);
@@ -185,6 +194,9 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
       }, 24);
     }
     panel.classList.toggle("sin-animacion", reducido);
+    recordEl.classList.toggle("oculto", !record);
+    recordEl.classList.toggle("nuevo", !!(record && record.nuevo));
+    if (record) { recordTitulo.textContent = record.titulo; recordTexto.textContent = record.detalle; }
     const d = desglosePuntaje(r);
     desglose.replaceChildren(...d.terminos.map((t) => {
       const signo = t.clave === "violaciones" ? "−" : "+";
@@ -194,7 +206,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
     }));
     rejilla.replaceChildren(
       pintarEstadistica("planeta", "Cuerpo", r.planeta || "—"),
-      pintarEstadistica("brujula", "Modo", r.modo || "—"),
+      pintarEstadistica("brujula", "Vehículo", r.modo ? Vehiculo(r.modo) : "—"),
       pintarEstadistica("microscopio", "Ciencia", r.ciencia == null ? "—" : `${formatoDato(r.ciencia * 100)} %`),
       pintarEstadistica("probeta", "Objetivos muestreados", r.objetivos_muestreados == null || r.objetivos_totales == null ? "—" : `${formatoDato(r.objetivos_muestreados)} / ${formatoDato(r.objetivos_totales)}`),
       pintarEstadistica("bateria", "Batería final", r.bateria_pct == null ? "—" : `${formatoDato(r.bateria_pct, { decimales: 1 })} %`),

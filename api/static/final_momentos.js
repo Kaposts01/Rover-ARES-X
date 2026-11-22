@@ -1,6 +1,7 @@
 // Pantalla final: «mejores momentos». Captura hasta 3 imágenes del canvas del renderer (primer veto, mayor riesgo y final).
 // Cada captura vuelve a dibujar la escena y copia el canvas en el mismo instante (sin preserveDrawingBuffer en el renderer).
 import { MAX_MOMENTOS, ANCHO_MOMENTO } from "./final_datos.js?v=r14";
+import { nombresMotivos } from "./textos.js?v=r14";
 
 export const ORDEN_MOMENTOS = ["veto", "riesgo", "final"];
 
@@ -36,7 +37,7 @@ export function crearMomentos({ canvas, dibujar, ancho = ANCHO_MOMENTO, max = MA
   function alPaso({ paso, motivos, riesgo } = {}) {
     const lista = Array.isArray(motivos) ? motivos : [];
     if (!guardados.has("veto") && lista.some((m) => typeof m === "string" && m.startsWith("V-"))) {
-      capturar("veto", { titulo: "Primer veto", texto: `La IA frenó una acción: ${lista.filter((m) => m.startsWith("V-")).join(", ")}.`, paso });
+      capturar("veto", { titulo: "Primer veto", texto: `La IA frenó una acción: ${nombresMotivos(lista.filter((m) => m.startsWith("V-")))}.`, paso });
     }
     const r = Number(riesgo);
     if (Number.isFinite(r) && r > riesgoMax && (paso == null || paso - pasoRiesgo >= 8 || !guardados.has("riesgo"))) {

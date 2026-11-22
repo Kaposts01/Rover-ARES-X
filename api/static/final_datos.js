@@ -26,7 +26,7 @@ export const CUERPOS_TROTAMUNDOS = 5;
 
 export const ROTULO_PUNTAJE = "Puntaje de juego, no es un criterio de evaluación.";
 export const ROTULO_PUNTAJE_HUD = "Puntaje simple";   // el del HUD: otra cuenta, distinta de la de la pantalla final
-export const NOTA_PUNTAJE = "No es el puntaje simple del HUD, ni el fitness del algoritmo genético, ni una métrica de la rúbrica.";
+export const NOTA_PUNTAJE = "No es el puntaje simple del HUD (100 × sitios visitados ÷ sitios totales + 0,5 × batería restante + 50 si no hubo vetos), ni el fitness del algoritmo genético, ni una métrica de la rúbrica.";
 export const ROTULO_FICCION = "Ficción, no evidencia";
 export const NOTA_SENAL = "La señal anómala del motor es una lectura sin explicación: no afirma vida.";
 export const NOTA_SIN_EVENTO = "Requiere un evento que el rover no tiene.";

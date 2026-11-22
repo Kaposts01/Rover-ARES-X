@@ -1,7 +1,7 @@
 // ARES-X · escena 3D del rover (ARX-04, ARX-05 y ARX-20: diseño realista). El motor está en Python; aquí solo se dibuja y se envían acciones.
 import * as THREE from "three";
 import { OrbitControls } from "/static/vendor/OrbitControls.js";
-import { iniciarLaboratorios } from "/static/laboratorio.js?v=r14";
+import { iniciarLaboratorios, seguirPasoLaboratorio } from "/static/laboratorio.js?v=r14";
 import * as efectos from "/static/efectos.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
@@ -1628,7 +1628,8 @@ async function refrescarPaneles() {
   // Los gráficos solo se piden si el panel está abierto
   if (!document.getElementById("graficos").classList.contains("plegado")) await refrescarGraficos();
   marcarDesbordes();
-  if (panelIA) panelIA.actualizar({ firma: firmaPlanHolo(estado) });   // el panel de IA pide solo lo de su pestaña abierta
+  if (panelIA) panelIA.actualizar();                    // el panel de IA muestra la decisión real del paso (/ia/paso)
+  seguirPasoLaboratorio();                               // y el laboratorio abierto la sigue en vivo si su casilla está marcada
   await refrescarMovilesYEscenario();
 }
 

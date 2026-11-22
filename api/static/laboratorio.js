@@ -477,7 +477,8 @@ function adaptarControlesRNA(modelo) {
     cont = document.createElement("input");
     cont.id = "rna-contraste"; cont.type = "range"; cont.min = "-1.5"; cont.max = "1.5"; cont.step = "0.05"; cont.value = "0";
     selBorde.parentNode.insertBefore(cont, selBorde);
-    cont.addEventListener("input", conRetardo(() => { rnaUsoRover = false; consultarRNA(); }, 200));
+    const recontraste = conRetardo(() => { rnaUsoRover = false; consultarRNA(); }, 200);
+    cont.addEventListener("input", () => { dejarDeSeguir(); recontraste(); });
   }
   cont.style.display = v2 ? "" : "none";
   selBorde.style.display = v2 ? "none" : "";
@@ -632,9 +633,10 @@ function mostrarSeccion(nombre) {
     $(`lab-${s}`).classList.toggle("oculto", s !== nombre);
   }
   for (const b of document.querySelectorAll(".lab-tab")) b.classList.toggle("activa", b.dataset.lab === nombre);
+  const vivo = $("lab-vivo") && $("lab-vivo").checked && estadoPartidaConPaso;   // en vivo: lo carga seguirPasoLaboratorio
   requestAnimationFrame(() => {
-    if (nombre === "difuso") consultarDifuso();
-    if (nombre === "rna") { consultarRNA(); if (!cargaEvaluacion) { cargaEvaluacion = true; cargarEvaluacion(); } }
+    if (nombre === "difuso" && !vivo) consultarDifuso();
+    if (nombre === "rna") { if (!vivo) consultarRNA(); if (!cargaEvaluacion) { cargaEvaluacion = true; cargarEvaluacion(); } }
     if (nombre === "ag" && agDatos) pintarAG();
     if (nombre === "politicas") { if (polDatos) pintarPoliticas(); else cargarPoliticas(); }
   });
@@ -647,12 +649,13 @@ export function iniciarLaboratorios(dependencias) {
   $("abrir-laboratorio").addEventListener("click", () => {
     $("laboratorio").classList.remove("oculto");
     mostrarSeccion(document.querySelector(".lab-tab.activa")?.dataset.lab || "ag");
+    setTimeout(seguirPasoLaboratorio, 50);   // con «en vivo», abre ya con las entradas del último paso
   });
   $("cerrar-laboratorio").addEventListener("click", () => $("laboratorio").classList.add("oculto"));
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && !$("laboratorio").classList.contains("oculto")) $("laboratorio").classList.add("oculto");
   });
-  for (const b of document.querySelectorAll(".lab-tab")) b.addEventListener("click", () => mostrarSeccion(b.dataset.lab));
+  for (const b of document.querySelectorAll(".lab-tab")) b.addEventListener("click", () => { mostrarSeccion(b.dataset.lab); setTimeout(seguirPasoLaboratorio, 50); });
 
   $("ag-ejecutar").addEventListener("click", ejecutarAG);
   iniciarPoliticas();
@@ -667,13 +670,55 @@ export function iniciarLaboratorios(dependencias) {
   });
 
   const reconsultarDif = conRetardo(consultarDifuso, 200);
-  for (const k of UNIVERSOS) $(CONTROL_DIF[k]).addEventListener("input", reconsultarDif);
+  for (const k of UNIVERSOS) $(CONTROL_DIF[k]).addEventListener("input", () => { dejarDeSeguir(); reconsultarDif(); });
   $("dif-barrido").addEventListener("click", barridoDifuso);
 
   const reconsultarRNA = conRetardo(() => { rnaUsoRover = false; consultarRNA(); }, 200);
-  for (const r of RASGOS) $(r.id).addEventListener("input", reconsultarRNA);
-  $("rna-borde").addEventListener("change", reconsultarRNA);
+  for (const r of RASGOS) $(r.id).addEventListener("input", () => { dejarDeSeguir(); reconsultarRNA(); });
+  $("rna-borde").addEventListener("change", () => { dejarDeSeguir(); reconsultarRNA(); });
   $("rna-restablecer").addEventListener("click", () => { rnaUsoRover = true; consultarRNA(); });
+}
+
+// ---------- seguir la misión en vivo (auditoría 22/11) ----------
+// Tras cada paso, con el laboratorio abierto y la casilla marcada, los controles toman las entradas REALES del paso
+// (GET /ia/paso) y se vuelve a consultar: la RNA con los rasgos que vio y el difuso con distancia, batería,
+// inclinación y temperatura del paso. Mover un control a mano desmarca la casilla (como en el ejemplo).
+function dejarDeSeguir() { const c = $("lab-vivo"); if (c) c.checked = false; }
+function fijarControl(id, valor, decimales) {
+  const e = $(id); if (!e || valor == null || Number.isNaN(Number(valor))) return;
+  const v = Math.min(Number(e.max), Math.max(Number(e.min), Number(valor)));
+  e.value = v.toFixed(decimales);
+}
+let siguiendo = false;
+let estadoPartidaConPaso = false;   // hay un paso de la IA que seguir (si no, el laboratorio consulta como siempre)
+export async function seguirPasoLaboratorio() {
+  const casilla = $("lab-vivo");
+  if (!casilla || !casilla.checked || $("laboratorio").classList.contains("oculto") || siguiendo) return;
+  const activa = document.querySelector(".lab-tab.activa")?.dataset.lab;
+  if (activa !== "rna" && activa !== "difuso") return;   // el AG y las políticas son experimentos propios del laboratorio
+  siguiendo = true;
+  try {
+    const d = await fetch("/ia/paso").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    estadoPartidaConPaso = !!(d && d.hay_paso);
+    if (!estadoPartidaConPaso) { if (activa === "rna") consultarRNA(); else consultarDifuso(); return; }
+    if (activa === "rna" && d.rna && d.rna.entrada) {
+      if (d.rna.modelo) adaptarControlesRNA(d.rna.modelo);
+      rellenarRasgos(d.rna.entrada);
+      rnaUsoRover = false;
+      await consultarRNA();
+      $("rna-accion").textContent = `paso ${d.paso} (en vivo) · ` + $("rna-accion").textContent;
+    }
+    if (activa === "difuso" && d.difuso) {
+      const e = d.difuso.entradas;
+      fijarControl("dif-distancia", e.distancia, 1); fijarControl("dif-bateria", e.bateria, 0);
+      fijarControl("dif-inclinacion", e.inclinacion, 0); fijarControl("dif-temperatura", e.temperatura, 0);
+      await consultarDifuso();
+      const topes = [["batería", e.bateria, "dif-bateria"], ["distancia", e.distancia, "dif-distancia"], ["inclinación", e.inclinacion, "dif-inclinacion"]]
+        .filter(([, v, id]) => v > Number($(id).max)).map(([n, v, id]) => `${n} real ${coma(v, 0)}, en el tope del universo (${$(id).max})`);
+      $("dif-estado").textContent = `paso ${d.paso} (en vivo): entradas reales del paso` + (d.difuso.intervenido ? " · difuso intervenido" : "")
+        + (topes.length ? ` · ${topes.join("; ")}: la pertenencia ya está saturada, el resultado es el mismo` : "");
+    }
+  } finally { siguiendo = false; }
 }
 
 // ---------- comparación de políticas (CA del PDF; contrato §7 de CONTRATOS_GRAFICOS.md) ----------

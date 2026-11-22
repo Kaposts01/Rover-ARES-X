@@ -23,7 +23,7 @@ import { textoNuevoRecord } from "/static/records_datos.js?v=r14";
 import { crearComparar } from "/static/comparar.js?v=r14";
 import { crearTutorial } from "/static/tutorial.js?v=r14";
 import { TEXTO_CAMBIO_MODO } from "/static/tutorial_datos.js?v=r14";
-import { condicionesPlaneta, filasCondiciones, perfilPlaneta } from "/static/planeta_datos.js?v=r14";
+import { condicionesPlaneta, filasCondiciones, deltaPaso, perfilPlaneta, textoQueCambia } from "/static/planeta_datos.js?v=r14";
 import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r14";
 import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
 
@@ -927,6 +927,7 @@ function animarBarranco(celdas) {
 }
 
 function construirMapa(datos) {
+  reiniciarCondiciones();   // mapa nuevo: las condiciones vivas y las celdas de hielo se leen de nuevo
   limitesMapa = { columnas: datos.columnas, filas: datos.filas };
   liberarMapa();
   limpiarEnergia();
@@ -1969,6 +1970,9 @@ function validarPlaneta() {
   boton.textContent = p && p.modo === "sonda" ? "Usar sonda" : "Usar rover";
   boton.dataset.modo = p ? p.modo : "rover";
   document.getElementById("iniciar").disabled = bloqueado;
+  // «qué cambia al jugar aquí»: los datos del motor de este planeta (GET /planetas → mecanicas)
+  const ficha = document.getElementById("menu-planeta-ficha");
+  if (ficha) ficha.textContent = p && p.mecanicas ? textoQueCambia(p.mecanicas, p.nombre) : "";
 }
 document.getElementById("menu-planeta").addEventListener("change", () => {
   const p = planetaElegido();
@@ -2224,32 +2228,64 @@ function aplicarAspecto(planeta) {
 }
 
 // ---------- condiciones del planeta (gravedad, viento, hielo) ----------
-// Único punto donde se leen: planeta_datos.condicionesPlaneta(estado.planeta_mecanicas, con valores de referencia si el motor no las manda).
-// De aquí salen el bloque del HUD, las partículas de viento, los centelleos y el brillo del hielo en el suelo.
+// Único punto donde se leen: planeta_datos.condicionesPlaneta(/estado.planeta_mecanicas: perfil + estado vivo del motor).
+// De aquí salen el bloque del HUD (ráfaga actual, dirección, resbalones, batería extra), las partículas de viento, los
+// centelleos y las celdas de hielo reales (GET /hielo) pintadas sobre el suelo.
 const ambientePlaneta = crearAmbientePlaneta({ THREE, escena: scene, altura: (x, z) => alturaTerreno(x, z), camara, renderer });
-let condicionesActuales = null, firmaCondiciones = "";
+let condicionesActuales = null, firmaCondiciones = "", planetaCondiciones = "";
+let capaHielo = null, claveHielo = "", hieloEnVuelo = false;
+function reiniciarCondiciones() { firmaCondiciones = ""; planetaCondiciones = ""; condicionesActuales = null; claveHielo = ""; }
+function liberarCapaHielo() {
+  if (!capaHielo) return;
+  scene.remove(capaHielo); capaHielo.geometry.dispose(); capaHielo.material.dispose(); capaHielo.dispose(); capaHielo = null;
+}
+// Celdas de hielo del motor (parches fijos por partida) como baldosas translúcidas sobre el suelo
+async function cargarCapaHielo(clave) {
+  if (hieloEnVuelo || clave === claveHielo) return;
+  hieloEnVuelo = true; claveHielo = clave;
+  try {
+    const h = await llamar("GET", "/hielo");
+    if (clave !== claveHielo) return;
+    liberarCapaHielo();
+    const celdas = h && Array.isArray(h.celdas) ? h.celdas.filter((c) => Array.isArray(c) && c.length >= 2) : [];
+    if (!celdas.length) return;
+    const geo = new THREE.PlaneGeometry(0.94, 0.94); geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xcdf3ff, transparent: true, opacity: 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false });
+    const malla = new THREE.InstancedMesh(geo, mat, celdas.length);
+    const m4 = new THREE.Matrix4();
+    celdas.forEach(([f, c], i) => { const x = c + 0.5, z = f + 0.5; m4.makeTranslation(x, alturaTerreno(x, z) + 0.07, z); malla.setMatrixAt(i, m4); });
+    malla.instanceMatrix.needsUpdate = true; malla.renderOrder = 2; malla.name = "capa-hielo"; malla.frustumCulled = false;
+    capaHielo = malla; scene.add(malla);
+  } catch (err) { console.warn("hielo: no se pudieron dibujar las celdas", err); }
+  finally { hieloEnVuelo = false; if (clave !== claveHielo) cargarCapaHielo(claveHielo); }
+}
 function aplicarCondiciones(e, forzar = false) {
   const planeta = (e && e.planeta) || planetaActivo;
   const c = condicionesPlaneta(e, planeta);
-  const firma = `${planeta}|${JSON.stringify(c)}`;
+  const firma = `${planeta}|${e && e.paso}|${JSON.stringify(c)}`;   // el paso entra en la firma: «este paso +x %» no queda viejo
   if (!forzar && firma === firmaCondiciones) return;
-  firmaCondiciones = firma; condicionesActuales = c;
-  ambientePlaneta.configurar(planeta, c);
+  const delta = deltaPaso(planeta === planetaCondiciones ? condicionesActuales : null, c);   // sobrecoste del paso y resbalón: dos lecturas del mismo mapa
+  const mismoMapa = planeta === planetaCondiciones && !forzar;
+  firmaCondiciones = firma; condicionesActuales = c; planetaCondiciones = planeta;
+  ambientePlaneta.configurar(planeta, c, { conservar: mismoMapa });
   const suelo = grupoMapa.children[0];   // hielo: el suelo se vuelve más liso y brilla bajo el sol
   if (suelo && suelo.material && suelo.material.isMeshStandardMaterial) {
     suelo.material.roughness = 0.95 - 0.5 * c.hielo.nivel;
     suelo.material.metalness = 0.12 * c.hielo.nivel;
   }
+  if (mapa && c.vivo.hay) cargarCapaHielo(`${e && e.semilla}|${planeta}|${mapa.filas}x${mapa.columnas}|${c.hielo.fraccion}`);
+  if (capaHielo) capaHielo.visible = c.hielo.fraccion > 0;
   const caja = document.getElementById("condiciones");
   if (!caja) return;
   const filas = caja.querySelector(".cond-filas");
-  filas.replaceChildren(...filasCondiciones(c).map(([etiqueta, valor, fuente]) => {
+  filas.replaceChildren(...filasCondiciones(c, delta).map(([etiqueta, valor, fuente]) => {
     const f = document.createElement("div"); f.className = "fila";
     const a = document.createElement("span"); a.textContent = etiqueta;
     const v = document.createElement("span"); v.className = "valor"; v.textContent = valor;
-    v.title = fuente === "motor" ? "Dato del motor" : "Valor de referencia del cliente: el motor aún no manda esta condición";
+    v.title = fuente === "motor" ? "Dato del motor" : "Valor aproximado: todavía no hay partida que lo confirme";
     f.append(a, v);
-    if (fuente !== "motor") { const r = document.createElement("small"); r.className = "cond-ref"; r.textContent = "ref."; v.append(" ", r); }
+    if (etiqueta === "¡Resbaló!") f.classList.add("cond-alerta");
+    if (fuente !== "motor") { const r = document.createElement("small"); r.className = "cond-ref"; r.textContent = "aprox."; v.append(" ", r); }
     return f;
   }));
   const firma2 = caja.querySelector(".cond-firma");

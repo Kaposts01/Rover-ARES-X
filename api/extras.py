@@ -176,8 +176,11 @@ def instalar(app: FastAPI, servidor) -> None:
 
     def ficha(l: Lado, n: int, r: dict) -> dict:
         e = servidor._estado(l.sesion)
+        ci = l.sesion.partida.ciencia()      # R23: valor de cada sitio por la calidad de su ventana
         return {"n": n, "posicion": e["posicion"], "accion": r.get("accion"), "motivos": list(r.get("motivos") or []),
                 "estado": estado_de(l), "bateria_pct": e["bateria_pct"], "puntaje": puntaje_de_juego(e),
+                "ciencia_recogida": float(ci["recogida"]), "ciencia_maxima": float(ci["maxima"]),
+                "ciencia_fraccion": float(ci["fraccion"]),
                 "sitios_visitados": e["sitios_visitados"], "sitios_totales": e["sitios_totales"],
                 "visitados": [list(map(int, c)) for c in sorted(l.sesion.partida.mision.visitados)],
                 "vetos": e["vetos"], "colisiones": e["colisiones"], "replanes": e["replanes"]}
@@ -228,6 +231,8 @@ def instalar(app: FastAPI, servidor) -> None:
             {"clave": "resultado", "a": ra, "b": rb, "ganador": ("a" if ra == "EXITO" else "b") if not mismo else "empate"},
             {"clave": "pasos", "a": fa["n"], "b": fb["n"], "ganador": mejor(fa["n"], fb["n"], False, mismo)},
             {"clave": "puntaje", "a": fa["puntaje"], "b": fb["puntaje"], "ganador": mejor(fa["puntaje"], fb["puntaje"])},
+            {"clave": "ciencia_fraccion", "a": fa["ciencia_fraccion"], "b": fb["ciencia_fraccion"],
+             "ganador": mejor(fa["ciencia_fraccion"], fb["ciencia_fraccion"])},
             {"clave": "bateria_pct", "a": fa["bateria_pct"], "b": fb["bateria_pct"], "ganador": mejor(fa["bateria_pct"], fb["bateria_pct"])},
             {"clave": "sitios_visitados", "a": fa["sitios_visitados"], "b": fb["sitios_visitados"], "ganador": mejor(fa["sitios_visitados"], fb["sitios_visitados"])},
             {"clave": "vetos", "a": fa["vetos"], "b": fb["vetos"], "ganador": mejor(fa["vetos"], fb["vetos"], False)},

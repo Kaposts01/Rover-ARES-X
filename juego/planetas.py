@@ -96,9 +96,24 @@ def perfil(nombre: str) -> PerfilPlaneta:
     return PERFILES.get(nombre, PERFILES[PLANETA_BASE])
 
 
+# Escala cualitativa del viento (la misma para el perfil y el estado vivo; el motor la rotula, la interfaz solo la muestra).
+# Umbrales sobre la intensidad NOMINAL (la del perfil, sin la escala del nivel ni la ráfaga): coinciden con las frases de
+# `PERFILES` (Venus 0,20 «lento»; Marte 0,40 «moderado»; Urano 0,55 «medio»; Saturno 0,80 «fuerte»; Neptuno 0,85 «muy fuerte»).
+ESCALA_VIENTO = ((0.05, "en calma"), (0.25, "suave"), (0.50, "moderado"), (0.75, "fuerte"))
+
+
+def rotulo_viento(nominal: float) -> str:
+    """Rótulo cualitativo del viento para una intensidad nominal (0..1)."""
+    for tope, nombre in ESCALA_VIENTO:
+        if nominal < tope:
+            return nombre
+    return "muy fuerte"
+
+
 def parametros(nombre: str) -> dict:
     """Parámetros del planeta como diccionario (JSON-serializable)."""
-    return perfil(nombre).como_dict()
+    p = perfil(nombre)
+    return {**p.como_dict(), "viento_rotulo": rotulo_viento(p.viento)}
 
 
 def sobrecosto_medio(nombre: str, intensidad: float = 1.0) -> float:
@@ -250,6 +265,8 @@ class MecanicasPlaneta:
         p = self.perfil
         return {"activa": self.activa, "intensidad": round(self.intensidad, 3),
                 "viento": round(self.viento_actual, 3), "rumbo_viento": p.rumbo_viento,
+                # mismo rótulo que el perfil: sobre la intensidad nominal, con la ráfaga (que la duplica) y sin la escala del nivel
+                "viento_rotulo": rotulo_viento(p.viento * (RAFAGA_MULT if self.rafaga_restante > 0 else 1.0) if self.activa else 0.0),
                 "rafaga": self.rafaga_restante > 0, "rafaga_restante": int(self.rafaga_restante),
                 "celdas_hielo": int(self.hielo.sum()),
                 "resbalones_hielo": int(self.resbalones_hielo), "desvios_viento": int(self.desvios_viento),

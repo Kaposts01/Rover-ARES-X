@@ -46,6 +46,7 @@ MARGEN_ENERGIA = 15.0              # reserva final de batería al llegar al refu
 W_PASOS = 0.25                     # peso del tiempo total (normalizado) en el fitness
 W_REPARACION = 0.01                # una recarga que hubo que reparar cuesta un poco más que una planeada
 PENAL_INFACTIBLE = 1.0
+PESOS_LAB_DEFECTO = {"ciencia": 1.0, "distancia": 0.3, "energia": 0.2, "riesgo": 0.8, "tiempo": 0.1}   # = genetico.PESOS_POR_DEFECTO
 
 _CACHE_DIST = {}
 
@@ -145,7 +146,8 @@ class Problema:
     """Instancia del problema de ruta con ventanas, recarga y selección. `dist` da longitudes de camino (BFS)."""
 
     def __init__(self, inicio, refugio, sitios, bases, bateria, capacidad, dist, factor=1.0, reserva=MARGEN_ENERGIA,
-                 reserva_extra=0.0, t0=0, recarga_pasos=RECARGA_PASOS, calidad_fuera=CALIDAD_FUERA_VENTANA, margen_escape=0.0):
+                 reserva_extra=0.0, t0=0, recarga_pasos=RECARGA_PASOS, calidad_fuera=CALIDAD_FUERA_VENTANA, margen_escape=0.0,
+                 pesos=None):
         self.inicio = (int(inicio[0]), int(inicio[1]))
         self.refugio = (int(refugio[0]), int(refugio[1]))
         self.sitios = list(sitios)
@@ -166,6 +168,7 @@ class Problema:
         self._escape = {}
         self.pasos_ref = 60.0
         self.evaluaciones = 0
+        self.pesos = dict(pesos) if pesos else None     # laboratorio (GET /ag): pesos de usuario; None = el fitness del juego
 
     # ---------- utilidades ----------
     def largo(self, a, b):
@@ -290,7 +293,10 @@ class Problema:
 
         ciencia = score / self.valor_total
         if factible:
-            f = ciencia - W_PASOS * pasos / self.pasos_ref - W_REPARACION * reparaciones
+            if self.pesos is None:
+                f = ciencia - W_PASOS * pasos / self.pasos_ref - W_REPARACION * reparaciones
+            else:
+                f = self.fitness_pesos(self.componentes(ciencia, pasos, recargas, reparaciones, ventanas_falladas), self.pesos)
         else:
             deficit = 0.0
             if fallo and fallo[0] == "bateria":
@@ -300,6 +306,26 @@ class Problema:
         return Plan(tuple(orden), tuple(nuevo_sel), tuple(nuevas), nodos, int(pasos), float(ciencia), int(recargas),
                     int(reparaciones), bool(factible), float(f), float(bat), viol,
                     tuple(dict.fromkeys(sacrificados)), int(ventanas_falladas))
+
+    # ---------- fitness con pesos de usuario (laboratorio) ----------
+    def componentes(self, ciencia, pasos, recargas, reparaciones, ventanas_falladas) -> dict:
+        """Componentes del fitness con los nombres del laboratorio (todos en 0 a 1 aprox.): ciencia (valor por calidad de ventana,
+        fracción del total), distancia (pasos ÷ pasos de referencia), energía (recargas ÷ (sitios + 1)), riesgo (fracción de recargas
+        que hubo que reparar, es decir, que el cromosoma no traía) y tiempo (fracción de ventanas perdidas)."""
+        con_ventana = sum(1 for s in self.sitios if s.ventana is not None) or 1
+        return {"ciencia": float(ciencia), "distancia": float(pasos) / max(self.pasos_ref, 1.0),
+                "energia": float(recargas) / (self.n + 1), "riesgo": float(reparaciones) / (self.n + 1),
+                "tiempo": float(ventanas_falladas) / con_ventana}
+
+    def fitness_pesos(self, c: dict, w: dict) -> float:
+        """Fitness del laboratorio: cada término es el del juego escalado por (peso ÷ peso por defecto); energía y tiempo, que el juego
+        no penaliza, entran con un coeficiente base de 0,02. Con los pesos por defecto el laboratorio usa directamente el del juego."""
+        g = lambda k: float(w.get(k, PESOS_LAB_DEFECTO[k]))
+        return (g("ciencia") / PESOS_LAB_DEFECTO["ciencia"] * c["ciencia"]
+                - g("distancia") / PESOS_LAB_DEFECTO["distancia"] * W_PASOS * c["distancia"]
+                - g("riesgo") / PESOS_LAB_DEFECTO["riesgo"] * W_REPARACION * (self.n + 1) * c["riesgo"]
+                - g("energia") / PESOS_LAB_DEFECTO["energia"] * 0.02 * c["energia"]
+                - g("tiempo") / PESOS_LAB_DEFECTO["tiempo"] * 0.02 * c["tiempo"])
 
     # ---------- salidas ----------
     def ruta(self, plan: Plan):
@@ -455,7 +481,7 @@ class AGRestringido:
     def __init__(self, problema: Problema, poblacion: int = 60, generaciones: int = 60, prob_cruce: float = 0.85,
                  prob_mutacion: float = 0.35, elite: int = 2, torneo: int = 3, semilla: int = 0,
                  umbral_diversidad: float = 0.12, inmigrantes: float = 0.10, n_candidatos: int = 6,
-                 semillas_cromosomas=()):
+                 semillas_cromosomas=(), parada_sin_mejora: int = None):
         self.p = problema
         self.poblacion = int(poblacion)
         self.generaciones = int(generaciones)
@@ -471,6 +497,8 @@ class AGRestringido:
         self.semillas_cromosomas = list(semillas_cromosomas)
         self.cruces = 0
         self.mutaciones = 0
+        self.parada_sin_mejora = None if parada_sin_mejora is None else int(parada_sin_mejora)
+        self.origenes = {}          # cromosoma de la generación actual -> cómo nació (para el laboratorio)
         # escala del tiempo: el largo del vecino más cercano (con el refugio), para que W_PASOS sea comparable entre mapas
         ids = [s.id for s in problema.sitios]
         problema.pasos_ref = max(40.0, float(_largo_tour(problema, orden_vecino(problema)) if ids else 40.0))
@@ -602,10 +630,13 @@ class AGRestringido:
         if not self.semillas_cromosomas and p.n:
             for f in (orden_vecino, orden_2opt):
                 agregar(self._desde_orden(f(p)))
+        origenes = {c: "heuristica" for c in pob}
         intentos = 0
         while len(pob) < self.poblacion and intentos < self.poblacion * 20:
             agregar(self._aleatorio())
             intentos += 1
+        for c in pob:
+            origenes.setdefault(c, "inicial")
         historial = []
         mejor_visto, ultima_mejora, sin_mejora = -np.inf, 0, 0
         for gen in range(self.generaciones):
@@ -624,25 +655,37 @@ class AGRestringido:
                 cands.append(planes[i])
                 if len(cands) >= self.n_candidatos:
                     break
+            ops = {}
+            for i in orden_i:
+                if (planes[i].orden, planes[i].sel) in firmas and (planes[i].orden, planes[i].sel) not in ops:
+                    ops[(planes[i].orden, planes[i].sel)] = origenes.get(pob[i], "inicial")
             historial.append({"n": gen, "mejor": float(fit.max()), "media": float(fit.mean()), "peor": float(fit.min()),
-                              "diversidad": float(div), "distintos": int(distintos), "candidatos": cands})
+                              "diversidad": float(div), "distintos": int(distintos), "candidatos": cands,
+                              "operaciones": [ops.get((c.orden, c.sel), "inicial") for c in cands],
+                              "cruces": int(self.cruces), "mutaciones": int(self.mutaciones)})
             if fit.max() > mejor_visto + 1e-12:
                 mejor_visto, ultima_mejora, sin_mejora = float(fit.max()), gen, 0
             else:
                 sin_mejora += 1
             if gen == self.generaciones - 1:
                 break
+            if self.parada_sin_mejora is not None and sin_mejora >= self.parada_sin_mejora:
+                break
             # --- siguiente generación ---
             adaptativa = div < self.umbral_diversidad
             pm = min(0.95, self.prob_mutacion * (2.0 if adaptativa else 1.0))
             nueva, firmas_n = [], set()
+            nuevos_origenes = {}
             for i in orden_i[:self.elite]:
                 nueva.append(pob[i])
                 firmas_n.add(pob[i])
+                nuevos_origenes[pob[i]] = "elite"
             if sin_mejora >= 8 and adaptativa:                  # reinicio parcial: el 40 % peor se renueva
                 corte = int(len(pob) * 0.6)
                 nueva = [pob[i] for i in orden_i[:max(self.elite, corte)]]
                 firmas_n = set(nueva)
+                for c in nueva:
+                    nuevos_origenes.setdefault(c, origenes.get(c, "inicial"))
                 sin_mejora = 0
             n_inm = int(round(self.inmigrantes * self.poblacion * (2.0 if adaptativa else 1.0)))
             intentos_gen = 0
@@ -652,20 +695,26 @@ class AGRestringido:
                 for _ in range(2):
                     idx = rng.choice(len(pob), size=min(self.torneo, len(pob)), replace=False)
                     padres.append(pob[max(idx, key=lambda k: fit[k])])
+                cruces_antes = self.cruces
                 for h in self._cruzar(*padres):
                     if len(nueva) >= self.poblacion - n_inm:
                         break
+                    op = "cruce" if self.cruces > cruces_antes else "copia"
                     if rng.random() < pm:
                         h = self._mutar(h)
+                        op += "+mutacion"
                     h = self._canonico(h)
                     tries = 0
                     while h in firmas_n and tries < 4:       # sin duplicados: se muta más
                         h = self._canonico(self._mutar(h, fuerza=2 + tries))
                         tries += 1
+                        if "mutacion" not in op:
+                            op += "+mutacion"
                     if h in firmas_n:
                         continue
                     firmas_n.add(h)
                     nueva.append(h)
+                    nuevos_origenes[h] = op
             guard = 0
             while len(nueva) < self.poblacion and guard < self.poblacion * 20:
                 guard += 1
@@ -673,9 +722,11 @@ class AGRestringido:
                 if h not in firmas_n:
                     firmas_n.add(h)
                     nueva.append(h)
+                    nuevos_origenes[h] = "inmigrante"
             while len(nueva) < self.poblacion:        # espacio de búsqueda más chico que la población (pocos sitios): se completa
                 nueva.append(nueva[len(nueva) % max(len(nueva), 1)])
             pob = nueva
+            origenes = nuevos_origenes
         planes = sorted((self.cache[c] for c in pob), key=lambda q: -q.fitness)
         mejor = max(self.cache.values(), key=lambda q: q.fitness)
         return ResultadoPlan(mejor=mejor, historial=historial, tiempo_s=time.perf_counter() - t0,

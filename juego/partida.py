@@ -326,6 +326,14 @@ PLAN_RESTRINGIDO_JUGABLE = True       # la partida jugable (garantia=True) usa e
 AG_PLAN_INICIAL = (60, 60)            # (población, generaciones) del plan inicial
 AG_PLAN_REPLANTEO = (40, 30)          # y de los replanteos completos (eventos graves, plan inviable)
 OLVIDOS_MAXIMOS = 4                 # veces por partida que se pueden olvidar las dudas de la RNA
+# R23 (corrección de integración): plan degradado cuando el plan con todas las restricciones es infactible. Etapas
+# (fracción de la reserva de caza de drones que se exige al llegar al refugio, todos los sitios opcionales): la reserva de
+# caza crece con el gasto real y, a veces, ni con la batería llena en una base cabe el recorrido completo más esa reserva;
+# antes la partida se quedaba parada en la base replanteando hasta agotar la batería.
+ETAPAS_DEGRADADO = ((0.5, False), (0.0, False), (0.0, True))
+LIMPIEZAS_MAXIMAS = 8               # veces por partida que se libera un camino real encerrado por lecturas firmes falsas
+PASOS_QUIETO_MAXIMO = 8             # salvaguarda: pasos seguidos sin moverse (sin recargar) antes de escalar la estrategia de escape
+REINTENTO_PLAN_COMPLETO = 15        # con un plan degradado, cada tantos pasos se vuelve a probar el plan completo
 MARGEN_ESCAPE_PLAN = 0.08           # fracción de la capacidad que debe quedar tras cada sitio para llegar a una base (tormentas, ráfagas)
 MARGEN_FACTOR_PLAN = 1.2           # margen sobre el factor de energía del planeta al planificar recargas
 # R23 (RNA): la RNA nominal da ~1,7 % de falsos barrancos entre las celdas libres; marcar una celda como riesgo permanente con una
@@ -1116,6 +1124,15 @@ class Partida:
             return
         if m.estado == "EXITO" and not self._exigidos_cumplidos():
             hechos = len(self.exigidos() & {tuple(c) for c in m.visitados})
+            if self.plan_activo and self._degradado:
+                # el plan reducido (sin los obligatorios que no caben) terminó en el refugio: volver a salir repetiría el ciclo
+                # refugio-base-refugio sin avanzar (QA: nivel 5 con poca batería). Se termina pronto y con el motivo claro.
+                self._vueltas_degradado += 1
+                if self._vueltas_degradado >= 2:
+                    m.estado = "FRACASO"
+                    self._avisar(f"Sin plan posible: con la batería disponible no caben los sitios obligatorios que faltan ({hechos}/{total}); "
+                                 "la misión vuelve al refugio sin completarlos")
+                    return
             # una sola replanificación; si no hay ruta a ningún sitio pendiente, la batería no alcanza: se termina (N6)
             m.objetivos = []
             m._planear()
@@ -1609,6 +1626,8 @@ class Partida:
                                 "bateria_pct": self._entrada_difuso["bateria"]}
             self._tras_paso_estacion()
             self._revisar_victoria()
+            if self.plan_activo and m.paso > paso_previo:
+                self._vigilar_quietud(pos_previa)
             if m.paso > paso_previo:
                 self._revisar_objetivo()
                 self._tick_ambiente()
@@ -1741,6 +1760,12 @@ class Partida:
         self._gasto_prev = None
         self._paso_replan_energia = -100
         self._olvidos = 0                      # veces que se olvidaron las dudas de la RNA para recuperar un sitio inalcanzable
+        self._limpiezas = 0
+        self._vueltas_degradado = 0            # llegadas al refugio con un plan reducido y obligatorios pendientes
+        self._degradado = 0                    # 0: plan completo; k > 0: etapa k de ETAPAS_DEGRADADO en uso (plan reducido)
+        self._escape_nivel = 0                 # salvaguarda de quietud: etapa mínima del plan degradado y, pasada la última, escape directo
+        self._quietos = 0                      # pasos seguidos sin moverse (ni recargar)
+        self._visitados_escape = 0
         self._rna_olvidada = False
         obligatorios = _sitios_obligatorios(mundo)
         celdas = sorted(mundo.sitios)
@@ -1797,8 +1822,11 @@ class Partida:
             return 0.0
         return float(self.margen_caza * sum(1 for d in self.combate.drones if d.vivo) * getattr(self, "factor_plan", 1.0))
 
-    def _problema_plan(self, origen, pendientes):
-        """`planificacion.Problema` del estado actual: posición, batería, paso, mapa estimado y sitios pendientes."""
+    def _problema_plan(self, origen, pendientes, caza: float = 1.0, opcionales: bool = False):
+        """`planificacion.Problema` del estado actual: posición, batería, paso, mapa estimado y sitios pendientes.
+
+        `caza` escala la reserva de batería para cazar drones y `opcionales` vuelve sacrificables todos los sitios: son las
+        relajaciones del plan degradado (`_plan_degradado`)."""
         m = self.mision
         origen = (int(origen[0]), int(origen[1]))
         refugio = tuple(int(v) for v in self.mundo.refugio)
@@ -1806,10 +1834,12 @@ class Partida:
         mascara[origen] = True
         mascara[refugio] = True
         sitios = [self.sitios_plan[tuple(c)] for c in sorted(pendientes) if tuple(c) in self.sitios_plan]
+        if opcionales:
+            sitios = [replace(s_, obligatorio=False) for s_ in sitios]
         self.factor_plan = max(self.factor_plan_base, self._gasto_ema * MARGEN_FACTOR_PLAN)   # el gasto real manda
         return planificacion.Problema(origen, refugio, sitios, self.estaciones, self.rover.bateria, self.capacidad_bateria,
                                       planificacion.Distancias.de(mascara), self.factor_plan,
-                                      reserva_extra=self._reserva_caza(), t0=int(m.paso),
+                                      reserva_extra=self._reserva_caza() * float(caza), t0=int(m.paso),
                                       margen_escape=MARGEN_ESCAPE_PLAN * float(self.capacidad_bateria))
 
     def _cromosoma_de_wp(self, prob):
@@ -1837,25 +1867,30 @@ class Partida:
             semillas.append((tuple(f(prob)), tuple([True] * prob.n), tuple([-1] * (prob.n + 1))))
         return semillas
 
+    @staticmethod
+    def candidato_json(prob, plan, con_camino: bool = True) -> dict:
+        """Un plan en el formato CANDIDATO de GET /ag/evolucion (orden de ids, recargas, paradas con la base, camino, violaciones)."""
+        ordenes = [n[2] for n in plan.nodos if n[0] == "sitio"]
+        recargas, paradas, vistos = [], [], 0
+        for n in plan.nodos:
+            if n[0] == "sitio":
+                vistos += 1
+            elif n[0] == "base":
+                recargas.append(vistos - 1)      # índice en `orden` del sitio tras el cual se recarga (-1: antes del primero)
+                paradas.append({"despues_de": vistos - 1, "base": [int(n[1][0]), int(n[1][1])]})
+        camino = None
+        if con_camino:
+            ruta = prob.ruta(plan)
+            camino = [[int(c[0]), int(c[1])] for c in ruta] if ruta else None
+        return {"orden": [int(i) for i in ordenes], "recargas": recargas, "paradas": paradas, "camino": camino,
+                "fitness": round(float(plan.fitness), 5), "factible": bool(plan.factible),
+                "violaciones": prob.textos(plan), "sacrificados": [int(i) for i in plan.sacrificados],
+                "ciencia": round(float(plan.ciencia), 4), "pasos": int(plan.pasos)}
+
     def _guardar_evolucion(self, prob, res) -> None:
         """Guarda la evolución del AG del plan inicial en el formato de GET /ag/evolucion (no se recalcula en cada llamada)."""
         def cand(plan, con_camino):
-            ordenes = [n[2] for n in plan.nodos if n[0] == "sitio"]
-            recargas, paradas, vistos = [], [], 0
-            for n in plan.nodos:
-                if n[0] == "sitio":
-                    vistos += 1
-                elif n[0] == "base":
-                    recargas.append(vistos - 1)      # índice en `orden` del sitio tras el cual se recarga (-1: antes del primero)
-                    paradas.append({"despues_de": vistos - 1, "base": [int(n[1][0]), int(n[1][1])]})
-            camino = None
-            if con_camino:
-                ruta = prob.ruta(plan)
-                camino = [[int(c[0]), int(c[1])] for c in ruta] if ruta else None
-            return {"orden": [int(i) for i in ordenes], "recargas": recargas, "paradas": paradas, "camino": camino,
-                    "fitness": round(float(plan.fitness), 5), "factible": bool(plan.factible),
-                    "violaciones": prob.textos(plan), "sacrificados": [int(i) for i in plan.sacrificados],
-                    "ciencia": round(float(plan.ciencia), 4), "pasos": int(plan.pasos)}
+            return self.candidato_json(prob, plan, con_camino)
         ultima = len(res.historial) - 1
         gens = []
         for h in res.historial:
@@ -1899,6 +1934,11 @@ class Partida:
         origen = tuple(int(v) for v in self.rover.posicion)
         pendientes = {c: v for c, v in self.mundo.sitios.items() if c not in m.visitados}
         if not pendientes:
+            return
+        if self._degradado:      # plan reducido: no se compara con el completo (siempre fallaría); cada tanto se reintenta el completo
+            if m.paso - self._paso_replan_energia >= REINTENTO_PLAN_COMPLETO:
+                self._paso_replan_energia = m.paso
+                m._planear()
             return
         prob = self._problema_plan(origen, pendientes)
         plan = prob.decodificar(*self._cromosoma_de_wp(prob))
@@ -1956,7 +1996,9 @@ class Partida:
                 m.objetivos = [c for c in ruta if c in self.mundo.sitios] + [refugio]
                 m.ruta = ruta if camino_valido(ruta, m.riesgo) else (_bfs_a(m, origen, refugio) or [])
                 return bool(m.ruta) and m.ruta[-1] == refugio
-            if (not plan.factible or not ruta) and self._olvidos < OLVIDOS_MAXIMOS and prob is not None                     and any(prob.dist.largo(origen, sit.celda) is None for sit in prob.sitios if sit.obligatorio):
+            if (not plan.factible or not ruta) and self._olvidos < OLVIDOS_MAXIMOS and prob is not None                     and (any(prob.dist.largo(origen, sit.celda) is None for sit in prob.sitios if sit.obligatorio)
+                         or prob.dist.largo(origen, refugio) is None      # el refugio encerrado por dudas de la RNA (QA: semilla 4, nivel 3)
+                         or self._escape_nivel > 0):                      # o la salvaguarda de quietud pide soltar las dudas
                 # un sitio obligatorio quedó inalcanzable en el mapa estimado: las dudas de la RNA (riesgo entre 0,5 y 1, no medido)
                 # lo habrán cerrado. Se olvidan y se planifica de nuevo (las lecturas firmes, riesgo 1, se conservan)
                 dudas = (m.riesgo >= 0.5) & (m.riesgo < 0.99)
@@ -1968,7 +2010,30 @@ class Partida:
                     ruta = m._optimizar_ag(origen, pendientes)
                     plan = getattr(m._optimizar_ag, "plan", None)
                     prob = getattr(m._optimizar_ag, "problema", None)
+            if (not plan.factible or not ruta) and prob is not None and self._limpiezas < LIMPIEZAS_MAXIMAS:
+                # lecturas firmes falsas (riesgo 1) pueden encerrar el refugio o un sitio obligatorio en el mapa estimado aunque el
+                # mapa real tenga camino (QA: semilla 5, nivel 4, sismo y meteoritos): se libera el camino real más corto
+                destinos = [refugio] + [sit.celda for sit in prob.sitios if sit.obligatorio]
+                aislados = [d for d in destinos if prob.dist.largo(origen, d) is None]
+                if aislados and any(self._liberar_ruta_real(origen, d) for d in aislados):
+                    self._limpiezas += 1
+                    self._wp = []
+                    ruta = m._optimizar_ag(origen, pendientes)
+                    plan = getattr(m._optimizar_ag, "plan", None)
+                    prob = getattr(m._optimizar_ag, "problema", None)
             if not plan.factible or not ruta:
+                deg = self._plan_degradado(origen, pendientes, self._escape_nivel)
+                if deg is not None:
+                    ruta, plan, etapa = deg
+                    if self._degradado != etapa + 1:
+                        self._avisar("Plan reducido: " + ("sin la reserva completa para cazar drones" if etapa < 2 else
+                                     "se visita lo alcanzable y se vuelve al refugio") + " (el plan completo no cabe en la batería)")
+                    self._degradado = etapa + 1
+                    m.objetivos = [n[1] for n in plan.nodos if n[0] == "sitio"] + [refugio]
+                    self._wp = [(n[0], n[1], n[2]) for n in plan.nodos[1:] if n[0] in ("base", "sitio")]
+                    m.ruta = ruta if camino_valido(ruta, m.riesgo) else []
+                    if m.ruta:
+                        return m.ruta[-1] == refugio
                 # sin plan con las restricciones: se intenta al menos llegar al refugio recargando
                 alivio = self._problema_plan(origen, {})
                 directo = alivio.decodificar((), (), (-1,))
@@ -1978,7 +2043,7 @@ class Partida:
                     # ni al refugio llega: se va a la base alcanzable más cercana (recargar es lo único que salva la partida)
                     cerca = [(len(t) - 1, i) for i, b in enumerate(self.estaciones)
                              for t in [camino_bfs(origen, tuple(b), m.riesgo < 0.5)] if t is not None
-                             and len(t) - 1 <= self.rover.bateria]
+                             and 0 < len(t) - 1 <= self.rover.bateria]      # una base donde ya está no es un destino (era el bucle parado)
                     if cerca:
                         _, i = min(cerca)
                         ruta = camino_bfs(origen, tuple(self.estaciones[i]), m.riesgo < 0.5)
@@ -1992,7 +2057,90 @@ class Partida:
         m.objetivos = [n[1] for n in plan.nodos if n[0] == "sitio"] + [refugio]
         self._wp = [(n[0], n[1], n[2]) for n in plan.nodos[1:] if n[0] in ("base", "sitio")]
         m.ruta = ruta if camino_valido(ruta, m.riesgo) else []
+        if m.ruta and plan.factible:
+            self._degradado = 0
+            self._escape_nivel = 0
         return bool(m.ruta) and m.ruta[-1] == refugio
+
+    def _liberar_ruta_real(self, origen, destino) -> bool:
+        """Borra del mapa estimado el riesgo de las celdas del camino real más corto de `origen` a `destino` (prefiere esquivar
+        las zonas de meteorito, que sí son un peligro). True si cambió alguna celda. Es la misma idea de `_recuperar_sin_ruta`."""
+        m = self.mision
+        real = np.asarray(self.mundo.tipo == LIBRE).copy()
+        seguro = real.copy()
+        for mt in self.meteoritos:
+            for z in mt["zona_riesgo"]:
+                seguro[tuple(z)] = False
+        for mascara in (seguro, real):
+            mascara[origen] = True
+            mascara[tuple(destino)] = True
+            tramo = camino_bfs(origen, tuple(destino), mascara)
+            if tramo:
+                break
+        else:
+            return False
+        cambio = False
+        for c in tramo:
+            if m.riesgo[c] >= 0.5:
+                m.riesgo[c] = 0.05
+                cambio = True
+        return cambio
+
+    def _plan_degradado(self, origen, pendientes, desde_etapa: int = 0):
+        """Plan reducido cuando el completo no cabe en la batería (ni con la llena en una base): se relaja la reserva de caza de
+        drones y, si aún no cabe, los sitios obligatorios pasan a opcionales (se visita lo alcanzable y se vuelve al refugio).
+        AG corto con el vecino más cercano y el 2-opt como semillas. Devuelve (ruta, plan, etapa) o None."""
+        m = self.mision
+        for k in range(max(0, desde_etapa), len(ETAPAS_DEGRADADO)):
+            caza, opcionales = ETAPAS_DEGRADADO[k]
+            prob = self._problema_plan(origen, pendientes, caza, opcionales)
+            if not prob.sitios:
+                continue
+            semillas = [(tuple(f(prob)), tuple([True] * prob.n), tuple([-1] * (prob.n + 1)))
+                        for f in (planificacion.orden_vecino, planificacion.orden_2opt)]
+            ag = planificacion.AGRestringido(prob, poblacion=30, generaciones=20, semilla=m.semilla + 104729 * m.replanes + k,
+                                             semillas_cromosomas=semillas)
+            plan = ag.optimizar().mejor
+            if plan.factible:
+                ruta = prob.ruta(plan)
+                if ruta and len(ruta) > 1:
+                    return ruta, plan, k
+        return None
+
+    def _vigilar_quietud(self, pos_previa) -> None:
+        """Salvaguarda general: `PASOS_QUIETO_MAXIMO` pasos seguidos sin moverse (replanteos o esperas, sin recargar) escalan la
+        estrategia de escape: plan reducido cada vez más relajado, luego ruta directa al refugio y, al final, el fin de la
+        partida con el motivo. Antes la partida podía quedarse parada cientos de pasos gastando batería."""
+        m = self.mision
+        quieto = (tuple(self.rover.posicion) == tuple(pos_previa) and self._recargando == 0 and self._falla_restante == 0
+                  and m.estado not in ESTADOS_TERMINALES and m.log.filas and m.log.filas[-1].get("accion") in ("replanificar", "detener"))
+        if len(m.visitados) != self._visitados_escape:       # un sitio nuevo: se avanzó de verdad
+            self._visitados_escape = len(m.visitados)
+            self._escape_nivel = 0
+        if not quieto:
+            self._quietos = 0
+            return
+        self._quietos += 1
+        if self._quietos < PASOS_QUIETO_MAXIMO:
+            return
+        self._quietos = 0
+        self._escape_nivel += 1
+        if self._escape_nivel <= len(ETAPAS_DEGRADADO):
+            self._avisar(f"Atascado {PASOS_QUIETO_MAXIMO} pasos sin moverse: se busca un plan más reducido (nivel {self._escape_nivel})")
+            m._planear()
+            return
+        origen = tuple(int(v) for v in self.rover.posicion)
+        refugio = tuple(int(v) for v in self.mundo.refugio)
+        ruta = camino_bfs(origen, refugio, m.riesgo < 0.5) if origen != refugio else None
+        if ruta and len(ruta) > 1 and len(ruta) - 1 <= self.rover.bateria:
+            self._avisar("Atascado: se va directo al refugio con la batería que queda")
+            m.objetivos = [refugio]
+            self._wp = []
+            m.ruta = ruta
+            self._escape_nivel = len(ETAPAS_DEGRADADO) - 1      # si vuelve a atascarse, el escape directo llega pronto
+            return
+        m.estado = "FRACASO"
+        self._avisar("Misión detenida: sin plan posible con la batería y el mapa conocidos (varios replanteos seguidos sin poder moverse)")
 
     # ---------- RNA con anticipación (R23) ----------
     def _anticipar(self) -> None:
@@ -2014,12 +2162,18 @@ class Partida:
                 break
             celda = tuple(int(v) for v in m.ruta[k])
             anterior = tuple(int(v) for v in m.ruta[k - 1])
-            if celda in conocidas or m.riesgo[celda] >= 0.5:
+            if celda in conocidas:
                 continue
             rng = np.random.default_rng([int(self.semilla), 7777, int(m.paso), k])
             probs = rna.probabilidades(anticipacion.rasgos_anticipacion(
                 self.mundo, pos, anterior, celda, k, rng, float(m.sensor.ruido), self._ambiente))
             pb = float(probs.get("barranco", 0.0))
+            if m.riesgo[celda] >= 0.5:      # ya es riesgo conocido: se clasifica igual (el panel la muestra) pero no se vuelve a contar
+                media = float(self._ant_suma[celda] / self._ant_n[celda]) if self._ant_n[celda] else pb
+                self._ant_ultima.append({"celda": [celda[0], celda[1]], "distancia": int(k), "probabilidades": probs,
+                                         "media_observaciones": round(media, 4), "observaciones": int(self._ant_n[celda]),
+                                         "marcada": True})
+                continue
             self._ant_suma[celda] += pb
             self._ant_n[celda] += 1
             media = float(self._ant_suma[celda] / self._ant_n[celda])
@@ -2039,7 +2193,8 @@ class Partida:
         """Clasificación por celda del tramo de ruta del paso: la celda siguiente (RNA original, distancia 1) y las de 2 a 4 pasos
         (RNA de anticipación). Cada elemento: {celda, distancia, probabilidades, fuente}."""
         tramo = [{"celda": [int(ui["celda"][0]), int(ui["celda"][1])], "distancia": 1,
-                  "probabilidades": dict(ui["probabilidades"]), "fuente": "rna"}]
+                  "probabilidades": dict(ui["probabilidades"]), "fuente": "rna",
+                  "marcada": bool(self.mision.riesgo[int(ui["celda"][0]), int(ui["celda"][1])] >= 0.5)}]
         tramo += [{"celda": e["celda"], "distancia": e["distancia"], "probabilidades": dict(e["probabilidades"]),
                    "fuente": "anticipacion", "marcada": e["marcada"]} for e in self._ant_ultima]
         return tramo
@@ -2600,8 +2755,10 @@ class Partida:
         celda = self.celda_para_barranco()
         if celda is None:
             return {"ok": False, "detalle": "sin celda libre cerca del rover"}
+        # R23 (QA): el barranco cambia solo el mundo real. El rover lo conoce cuando lo percibe: la anticipación de la RNA (celdas a 2 a 4
+        # pasos de la ruta; con la confirmación marca el riesgo y replantea en ese mismo paso) o los sensores de la celda de enfrente (el
+        # veto replantea). Antes se escribía en el mapa estimado «por arte de magia» sin replantear, y la ruta seguía cruzándolo.
         self.mundo.marcar_barranco(celda)
-        self.mision.riesgo[celda] = 1.0
         if "barranco" in EVENTOS_GRAVES and celda in {tuple(x) for x in (self.mision.ruta or [])}:
             self._replanear_ag("barranco")
         return {"ok": True, "detalle": f"barranco en {celda}", "celdas": [[int(celda[0]), int(celda[1])]]}

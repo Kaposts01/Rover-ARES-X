@@ -147,8 +147,24 @@ def _rasgos_alerta2_entrenamiento(mundo, pos, rumbo, sensor, rng):
     return _rasgos_alerta2(mundo, pos, rumbo, sensor, rng)
 
 
-def generar_dataset(semillas, muestras_por_mapa=400, ruido=0.1, prob_fallo=0.0, perfil="v2"):
+# R23 (RNA): el barranco es ~1 % de las celdas «de enfrente» y la red entrenada con esa proporción lo daba por libre con
+# confianza del 100 % cuando era poco profundo (recall 19/30 = 63 % en los mapas de prueba). El refuerzo añade escenas
+# dirigidas, con barrancos de profundidad sorteada como en el juego, mirados desde una celda libre vecina.
+SEMILLA_BASE_REFUERZO = 50_000        # los mapas de refuerzo salen de semillas lejanas a las de prueba (≤ 200)
+# Muestras dirigidas por mapa de entrenamiento que usa el modelo v2 con ruido nominal. Medido (60 mapas, 400 muestras, prueba
+# 51-59): 0 -> 19/30 (63 %); 100 -> 25/30 con 1,7 % de falsos barrancos entre las celdas libres. Más refuerzo solo sube los
+# falsos positivos: los barrancos de 1,0 a 1,5 m se confunden con la pendiente natural (límite físico del telémetro).
+REFUERZO_BARRANCO_POR_MAPA = 100
+BARRANCOS_MAPA_REFUERZO = 20          # barrancos por mapa de refuerzo (el juego usa 5-9 por mapa de 20x30)
+
+
+def generar_dataset(semillas, muestras_por_mapa=400, ruido=0.1, prob_fallo=0.0, perfil="v2", refuerzo_barranco=0):
     """Muestras etiquetadas a partir de mapas con las semillas indicadas.
+
+    `refuerzo_barranco`: muestras dirigidas ADICIONALES por semilla, tomadas de un mapa de refuerzo propio (semilla
+    `SEMILLA_BASE_REFUERZO + semilla`, con muchos barrancos) y siempre mirando a un barranco desde una celda libre
+    vecina. Solo para entrenar: no altera el azar de las muestras naturales (van al final) y los datos de prueba se
+    generan sin él (con 0 el resultado es idéntico al de antes).
 
     perfil="v2" (por defecto): sensores físicos sobre el mundo v2 (ARX-94d). perfil="v1" (alias "actual"):
     el modelo de la entrega del 17/11, con su dataset en el mundo v1. "terreno" y "alerta2" son las pistas de
@@ -159,10 +175,29 @@ def generar_dataset(semillas, muestras_por_mapa=400, ruido=0.1, prob_fallo=0.0, 
     rasgos_de = {"v2": _rasgos_celda_v2, "v1": _rasgos_celda_v1, "actual": _rasgos_celda_v1,
                  "terreno": _rasgos_terreno, "alerta2": _rasgos_alerta2_entrenamiento}[perfil]
     with _mundo_v1(perfil != "v2"):
-        return _dataset(semillas, muestras_por_mapa, ruido, prob_fallo, rasgos_de)
+        return _dataset(semillas, muestras_por_mapa, ruido, prob_fallo, rasgos_de, refuerzo_barranco)
 
 
-def _dataset(semillas, muestras_por_mapa, ruido, prob_fallo, rasgos_de):
+def _refuerzo_barranco(semilla, cantidad, ruido, prob_fallo, rasgos_de, X, y):
+    """Agrega `cantidad` muestras de barranco: celda libre cardinal vecina de un barranco, mirando hacia él."""
+    rng = np.random.default_rng(20_000 + semilla)
+    mundo = generar_mundo(semilla=SEMILLA_BASE_REFUERZO + semilla, n_barrancos=BARRANCOS_MAPA_REFUERZO)
+    sensor = SensorSuite(rng=rng, ruido=ruido, prob_fallo=prob_fallo)
+    posibles = []
+    for celda in zip(*np.nonzero(mundo.tipo == BARRANCO)):
+        for rumbo, (df, dc) in MOVIMIENTOS.items():
+            pos = (int(celda[0]) - df, int(celda[1]) - dc)      # desde `pos` con ese rumbo se mira a `celda`
+            if mundo.dentro(pos) and mundo.tipo[pos] == LIBRE:
+                posibles.append((pos, rumbo))
+    for _ in range(cantidad if posibles else 0):
+        pos, rumbo = posibles[int(rng.integers(len(posibles)))]
+        resultado = rasgos_de(mundo, pos, rumbo, sensor, rng)
+        if resultado is not None:
+            X.append(resultado[0])
+            y.append(resultado[1])
+
+
+def _dataset(semillas, muestras_por_mapa, ruido, prob_fallo, rasgos_de, refuerzo_barranco=0):
     X, y = [], []
     for semilla in semillas:
         rng = np.random.default_rng(10_000 + semilla)
@@ -180,6 +215,9 @@ def _dataset(semillas, muestras_por_mapa, ruido, prob_fallo, rasgos_de):
             rasgos, clase = resultado
             X.append(rasgos)
             y.append(clase)
+    if refuerzo_barranco:
+        for semilla in semillas:
+            _refuerzo_barranco(int(semilla), int(refuerzo_barranco), ruido, prob_fallo, rasgos_de, X, y)
     X = np.nan_to_num(np.array(X, dtype=float), nan=0.0)
     return X, np.array(y)
 

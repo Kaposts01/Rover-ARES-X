@@ -194,7 +194,7 @@ def construir():
         nbf.v4.new_markdown_cell("## 2. Entrenamiento de la RNA\n\nLa RNA se entrena con mapas separados por semilla. Se reporta macro-F1 y recall de barrancos en prueba."),
         nbf.v4.new_code_cell(
             "tr, va, te = particion_por_mapas(total_mapas=60)\n"
-            "X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400)\n"
+            "X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400, refuerzo_barranco=REFUERZO_BARRANCO_POR_MAPA)\n"
             "X_te, y_te = generar_dataset(te, muestras_por_mapa=400)\n"
             "rna_final = NeuralPerception(semilla=42).entrenar(X_tr, y_tr)\n"
             "res = rna_final.evaluar(X_te, y_te)\n"

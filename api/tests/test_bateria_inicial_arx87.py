@@ -62,7 +62,12 @@ def test_la_garantia_recibe_la_bateria_elegida(monkeypatch):
         vistas.append(bat0)
         return False
 
+    def falsa_plan(mundo, bat0, bases, factor, **kw):
+        vistas.append(bat0)
+        return False
+
     monkeypatch.setattr(pm, "_es_ganable", falsa)
+    monkeypatch.setattr(pm, "_es_ganable_plan", falsa_plan)      # R23: la partida jugable comprueba con el planificador
     p = Partida(semilla=11, nivel=1, filas=20, columnas=30, bateria=120)
     assert vistas and all(b == 120 for b in vistas)
     assert p._sin_garantia and any("Mapa sin garantía" in a for a in p.avisos)

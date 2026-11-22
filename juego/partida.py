@@ -752,7 +752,7 @@ class Partida:
         # ARX-90: regla de percepción (método ligado: sobrevive a copy y deepcopy de la partida)
         self.mision._actualizar_mapa_estimado = self._actualizar_mapa_percepcion
         self.confirmar_rna = bool(garantia) and CONFIRMAR_RNA_JUGABLE      # R23: ver CONFIRMAR_RNA_JUGABLE
-        self.anticipacion_activa = bool(garantia) and ANTICIPACION_JUGABLE
+        self.anticipacion_activa = self.plan_activo and ANTICIPACION_JUGABLE      # solo con el plan restringido: sabe olvidar marcas dudosas
         self._ant_suma = np.zeros(mundo.tipo.shape)    # p(barranco) acumulada por celda mirada a 2-4 pasos
         self._ant_n = np.zeros(mundo.tipo.shape, dtype=int)
         self._ant_ultima = []                           # clasificación del tramo del último paso (para /ia/paso)
@@ -1765,7 +1765,7 @@ class Partida:
     def exigidos(self) -> set:
         """Celdas de los sitios que hay que visitar para ganar (con plan restringido, todos menos los opcionales)."""
         if self.plan_activo and self.sitios_plan:
-            return {c for c, s in self.sitios_plan.items() if s.obligatorio}
+            return {c for c, s in self.sitios_plan.items() if s.obligatorio and c in self.mundo.sitios}   # la señal no cuenta aquí
         return {tuple(c) for c in self.mundo.sitios}
 
     def _exigidos_cumplidos(self) -> bool:
@@ -1914,7 +1914,8 @@ class Partida:
             return
         m = self.mision
         pos = tuple(int(v) for v in self.rover.posicion)
-        wp = [w for w in self._wp if not (w[0] == "sitio" and tuple(w[1]) in m.visitados)]
+        vistas = {tuple(sn["celda"]) for sn in self.senales if sn["visitada"]}
+        wp = [w for w in self._wp if not (w[0] == "sitio" and (tuple(w[1]) in m.visitados or tuple(w[1]) in vistas))]
         while wp and wp[0][0] == "base" and tuple(wp[0][1]) == pos:
             wp.pop(0)
         self._wp = wp
@@ -1932,6 +1933,11 @@ class Partida:
                 m.riesgo[c] = 0.05
         self._actualizar_plan()
         pendientes = {c: v for c, v in self.mundo.sitios.items() if c not in m.visitados}
+        celda_senal = self.senal_activa
+        if celda_senal is not None:                  # la señal biológica pendiente es un sitio obligatorio más del plan
+            celda_senal = tuple(int(v) for v in celda_senal)
+            pendientes[celda_senal] = 1.0
+            self.sitios_plan.setdefault(celda_senal, planificacion.SitioPlan(900 + len(self.senales), celda_senal, 1.0, None, True))
         prob = plan = None
         ruta = []
         if self._wp and m.objetivos and pendientes and getattr(m._optimizar_ag, "plan", None) is not None:
@@ -2128,7 +2134,7 @@ class Partida:
         y la ruta pasa a ser la cadena BFS de Mision por los objetivos pendientes (misma vía que ya usa Mision)."""
         m = self.mision
         celda = self.senal_activa
-        if celda is None:
+        if celda is None or self.plan_activo:         # R23: con plan restringido la señal ya es un sitio del plan
             return resultado
         if celda not in m.objetivos:
             m.objetivos = [celda] + list(m.objetivos)
@@ -2473,6 +2479,18 @@ class Partida:
         import itertools
         mascara = np.asarray(self.mundo.tipo == LIBRE)
         origen = tuple(int(x) for x in self.rover.posicion)
+        if self.plan_activo:
+            # R23: con 8 a 12 sitios no se permutan: la señal y los sitios obligatorios pendientes caben en algún recorrido del
+            # planificador (vecino más cercano o 2-opt, con recargas) sobre el mapa real
+            bateria = self.rover.bateria - (DANO_METEORITO if "meteorito" in self.eventos_activos else 0.0)
+            exig = self.exigidos()
+            sitios = [planificacion.SitioPlan(0, tuple(int(v) for v in celda), 1.0, None, True)]
+            sitios += [planificacion.SitioPlan(s_.id, s_.celda, s_.valor, None, True) for c, s_ in self.sitios_plan.items()
+                       if c in exig and c not in self.mision.visitados]
+            prob = planificacion.Problema(origen, tuple(int(v) for v in self.mundo.refugio), sitios, self.estaciones, bateria,
+                                          self.capacidad_bateria, planificacion.Distancias.de(mascara),
+                                          self.mision.factor_ambiente * self.factor_seguridad, reserva_extra=self._reserva_caza())
+            return any(planificacion.mejor_heuristico(prob, h).factible for h in ("vecino", "2opt"))
         pendientes = [tuple(int(v) for v in s) for s in self.mundo.sitios if s not in self.mision.visitados]
         refugio = tuple(int(v) for v in self.mundo.refugio)
         tramos, largos = {}, {}

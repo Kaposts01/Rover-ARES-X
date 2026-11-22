@@ -596,6 +596,20 @@ def _curvas_difuso_fijas():
     return universos, curvas, salida_universo, salida_conjuntos
 
 
+def _capacidad_bateria(sesion) -> float:
+    """Capacidad de la batería del rover en unidades del motor (la misma base del porcentaje de /estado)."""
+    return float(getattr(sesion.partida, "capacidad_bateria", 100.0) or 100.0)
+
+
+def _bateria_difuso(sesion, bateria, bateria_pct):
+    """Batería para el difuso en unidades del motor. `bateria_pct` (0 a 100, % de la capacidad, el mismo del HUD) manda
+    sobre `bateria` (unidades del motor). Sin ninguno devuelve None (se usa la carga real)."""
+    pct = _valor_entrada(bateria_pct, "bateria_pct", 0.0, 100.0)
+    if pct is not None:
+        return pct / 100.0 * _capacidad_bateria(sesion)
+    return _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
+
+
 def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, temperatura: float = 0.0) -> dict:
     """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2)."""
     from difuso import REGLAS, TEMPERATURA_TOLERANCIA
@@ -605,9 +619,14 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
     tolerancia = float(getattr(termico_p, "tolerancia", TEMPERATURA_TOLERANCIA) or TEMPERATURA_TOLERANCIA)
     res = m.difuso.inferir(distancia, bateria, inclinacion, temperatura)
     universos, curvas, salida_universo, salida_conjuntos = _curvas_difuso_fijas()
+    capacidad = _capacidad_bateria(sesion)
     return {
+        # `bateria` está en las unidades del motor (la escala que usa el difuso, con universo 0 a 100); `bateria_pct` es
+        # la misma carga como porcentaje de la capacidad (lo que muestra el HUD) y `capacidad_bateria` la equivalencia
         "entradas": {"distancia": float(distancia), "bateria": float(bateria), "inclinacion": float(inclinacion),
-                     "temperatura": float(temperatura)},
+                     "temperatura": float(temperatura),
+                     "bateria_pct": round(min(100.0, max(0.0, 100.0 * float(bateria) / capacidad)), 1),
+                     "capacidad_bateria": round(capacidad, 2)},
         "universos": universos,
         "curvas": curvas,
         "punto_entrada": {var: {c: round(float(g), 4) for c, g in res.membresias[var].items()}
@@ -826,7 +845,8 @@ def _razon_corta(modelo: str, motivos: list, accion) -> str:
         if m in _RAZONES:
             return _RAZONES[m]
     if motivos and motivos[0].startswith("V-"):
-        return f"la supervisión veta el paso ({motivos[0]})"
+        from api.narrador import TEXTO_MOTIVO
+        return f"el supervisor veta el paso: {TEXTO_MOTIVO.get(motivos[0].split(':')[0], 'riesgo detectado')}"
     if accion == "detener":
         return "conviene detenerse"
     if accion == "replanificar":
@@ -1181,7 +1201,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                        "mejor_desglose": _desglose_fitness(res.mejor_desglose)})
         salida["ag"] = ag
         from api.narrador import narrar_fila
-        salida["narracion"] = narrar_fila(ultima) if ultima else narrar_fila({})
+        vehiculo = getattr(sesion, "modo_planeta", "rover")
+        salida["narracion"] = narrar_fila(ultima, vehiculo) if ultima else narrar_fila({}, vehiculo)
         return salida
 
     @app.get("/rna/red")
@@ -1214,14 +1235,15 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
 
     @app.get("/difuso")
     def diagnostico_difuso(distancia: str = None, bateria: str = None, inclinacion: str = None,
-                           temperatura: str = None):
+                           temperatura: str = None, bateria_pct: str = None):
         """Laboratorio difuso (CA-05, §10.2). Sin parámetros usa el estado actual de la partida.
-        Las entradas manuales son opcionales; NaN o fuera de rango → 400 con motivo."""
+        Las entradas manuales son opcionales; NaN o fuera de rango → 400 con motivo. La batería se pide en
+        `bateria_pct` (% de la capacidad, como el HUD) o en `bateria` (unidades del motor, 0 a 100)."""
         sesion = activa()
         p = sesion.partida
         dist_actual = float(p.mision._distancia_a_riesgo_en_ruta())
         d = _valor_entrada(distancia, "distancia", 0.0, DISTANCIA_MAX)
-        b = _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
+        b = _bateria_difuso(sesion, bateria, bateria_pct)
         i = _valor_entrada(inclinacion, "inclinacion", 0.0, INCLINACION_MAX)
         t = _valor_entrada(temperatura, "temperatura", -80.0, 80.0)
         return _difuso_datos(sesion,
@@ -1232,7 +1254,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
 
     @app.get("/difuso/barrido")
     def barrido_difuso(desde: float = 10.0, hasta: float = 1.0, paso: float = 1.0, bateria: str = None,
-                       inclinacion: str = None, temperatura: str = None):
+                       inclinacion: str = None, temperatura: str = None, bateria_pct: str = None):
         """Barrido de la distancia (CA-05: de 10 m a 1 m). Devuelve velocidad y reglas por cada valor."""
         sesion = activa()
         if not (math.isfinite(desde) and math.isfinite(hasta) and math.isfinite(paso)) or paso <= 0:
@@ -1241,7 +1263,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             raise ErrorApi(400, f"la distancia debe estar en [0, {DISTANCIA_MAX:g}]")
         if (abs(desde - hasta) / paso) > 200:
             raise ErrorApi(400, "barrido demasiado largo: como máximo 200 valores")
-        b = _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
+        b = _bateria_difuso(sesion, bateria, bateria_pct)
         i = _valor_entrada(inclinacion, "inclinacion", 0.0, INCLINACION_MAX)
         b = float(sesion.partida.rover.bateria) if b is None else b
         i = 0.0 if i is None else i
@@ -1255,7 +1277,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             filas.append({"distancia": round(float(d), 3), "velocidad": round(float(res.velocidad), 4),
                           "fallback": bool(res.fallback),
                           "reglas": [{"id": r, "fuerza": round(float(f), 4)} for r, f, _ in res.reglas_activadas]})
-        return {"bateria": b, "inclinacion": i, "temperatura": t, "filas": filas}
+        return {"bateria": b, "bateria_pct": round(min(100.0, 100.0 * b / _capacidad_bateria(sesion)), 1),
+                "inclinacion": i, "temperatura": t, "filas": filas}
 
     @app.get("/moviles")
     def moviles():

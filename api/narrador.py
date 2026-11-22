@@ -29,6 +29,25 @@ TEXTO_MOTIVO = {
     "D-DIFUSO-LENTO": "el difuso pidió ir tan lento que se detuvo",
     "D-DISPARO-DRON": "disparó a un dron en línea",
     "AG-FALLBACK-GARANTIA": "el AG no encontró un orden que cumpliera todo y usó el orden de respaldo",
+    "AG-SIGUE-RUTA": "el AG siguió la ruta que había planificado",
+    "RNA-MAX-PLIBRE": "la RNA eligió la celda que veía más libre",
+    "D-VELOCIDAD-OK": "el difuso dio velocidad suficiente para avanzar",
+    "D-VELOCIDAD-BAJA": "el difuso dio velocidad baja y se esperó",
+    "D-RODEO": "el difuso rodeó el obstáculo",
+    "D-SIN-CAMINO": "no había un camino libre hacia el objetivo",
+    "D-SIN-CANDIDATO": "no había una celda candidata para avanzar",
+    "D-FALLA-SENSOR": "un sensor estaba en falla",
+    "D-SIN-ENLACE": "no había enlace con la base",
+    "D-META-ALCANZADA": "se alcanzó la meta",
+    "D-PARTIDA-TERMINADA": "la partida ya había terminado",
+    "T-SOBRE-TOLERANCIA": "la temperatura interna estaba sobre la tolerancia",
+    "REPLAN-RUTA-INCONSISTENTE": "la ruta dejó de ser coherente y se replanificó",
+    "V-RODEO-SIN-CANDIDATO": "no había por dónde rodear el obstáculo",
+    "V-SEGURIDAD-BARRANCO": "el supervisor vetó el avance por un barranco delante",
+    "V-SEGURIDAD-OBSTACULO": "el supervisor vetó el avance por un obstáculo delante",
+    "V-DISPARO-RIESGO": "el supervisor no dejó disparar porque la celda era de riesgo",
+    "V-DISPARO-BATERIA-CRITICA": "el supervisor no dejó disparar por batería crítica",
+    "V-DISPARO-MODO-SEGURO": "el supervisor no dejó disparar en modo seguro",
 }
 TEXTO_REGLA = {r["id"]: r["motivo"].rstrip(".") for r in REGLAS}
 VERBO_ACCION = {"avanzar": "avanzó", "detener": "se detuvo", "replanificar": "replanificó", "modo_seguro": "entró en modo seguro",
@@ -39,8 +58,14 @@ def _pct(v) -> str:
     return f"{round(float(v) * 100):d} %"
 
 
-def narrar_fila(fila: dict) -> str:
-    """Frase que explica el paso: qué vio la RNA, qué velocidad eligió el difuso y por qué, y qué decidió el supervisor."""
+def _vehiculo(vehiculo) -> str:
+    """Vehículo de la partida con su artículo, para abrir la frase: «el rover» o «la sonda» (otro valor cae en rover)."""
+    return "la sonda" if str(vehiculo or "").lower() == "sonda" else "el rover"
+
+
+def narrar_fila(fila: dict, vehiculo: str = "rover") -> str:
+    """Frase que explica el paso: qué vio la RNA, qué velocidad eligió el difuso y por qué, y qué decidió el supervisor.
+    `vehiculo` es el de la partida («rover» o «sonda»): la frase usa su nombre real."""
     if not fila:
         return "Todavía no hay pasos de la IA."
     partes = []
@@ -53,7 +78,8 @@ def narrar_fila(fila: dict) -> str:
     vel = fila.get("velocidad")
     if reglas and vel is not None:
         razon = TEXTO_REGLA.get(reglas[0], reglas[0]).lower()
-        extra = f" y {len(reglas) - 1} regla(s) más" if len(reglas) > 1 else ""
+        resto = len(reglas) - 1
+        extra = "" if resto < 1 else (" y 1 regla más" if resto == 1 else f" y {resto} reglas más")
         velocidad = f"{float(vel):.2f}".replace(".", ",")
         partes.append(f"el difuso fijó la velocidad en {velocidad} ({reglas[0]}: {razon}{extra})")
     motivos = [m for m in str(fila.get("motivos") or "").split(";") if m]
@@ -67,7 +93,7 @@ def narrar_fila(fila: dict) -> str:
     frase = ", ".join(partes)
     if frase:
         frase = frase[0].upper() + frase[1:] + ". "
-    cierre = f"El rover {accion}"
+    cierre = f"{_vehiculo(vehiculo).capitalize()} {accion}"
     if explicaciones:
         cierre += ": " + "; ".join(explicaciones[:2])
     return f"Paso {fila.get('paso', '-')}. {frase}{cierre}."

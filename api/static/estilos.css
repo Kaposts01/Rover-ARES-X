@@ -1235,3 +1235,5 @@ button.badge-reglas { border: 0; cursor: pointer; margin: 6px 0 0; width: auto; 
   .barra-mision button { padding: 6px 9px; font-size: 12px; }
   .barra-mision #reproducir { min-width: 0; }
 }
+/* «persecución» (estado de un dron) no se parte a mitad de palabra en el HUD; los demás valores siguen partiéndose por palabras */
+#h-drones { overflow-wrap: normal; word-break: normal; }

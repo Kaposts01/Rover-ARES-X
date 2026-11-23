@@ -21,6 +21,8 @@ export function pasosTutorial(vehiculo = "rover") {
       id: "mover", objetivo: ["#pad"], preparar: "controles", accion: "mover",
       titulo: "Muévete",
       texto: `Con las flechas del teclado (o W, A, S, D), o con los botones de este pad, mueves ${el} una celda por turno. Las diagonales están en las esquinas del pad. Prueba a dar un paso ahora.`,
+      // si el pad no está a la vista (p. ej. con la sonda, que no se conduce con botones), el texto no lo menciona
+      textoSinObjetivo: `Con las flechas del teclado (o W, A, S, D) mueves ${el} una celda por turno; las diagonales están en 7, 9, 1 y 3. En este momento no hay un pad de botones a la vista, así que usa el teclado. Prueba a dar un paso ahora.`,
       pista: "Esperando que muevas el vehículo…", hecho: "¡Bien! Cada movimiento es un turno: los drones, si hay, también actúan.",
     },
     {

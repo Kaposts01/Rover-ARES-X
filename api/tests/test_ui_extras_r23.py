@@ -137,6 +137,11 @@ def test_el_tutorial_tiene_de_4_a_6_pasos_con_accion_y_recuerda_lo_visto():
     assert [p["accion"] for p in pasos if p["accion"]] == ["mover", "recomendacion", "evento"]
     assert all(p["titulo"] and p["texto"] and p["objetivo"] for p in pasos)
     assert "la sonda" in _js("tutorial_datos.js", 'm.pasosTutorial("sonda")')[0]["texto"]
+    # el paso que habla del pad tiene un texto alternativo que no lo menciona, para cuando el pad no está a la vista
+    for v in ("rover", "sonda"):
+        mover = _js("tutorial_datos.js", f'm.pasosTutorial("{v}")')[0]
+        assert "pad" in mover["texto"] and "pad" not in mover["textoSinObjetivo"].replace("pad de botones", "")
+        assert "flechas" in mover["textoSinObjetivo"]
     # almacenamiento bloqueado o con datos: nunca lanza
     assert _js("tutorial_datos.js", "m.yaVisto({getItem() { throw new Error('bloqueado'); }})") is False
     assert _js("tutorial_datos.js", "m.marcarVisto({setItem() { throw new Error('bloqueado'); }})") is False

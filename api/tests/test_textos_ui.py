@@ -481,3 +481,15 @@ def test_la_intro_tiene_lista_de_planetas_y_zonas_de_clic_generosas():
     js = (ESTATICOS / "intro3d.js").read_text(encoding="utf-8")
     assert "in-lista" in js and "ZONA_FACTOR" in js and "velOrbital" in js
     assert "zona" in js and "intersectObjects(cuerpos.map((k) => k.zona)" in js
+
+
+@sin_node
+def test_los_rotulos_de_los_graficos_se_parten_sin_encimarse():
+    medir = "(t) => t.length * 6"          # 6 px por letra
+    r = _js(f'm.lineasRotulo("Sin AG (vecino más cercano)", 90, {medir}, 3)')
+    assert len(r) >= 2 and all(len(x) * 6 <= 90 for x in r) and " ".join(r) == "Sin AG (vecino más cercano)"
+    assert _js(f'm.lineasRotulo("Híbrido", 90, {medir})') == ["Híbrido"]
+    largo = _js(f'm.lineasRotulo("Sin AG (ruta con 2-opt) muy largo de verdad esto", 60, {medir}, 2)')
+    assert len(largo) == 2 and largo[-1].endswith("…") and all(len(x) * 6 <= 60 for x in largo)
+    assert _js(f'm.lineasRotulo("Extraordinariamente", 50, {medir})')[0].endswith("…")
+    assert _js(f'm.lineasRotulo("", 50, {medir})') == [""]

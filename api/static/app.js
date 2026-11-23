@@ -2195,9 +2195,20 @@ function actualizarEtiquetaEvento() {
   etiquetaEvento.classList.toggle("fuera", base.fuera);
   etiquetaEvento.style.setProperty("--ang", `${ang}rad`);
   etiquetaEvento.style.setProperty("--color", `#${m.color.toString(16).padStart(6, "0")}`);
-  etiquetaEvento.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, ${base.fuera ? "-50%" : "-100%"})`;
   const texto = etiquetaEvento.querySelector(".ev-texto");
   if (texto.textContent !== textoEtiquetaEvento) texto.textContent = textoEtiquetaEvento;
+  // El rótulo no debe tapar la bitácora (lista fija arriba a la izquierda del centro): si cae encima, baja a su lado o por debajo
+  const w = etiquetaEvento.offsetWidth || 160, hh = etiquetaEvento.offsetHeight || 28;
+  const centrado = base.fuera;
+  let izq = x - w / 2, arr = centrado ? y - hh / 2 : y - hh;
+  const bit = document.getElementById("registro"), rb = bit && bit.getClientRects().length > 0 && bit.children.length ? bit.getBoundingClientRect() : null;
+  const cruza = (a, t) => rb && a < rb.right && a + w > rb.left && t < rb.bottom && t + hh > rb.top;
+  if (cruza(izq, arr)) {
+    if (!centrado && !cruza(izq, y + 10)) arr = y + 10;      // la marca está bajo la bitácora: el rótulo pasa debajo de la marca
+    else arr = rb.bottom + 8;                                 // si no, justo debajo de la bitácora
+  }
+  izq = Math.max(8, Math.min(izq, window.innerWidth - w - 8));
+  etiquetaEvento.style.transform = `translate(${Math.round(izq)}px, ${Math.round(arr)}px)`;
 }
 etiquetaEvento.addEventListener("click", () => {
   const m = marcasEvento.principal();

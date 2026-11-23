@@ -2,7 +2,7 @@ import { coma as comaFormato } from "./formato.js?v=r14";
 import * as adaptador from "/static/adaptador.js?v=r14";
 import {
   VARIANTES_POLITICA, nombreVariante, notaVariantes, NOTA_POLITICAS, textoCandidatoAG, lineasExtraCandidatoAG, LAB_AG, textoEvaluacionRNA, textoBateriaDifuso,
-  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso } from "/static/textos.js?v=r14";
+  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso, lineasRotulo } from "/static/textos.js?v=r14";
 import { crearEditorDifuso } from "/static/difuso_editor.js?v=r14";
 // Laboratorios de los modelos: genético, difuso y RNA, más la comparación de políticas.
 // Datos de los endpoints de docs/CONTRATOS_GRAFICOS.md. Este módulo solo dibuja; el motor está en Python.
@@ -257,6 +257,11 @@ function pintarPoblacion(indice) {
 function pintarCandidatos() {
   const cont = $("ag-candidatos");
   cont.replaceChildren();
+  const tituloDesglose = $("ag-desglose-titulo");   // el título dice cuántas rutas se muestran de verdad
+  if (tituloDesglose) {
+    const n = agDatos.candidatos.length;
+    tituloDesglose.textContent = n ? `Desglose del fitness (${n} ${n === 1 ? "mejor ruta" : "mejores rutas"})` : "Desglose del fitness de las mejores rutas";
+  }
   agDatos.candidatos.forEach((c, i) => {
     const b = nodo("button", "chip" + (i === agCandidato ? " activa" : ""), `Candidato ${i + 1} · ${coma(c.fitness, 3)}`);
     b.type = "button";
@@ -831,6 +836,13 @@ function dibujarBarrasPol(filas) {
   if (!p || !filas.length) return;
   const { ctx, w, h } = p;
   const m = { l: 52, r: 14, t: 14, b: 40 };
+  // Los nombres de las variantes se parten en líneas del ancho de su barra (no se enciman con las vecinas): el margen inferior crece con las líneas
+  const anchoSlot = (w - m.l - m.r) / filas.length;
+  const FUENTE_ROTULO = "11px 'Segoe UI', system-ui, sans-serif";
+  ctx.font = FUENTE_ROTULO;
+  const rotulos = filas.map((f) => lineasRotulo(f.nombre, Math.max(30, anchoSlot - 8), (t) => ctx.measureText(t).width, 3));
+  const nLineas = Math.max(1, ...rotulos.map((l) => l.length));
+  m.b = 14 + nLineas * 14;
   const top = Math.max(1, ...filas.map((f) => f.media + f.desv)) * 1.1;
   const Y = (y) => h - m.b - (y / top) * (h - m.t - m.b);
   ctx.font = "12px 'Segoe UI', system-ui, sans-serif";
@@ -865,7 +877,9 @@ function dibujarBarrasPol(filas) {
     ctx.fillStyle = "#c8d2e4";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(f.nombre, cx, h - m.b + 8);
+    ctx.font = FUENTE_ROTULO;
+    rotulos[i].forEach((linea, j) => ctx.fillText(linea, cx, h - m.b + 8 + j * 14));
+    ctx.font = "12px 'Segoe UI', system-ui, sans-serif";
     polBarras.push({ x0: cx - bw / 2, x1: cx + bw / 2, f });
   });
   ctx.textAlign = "left";

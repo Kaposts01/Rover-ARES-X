@@ -156,36 +156,48 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
       const d = await obtener("/ia/paso");
       if (miEpoca !== epoca) return;   // llegó de la partida anterior
       if (!d) { pasoInfo.textContent = "Sin datos (no hay partida o el motor no respondió)."; return; }
-      iaUlt = d;
-      const nuevo = d.hay_paso && d.paso !== ultimoPaso;
-      narracion.textContent = d.hay_paso ? (d.narracion || "") : "";
-      if (nuevo && alNarrar) { try { alNarrar(d.narracion || ""); } catch (e) { /* sin subtítulos */ } }
-      if (!d.hay_paso) { pasoInfo.textContent = "Sin pasos todavía: pulsa «Un paso» o «Reproducir»."; }
+      // /ia/paso es la decisión del ÚLTIMO PASO DE LA IA: si el jugador movió el vehículo a mano (o aún no hubo paso de la IA),
+      // esa decisión es vieja. Entonces la RNA se lee en vivo sobre la celda de enfrente (GET /rna) en cada movimiento.
+      const vieja = !d.hay_paso || (d.paso_ia != null && d.paso_ia !== d.paso);
+      const vivo = vieja ? await obtener("/rna") : null;
+      if (miEpoca !== epoca) return;
+      const enVivo = !!vivo;
+      iaUlt = enVivo ? { ...d, rna: vivo, celda: null, posicion: null } : d;
+      const nuevo = (d.hay_paso || enVivo) && d.paso !== ultimoPaso;
+      narracion.textContent = d.hay_paso && !enVivo ? (d.narracion || "") : "";
+      if (nuevo && alNarrar && !enVivo) { try { alNarrar(d.narracion || ""); } catch (e) { /* sin subtítulos */ } }
+      if (enVivo) {
+        pasoInfo.replaceChildren(el("strong", null, `Paso ${d.paso}`),
+          document.createTextNode(d.hay_paso ? ` · lectura en vivo de la RNA sobre la celda de enfrente (la última decisión de la IA fue en el paso ${d.paso_ia ?? "—"}; desde entonces conduces tú)`
+            : " · lectura en vivo de la RNA sobre la celda de enfrente (todavía no hubo un paso de la IA)"));
+      } else if (!d.hay_paso) { pasoInfo.textContent = "Sin pasos todavía: pulsa «Un paso» o «Reproducir»."; }
       else {
         const sup = d.supervisor || {};
         pasoInfo.replaceChildren(el("strong", null, `Paso ${d.paso}`),
           document.createTextNode(` · celda ${d.posicion ? `(${d.posicion.join(", ")})` : "-"} → ${d.rumbo || "-"} · ${sup.accion || "-"}`),
           el("span", "pia-motivos", nombresMotivos(sup.motivos)));
       }
-      if (d.rna) {
-        if (!red || !red.modelo || !d.rna.modelo || red.modelo.perfil !== d.rna.modelo.perfil) red = await obtener("/rna/red");
+      const rnaFuente = enVivo ? vivo : d.rna;
+      if (rnaFuente) {
+        if (!red || !red.modelo || !rnaFuente.modelo || red.modelo.perfil !== rnaFuente.modelo.perfil) red = await obtener("/rna/red");
         if (miEpoca !== epoca) return;
-        rnaDatos = { ...d.rna, accion: (d.supervisor || {}).accion };
+        rnaDatos = { ...rnaFuente, accion: enVivo ? rnaFuente.accion : (d.supervisor || {}).accion };
       } else rnaDatos = null;
-      difDatos = d.difuso || null;
+      difDatos = enVivo ? null : (d.difuso || null);
       agDatosUlt = d.ag || null;
       if (nuevo) {
         ultimoPaso = d.paso;
-        const pr = (d.rna && (d.rna.probabilidades_usadas || d.rna.probabilidades)) || {};
+        const pr = (rnaFuente && (rnaFuente.probabilidades_usadas || rnaFuente.probabilidades)) || {};
         hist.push({ paso: d.paso, pb: pr.barranco ?? null, conf: Object.keys(pr).length ? Math.max(...Object.values(pr)) : null,
-          vel: d.difuso ? d.difuso.velocidad_usada ?? d.difuso.salida.velocidad : null,
-          faltan: d.ag ? d.ag.celdas_restantes : null, replan: !!(d.ag && d.ag.ultimo_replanteo && d.ag.ultimo_replanteo.paso === d.paso) });
+          vel: !enVivo && d.difuso ? d.difuso.velocidad_usada ?? d.difuso.salida.velocidad : null,
+          faltan: d.ag ? d.ag.celdas_restantes : null, replan: !enVivo && !!(d.ag && d.ag.ultimo_replanteo && d.ag.ultimo_replanteo.paso === d.paso) });
         if (hist.length > HIST_N) hist.shift();
       }
       if (!rnaDatos) rnaDecision.textContent = "La RNA no actuó en este paso (modo sin RNA o sin paso de la IA).";
+      if (rnaDatos && enVivo) rnaDecision.setAttribute("data-en-vivo", "1"); else rnaDecision.removeAttribute("data-en-vivo");
       if (!difDatos) difSalida.textContent = "El difuso no actuó en este paso (modo sin difuso o sin paso de la IA).";
       pintarRNA(); pintarDifuso(); pintarAG(); pintarHistoriales();
-      if (nuevo || forzar) { pulsar(); if (d.rna) marcar(celdasAMarcar(tramoActual())); }
+      if (nuevo || forzar) { pulsar(); if (rnaFuente) marcar(celdasAMarcar(tramoActual())); }
     } finally { enVuelo = false; }
   }
 
@@ -331,7 +343,9 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     const tramo = tramoActual();
     const f0 = tramo && tramo.filas[0];
     // la cabecera siempre dice de qué celda habla (la clasificación de la celda de enfrente), no solo «libre 100 %»
-    rnaDecision.replaceChildren(el("strong", null, f0 ? titularRNA(f0) : `${mejor} · ${pct(probs[mejor])}`), document.createTextNode(` → acción ${rnaDatos.accion || "-"}`));
+    const envivo = rnaDecision.getAttribute("data-en-vivo") === "1";
+    rnaDecision.replaceChildren(el("strong", null, f0 ? titularRNA(f0) : `${mejor} · ${pct(probs[mejor])}`),
+      document.createTextNode(envivo ? ` (celda de enfrente ahora) → el supervisor ${rnaDatos.accion ? `haría: ${rnaDatos.accion}` : "no decidió"}` : ` → acción ${rnaDatos.accion || "-"}`));
     rnaDecision.style.setProperty("--c", COLOR_CLASE[mejor] || CIAN);
     barras(rnaProbs, clases.map((c) => [c, probs[c], COLOR_CLASE[c]]));
     pintarTramo(tramo);

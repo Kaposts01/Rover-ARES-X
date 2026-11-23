@@ -118,6 +118,25 @@ export function textoCiencia(fraccion) {
   return ok ? `${comaFormato(Number(fraccion) * 100, 1)} %` : "—";
 }
 
+// Parte un rótulo en líneas que caben en `anchoMax` (medido con `medir(texto)`): por palabras y, si una palabra sola no cabe, la recorta
+// con «…». Sirve para las etiquetas de los gráficos, que no deben encimarse con la vecina. Máximo `maxLineas` (la última lleva «…» si sobra).
+export function lineasRotulo(texto, anchoMax, medir, maxLineas = 3) {
+  const palabras = String(texto ?? "").split(/\s+/).filter(Boolean);
+  const caben = (t) => medir(t) <= anchoMax;
+  const recortar = (t) => { let x = t; while (x.length > 1 && !caben(`${x}…`)) x = x.slice(0, -1); return `${x}…`; };
+  const lineas = [];
+  let actual = "";
+  for (const p of palabras) {
+    const prueba = actual ? `${actual} ${p}` : p;
+    if (caben(prueba)) { actual = prueba; continue; }
+    if (actual) lineas.push(actual);
+    actual = caben(p) ? p : recortar(p);
+  }
+  if (actual) lineas.push(actual);
+  if (lineas.length > maxLineas) { const resto = lineas.slice(0, maxLineas); resto[maxLineas - 1] = recortar(`${resto[maxLineas - 1]} ${lineas.slice(maxLineas).join(" ")}`); return resto; }
+  return lineas.length ? lineas : [""];
+}
+
 // Batería del difuso: lo que se rotula «%» es el porcentaje real (el del HUD); la entrada que usó el difuso está en
 // unidades del motor y se dice como tal.
 export function textoBateriaDifuso(entradas) {

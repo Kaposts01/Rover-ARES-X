@@ -94,7 +94,7 @@ html, body {
   max-width: calc(100vw - 560px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-#ver-resultado { position: fixed; top: 56px; left: var(--centro, 50%); transform: translateX(-50%); z-index: 40; width: auto; padding: 8px 18px; border-radius: 999px; font-weight: 700; background: var(--acento); color: #06121c; border: 1px solid var(--acento); box-shadow: var(--sombra); cursor: pointer; }
+#ver-resultado { position: fixed; top: 62px; left: var(--centro, 50%); transform: translateX(-50%); z-index: 40; width: auto; padding: 8px 18px; border-radius: 999px; font-weight: 700; background: var(--acento); color: #06121c; border: 1px solid var(--acento); box-shadow: var(--sombra); cursor: pointer; }
 #ver-resultado.oculto { display: none; }
 
 /* ---------- controles (derecha) ---------- */
@@ -1237,3 +1237,7 @@ button.badge-reglas { border: 0; cursor: pointer; margin: 6px 0 0; width: auto; 
 }
 /* «persecución» (estado de un dron) no se parte a mitad de palabra en el HUD; los demás valores siguen partiéndose por palabras */
 #h-drones { overflow-wrap: normal; word-break: normal; }
+.cond-filas .fila.cond-larga { display: block; }
+.cond-filas .fila.cond-larga .valor { display: block; margin-top: 2px; text-align: left; font-weight: 400; color: var(--texto-suave, #b5c8d1); }
+/* con el tutorial abierto, los avisos de logro no tapan su tarjeta: los logros nuevos se ven luego en la pantalla final */
+body.tutorial-activo .fn-avisos { display: none; }

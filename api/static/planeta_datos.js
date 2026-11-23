@@ -1,4 +1,4 @@
-import { coma as comaFormato } from "./formato.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
 // Condiciones y aspecto de cada planeta: datos y funciones puras (sin DOM ni THREE). Se prueban con node (api/tests/test_textos_ui.py).
 //
 // ADAPTADOR ÚNICO de las mecánicas del planeta. El motor (juego/planetas.py) las entrega de dos maneras y aquí se leen las dos:

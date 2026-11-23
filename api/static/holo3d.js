@@ -1,8 +1,8 @@
 // Capa 3D «Holograma de IA»: panel en un canvas junto al rover y la ruta luminosa del AG.
 // El contenido llega ya adaptado (holo_datos.js). Sin recursos externos; sin fábricas globales.
 import * as THREE from "three";
-import { limpiar, porcentaje } from "/static/holo_datos.js?v=r14";
-import { nombreEstado, plural } from "/static/textos.js?v=r14";
+import { limpiar, porcentaje } from "/static/holo_datos.js?v=r15";
+import { nombreEstado, plural } from "/static/textos.js?v=r15";
 
 const ANCHO = 1024;
 const ALTO = 560;

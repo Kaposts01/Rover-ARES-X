@@ -427,3 +427,17 @@ def test_h5_foco_atrapado_en_la_tarjeta():
 def test_h6_plan_sin_referencia_a_inventario():
     plan = (Path(__file__).resolve().parents[2] / "docs" / "planes" / "PANTALLA_FINAL.md").read_text(encoding="utf-8")
     assert "inventario del ejemplo" not in plan and "proyecto de ejemplo del usuario" in plan
+
+
+def test_cierre_de_la_pantalla_final_y_textos_sin_vehiculo_fijo():
+    """Esc y «Cerrar y revisar la partida» dejan la partida a la vista; «Ver resultado» la reabre; los textos nombran al vehículo según el modo."""
+    tarjeta = (ESTATICOS / "final_tarjeta.js").read_text(encoding="utf-8")
+    html = (ESTATICOS / "index.html").read_text(encoding="utf-8")
+    app = (ESTATICOS / "app.js").read_text(encoding="utf-8")
+    assert "Cerrar y revisar la partida" in tarjeta and "Omitir el informe" not in tarjeta
+    assert 'e.key === "Escape"' in tarjeta and "llamar(alContinuar)" in tarjeta
+    assert 'id="ver-resultado"' in html and "Ver resultado" in html and 'cierreDeMision(estado.estado, null)' in app
+    assert 'cerrarFinal("revisar")' in app or 'cerrarFinal && cerrarFinal("revisar")' in app
+    # ningún «rover» fijo en los textos visibles del HTML que no cambian con el modo
+    assert "Celda frente al rover" not in html and "La cámara sigue al rover</label>" not in html
+    assert "3 mejores rutas" not in html and 'id="ag-desglose-titulo"' in html

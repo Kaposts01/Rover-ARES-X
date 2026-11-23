@@ -1,5 +1,5 @@
 // Viaje entre planetas: tarjeta DOM. Todo con textContent (sin innerHTML).
-import { DURACION_VIAJE_S } from "/static/viaje_datos.js?v=r14";
+import { DURACION_VIAJE_S } from "/static/viaje_datos.js?v=r15";
 
 export function crearTarjetaViaje(contenedor) {
   const raiz = document.createElement("div");

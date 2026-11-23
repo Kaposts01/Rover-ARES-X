@@ -1,9 +1,9 @@
-import { coma as comaFormato } from "./formato.js?v=r14";
-import * as adaptador from "/static/adaptador.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import * as adaptador from "/static/adaptador.js?v=r15";
 import {
   VARIANTES_POLITICA, nombreVariante, notaVariantes, NOTA_POLITICAS, textoCandidatoAG, lineasExtraCandidatoAG, LAB_AG, textoEvaluacionRNA, textoBateriaDifuso,
-  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso, lineasRotulo } from "/static/textos.js?v=r14";
-import { crearEditorDifuso } from "/static/difuso_editor.js?v=r14";
+  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso, lineasRotulo } from "/static/textos.js?v=r15";
+import { crearEditorDifuso } from "/static/difuso_editor.js?v=r15";
 // Laboratorios de los modelos: genético, difuso y RNA, más la comparación de políticas.
 // Datos de los endpoints de docs/CONTRATOS_GRAFICOS.md. Este módulo solo dibuja; el motor está en Python.
 
@@ -840,7 +840,7 @@ function dibujarBarrasPol(filas) {
   const anchoSlot = (w - m.l - m.r) / filas.length;
   const FUENTE_ROTULO = "11px 'Segoe UI', system-ui, sans-serif";
   ctx.font = FUENTE_ROTULO;
-  const rotulos = filas.map((f) => lineasRotulo(f.nombre, Math.max(30, anchoSlot - 8), (t) => ctx.measureText(t).width, 3));
+  const rotulos = filas.map((f) => lineasRotulo(f.nombre, Math.max(30, anchoSlot - 8), (t) => ctx.measureText(t).width, 4));
   const nLineas = Math.max(1, ...rotulos.map((l) => l.length));
   m.b = 14 + nLineas * 14;
   const top = Math.max(1, ...filas.map((f) => f.media + f.desv)) * 1.1;

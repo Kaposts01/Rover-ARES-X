@@ -1,6 +1,6 @@
 // Comparar dos políticas lado a lado: textos y cálculos puros (sin DOM), que se prueban con node.
-import { coma as comaFormato, porcentaje, grados } from "./formato.js?v=r14";
-import { nombreVariante, ayudaVariante, nombreAccion, nombresMotivos, nombreEstado, plural } from "./textos.js?v=r14";
+import { coma as comaFormato, porcentaje, grados } from "./formato.js?v=r15";
+import { nombreVariante, ayudaVariante, nombreAccion, nombresMotivos, nombreEstado, plural } from "./textos.js?v=r15";
 
 // Políticas que se pueden enfrentar. «solo_*»: una sola técnica conduce, con el supervisor; el resto son variantes del híbrido.
 export const ORDEN_POLITICAS = ["hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_mas_corta", "sin_ag_2opt", "ruta_corta", "ag_puro", "solo_rna", "solo_difuso", "solo_ag"];

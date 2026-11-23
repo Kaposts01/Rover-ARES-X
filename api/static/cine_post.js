@@ -1,6 +1,6 @@
 // Cine: postproceso (bloom, bokeh y viñeta ligera). Recibe THREE y las clases de los passes cargadas con import().
 // Si algo falla, quien lo llama vuelve a renderer.render. Mide sus propios cuadros y se apaga si el equipo no rinde.
-import { crearMonitorFps, UMBRAL_FPS } from "/static/cine_datos.js?v=r14";
+import { crearMonitorFps, UMBRAL_FPS } from "/static/cine_datos.js?v=r15";
 
 const VINETA = {
   uniforms: { tDiffuse: { value: null }, intensidad: { value: 0.22 } },

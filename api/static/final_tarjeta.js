@@ -1,12 +1,12 @@
 // Pantalla final: capa DOM (estrellas, puntaje, estadísticas, logros, momentos y botones). Todo con textContent.
-import { porcentaje } from "./formato.js?v=r14";
+import { porcentaje } from "./formato.js?v=r15";
 import {
   ROTULO_PUNTAJE, NOTA_PUNTAJE, ROTULO_FICCION, NOTA_DISTANCIA, NOTA_BARRANCOS, NOTA_VIOLACIONES, AVISO_TERRENO,
   DURACION_CUENTA_MS, DURACION_CONFETI_MS, TECLAS_QUE_PASAN, MAX_MOMENTOS,
   tituloFinal, puntajeFinal, desglosePuntaje, detalleEstrellas, lineaTermino, formatoDato, confetiPermitido,
-} from "./final_datos.js?v=r14";
-import { icono, insignia, estrella } from "./final_iconos.js?v=r14";
-import { Vehiculo, nombreEstado, AYUDA_SITIOS_Y_CIENCIA, textoSitios, textoCiencia } from "./textos.js?v=r14";
+} from "./final_datos.js?v=r15";
+import { icono, insignia, estrella } from "./final_iconos.js?v=r15";
+import { Vehiculo, nombreEstado, AYUDA_SITIOS_Y_CIENCIA, textoSitios, textoCiencia } from "./textos.js?v=r15";
 
 const reducidoAhora = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 

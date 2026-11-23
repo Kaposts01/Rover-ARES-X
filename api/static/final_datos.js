@@ -1,5 +1,5 @@
 // Pantalla final: puntaje, estrellas y logros. Datos y funciones puras (sin DOM ni THREE). Se prueban con node.
-import { PLANETAS_VIAJE, AVISO_TERRENO } from "./viaje_datos.js?v=r14";
+import { PLANETAS_VIAJE, AVISO_TERRENO } from "./viaje_datos.js?v=r15";
 
 export { PLANETAS_VIAJE, AVISO_TERRENO };
 export const CLAVE_PREF = "ares.final";          // localStorage: casilla «Mostrar la pantalla final» (activa por defecto)

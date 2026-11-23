@@ -1,5 +1,5 @@
 // Introducción: capa DOM (cabecera, tarjeta del cuerpo, avisos fijos, Omitir y casilla). Todo con textContent (sin innerHTML).
-import { TITULO_INTRO, SUBTITULO_INTRO, ROTULO_INTRO, AVISO_TERRENO_INTRO, NOTA_ELEGIR } from "./intro_datos.js?v=r14";
+import { TITULO_INTRO, SUBTITULO_INTRO, ROTULO_INTRO, AVISO_TERRENO_INTRO, NOTA_ELEGIR } from "./intro_datos.js?v=r15";
 
 export function crearTarjetaIntro(contenedor) {
   const raiz = document.createElement("div");

@@ -1,7 +1,7 @@
 // Escena propia de cada planeta: partículas de viento con dirección, centelleo (hielo, regolito, pavesas) y obstáculos de los gigantes
 // (bancos de nubes, bruma, cristales de hielo). Los datos (perfiles y condiciones) viven en planeta_datos.js.
 // Rendimiento: dos nubes de puntos de tamaño fijo (≤ 260 y ≤ 170), una sola geometría compartida por obstáculo y nada que liberar por mapa.
-import { perfilPlaneta } from "./planeta_datos.js?v=r14";
+import { perfilPlaneta } from "./planeta_datos.js?v=r15";
 
 const MAX_VIENTO = 260, MAX_CENTELLEO = 170;
 const MEDIA_CAJA = 15;   // las partículas viven en una caja de 30 × 30 celdas alrededor del vehículo

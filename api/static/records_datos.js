@@ -1,6 +1,6 @@
 // Récords por semilla: textos y formatos puros (sin DOM), que se prueban con node.
-import { coma as comaFormato } from "./formato.js?v=r14";
-import { nombreModo, nombreEstado, Vehiculo, plural } from "./textos.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import { nombreModo, nombreEstado, Vehiculo, plural } from "./textos.js?v=r15";
 
 export const NIVELES = ["Muy fácil", "Fácil", "Medio", "Difícil", "Hardcore"];
 export const nombreNivel = (n) => NIVELES[Number(n) - 1] || String(n ?? "—");

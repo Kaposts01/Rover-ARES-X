@@ -1,33 +1,33 @@
 // ARES-X · escena 3D del rover (ARX-04, ARX-05 y ARX-20: diseño realista). El motor está en Python; aquí solo se dibuja y se envían acciones.
 import * as THREE from "three";
 import { OrbitControls } from "/static/vendor/OrbitControls.js";
-import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios, abrirEdicionDifuso } from "/static/laboratorio.js?v=r14";
-import { coma, porcentaje, fraccionAPorcentaje, grados } from "/static/formato.js?v=r14";
-import * as efectos from "/static/efectos.js?v=r14";
-import * as adaptador from "/static/adaptador.js?v=r14";
-import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
-import { crearEvolucion } from "/static/evolucion3d.js?v=r14";
-import { crearEvolucionUI } from "/static/evolucion_ui.js?v=r14";
-import { adaptarEvolucion, desdeLaboratorio } from "/static/ag_evolucion_datos.js?v=r14";
-import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
-import { crearHolograma } from "/static/holo3d.js?v=r14";
-import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
-import { crearPanelIA } from "/static/panel_ia.js?v=r14";
-import { crearSonido } from "/static/sonido.js?v=r14";
-import { crearDefensa } from "/static/defensa.js?v=r14";
+import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios, abrirEdicionDifuso } from "/static/laboratorio.js?v=r15";
+import { coma, porcentaje, fraccionAPorcentaje, grados } from "/static/formato.js?v=r15";
+import * as efectos from "/static/efectos.js?v=r15";
+import * as adaptador from "/static/adaptador.js?v=r15";
+import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r15";
+import { crearEvolucion } from "/static/evolucion3d.js?v=r15";
+import { crearEvolucionUI } from "/static/evolucion_ui.js?v=r15";
+import { adaptarEvolucion, desdeLaboratorio } from "/static/ag_evolucion_datos.js?v=r15";
+import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r15";
+import { crearHolograma } from "/static/holo3d.js?v=r15";
+import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r15";
+import { crearPanelIA } from "/static/panel_ia.js?v=r15";
+import { crearSonido } from "/static/sonido.js?v=r15";
+import { crearDefensa } from "/static/defensa.js?v=r15";
 import {
   EVO, reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
   textoBateriaDifuso, resumenMeta, ayudaPuntaje, AYUDA_SITIOS_Y_CIENCIA, elVehiculo, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
-} from "/static/textos.js?v=r14";
-import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
-import { crearRecords } from "/static/records.js?v=r14";
-import { textoNuevoRecord } from "/static/records_datos.js?v=r14";
-import { crearComparar } from "/static/comparar.js?v=r14";
-import { crearTutorial } from "/static/tutorial.js?v=r14";
-import { TEXTO_CAMBIO_MODO } from "/static/tutorial_datos.js?v=r14";
-import { condicionesPlaneta, filasCondiciones, deltaPaso, perfilPlaneta, textoQueCambia } from "/static/planeta_datos.js?v=r14";
-import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r14";
-import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
+} from "/static/textos.js?v=r15";
+import { crearMarcasEvento } from "/static/marcas_evento.js?v=r15";
+import { crearRecords } from "/static/records.js?v=r15";
+import { textoNuevoRecord } from "/static/records_datos.js?v=r15";
+import { crearComparar } from "/static/comparar.js?v=r15";
+import { crearTutorial } from "/static/tutorial.js?v=r15";
+import { TEXTO_CAMBIO_MODO } from "/static/tutorial_datos.js?v=r15";
+import { condicionesPlaneta, filasCondiciones, deltaPaso, perfilPlaneta, textoQueCambia } from "/static/planeta_datos.js?v=r15";
+import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r15";
+import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r15";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -458,7 +458,7 @@ async function obtenerEvolucion() {
   if (r.ok) return adaptarEvolucion(r.cuerpo, { fuente: "motor" });
   if (r.cuerpo && r.cuerpo.hay_plan === false) return adaptarEvolucion({ hay_plan: false });
   if (new URLSearchParams(location.search).has("demo")) {   // ?demo: simulacro con ventanas y recargas, mientras el motor no publique el endpoint
-    const { simularEvolucion } = await import("/static/ag_evolucion_simulacro.js?v=r14");
+    const { simularEvolucion } = await import("/static/ag_evolucion_simulacro.js?v=r15");
     return adaptarEvolucion(simularEvolucion(contextoEvolucion(), { autonomia: 16 }), { fuente: "motor" });
   }
   const ag = await pedirSinAviso("/ag");   // respaldo: el laboratorio genético
@@ -2354,6 +2354,7 @@ function aplicarCondiciones(e, forzar = false) {
     v.title = fuente === "motor" ? "Dato del motor" : "Valor aproximado: todavía no hay partida que lo confirme";
     f.append(a, v);
     if (etiqueta === "¡Resbaló!") f.classList.add("cond-alerta");
+    if (String(valor).length > 34) f.classList.add("cond-larga");   // texto largo (p. ej. el gasto adicional): etiqueta arriba y valor debajo, sin columnas angostas
     if (fuente !== "motor") { const r = document.createElement("small"); r.className = "cond-ref"; r.textContent = "aprox."; v.append(" ", r); }
     return f;
   }));
@@ -2386,7 +2387,7 @@ async function abrirVuelo(destino, { alOmitir = null } = {}) {
   try {
     // Carga perezosa: si un módulo del vuelo no carga, la partida sigue igual (con import estático rompería toda la app)
     const [datosV, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
-      import("/static/viaje_datos.js?v=r14"), import("/static/viaje3d.js?v=r14"), import("/static/viaje_tarjeta.js?v=r14")]);
+      import("/static/viaje_datos.js?v=r15"), import("/static/viaje3d.js?v=r15"), import("/static/viaje_tarjeta.js?v=r15")]);
     const { datosTarjeta, modoMovimiento, origenVuelo, pasoCarga, etapaCarga, textoEtapa, CIERRE_ESTATICO_S } = datosV;
     const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const modo = modoMovimiento(reducido, true);
@@ -2496,10 +2497,10 @@ async function correrIntro({ motivo = "abrir" } = {}) {
   try {
     const reducido = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const webgl = !!(renderer && renderer.getContext && renderer.getContext());
-    const { debeMostrarIntro, elegirCuerpo, datosCuerpo, GUARDA_PRIMER_CUADRO_S, CIERRE_INACTIVIDAD_S } = await import("/static/intro_datos.js?v=r14");
+    const { debeMostrarIntro, elegirCuerpo, datosCuerpo, GUARDA_PRIMER_CUADRO_S, CIERRE_INACTIVIDAD_S } = await import("/static/intro_datos.js?v=r15");
     if (!debeMostrarIntro({ motivo, activada: introActivada(), reducido, webgl })) return;
     if (!webgl || !planetasDatos) return;
-    const [{ crearIntro }, { crearTarjetaIntro }] = await Promise.all([import("/static/intro3d.js?v=r14"), import("/static/intro_tarjeta.js?v=r14")]);
+    const [{ crearIntro }, { crearTarjetaIntro }] = await Promise.all([import("/static/intro3d.js?v=r15"), import("/static/intro_tarjeta.js?v=r15")]);
     if (!tarjetaIntro) tarjetaIntro = crearTarjetaIntro(document.body);
     controles.enabled = false;   // la cámara de la partida no se mueve mientras dura la intro
     document.body.classList.add("intro-activa");   // oculta los paneles de la app mientras dura (CSS)
@@ -2573,7 +2574,7 @@ document.querySelectorAll(".casilla-final").forEach((c) => {
 });
 function cargarLogros() {
   if (!promesaLogros) {
-    promesaLogros = import("/static/final_logros.js?v=r14").then(({ crearLogros }) => {
+    promesaLogros = import("/static/final_logros.js?v=r15").then(({ crearLogros }) => {
       logrosPantalla = crearLogros({ contenedor: document.body, alDesbloquear: (l) => { logrosNuevos.push(l); } });
       return logrosPantalla;
     }).catch((e) => { console.warn("logros: no se pudo cargar el módulo", e); return null; });
@@ -2589,7 +2590,7 @@ function revisarEstadoLogros(datos) {
 }
 function cargarMomentos() {
   if (!promesaMomentos) {
-    promesaMomentos = import("/static/final_momentos.js?v=r14").then(({ crearMomentos }) => {
+    promesaMomentos = import("/static/final_momentos.js?v=r15").then(({ crearMomentos }) => {
       momentosPantalla = crearMomentos({ canvas: renderer.domElement, dibujar: () => renderer.render(scene, camara) });
       return momentosPantalla;
     }).catch((e) => { console.warn("momentos: no se pudo cargar el módulo", e); return null; });
@@ -2618,11 +2619,11 @@ async function correrFinal(codigo) {
   accionFinal = null;
   let inactividad = null, limpiarActividad = null;
   try {
-    const { debeMostrarFinal, normalizarResultado, CIERRE_INACTIVIDAD_S } = await import("/static/final_datos.js?v=r14");
+    const { debeMostrarFinal, normalizarResultado, CIERRE_INACTIVIDAD_S } = await import("/static/final_datos.js?v=r15");
     const reducido = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     if (!debeMostrarFinal({ activada: finActivada(), reducido, terminal: ESTADOS_TERMINALES.includes(codigo) })) return;
     finCorriendo = true;
-    const { crearFinal } = await import("/static/final_tarjeta.js?v=r14");
+    const { crearFinal } = await import("/static/final_tarjeta.js?v=r15");
     await colaLogros;                                 // los logros del último paso ya están evaluados
     const m = await cargarMomentos();
     if (m && estado) m.alFinal({ paso: pasoActual(), codigo });
@@ -3741,7 +3742,7 @@ function cineCargar() {
   if (!cineCarga) {
     cineCarga = (async () => {
       const [datos, { crearDirector }, ui] = await Promise.all([
-        import("/static/cine_datos.js?v=r14"), import("/static/cine3d.js?v=r14"), import("/static/cine_ui.js?v=r14")]);
+        import("/static/cine_datos.js?v=r15"), import("/static/cine3d.js?v=r15"), import("/static/cine_ui.js?v=r15")]);
       const director = crearDirector({
         THREE, escena: scene, camara, controles, sueloEn: alturaTerreno, reducido: cineReducido(),
         celdas: () => limitesMapa || { columnas: 60, filas: 40 },
@@ -3798,7 +3799,7 @@ async function cinePostActivar(on) {
     if (!cinePostCarga) {
       const base = "/static/vendor/postprocessing/";
       cinePostCarga = Promise.all([
-        import("/static/cine_post.js?v=r14"), import(base + "EffectComposer.js"), import(base + "RenderPass.js"), import(base + "UnrealBloomPass.js"),
+        import("/static/cine_post.js?v=r15"), import(base + "EffectComposer.js"), import(base + "RenderPass.js"), import(base + "UnrealBloomPass.js"),
         import(base + "BokehPass.js"), import(base + "ShaderPass.js"), import(base + "OutputPass.js"), cineCargar()]).catch((e) => { cinePostCarga = null; throw e; });
     }
     const [{ crearPostproceso }, a, b, c, d, f, g] = await cinePostCarga;

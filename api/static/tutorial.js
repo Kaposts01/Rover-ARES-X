@@ -1,7 +1,7 @@
 // Tutorial del modo manual: recorrido guiado sobre la interfaz real. Resalta el control y espera la acción del jugador
 // (app.js avisa con el evento «ares:accion»). Se ofrece la primera vez, se puede saltar y se reabre con el botón «Tutorial».
-import { el, boton } from "./vx_ui.js?v=r14";
-import { pasosTutorial, yaVisto, marcarVisto, TEXTO_OFERTA } from "./tutorial_datos.js?v=r14";
+import { el, boton } from "./vx_ui.js?v=r15";
+import { pasosTutorial, yaVisto, marcarVisto, TEXTO_OFERTA } from "./tutorial_datos.js?v=r15";
 
 const almacen = () => { try { return window.localStorage; } catch (e) { return { getItem() { throw new Error("sin almacenamiento"); }, setItem() { throw new Error("sin almacenamiento"); } }; } };
 

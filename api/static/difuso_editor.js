@@ -3,11 +3,11 @@
 // El cálculo de la vista previa es local (difuso_reglas_datos.js): al cambiar algo no se espera al servidor. Los cambios válidos se aplican
 // a la partida con PUT /difuso/reglas (con una pequeña espera); «Restaurar» llama a DELETE. Sin soporte en el motor (404), todo queda en
 // vista previa y se dice. Todo con textContent; textos en textos.js (EDIT).
-import { coma as comaFormato } from "./formato.js?v=r14";
-import { EDIT, reglasActivadas, nombreDifuso } from "/static/textos.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import { EDIT, reglasActivadas, nombreDifuso } from "/static/textos.js?v=r15";
 import {
   adaptarReglas, modeloDeFabrica, clonar, inferir, barrido, superficie, validar, viabilidadAntecedente, diferencias, cuerpoPUT,
-} from "/static/difuso_reglas_datos.js?v=r14";
+} from "/static/difuso_reglas_datos.js?v=r15";
 
 const el = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
 const coma = (v, d = 2) => comaFormato(v, d, "—");

@@ -14,8 +14,8 @@
 //
 // RESPALDO (mientras el motor no publique /ag/evolucion): desdeLaboratorio() convierte la respuesta de GET /ag del laboratorio
 // genético (generaciones con población de cromosomas = celdas de sitios) a la misma forma, con los sitios y las bases de /mapa.
-import { coma as comaFormato } from "./formato.js?v=r14";
-import { EVO } from "./textos.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import { EVO } from "./textos.js?v=r15";
 
 export const MAX_RUTAS_POR_GENERACION = 6;     // las mejores que se dibujan por generación (la población trae ~30)
 export const VELOCIDADES_EVO = [[0.5, "×0,5"], [1, "×1"], [2, "×2"], [4, "×4"]];

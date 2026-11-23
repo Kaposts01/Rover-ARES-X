@@ -1,10 +1,10 @@
 // Panel derecho de IA: pestañas Red neuronal / Difuso / Genético / Misión, siempre a la vista durante la partida.
 // Solo lee del motor (GET /rna/red, /rna, /difuso, /ag) y solo pide los datos de la pestaña abierta.
 // Todo con textContent (sin innerHTML). Si algo falla, el panel lo dice y la partida sigue igual.
-import { coma as comaFormato } from "./formato.js?v=r14";
-import { dibujarLineas, preparar } from "/static/laboratorio.js?v=r14";
-import { adaptarTramoRNA, titularRNA, celdasAMarcar, NOTA_SIN_TRAMO } from "/static/rna_tramo_datos.js?v=r14";
-import { reglasActivadas, plural, nombresMotivos, textoBateriaDifuso, ETIQUETA_BATERIA_UNIVERSO } from "/static/textos.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import { dibujarLineas, preparar } from "/static/laboratorio.js?v=r15";
+import { adaptarTramoRNA, titularRNA, celdasAMarcar, NOTA_SIN_TRAMO } from "/static/rna_tramo_datos.js?v=r15";
+import { reglasActivadas, plural, nombresMotivos, textoBateriaDifuso, ETIQUETA_BATERIA_UNIVERSO } from "/static/textos.js?v=r15";
 
 const coma = (v, d = 2) => comaFormato(v, d, "-");
 const pct = (v) => (v == null ? "-" : `${coma(v * 100, 1)} %`);

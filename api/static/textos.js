@@ -1,4 +1,4 @@
-import { coma as comaFormato } from "./formato.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
 // Textos y formatos de la interfaz: funciones puras, sin DOM, que se prueban con node (api/tests/test_textos_ui.py).
 // Aquí viven los nombres que ve el jugador; los valores que compara el código («automatico», «persecucion»...) no cambian.
 

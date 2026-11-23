@@ -151,10 +151,13 @@ def _rasgos_alerta2_entrenamiento(mundo, pos, rumbo, sensor, rng):
 # confianza del 100 % cuando era poco profundo (recall 19/30 = 63 % en los mapas de prueba). El refuerzo añade escenas
 # dirigidas, con barrancos de profundidad sorteada como en el juego, mirados desde una celda libre vecina.
 SEMILLA_BASE_REFUERZO = 50_000        # los mapas de refuerzo salen de semillas lejanas a las de prueba (≤ 200)
-# Muestras dirigidas por mapa de entrenamiento que usa el modelo v2 con ruido nominal. Medido (60 mapas, 400 muestras, prueba
-# 51-59): 0 -> 19/30 (63 %); 100 -> 25/30 con 1,7 % de falsos barrancos entre las celdas libres. Más refuerzo solo sube los
-# falsos positivos: los barrancos de 1,0 a 1,5 m se confunden con la pendiente natural (límite físico del telémetro).
-REFUERZO_BARRANCO_POR_MAPA = 100
+# Muestras dirigidas por mapa de entrenamiento que usa el modelo v2 con ruido nominal. Medido (R23b; 60 mapas, 400 muestras, prueba
+# 51-59, argmax): refuerzo 0 -> macro-F1 0,906, barranco 19/30, 2 libres marcadas como barranco; 15 -> 0,890, 23/30 (77 %), 14;
+# 100 -> 0,819, 25/30, 52 (la primera versión de R23: subía el recall pero marcaba 26 veces más celdas libres y los vetos de más).
+# En 60 mapas no vistos (100-159): 0 -> 0,913 / 66 %; 15 -> 0,908 / 77 %, 0,31 % de libres marcadas; 100 -> 0,849 / 88 %, 1,3 %.
+# El punto elegido (15) recupera el macro-F1 >= 0,88 con recall >= 0,75 sin cambiar el umbral de veto (0,5). Más refuerzo solo
+# sube los falsos positivos: los barrancos de 1,0 a 1,5 m se confunden con la pendiente natural (límite físico del telémetro).
+REFUERZO_BARRANCO_POR_MAPA = 15
 BARRANCOS_MAPA_REFUERZO = 20          # barrancos por mapa de refuerzo (el juego usa 5-9 por mapa de 20x30)
 
 

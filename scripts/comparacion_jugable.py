@@ -1,8 +1,10 @@
 """R23: comparación de políticas en la partida jugable difícil (plan con ventanas, recarga obligatoria y mecánicas del planeta).
 
 Híbrido frente a sin RNA, sin difuso, sin AG (vecino más cercano, 2-opt y por ventanas) y difuso sin evolucionar, con las mismas
-semillas para todas las variantes: 20 semillas de desarrollo (1 a 20) y 20 de VALIDACIÓN no vistas (101 a 120; ni el diseño de la
-dificultad ni la evolución del difuso, que usa 301 a 308, las vieron). Escribe docs/COMPARACION_POLITICAS_<escenario>.json con la
+semillas para todas las variantes: 100 semillas de desarrollo (1 a 100; R23b: con 20, una misión de diferencia era ruido) y 20 de
+VALIDACIÓN no vistas (101 a 120; ni el diseño de la dificultad ni la evolución del difuso, que usa 301 a 308, las vieron). Cada variante
+lleva su diferencia con el híbrido (mismas semillas) con error estándar y si se distingue del ruido (`frente_al_hibrido`). Una corrida
+tarda ~20 min por escenario (7 variantes × 120 partidas de ~1,5 s): una a la vez, nunca en paralelo. Escribe docs/COMPARACION_POLITICAS_<escenario>.json con la
 misma forma que los demás (variantes, filas) y la validación en la clave `validacion`.
 
 Uso (desde la raíz; medición pesada, una a la vez):
@@ -25,7 +27,7 @@ from juego import comparacion  # noqa: E402
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--escenario", default="jugable_dificil")
-    ap.add_argument("--semillas", type=int, default=20)
+    ap.add_argument("--semillas", type=int, default=100)
     ap.add_argument("--validacion", type=int, default=20)
     ap.add_argument("--primera-validacion", type=int, default=101)
     ap.add_argument("--salida", default=None)
@@ -38,18 +40,32 @@ def main() -> None:
         datos["validacion"] = {k: val[k] for k in ("semillas", "variantes", "filas")}
         print(f"validación: {a.validacion} semillas en {time.time() - t0:.0f} s", flush=True)
     datos["parametros"] = {k: (list(v) if isinstance(v, tuple) else v) for k, v in comparacion.ESCENARIOS[a.escenario].items()}
+    datos["info"] = comparacion.INFO_ESCENARIOS[a.escenario]          # título, descripción y si es histórico
     salida = Path(a.salida) if a.salida else repo / "docs" / f"COMPARACION_POLITICAS_{a.escenario}.json"
     salida.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
     for nombre, bloque in (("desarrollo", datos), ("validación", datos.get("validacion"))):
-        if not bloque:
-            continue
-        print(f"\n## {a.escenario} · {nombre} · semillas {bloque['semillas'][0]}–{bloque['semillas'][-1]}")
-        print("| Variante | Éxito | IC 95 % | Ciencia (media ± EE) | Puntaje (media ± EE) | Pasos | Recargas |\n|---|---|---|---|---|---|---|")
-        for v, r in bloque["variantes"].items():
-            print(f"| {v} | {r['exitos']}/{r['n']} ({r['tasa_exito']:.0f} %) | {r['ic95_exito'][0]:.0f}–{r['ic95_exito'][1]:.0f} | "
-                  f"{r['ciencia']['media']:.3f} ± {r['ciencia']['error_estandar']:.3f} | "
-                  f"{r['puntaje']['media']:.0f} ± {r['puntaje']['error_estandar']:.0f} | {r['pasos']['media']:.0f} | "
-                  f"{r['recargas']['media']:.1f} |")
+        if bloque:
+            imprimir_tablas(a.escenario, nombre, bloque)
+
+
+def imprimir_tablas(escenario: str, nombre: str, bloque: dict) -> None:
+    """Tablas en Markdown: cifras por variante y diferencia con el híbrido (R23b). También sirve para releer un JSON ya generado."""
+    print(f"\n## {escenario} · {nombre} · semillas {bloque['semillas'][0]}–{bloque['semillas'][-1]}")
+    print("| Variante | Éxito | IC 95 % | Ciencia (media ± EE) | Puntaje (media ± EE) | Pasos (media ± EE) | Recargas |\n|---|---|---|---|---|---|---|")
+    for v, r in bloque["variantes"].items():
+        print(f"| {v} | {r['exitos']}/{r['n']} ({r['tasa_exito']:.0f} %) | {r['ic95_exito'][0]:.0f}–{r['ic95_exito'][1]:.0f} | "
+              f"{r['ciencia']['media']:.3f} ± {r['ciencia']['error_estandar']:.3f} | "
+              f"{r['puntaje']['media']:.0f} ± {r['puntaje']['error_estandar']:.0f} | "
+              f"{r['pasos']['media']:.0f} ± {r['pasos'].get('error_estandar', 0):.1f} | {r['recargas']['media']:.1f} |")
+    print("\n| Variante frente al híbrido (variante menos híbrido) | Éxito (pp) | Ciencia | Puntaje | Pasos (si ganan las dos) |\n|---|---|---|---|---|")
+
+    def celda(x, dec=2):
+        marca = "distinguible" if x["distinguible_del_ruido"] else "ruido"
+        return f"{x['diferencia']:+.{dec}f} ± {x['error_estandar']:.{dec}f} ({marca})"
+    for v, r in bloque["variantes"].items():
+        d = r.get("frente_al_hibrido")
+        if d:
+            print(f"| {v} | {celda(d['exito_pp'], 1)} | {celda(d['ciencia'], 3)} | {celda(d['puntaje'], 0)} | {celda(d['pasos_si_ganan_las_dos'], 1)} |")
 
 
 if __name__ == "__main__":

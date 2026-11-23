@@ -259,6 +259,8 @@ def _estado(sesion: Sesion) -> dict:
     p = sesion.partida
     sug = p.sugerencia()
     res = p.resumen()
+    det = p.puntaje_detalle()                    # R23b: el único puntaje (juego/puntaje.py), con su desglose
+    ci = p.ciencia_publica()
     return {
         "semilla": sesion.semilla,
         "nivel": sesion.nivel,
@@ -276,7 +278,12 @@ def _estado(sesion: Sesion) -> dict:
         "estaciones": [[int(f), int(c)] for f, c in getattr(p, "estaciones", [])],
         "pilas": [[int(f), int(c)] for f, c in getattr(p, "pilas", [])],
         "pilas_recogidas": int(getattr(p, "pilas_recogidas", 0)),
-        "puntaje": p.puntaje(),
+        "puntaje": det["puntaje"],
+        "puntaje_desglose": det["desglose"],
+        "puntaje_formula": det["formula"],
+        "ciencia_fraccion": float(ci["fraccion"]),     # R23b: ciencia recogida (0 a 1); no es sitios visitados ÷ totales
+        "ciencia_recogida": float(ci["recogida"]),
+        "ciencia_maxima": float(ci["maxima"]),
         "modo": sesion.modo,
         "ambiente": p.ambiente,
         "ambiente_restante": p.ambiente_restante,
@@ -694,7 +701,7 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
 _cache_evaluacion_rna = {}
 _cache_ag = {}
 _cache_comparacion = {}
-ESCENARIOS_COMPARACION = ("congelado", "exigente")   # ARX-28d; si el motor declara ESCENARIOS, manda el motor
+ESCENARIOS_COMPARACION = ("jugable_dificil", "congelado", "exigente")   # ARX-28d; si el motor declara ESCENARIOS, manda el motor
 
 
 PESO_MAX = 5.0
@@ -1597,12 +1604,13 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         return {"planeta": sesion.partida.planeta, "celdas": mec.celdas_hielo(), "estado": mec.estado()}
 
     @app.get("/comparacion")
-    def comparacion(semillas: int = 20, escenario: str = "congelado"):
+    def comparacion(semillas: int = None, escenario: str = "jugable_dificil"):
         """Comparación de políticas (RF-14, RF-15): híbrido frente a sin RNA, sin difuso y sin AG.
-        `escenario=congelado` (por defecto) o `exigente` (ARX-28d). Con 20 semillas sirve el JSON del escenario
-        (docs/COMPARACION_POLITICAS.json o docs/COMPARACION_POLITICAS_<escenario>.json); otros valores calculan
-        en la petición y tardan (1 a 40 semillas). La caché distingue escenario y número de semillas."""
-        if isinstance(semillas, bool) or not 1 <= semillas <= 40:
+        R23b: el escenario por defecto es `jugable_dificil` (la partida actual); `congelado` es histórico (versión anterior del
+        juego) y hay que pedirlo (`?escenario=congelado`). Sin `semillas` se sirve el JSON del escenario con todas sus semillas
+        (100 en los jugables, 20 en los demás: docs/COMPARACION_POLITICAS[_<escenario>].json); con `semillas` (1 a 40) se sirve el
+        JSON solo si trae justo esas semillas y, si no, se calcula en la petición (tarda). La caché distingue escenario y semillas."""
+        if semillas is not None and (isinstance(semillas, bool) or not 1 <= semillas <= 40):
             raise ErrorApi(400, "semillas debe ser un entero entre 1 y 40")
         validos = _escenarios_comparacion()
         if escenario not in validos:
@@ -1613,21 +1621,31 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             return _cache_comparacion[clave]
         ruta = COMPARACION_JSON if escenario == "congelado" else COMPARACION_JSON.replace(
             ".json", f"_{escenario}.json")
-        if semillas == 20 and os.path.exists(ruta):
+        datos = None
+        if os.path.exists(ruta):
             with open(ruta, encoding="utf-8") as f:
-                datos = json.load(f)
-        else:
+                en_disco = json.load(f)
+            if semillas is None or semillas == len(en_disco.get("semillas") or ()):
+                datos = en_disco
+        if datos is None:
             from juego import comparacion as motor
+            n = 20 if semillas is None else semillas
             if escenario == "congelado":
-                datos = motor.comparar(range(1, semillas + 1))
+                datos = motor.comparar(range(1, n + 1))
             elif not hasattr(motor, "ESCENARIOS"):
                 raise ErrorApi(400, f"el escenario {escenario} aún no está disponible en el motor de comparación")
             else:
-                datos = motor.comparar(range(1, semillas + 1), escenario=escenario)
+                datos = motor.comparar(range(1, n + 1), escenario=escenario)
         # ev3-d71: ag_puro no se publica (no mide el AG); mismo criterio que scripts/comparacion_politicas.py
         no_publicar = ()   # ev3-d71 corregido: ag_puro se publica entre las ablaciones; ARX-92 regeneración
+        try:
+            from juego.comparacion import INFO_ESCENARIOS
+        except ImportError:
+            INFO_ESCENARIOS = {}
         datos = {**datos, "escenario": escenario, "escenario_recomendado": "jugable_dificil",   # R23: el que mide la IA en la partida jugable
-                 "escenarios_disponibles": list(validos),
+                 "escenarios_disponibles": list(validos),          # R23b: la partida actual primero; el congelado es histórico
+                 "escenarios_info": {k: INFO_ESCENARIOS[k] for k in validos if k in INFO_ESCENARIOS},
+                 "info": INFO_ESCENARIOS.get(escenario),
                  "variantes": {v: r for v, r in datos["variantes"].items() if v not in no_publicar},
                  "filas": [f for f in datos["filas"] if f["variante"] not in no_publicar]}
         _cache_comparacion[clave] = datos

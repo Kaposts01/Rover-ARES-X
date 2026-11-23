@@ -202,21 +202,22 @@ def test_ambiente_usa_generador_propio_no_el_de_la_mision():
 
 # ---------- puntaje (ev3-d24) ----------
 
-def test_puntaje_es_entero_con_la_formula_del_contrato():
+def test_puntaje_es_entero_con_la_formula_unica():
+    from juego import puntaje as pj
     p = Partida(semilla=11)
-    total = len(p.mundo.sitios)
-    esperado = round(100 * len(p.mision.visitados) / total + 0.5 * p.rover.bateria
-                     + (50 if p.mision.vetos == 0 else 0))
+    ci = p.ciencia_publica()["fraccion"]
+    esperado = max(0, round(450 * ci))        # sin éxito no cuentan ni la misión cumplida, ni la batería, ni los pasos
     valor = p.puntaje()
     assert isinstance(valor, int)
     assert valor == esperado
+    d = p.puntaje_detalle()
+    assert d["puntaje"] == pj.total(d["desglose"]) and d["formula"] == pj.FORMULA
 
 
 def test_puntaje_sin_sitios_no_divide_entre_cero():
     p = Partida(semilla=11)
     p.mundo.sitios.clear()
-    valor = p.puntaje()
-    assert valor == round(0.5 * p.rover.bateria + (50 if p.mision.vetos == 0 else 0))
+    assert p.puntaje() == 0 and p.ciencia_publica()["fraccion"] == 0.0
 
 
 def test_resumen_incluye_nivel_y_puntaje():

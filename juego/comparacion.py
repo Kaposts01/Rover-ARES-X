@@ -32,23 +32,53 @@ VARIANTES = VARIANTES_ABLACION + VARIANTES_BASE
 VARIANTES_JUGABLE = ("hibrido", "sin_rna", "sin_difuso", "sin_ag_vecino", "sin_ag_2opt", "sin_ag_ventanas", "difuso_base")
 MAX_PASOS = 400
 
-# Escenarios de evaluación (ARX-28b). "congelado" es la evaluación del informe: 20x30, nivel 1, parámetros por defecto.
-# "exigente": nivel 5 con sensor más ruidoso y detección de peligros más pobre. ruido y p_detectar los fijó ARX-28a
-# (calibración; ver docs/planes/ARX-28_calibracion.md). Si alguno fuera None el escenario no se podría usar.
+# Escenarios de evaluación (ARX-28b). R23b: los de la partida actual primero; `INFO_ESCENARIOS` dice cuál es histórico.
 ESCENARIOS = {
-    "congelado": {"nivel": 1, "ruido": None, "p_detectar": None, "prob_fallo": None},      # None = no se toca: valores por defecto de Mision
-    # prob_fallo (ev3-d60 A): probabilidad de lectura NaN del sensor de proximidad, solo en este escenario. None = sin fallo
-    # (comportamiento de 11dae05). La rellena la calibración (medición pedida por el Orquestador); no tiene valor aún.
-    "exigente": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None, "fisica_velocidad": True},         # calibrado en ARX-28a (docs/planes/ARX-28_calibracion.md)
-    # ARX-92c (ev3-d73 A): 10 sitios y batería = ⌈L_ref × 1,15⌉ por semilla (criterio en ARX-92_ag_decide.md §12)
-    "exigente10": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None, "fisica_velocidad": True,
-                   "n_sitios": 10, "margen_bateria": 0.15},
+    # R23b: primero los escenarios que representan el juego actual; el congelado es histórico (versión anterior del juego).
     # R23: la partida jugable difícil (garantia=True): 11 sitios con ventanas de tiempo, recarga obligatoria, sitios opcionales y las
     # mecánicas del planeta (viento, hielo, gravedad). Un escenario por planeta; el híbrido usa el difuso evolucionado del planeta.
     "jugable_dificil": {"nivel": 4, "ruido": None, "p_detectar": None, "prob_fallo": None, "jugable": True,
                         "planeta": "Marte", "n_sitios": 11, "variantes": VARIANTES_JUGABLE},
     "jugable_dificil_neptuno": {"nivel": 4, "ruido": None, "p_detectar": None, "prob_fallo": None, "jugable": True,
                                 "planeta": "Neptuno", "n_sitios": 11, "variantes": VARIANTES_JUGABLE},
+    # "exigente": nivel 5 con sensor más ruidoso y detección de peligros más pobre. ruido y p_detectar los fijó ARX-28a
+    # (calibración; ver docs/planes/ARX-28_calibracion.md). Si alguno fuera None el escenario no se podría usar.
+    # prob_fallo (ev3-d60 A): probabilidad de lectura NaN del sensor de proximidad, solo en este escenario. None = sin fallo.
+    "exigente": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None, "fisica_velocidad": True},         # calibrado en ARX-28a (docs/planes/ARX-28_calibracion.md)
+    # ARX-92c (ev3-d73 A): 10 sitios y batería = ⌈L_ref × 1,15⌉ por semilla (criterio en ARX-92_ag_decide.md §12)
+    "exigente10": {"nivel": 5, "ruido": 0.6, "p_detectar": 0.4, "prob_fallo": None, "fisica_velocidad": True,
+                   "n_sitios": 10, "margen_bateria": 0.15},
+    # "congelado" es la evaluación del informe: 20x30, nivel 1, parámetros por defecto. Histórico: ya no representa el juego.
+    "congelado": {"nivel": 1, "ruido": None, "p_detectar": None, "prob_fallo": None},      # None = no se toca: valores por defecto de Mision
+}
+
+# R23b: lo que se muestra de cada escenario (la API y los JSON de docs/ lo publican; no entra en la salida de `comparar`, cuyo hash
+# fija una prueba). `historico`: ya no representa el juego actual.
+INFO_ESCENARIOS = {
+    "jugable_dificil": {
+        "titulo": "Partida jugable difícil en Marte (versión actual)", "historico": False,
+        "descripcion": "Nivel 4, mapa pequeño, 11 sitios con ventanas de tiempo, recarga obligatoria en bases, sitios opcionales, "
+                       "viento, hielo y polvo de Marte. Es la partida real: el AG ordena los sitios, decide dónde recargar y cuáles "
+                       "sacrificar. Sin drones (el laboratorio corre la partida sin combate)."},
+    "jugable_dificil_neptuno": {
+        "titulo": "Partida jugable difícil en Neptuno (versión actual)", "historico": False,
+        "descripcion": "Igual que la de Marte (nivel 4, 11 sitios con ventanas, recargas, opcionales) con viento muy fuerte y hielo "
+                       "muy resbaladizo de Neptuno. Sin drones."},
+    "exigente": {
+        "titulo": "Exigente (nivel 5 con sensor ruidoso, 3 a 4 sitios)", "historico": False,
+        "descripcion": "Mapa pequeño, nivel 5, sensor con ruido 0,6 y detección pobre de peligros. NO ejercita al AG restringido: son "
+                       "3 a 4 sitios sin ventanas de tiempo ni recargas, y con tan pocos sitios el 2-opt encuentra el mismo orden que el "
+                       "AG (las dos políticas hacen exactamente lo mismo en las 20 semillas). Sirve para medir RNA y difuso con "
+                       "sensores malos, no al AG."},
+    "exigente10": {
+        "titulo": "Exigente con 10 sitios (sin ventanas ni recargas)", "historico": False,
+        "descripcion": "Como el exigente pero con 10 sitios y batería ajustada a la ruta de referencia. Ejercita el orden de los "
+                       "sitios (viajante) pero no las ventanas de tiempo ni las recargas de la partida actual."},
+    "congelado": {
+        "titulo": "Congelado (histórico: versión anterior del juego)", "historico": True,
+        "descripcion": "Histórico (versión anterior del juego): nivel 1, 3 a 4 sitios, sin ventanas, recargas ni mecánicas de "
+                       "planeta. Ya no representa la partida actual; se conserva para reproducir la evaluación del informe "
+                       "(las pruebas fijan su huella)."},
 }
 
 
@@ -252,7 +282,7 @@ def correr(semilla: int, variante: str, escenario: str = "congelado") -> dict:
             "sitios_visitados": len(p.mision.visitados)}
     if p.plan_activo:      # R23: ciencia recogida (valor por la calidad de la ventana) y puntaje de la partida jugable
         fila["ciencia"] = p.ciencia()["fraccion"]
-        fila["puntaje"] = p.puntaje() if p.estado == "EXITO" else int(round(100 * fila["ciencia"]))
+        fila["puntaje"] = p.puntaje()         # R23b: el único puntaje (juego/puntaje.py), el mismo de la partida, la API y los récords
         fila["recargas"] = int(p.recargas_hechas)
     return fila
 
@@ -274,6 +304,63 @@ def _wilson(k: int, n: int, z: float = 1.96) -> list:
     centro = (p + z * z / (2 * n)) / den
     mitad = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
     return [round(100 * max(0.0, centro - mitad), 1), round(100 * min(1.0, centro + mitad), 1)]
+
+
+def _error_estandar(valores) -> float:
+    v = np.asarray(valores, dtype=float)
+    return round(float(np.std(v, ddof=1) / np.sqrt(len(v))), 4) if len(v) > 1 else 0.0
+
+
+def _diferencia(x, y) -> dict:
+    """Media de (variante − híbrido) sobre pares (misma semilla), su error estándar y si |z| ≥ 1,96 (95 %): distinguible del ruido."""
+    d = np.asarray(y, dtype=float) - np.asarray(x, dtype=float)
+    n = len(d)
+    media = float(d.mean()) if n else 0.0
+    ee = float(np.std(d, ddof=1) / np.sqrt(n)) if n > 1 else 0.0
+    z = media / ee if ee > 0 else (0.0 if media == 0 else float("inf") * np.sign(media))
+    return {"n": int(n), "diferencia": round(media, 4), "error_estandar": round(ee, 4),
+            "z": round(float(z), 2) if np.isfinite(z) else None, "distinguible_del_ruido": bool(abs(z) >= 1.96)}
+
+
+def _diferencias_pareadas(hib: dict, var: dict) -> dict:
+    """Diferencias (variante − híbrido) por semilla. Éxito en puntos de porcentaje; ciencia y puntaje en todas las semillas;
+    pasos solo en las semillas que ganan las dos (una partida perdida termina antes y sus pasos no son comparables)."""
+    comunes = sorted(set(hib) & set(var))
+    exito = _diferencia([100.0 * hib[s]["exito"] for s in comunes], [100.0 * var[s]["exito"] for s in comunes])
+    ambas = [s for s in comunes if hib[s]["exito"] and var[s]["exito"]]
+    return {"exito_pp": exito,
+            "ciencia": _diferencia([hib[s]["ciencia"] for s in comunes], [var[s]["ciencia"] for s in comunes]),
+            "puntaje": _diferencia([hib[s]["puntaje"] for s in comunes], [var[s]["puntaje"] for s in comunes]),
+            "pasos_si_ganan_las_dos": _diferencia([hib[s]["pasos"] for s in ambas], [var[s]["pasos"] for s in ambas]),
+            "nota": "variante − híbrido, mismas semillas; «distinguible_del_ruido» = |diferencia ÷ error estándar| ≥ 1,96"}
+
+
+def estadistica(datos: dict) -> dict:
+    """R23b: intervalo de Wilson del éxito y diferencia con el híbrido (éxito en pp, pasos si ganan las dos, choques) con su error estándar,
+    a partir de las filas de `comparar`. Sirve para cualquier escenario (los jugables ya lo llevan dentro de `variantes`). No modifica
+    `datos`: lo publican los guiones aparte, para no mover la salida de `comparar` que fija la huella del congelado."""
+    filas = datos["filas"]
+    por_variante = {}
+    for f in filas:
+        por_variante.setdefault(f["variante"], {})[f["semilla"]] = f
+    hib = por_variante.get("hibrido", {})
+    salida = {}
+    for v, grupo in por_variante.items():
+        bloque = {"ic95_exito": _wilson(sum(f["exito"] for f in grupo.values()), len(grupo))}
+        if v != "hibrido" and hib:
+            comunes = sorted(set(hib) & set(grupo))
+            ambas = [x for x in comunes if hib[x]["exito"] and grupo[x]["exito"]]
+            bloque["frente_al_hibrido"] = {
+                "exito_pp": _diferencia([100.0 * hib[x]["exito"] for x in comunes], [100.0 * grupo[x]["exito"] for x in comunes]),
+                "pasos_si_ganan_las_dos": _diferencia([hib[x]["pasos"] for x in ambas], [grupo[x]["pasos"] for x in ambas]),
+                "colisiones": _diferencia([hib[x]["colisiones"] for x in comunes], [grupo[x]["colisiones"] for x in comunes]),
+                "semillas_con_la_misma_trayectoria": int(sum(
+                    (hib[x]["pasos"], hib[x]["exito"], hib[x]["sitios_visitados"], hib[x]["colisiones"], hib[x]["bateria_final"])
+                    == (grupo[x]["pasos"], grupo[x]["exito"], grupo[x]["sitios_visitados"], grupo[x]["colisiones"], grupo[x]["bateria_final"])
+                    for x in comunes)),
+                "nota": "variante − híbrido, mismas semillas; «distinguible_del_ruido» = |diferencia ÷ error estándar| ≥ 1,96"}
+        salida[v] = bloque
+    return salida
 
 
 def comparar(semillas, escenario: str = "congelado") -> dict:
@@ -298,8 +385,14 @@ def comparar(semillas, escenario: str = "congelado") -> dict:
             politicas[v]["ic95_exito"] = _wilson(sum(f["exito"] for f in grupo), len(grupo))
             for clave in ("ciencia", "puntaje", "recargas"):
                 politicas[v][clave] = {**_resumen([f[clave] for f in grupo]),
-                                       "error_estandar": round(float(np.std([f[clave] for f in grupo], ddof=1) / np.sqrt(len(grupo))), 4)
-                                       if len(grupo) > 1 else 0.0}
+                                       "error_estandar": _error_estandar([f[clave] for f in grupo])}
+            politicas[v]["pasos"]["error_estandar"] = _error_estandar([f["pasos"] for f in grupo])   # R23b
+    if "hibrido" in politicas and "ciencia" in filas[0]:
+        for v in variantes:      # R23b: diferencia contra el híbrido con las mismas semillas y si se distingue del ruido
+            if v != "hibrido":
+                politicas[v]["frente_al_hibrido"] = _diferencias_pareadas(
+                    {f["semilla"]: f for f in filas if f["variante"] == "hibrido"},
+                    {f["semilla"]: f for f in filas if f["variante"] == v})
     return {"escenario": escenario, "semillas": semillas, "variantes": politicas, "filas": filas,
             "nota": "Arnés: capa de juego (juego/partida.py), misma semilla por variante. Sin atribución causal fuera "
                     "de estas condiciones (§14). Los intentos a barranco no se miden en el híbrido."}

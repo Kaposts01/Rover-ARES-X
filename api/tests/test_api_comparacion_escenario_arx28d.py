@@ -26,14 +26,17 @@ def motor_falso(monkeypatch):
         llamadas.append((len(list(semillas)), escenario))
         return {"semillas": [1], "variantes": {}, "filas": [], "nota": "x"}
     monkeypatch.setattr(motor, "comparar", comparar)
-    monkeypatch.setattr(motor, "ESCENARIOS", {"congelado": {}, "exigente": {}}, raising=False)
+    monkeypatch.setattr(motor, "ESCENARIOS", {"jugable_dificil": {}, "congelado": {}, "exigente": {}}, raising=False)
     return llamadas
 
 
-def test_sin_escenario_es_congelado_y_trae_el_campo(cliente, motor_falso):
+def test_sin_escenario_es_el_jugable_actual_y_el_congelado_hay_que_pedirlo(cliente, motor_falso):
+    """R23b: el congelado es histórico (versión anterior del juego); el escenario por defecto es la partida jugable actual."""
     datos = cliente.get("/comparacion?semillas=3").json()
-    assert datos["escenario"] == "congelado"
-    assert motor_falso == [(3, "congelado")]
+    assert datos["escenario"] == "jugable_dificil"
+    assert motor_falso == [(3, "jugable_dificil")]
+    datos = cliente.get("/comparacion?semillas=3&escenario=congelado").json()
+    assert datos["escenario"] == "congelado" and motor_falso[-1] == (3, "congelado")
 
 
 def test_escenario_exigente_se_calcula_y_se_etiqueta(cliente, motor_falso):
@@ -46,26 +49,26 @@ def test_escenario_exigente_se_calcula_y_se_etiqueta(cliente, motor_falso):
 def test_escenario_desconocido_es_400_legible(cliente, motor_falso, valor):
     r = cliente.get("/comparacion", params={"semillas": 3, "escenario": valor})
     assert r.status_code == 400
-    assert "congelado" in str(r.json()) and "exigente" in str(r.json())
+    assert "jugable_dificil" in str(r.json()) and "congelado" in str(r.json()) and "exigente" in str(r.json())
     assert motor_falso == []
 
 
 def test_la_cache_distingue_escenarios(cliente, motor_falso):
-    cliente.get("/comparacion?semillas=3")
+    cliente.get("/comparacion?semillas=3&escenario=congelado")
     cliente.get("/comparacion?semillas=3&escenario=exigente")
     cliente.get("/comparacion?semillas=3&escenario=exigente")
-    cliente.get("/comparacion?semillas=3")
+    cliente.get("/comparacion?semillas=3&escenario=congelado")
     assert motor_falso == [(3, "congelado"), (3, "exigente")]
 
 
-def test_con_20_semillas_sirve_el_json_del_escenario(cliente, motor_falso, tmp_path, monkeypatch):
+def test_sin_semillas_sirve_el_json_del_escenario_con_las_suyas(cliente, motor_falso, tmp_path, monkeypatch):
     import json
     base = tmp_path / "COMPARACION_POLITICAS.json"
     base.write_text(json.dumps({"semillas": [1], "variantes": {}, "filas": [], "marca": "c"}), encoding="utf-8")
     (tmp_path / "COMPARACION_POLITICAS_exigente.json").write_text(
         json.dumps({"semillas": [1], "variantes": {}, "filas": [], "marca": "e"}), encoding="utf-8")
     monkeypatch.setattr(servidor, "COMPARACION_JSON", str(base))
-    assert cliente.get("/comparacion").json()["marca"] == "c"
+    assert cliente.get("/comparacion?escenario=congelado").json()["marca"] == "c"
     d = cliente.get("/comparacion?escenario=exigente").json()
     assert d["marca"] == "e" and d["escenario"] == "exigente"
     assert motor_falso == []

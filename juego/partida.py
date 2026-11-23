@@ -2779,16 +2779,28 @@ class Partida:
         self.rover.bateria = BATERIA_BAJA
         return {"ok": True, "detalle": f"batería fijada en {BATERIA_BAJA}"}
 
-    # ---------- puntaje (ev3-d24) ----------
-    def puntaje(self) -> int:
-        m = self.mision
-        total = len(self.mundo.sitios)
+    # ---------- puntaje (R23b: una sola fórmula, en juego/puntaje.py) ----------
+    def ciencia_publica(self) -> dict:
+        """Ciencia recogida como la ve el jugador: con plan activo, valor × calidad de ventana; sin plan, sitios visitados ÷ totales."""
         if self.plan_activo:
-            cientifica = 100.0 * self.ciencia()["fraccion"]      # R23: valor de cada sitio por la calidad de su ventana
-        else:
-            cientifica = 100 * len(m.visitados) / total if total else 0.0
-        bonus = 50 if m.vetos == 0 else 0
-        return int(round(cientifica + 0.5 * self.rover.bateria + bonus))
+            return self.ciencia()
+        total = float(len(self.mundo.sitios))
+        rec = float(len(self.mision.visitados))
+        return {"recogida": rec, "maxima": total, "fraccion": round(rec / total, 4) if total else 0.0}
+
+    def puntaje_detalle(self) -> dict:
+        """`{puntaje, desglose, formula}` de `juego.puntaje` con los datos de la partida de ahora."""
+        from juego import puntaje as _p
+        m = self.mision
+        capacidad = float(getattr(self, "capacidad_bateria", 100.0) or 100.0)
+        return _p.calcular(
+            ciencia=self.ciencia_publica()["fraccion"], exito=m.estado == "EXITO",
+            bateria_pct=min(100.0, 100.0 * float(self.rover.bateria) / capacidad), pasos=int(m.paso),
+            choques=int(m.colisiones), caidas=int(self.mundo.tipo[self.rover.posicion] == BARRANCO),
+            pasos_sobre_tolerancia=int(self.pasos_sobre_tolerancia))
+
+    def puntaje(self) -> int:
+        return self.puntaje_detalle()["puntaje"]
 
     # ---------- salidas ----------
     def bitacora(self) -> pd.DataFrame:

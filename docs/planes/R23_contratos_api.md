@@ -112,3 +112,56 @@ Cada ficha de paso lleva `ciencia_recogida` (valor × calidad de ventana), `cien
 - `rna.tramo[].marcada` también sale en la celda de distancia 1 (riesgo ≥ 0,5 tras el paso); las celdas con riesgo conocido siguen en el tramo (antes se saltaban).
 - El evento `barranco` solo cambia el mundo real: el mapa estimado lo marca la percepción (anticipación de la RNA o sensores), no el evento.
 - Las respuestas de más de 4 KB se comprimen con gzip si el cliente manda `Accept-Encoding: gzip` (`/ag/evolucion`: 354 KB → ~12 KB en mapa grande).
+
+
+## R23b: un solo puntaje, ciencia aparte de sitios visitados, comparación y laboratorio (rama `r23b/motor`)
+
+Respuesta a la segunda tanda de comentarios del evaluador. Contrato que respeta la interfaz.
+
+### Puntaje (`juego/puntaje.py`, único)
+`Partida.puntaje()`, `GET /estado`, las fichas y la tabla de `/comparar`, los récords (`/records/registrar`), el reporte HTML y el laboratorio
+(`/comparacion`) usan esta fórmula. Desaparecen el «puntaje simple» (HUD, +50 sin vetos), el de `final_datos.js` (+50 por veto) y la copia de
+`api/extras.py`. **Sin bono ni castigo por veto.**
+
+```
+puntaje = 450 × ciencia (0..1) + 300 si EXITO + 125 × batería final (0..1) + 125 × eficiencia en pasos (1 − pasos ÷ 400, mín. 0)
+          − 100 × choques − 150 × caídas a barranco − 20 × pasos sobre la tolerancia térmica          (mín. 0, entero)
+```
+La batería y la eficiencia solo cuentan con EXITO. Fracasar da como máximo 450 (ciencia completa) y casi siempre 150 a 300; cumplir da 600 a 1000.
+Mientras la partida está en curso el puntaje es provisional (solo ciencia menos castigos; el resto llega con el éxito).
+
+`GET /estado` añade (el campo `puntaje` ya existía, ahora es este):
+- `puntaje`: entero ≥ 0.
+- `puntaje_desglose`: `[{clave, etiqueta, valor, peso, puntos}]` en este orden: `ciencia`, `mision`, `bateria`, `eficiencia`, `choques`, `caidas`,
+  `tolerancia`. `etiqueta` en español lista para mostrar; `valor` es la magnitud (fracción 0..1 o conteo); `puntos` lleva signo
+  (los castigos son negativos). `max(0, round(suma de puntos)) == puntaje`.
+- `puntaje_formula`: una línea legible con la fórmula.
+- `ciencia_fraccion` (0..1), `ciencia_recogida`, `ciencia_maxima`: con plan activo, valor de cada sitio × calidad de su ventana (100 % dentro,
+  25 % fuera) sobre el valor total; sin plan, sitios visitados ÷ totales. **No es `sitios_visitados`**: este es otro dato (cuántos sitios se
+  pisaron, 10/10, aunque varios llegaran fuera de ventana). Las pantallas deben rotularlos distinto («Ciencia recogida» y «Sitios visitados»).
+- `barrancos_evitados` sigue en `/estado` como dato informativo (vetos por barranco); ya no entra en ninguna cuenta.
+
+`/records/registrar` guarda `puntaje` (el único) y `ciencia_fraccion`; desaparece `puntaje_simple`. Los récords guardados antes conservan su
+valor anterior (otra escala).
+
+### GET /comparar
+- Cada ficha de paso: `n` (turno de la API; un disparo ocupa un turno sin avanzar la misión), **`paso`** (paso de la misión) y `puntaje`,
+  `ciencia_fraccion`, `ciencia_recogida`, `ciencia_maxima` como en `/estado`.
+- Tabla: la fila `pasos` compara **`paso`** (antes `n`). Causa de «175 en vivo frente a 181 en la comparación»: la partida mostraba el paso de la
+  misión (175) y la tabla contaba turnos de la API (181 = 175 + 6 disparos a drones). La trayectoria era idéntica. Una prueba
+  (`api/tests/test_vivo_vs_comparar_r23b.py`) fija que la misma semilla da la misma trayectoria, pasos, ciencia y puntaje por ambos caminos.
+- `vetos` y `sitios_visitados` son filas **informativas** (`ganador: null`, `informativa: true`): un veto no es mérito ni demérito (lo que
+  vale es lo que evita: choques y caídas, que ya van en el puntaje); la ciencia es la fila con ganador. `colisiones` sigue con ganador (menos es mejor).
+  El ganador general es el resultado y, si empatan, el puntaje.
+
+### GET /comparacion (laboratorio)
+- Por defecto `escenario=jugable_dificil` (antes `congelado`). **La interfaz debe pedir `?escenario=congelado` explícitamente** (antes el
+  congelado no mandaba parámetro). Orden de `escenarios_disponibles`: `jugable_dificil`, `jugable_dificil_neptuno`, `exigente`, `exigente10`, `congelado`.
+- `semillas` es opcional: sin él se sirve el JSON del escenario con todas sus semillas (100 en los jugables y el exigente, 20 en los demás);
+  con él (1 a 40) se sirve el JSON solo si coincide con las suyas, si no se calcula en la petición.
+- Nuevos: `info` `{titulo, descripcion, historico}` del escenario servido y `escenarios_info` (el mismo por escenario). `congelado` trae
+  `historico: true` y el título «Congelado (histórico: versión anterior del juego)».
+- En los escenarios jugables cada variante añade `pasos.error_estandar` y `frente_al_hibrido`: `{exito_pp, ciencia, puntaje,
+  pasos_si_ganan_las_dos}`, cada uno `{n, diferencia, error_estandar, z, distinguible_del_ruido}` (variante − híbrido, mismas semillas;
+  distinguible si |z| ≥ 1,96). Úsese para no vender una misión de diferencia como ventaja.
+- `puntaje` de cada fila es el único (antes, en los fracasos, `100 × ciencia`).

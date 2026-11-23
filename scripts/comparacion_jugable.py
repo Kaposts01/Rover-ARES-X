@@ -1,8 +1,10 @@
 """R23: comparación de políticas en la partida jugable difícil (plan con ventanas, recarga obligatoria y mecánicas del planeta).
 
 Híbrido frente a sin RNA, sin difuso, sin AG (vecino más cercano, 2-opt y por ventanas) y difuso sin evolucionar, con las mismas
-semillas para todas las variantes: 20 semillas de desarrollo (1 a 20) y 20 de VALIDACIÓN no vistas (101 a 120; ni el diseño de la
-dificultad ni la evolución del difuso, que usa 301 a 308, las vieron). Escribe docs/COMPARACION_POLITICAS_<escenario>.json con la
+semillas para todas las variantes: 100 semillas de desarrollo (1 a 100; R23b: con 20, una misión de diferencia era ruido) y 20 de
+VALIDACIÓN no vistas (101 a 120; ni el diseño de la dificultad ni la evolución del difuso, que usa 301 a 308, las vieron). Cada variante
+lleva su diferencia con el híbrido (mismas semillas) con error estándar y si se distingue del ruido (`frente_al_hibrido`). Una corrida
+tarda ~20 min por escenario (7 variantes × 120 partidas de ~1,5 s): una a la vez, nunca en paralelo. Escribe docs/COMPARACION_POLITICAS_<escenario>.json con la
 misma forma que los demás (variantes, filas) y la validación en la clave `validacion`.
 
 Uso (desde la raíz; medición pesada, una a la vez):
@@ -25,7 +27,7 @@ from juego import comparacion  # noqa: E402
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--escenario", default="jugable_dificil")
-    ap.add_argument("--semillas", type=int, default=20)
+    ap.add_argument("--semillas", type=int, default=100)
     ap.add_argument("--validacion", type=int, default=20)
     ap.add_argument("--primera-validacion", type=int, default=101)
     ap.add_argument("--salida", default=None)
@@ -38,6 +40,7 @@ def main() -> None:
         datos["validacion"] = {k: val[k] for k in ("semillas", "variantes", "filas")}
         print(f"validación: {a.validacion} semillas en {time.time() - t0:.0f} s", flush=True)
     datos["parametros"] = {k: (list(v) if isinstance(v, tuple) else v) for k, v in comparacion.ESCENARIOS[a.escenario].items()}
+    datos["info"] = comparacion.INFO_ESCENARIOS[a.escenario]          # título, descripción y si es histórico
     salida = Path(a.salida) if a.salida else repo / "docs" / f"COMPARACION_POLITICAS_{a.escenario}.json"
     salida.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
     for nombre, bloque in (("desarrollo", datos), ("validación", datos.get("validacion"))):

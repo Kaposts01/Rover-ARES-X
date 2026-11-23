@@ -14,7 +14,9 @@ from juego.partida import Partida  # noqa: E402
 # no lo cambian (el congelado usa ruido nominal); el cambio viene de 94a-94c.
 # R23 (RNA con refuerzo de barrancos): la RNA nominal ve más barrancos y también marca algunos falsos; cambia el híbrido
 # del congelado (20 semillas: 42,2 -> 43,95 pasos; sin_rna idéntico, 20/20 y 0 choques en ambos). Antes: "fec4500d…".
-HASH_CONGELADO_BASE = "73329aed691ffdaf8935dabebd303440f182a014799dee5ec4c9cc18d4f6f15d"
+# R23b: el refuerzo baja de 100 a 15 muestras por mapa (menos falsas alarmas, macro-F1 0,890 en vez de 0,819): cambia el híbrido del
+# congelado; sin_rna y la nota idénticos. Antes: "73329aed…".
+HASH_CONGELADO_BASE = "f0425d43ca4bc816d2c25e1a8c3106805f8fc0f7b6ff232373fa30cfb5b94c48"
 # Hash de la nota de texto de la salida (la misma de la base; el hash anterior ya la cubría dentro del total, B2 de QA).
 HASH_NOTA_BASE = "f0696978dedf462892e6348ae4fac3c215c8a19c1dc0d2ec4184b34d31f863d8"
 

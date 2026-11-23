@@ -335,6 +335,34 @@ def _diferencias_pareadas(hib: dict, var: dict) -> dict:
             "nota": "variante − híbrido, mismas semillas; «distinguible_del_ruido» = |diferencia ÷ error estándar| ≥ 1,96"}
 
 
+def estadistica(datos: dict) -> dict:
+    """R23b: intervalo de Wilson del éxito y diferencia con el híbrido (éxito en pp, pasos si ganan las dos, choques) con su error estándar,
+    a partir de las filas de `comparar`. Sirve para cualquier escenario (los jugables ya lo llevan dentro de `variantes`). No modifica
+    `datos`: lo publican los guiones aparte, para no mover la salida de `comparar` que fija la huella del congelado."""
+    filas = datos["filas"]
+    por_variante = {}
+    for f in filas:
+        por_variante.setdefault(f["variante"], {})[f["semilla"]] = f
+    hib = por_variante.get("hibrido", {})
+    salida = {}
+    for v, grupo in por_variante.items():
+        bloque = {"ic95_exito": _wilson(sum(f["exito"] for f in grupo.values()), len(grupo))}
+        if v != "hibrido" and hib:
+            comunes = sorted(set(hib) & set(grupo))
+            ambas = [x for x in comunes if hib[x]["exito"] and grupo[x]["exito"]]
+            bloque["frente_al_hibrido"] = {
+                "exito_pp": _diferencia([100.0 * hib[x]["exito"] for x in comunes], [100.0 * grupo[x]["exito"] for x in comunes]),
+                "pasos_si_ganan_las_dos": _diferencia([hib[x]["pasos"] for x in ambas], [grupo[x]["pasos"] for x in ambas]),
+                "colisiones": _diferencia([hib[x]["colisiones"] for x in comunes], [grupo[x]["colisiones"] for x in comunes]),
+                "semillas_con_la_misma_trayectoria": int(sum(
+                    (hib[x]["pasos"], hib[x]["exito"], hib[x]["sitios_visitados"], hib[x]["colisiones"], hib[x]["bateria_final"])
+                    == (grupo[x]["pasos"], grupo[x]["exito"], grupo[x]["sitios_visitados"], grupo[x]["colisiones"], grupo[x]["bateria_final"])
+                    for x in comunes)),
+                "nota": "variante − híbrido, mismas semillas; «distinguible_del_ruido» = |diferencia ÷ error estándar| ≥ 1,96"}
+        salida[v] = bloque
+    return salida
+
+
 def comparar(semillas, escenario: str = "congelado") -> dict:
     """Ejecuta todas las variantes con las mismas semillas y resume cada una."""
     par = _parametros_escenario(escenario)          # falla pronto si el escenario no existe o está pendiente

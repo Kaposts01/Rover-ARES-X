@@ -92,3 +92,9 @@ Con eso Marte N4 y N5 subieron por encima de sus metas (100 % y 75 %), así que 
 
 Marte con 34 semillas (N3 a N5): 91, 79 y 59 %; 102 partidas, 0 sin terminar en 500 pasos. N1 y N2 no son comparables entre niveles a ±10 puntos. Los demás planetas
 conservan su compensación completa y no se revalidaron con las nuevas baterías de N4 y N5.
+
+
+## R23b: las tasas de éxito con 100 semillas
+
+Con el puntaje único y la RNA con refuerzo 15 (`R23_ag.md`, sección 6), el híbrido en el escenario `jugable_dificil` (nivel 4, 11 sitios) gana 75/100 en Marte (IC 95 %: 66–82) y 84/100
+en Neptuno (76–90), con semillas 1 a 100. Las cifras de 20 semillas de arriba tienen un error de ±15 puntos y no deben leerse como la dificultad real del nivel 4. No se recalibró la batería.

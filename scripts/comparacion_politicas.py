@@ -10,7 +10,7 @@ import sys
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
-from juego.comparacion import INFO_ESCENARIOS, comparar  # noqa: E402
+from juego.comparacion import INFO_ESCENARIOS, comparar, estadistica  # noqa: E402
 
 # Publicación (ev3-d71): ag_puro no se publica porque no mide el AG (el envoltorio de Partida elige la permutación más
 # corta; se redefine en ARX-92). ruta_corta se publica con su rótulo real: voraz, vecino más cercano.
@@ -32,6 +32,7 @@ def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 20
     escenario = sys.argv[2] if len(sys.argv) > 2 else "congelado"
     datos = para_publicar(comparar(range(1, n + 1), escenario))
+    datos["estadistica"] = estadistica(datos)         # R23b: Wilson del éxito y diferencia con el híbrido (error estándar, ¿ruido?)
     datos["info"] = INFO_ESCENARIOS[escenario]        # R23b: título, descripción y si es histórico (versión anterior del juego)
     nombre = "COMPARACION_POLITICAS.json" if escenario == "congelado" else f"COMPARACION_POLITICAS_{escenario}.json"
     salida = os.path.join(RAIZ, "docs", nombre)

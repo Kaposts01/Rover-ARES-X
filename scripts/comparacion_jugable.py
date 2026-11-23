@@ -44,15 +44,28 @@ def main() -> None:
     salida = Path(a.salida) if a.salida else repo / "docs" / f"COMPARACION_POLITICAS_{a.escenario}.json"
     salida.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
     for nombre, bloque in (("desarrollo", datos), ("validación", datos.get("validacion"))):
-        if not bloque:
-            continue
-        print(f"\n## {a.escenario} · {nombre} · semillas {bloque['semillas'][0]}–{bloque['semillas'][-1]}")
-        print("| Variante | Éxito | IC 95 % | Ciencia (media ± EE) | Puntaje (media ± EE) | Pasos | Recargas |\n|---|---|---|---|---|---|---|")
-        for v, r in bloque["variantes"].items():
-            print(f"| {v} | {r['exitos']}/{r['n']} ({r['tasa_exito']:.0f} %) | {r['ic95_exito'][0]:.0f}–{r['ic95_exito'][1]:.0f} | "
-                  f"{r['ciencia']['media']:.3f} ± {r['ciencia']['error_estandar']:.3f} | "
-                  f"{r['puntaje']['media']:.0f} ± {r['puntaje']['error_estandar']:.0f} | {r['pasos']['media']:.0f} | "
-                  f"{r['recargas']['media']:.1f} |")
+        if bloque:
+            imprimir_tablas(a.escenario, nombre, bloque)
+
+
+def imprimir_tablas(escenario: str, nombre: str, bloque: dict) -> None:
+    """Tablas en Markdown: cifras por variante y diferencia con el híbrido (R23b). También sirve para releer un JSON ya generado."""
+    print(f"\n## {escenario} · {nombre} · semillas {bloque['semillas'][0]}–{bloque['semillas'][-1]}")
+    print("| Variante | Éxito | IC 95 % | Ciencia (media ± EE) | Puntaje (media ± EE) | Pasos (media ± EE) | Recargas |\n|---|---|---|---|---|---|---|")
+    for v, r in bloque["variantes"].items():
+        print(f"| {v} | {r['exitos']}/{r['n']} ({r['tasa_exito']:.0f} %) | {r['ic95_exito'][0]:.0f}–{r['ic95_exito'][1]:.0f} | "
+              f"{r['ciencia']['media']:.3f} ± {r['ciencia']['error_estandar']:.3f} | "
+              f"{r['puntaje']['media']:.0f} ± {r['puntaje']['error_estandar']:.0f} | "
+              f"{r['pasos']['media']:.0f} ± {r['pasos'].get('error_estandar', 0):.1f} | {r['recargas']['media']:.1f} |")
+    print("\n| Variante frente al híbrido (variante menos híbrido) | Éxito (pp) | Ciencia | Puntaje | Pasos (si ganan las dos) |\n|---|---|---|---|---|")
+
+    def celda(x, dec=2):
+        marca = "distinguible" if x["distinguible_del_ruido"] else "ruido"
+        return f"{x['diferencia']:+.{dec}f} ± {x['error_estandar']:.{dec}f} ({marca})"
+    for v, r in bloque["variantes"].items():
+        d = r.get("frente_al_hibrido")
+        if d:
+            print(f"| {v} | {celda(d['exito_pp'], 1)} | {celda(d['ciencia'], 3)} | {celda(d['puntaje'], 0)} | {celda(d['pasos_si_ganan_las_dos'], 1)} |")
 
 
 if __name__ == "__main__":

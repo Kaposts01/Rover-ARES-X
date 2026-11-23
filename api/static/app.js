@@ -17,7 +17,7 @@ import { crearSonido } from "/static/sonido.js?v=r14";
 import { crearDefensa } from "/static/defensa.js?v=r14";
 import {
   EVO, reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
-  textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
+  textoBateriaDifuso, resumenMeta, ayudaPuntaje, AYUDA_SITIOS_Y_CIENCIA, elVehiculo, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
 } from "/static/textos.js?v=r14";
 import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
 import { crearRecords } from "/static/records.js?v=r14";
@@ -1664,7 +1664,11 @@ function pintarHud(e) {
   if (padConduccion) padConduccion.style.display = enSonda ? "none" : "";
   document.getElementById("manual").classList.toggle("sin-pad", enSonda);   // sin pad, los botones de vista se reparten en dos filas
   const botonRover = document.getElementById("encuadrar");
-  if (botonRover) { botonRover.textContent = enSonda ? "Sonda" : "Rover"; botonRover.title = enSonda ? "Centrar en la sonda" : "Centrar en el rover"; }
+  if (botonRover) { botonRover.textContent = enSonda ? "Sonda" : "Rover"; botonRover.title = `Centrar en ${elVehiculo(enSonda ? "sonda" : "rover")}`; }
+  // textos fijos del HTML que nombran al vehículo: siguen al modo (rover o sonda)
+  const vh = enSonda ? "sonda" : "rover";
+  const rnaRest = document.getElementById("rna-restablecer"); if (rnaRest) rnaRest.textContent = `Celda frente a ${elVehiculo(vh)}`;
+  const pausaCam = document.getElementById("pausa-camara-texto"); if (pausaCam) pausaCam.textContent = `La cámara sigue a ${elVehiculo(vh)}`;
   if (enSonda) {
     document.getElementById("sonda-planeta").textContent = planetaActivo;
     document.getElementById("sonda-temp").textContent = `${grados(e.temperatura_interna)} (tolerancia ${grados(e.tolerancia)})`;
@@ -1684,7 +1688,8 @@ function pintarHud(e) {
   document.getElementById("h-bateria").textContent = porcentaje(bpct);
   document.getElementById("h-bateria-barra").style.width = `${Math.max(0, Math.min(100, bpct))}%`;
   try { pintarEnergia(e); } catch (err) { console.warn("bases y pilas: no se pudieron dibujar", err); }
-  document.getElementById("h-puntaje").textContent = e.puntaje;
+  document.getElementById("h-puntaje").textContent = e.puntaje ?? "—";   // el único puntaje: lo calcula el motor
+  document.getElementById("fila-puntaje").title = ayudaPuntaje(e.puntaje_formula);
   document.getElementById("h-municion").textContent = e.municion;
   document.getElementById("h-modo").textContent = nombreModo(e.modo);
   document.getElementById("h-paso").textContent = e.paso ?? "-";
@@ -2462,6 +2467,7 @@ function volverAlInicio(motivo = "salir") {
   generacionInicio += 1;
   cerrarAvisos();            // meta, pausa, avisos; con pausaActiva = false
   detenerReproduccion();
+  mostrarVerResultado(false);
   cadenaAutomatica = null;
   document.getElementById("controles").classList.add("oculto");
   document.getElementById("manual").classList.add("oculto");
@@ -2534,8 +2540,8 @@ if (botonVerIntro) botonVerIntro.addEventListener("click", () => { correrIntro({
 // Puntaje de juego, estrellas, logros y mejores momentos; si algo falla, se abre la meta como siempre.
 let tarjetaFinal = null;
 let finCorriendo = false;
-let cerrarFinal = null;                    // cierra la pantalla abierta con la acción pedida (null = continuar a la meta)
-let accionFinal = null;                    // «repetir» | «otro» | null, según el botón con que se cerró
+let cerrarFinal = null;                    // cierra la pantalla abierta con la acción pedida
+let accionFinal = null;                    // «repetir» | «otro» | «opciones» | «revisar» (Esc o «Cerrar y revisar la partida») | null (no se mostró: sigue la meta)
 let logrosPantalla = null;                 // módulo de logros ya creado (carga perezosa)
 let promesaLogros = null;
 let colaLogros = Promise.resolve();        // los eventos de logros se evalúan en orden
@@ -2619,8 +2625,9 @@ async function correrFinal(codigo) {
       if (!tarjetaFinal) {
         tarjetaFinal = crearFinal({
           contenedor: document.body,
-          alContinuar: () => cerrarFinal && cerrarFinal(null),
-          alCerrar: () => cerrarFinal && cerrarFinal(null),
+          alContinuar: () => cerrarFinal && cerrarFinal("revisar"),
+          alCerrar: () => cerrarFinal && cerrarFinal("revisar"),
+          alOpciones: () => cerrarFinal && cerrarFinal("opciones"),
           alRepetir: () => cerrarFinal && cerrarFinal("repetir"),
           alOtroPlaneta: () => cerrarFinal && cerrarFinal("otro"),
           alVerRecords: () => abrirRecords({ semilla: estado ? estado.semilla : "" }),
@@ -2633,7 +2640,7 @@ async function correrFinal(codigo) {
       });
       const reiniciarInactividad = () => {
         clearTimeout(inactividad);
-        inactividad = setTimeout(() => { console.warn("final: cierre por inactividad"); fin(); }, CIERRE_INACTIVIDAD_S * 1000);
+        inactividad = setTimeout(() => { console.warn("final: cierre por inactividad"); fin("revisar"); }, CIERRE_INACTIVIDAD_S * 1000);
       };
       reiniciarInactividad();
       window.addEventListener("pointermove", reiniciarInactividad); window.addEventListener("keydown", reiniciarInactividad);
@@ -2682,6 +2689,7 @@ function reiniciarEstadoDerivado() {
 async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente(), bateria = null) {
   detenerReproduccion();
   finAtendido = false; ultimoRecord = null; misionTerminada = false;
+  mostrarVerResultado(false);
   cerrarAvisos();
   reiniciarEventos();
   cargando = true;
@@ -2895,17 +2903,38 @@ async function alFinDeMision(codigo) {
   }
   // La pantalla final usa la cadena; se anula después, para que el bloque conserve los datos de la última misión
   const cadenaTerminada = cadenaAutomatica;
-  await correrFinal(codigo);   // la pantalla final va antes de la meta; nunca lanza y, si falla o se omite, sigue la meta
+  await cierreDeMision(codigo, cadenaTerminada);
+}
+// Cierre único de la misión: la pantalla final es la única pantalla de resultado (un solo puntaje). La meta con las opciones de
+// mapa y dificultad solo se abre si el jugador la pide, si la pantalla final está desactivada o si terminó una cadena automática.
+async function cierreDeMision(codigo, cadenaTerminada) {
+  accionFinal = null;
+  if (!cadenaTerminada) await correrFinal(codigo);   // nunca lanza; si falla o está desactivada, sigue la meta
   const pedido = accionFinal; accionFinal = null;
   if (pedido === "jugar" && configPendiente) { const c = configPendiente; configPendiente = null; cadenaAutomatica = null; await jugarConfiguracion(c); return; }
   if (pedido === "repetir") { cadenaAutomatica = null; await nuevaDesdeMeta(estado.semilla, estado.nivel); return; }
   if (pedido === "otro") {
+    cadenaAutomatica = null;
     volverAlInicio("salir");   // «Explorar otro cuerpo»: de vuelta al sistema solar
     return;
   }
+  if (pedido === "revisar") {   // Esc o «Cerrar y revisar la partida»: el mapa y los paneles quedan a la vista; «Ver resultado» la reabre
+    cadenaAutomatica = null;
+    mostrarVerResultado(true);
+    return;
+  }
+  mostrarVerResultado(false);
   mostrarMeta(codigo, cadenaTerminada);
   cadenaAutomatica = null;
 }
+// Botón para reabrir la pantalla final después de cerrarla para revisar la partida terminada
+function mostrarVerResultado(on) { const b = document.getElementById("ver-resultado"); if (b) b.classList.toggle("oculto", !on); }
+const botonVerResultado = document.getElementById("ver-resultado");
+if (botonVerResultado) botonVerResultado.addEventListener("click", () => {
+  if (!estado || !ESTADOS_TERMINALES.includes(estado.estado) || finCorriendo) return;
+  mostrarVerResultado(false);
+  cierreDeMision(estado.estado, null);
+});
 
 // Confirmar en la meta: cierra la meta y todos los avisos, y crea la partida con lo elegido (planeta, vehículo, tamaño y modo vigentes)
 async function nuevaDesdeMeta(semilla, nivel) {
@@ -2939,7 +2968,7 @@ function mostrarMeta(codigo, cadena = null) {
   }));
   const rec = textoNuevoRecord(ultimoRecord);
   if (rec) { const li = document.createElement("li"); li.textContent = `${rec.nuevo ? "★ " : ""}${rec.titulo}`; if (rec.nuevo) li.className = "nuevo-record"; li.title = rec.detalle; resumenLista.appendChild(li); }
-  document.getElementById("meta-puntaje-ayuda").textContent = AYUDA_PUNTAJE_SIMPLE;
+  document.getElementById("meta-puntaje-ayuda").textContent = `${ayudaPuntaje(estado && estado.puntaje_formula)} ${AYUDA_SITIOS_Y_CIENCIA}`;
   const lista = document.getElementById("meta-objetivos");
   lista.replaceChildren();
   for (const c of (ultimosObjetivos && ultimosObjetivos.condiciones) || []) {

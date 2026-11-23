@@ -50,7 +50,7 @@ export function crearHolograma(escena, { alturaTerreno } = {}) {
     ctx.stroke();
     ctx.fillStyle = "#a5f7ff";
     ctx.font = "bold 34px system-ui, sans-serif";
-    ctx.fillText("ROVER · ESTADO COGNITIVO", 44, 70);
+    ctx.fillText(`${d.vehiculo === "sonda" ? "SONDA" : "ROVER"} · ESTADO COGNITIVO`, 44, 70);
     // RNA: las 3 clases reales
     ctx.fillStyle = "#73eaff";
     ctx.font = "bold 28px system-ui, sans-serif";

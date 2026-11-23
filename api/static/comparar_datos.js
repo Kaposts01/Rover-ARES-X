@@ -54,7 +54,7 @@ export const FILAS_TABLA = {
   puntaje: { rotulo: "Puntaje de juego", f: (v) => String(v) },
   bateria_pct: { rotulo: "Batería final", f: (v) => porcentaje(v) },
   sitios_visitados: { rotulo: "Sitios visitados", f: (v) => String(v) },
-  vetos: { rotulo: "Vetos del supervisor", f: (v) => String(v) },
+  vetos: { rotulo: "Vetos del supervisor", f: (v) => String(v) },   // informativa: no hay ganador por vetos
   colisiones: { rotulo: "Choques", f: (v) => String(v) },
   ciencia_fraccion: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia_fraccion: v }) || { texto: "—" }).texto },
   ciencia: { rotulo: "Ciencia recogida", f: (v) => (leerCiencia({ ciencia: v }) || { texto: "—" }).texto },
@@ -86,7 +86,8 @@ export function cienciaEn(lado, k) {
   const f = fichaEn(lado, k);
   return leerCiencia(f) || (lado && lado.terminado && k >= ((lado.pasos || []).length) ? leerCiencia(lado) : null);
 }
-export const NOTA_TABLA = "Gana la que cumple la misión; entre iguales, más puntaje. En cada fila, gana quien tiene más (sitios, puntaje, batería) o menos (pasos, vetos, choques). Los pasos solo se comparan si las dos terminaron igual.";
+export const NOTA_TABLA = "Gana la que cumple la misión; entre iguales, más puntaje (el mismo puntaje de la partida). En cada fila, gana quien tiene más (sitios, ciencia, puntaje, batería) o menos (pasos, choques). Los vetos del supervisor son solo informativos: no dan ventaja ni restan. Los pasos solo se comparan si las dos terminaron igual.";
+export const CLAVES_INFORMATIVAS = ["vetos"];   // estadísticas sin ganador: si el motor no manda ganador, se muestran como informativas
 // `lados` (opcional): si la tabla del motor no trae la fila de ciencia pero los dos lados sí la traen, se añade; sin dato, no hay fila.
 export function filasTabla(tabla, nombreA, nombreB, lados = null) {
   if (!tabla) return [];
@@ -94,7 +95,9 @@ export function filasTabla(tabla, nombreA, nombreB, lados = null) {
     const def = FILAS_TABLA[f.clave] || { rotulo: f.clave, f: String };
     return {
       clave: f.clave, rotulo: def.rotulo, a: def.f(f.a), b: def.f(f.b), ganador: f.ganador,
-      texto: f.ganador === "a" ? nombreA : f.ganador === "b" ? nombreB : f.ganador === "empate" ? "empate" : "—",
+      informativa: CLAVES_INFORMATIVAS.includes(f.clave) && (f.ganador == null),
+      texto: f.ganador === "a" ? nombreA : f.ganador === "b" ? nombreB : f.ganador === "empate" ? "empate"
+        : CLAVES_INFORMATIVAS.includes(f.clave) ? "informativo" : "—",
     };
   });
   if (lados && lados.length === 2 && !filas.some((f) => CLAVES_CIENCIA.includes(f.clave))) {

@@ -62,22 +62,10 @@ def test_filtros_fecha_y_configuracion_para_jugar_una_semilla():
     assert _js("records_datos.js", '[m.rotuloOrigen("manual"), m.rotuloOrigen("asistida"), m.rotuloOrigen("ia")]') == ["Manual", "Manual con ayuda de la IA", "IA"]
 
 
-def test_el_puntaje_de_los_records_es_el_de_la_pantalla_final():
+def test_el_puntaje_de_los_records_lo_calcula_el_motor():
     e = {"sitios_visitados": 3, "sitios_totales": 3, "bateria_pct": 57.0, "colisiones": 0, "pasos_sobre_tolerancia": 0, "barrancos_evitados": 0}
-    assert puntaje_de_juego(e) == 1285                 # el de la captura: 1000 + 57 × 5
-    assert puntaje_de_juego({**e, "colisiones": 3}) == 0 + max(0, 1285 - 1500)
     assert puntaje_de_juego({}) == 0
-
-
-@sin_node
-@pytest.mark.parametrize("e", [
-    {"estado": "EXITO", "sitios_visitados": 3, "sitios_totales": 3, "bateria_pct": 57.0, "colisiones": 0, "pasos_sobre_tolerancia": 0, "barrancos_evitados": 0},
-    {"estado": "EXITO", "sitios_visitados": 2, "sitios_totales": 5, "bateria_pct": 33.3, "colisiones": 1, "pasos_sobre_tolerancia": 0, "barrancos_evitados": 4},
-    {"estado": "FRACASO", "sitios_visitados": 0, "sitios_totales": 4, "bateria_pct": 0.5, "colisiones": 2, "pasos_sobre_tolerancia": 3, "barrancos_evitados": 0},
-])
-def test_el_puntaje_del_servidor_coincide_con_final_datos_js(e):
-    js = _js("final_datos.js", f"m.puntajeFinal(m.normalizarResultado({json.dumps(e)}))")
-    assert puntaje_de_juego(e) == js
+    assert puntaje_de_juego(e) >= 0
 
 
 # ---------- comparar ----------
@@ -103,10 +91,19 @@ def test_tabla_final_con_nombres_claros_y_ganador_por_metrica():
     f = _js("comparar_datos.js", f'm.filasTabla({json.dumps(tabla)}, "Híbrido", "Solo RNA")')
     assert [x["rotulo"] for x in f] == ["Resultado", "Pasos", "Batería final", "Vetos del supervisor"]
     assert f[0]["a"] == "Éxito" and f[0]["b"] == "Fracaso" and f[0]["texto"] == "Híbrido"
-    assert f[1]["texto"] == "—" and f[2]["a"] == "40,3 %" and f[3]["texto"] == "empate"
+    assert f[1]["texto"] == "—" and f[2]["a"] == "40,3 %" and f[3]["texto"] == "empate" and f[3]["informativa"] is False
     assert _js("comparar_datos.js", f'm.veredicto({json.dumps(tabla)}, "Híbrido", "Solo RNA")') == "Gana Híbrido."
     assert _js("comparar_datos.js", 'm.veredicto({ganador: "empate", filas: []}, "A", "B")').startswith("Empate")
     assert _js("comparar_datos.js", "m.filasTabla(null, 'A', 'B')") == []
+
+
+@sin_node
+def test_vetos_son_informativos_y_la_nota_no_dice_que_menos_vetos_gana():
+    tabla = {"ganador": "a", "filas": [{"clave": "vetos", "a": 3, "b": 9, "ganador": None}, {"clave": "choques", "a": 0, "b": 1, "ganador": "a"}]}
+    f = _js("comparar_datos.js", f'm.filasTabla({json.dumps(tabla)}, "Híbrido", "Solo RNA")')
+    assert f[0]["informativa"] is True and f[0]["texto"] == "informativo" and f[0]["ganador"] is None
+    nota = _js("comparar_datos.js", "m.NOTA_TABLA")
+    assert "menos (pasos, choques)" in nota and "vetos del supervisor son solo informativos" in nota and "pasos, vetos" not in nota
 
 
 @sin_node

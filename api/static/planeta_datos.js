@@ -114,7 +114,7 @@ export function condicionesPlaneta(origen, planeta) {
     energiaExtra: numero(vivo.energia_extra, null), intensidad,
   };
   const resumen = typeof p.resumen === "string" ? p.resumen : "";
-  return { gravedad, viento, hielo, terreno, vivo: vida, sobrecostoMedio: numero(p.sobrecosto_medio, null), resumen };
+  return { planeta, gravedad, viento, hielo, terreno, vivo: vida, sobrecostoMedio: numero(p.sobrecosto_medio, null), resumen };
 }
 
 // Qué cambia al jugar en ese planeta: frases cortas a partir de los datos del motor (ficha del planeta, sin estado vivo).
@@ -130,7 +130,7 @@ export function queCambia(origen, planeta) {
   if (c.hielo.fraccion > 0) frases.push(`hielo en el ${pct0(c.hielo.fraccion)} del mapa${c.hielo.fragilidad > 1.05 ? " (muy resbaladizo)" : ""}: a velocidad alta el vehículo resbala`);
   if (c.terreno.pendiente > 1.05) frases.push("regolito suelto: las subidas cuestan más");
   if (c.terreno.arrastre > 0) frases.push("atmósfera densa: frena en cada paso");
-  if (c.terreno.polvo > 1.05) frases.push(`tormentas de polvo ${veces(c.terreno.polvo)} veces más frecuentes`);
+  if (c.terreno.polvo > 1.05) frases.push(`${planeta === "Marte" ? "tormentas de polvo" : "tormentas"} ${veces(c.terreno.polvo)} veces más frecuentes`);
   return frases;
 }
 export const textoQueCambia = (origen, planeta) => `Al jugar aquí: ${queCambia(origen, planeta).join("; ")}.`;
@@ -162,11 +162,11 @@ export function filasCondiciones(c, paso) {
   ];
   if (c.terreno.pendiente > 1.05) filas.push(["Pendiente", `las subidas cuestan ×${veces(c.terreno.pendiente)}`, c.terreno.fuente]);
   if (c.terreno.arrastre > 0) filas.push(["Atmósfera", `frena +${f2(c.terreno.arrastre)} % por paso`, c.terreno.fuente]);
-  if (c.terreno.polvo > 1.05) filas.push(["Polvo", `tormentas ×${veces(c.terreno.polvo)}`, c.terreno.fuente]);
+  if (c.terreno.polvo > 1.05) filas.push([c.planeta === "Marte" ? "Polvo" : "Tormentas", `tormentas ×${veces(c.terreno.polvo)}`, c.terreno.fuente]);
   if (c.vivo.hay) {
     if (c.vivo.energiaExtra != null) {
       const extra = paso && esNumero(paso.extra) && paso.extra > 0.004 ? ` · este paso +${f2(paso.extra)} %` : "";
-      filas.push(["Batería extra", `+${f2(c.vivo.energiaExtra)} % en la partida${extra}`, "motor"]);
+      filas.push(["Gasto adicional por el planeta", `+${f2(c.vivo.energiaExtra)} % de batería gastada de más por gravedad, viento y hielo en esta partida${extra}`, "motor"]);
     }
     if (c.vivo.resbalones || c.vivo.desvios || (paso && paso.resbalo)) {
       const partes = [];

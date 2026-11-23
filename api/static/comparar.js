@@ -8,7 +8,7 @@ import {
   textoDecision, textoDivergencia, TEXTO_SIN_DIVERGENCIA_AUN, TEXTO_SIN_DIVERGENCIA_FIN, filasTabla, veredicto, NOTA_TABLA, hayCiencia, cienciaEn,
   validarFormulario, VELOCIDADES, tamanoCelda,
 } from "./comparar_datos.js?v=r14";
-import { nombreAccion, nombresMotivos, plural, Vehiculo } from "./textos.js?v=r14";
+import { nombreAccion, nombresMotivos, plural, Vehiculo, AYUDA_SITIOS_Y_CIENCIA } from "./textos.js?v=r14";
 import { NIVELES } from "./records_datos.js?v=r14";
 
 const COLOR = { a: "#5fd3ff", b: "#ffb454" };
@@ -258,7 +258,7 @@ export function crearComparar({ valores = () => ({}), planetas = () => [] } = {}
       cuerpo.append(tr);
     }
     tabla.append(th, cuerpo);
-    cajaTabla.append(el("div", "vx-veredicto", veredicto(datos.tabla, nA, nB)), tabla, el("div", "ayuda", NOTA_TABLA));
+    cajaTabla.append(el("div", "vx-veredicto", veredicto(datos.tabla, nA, nB)), tabla, el("div", "ayuda", NOTA_TABLA), el("div", "ayuda", AYUDA_SITIOS_Y_CIENCIA));
   }
 
   function ir(n) {

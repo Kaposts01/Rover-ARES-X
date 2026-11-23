@@ -30,26 +30,47 @@ def _p(**k):
 
 
 @sin_node
-def test_constantes_de_la_formula_y_rotulo():
-    assert [_js(f"m.{n}") for n in ("PESO_CIENCIA", "PESO_BARRANCOS_EVITADOS", "PESO_BATERIA", "PENALIZACION_VIOLACION")] == [1000, 50, 5, 500]
+def test_constantes_umbrales_y_rotulo_sin_formula_propia():
     assert [_js(f"m.{n}") for n in ("UMBRAL_2_ESTRELLAS", "UMBRAL_3_CIENCIA", "UMBRAL_3_BATERIA")] == [0.6, 0.85, 20]
     assert _js("m.ROTULO_PUNTAJE") == "Puntaje de juego, no es un criterio de evaluación."
     assert _js("m.ROTULO_FICCION") == "Ficción, no evidencia"
-    assert _js("m.ROTULO_PUNTAJE_HUD") != _js("m.ROTULO_PUNTAJE")
     assert _js("m.CIERRE_INACTIVIDAD_S") == 120
+    # un solo puntaje: no existen los pesos ni el «puntaje simple» del HUD
+    for nombre in ("PESO_CIENCIA", "PESO_BARRANCOS_EVITADOS", "PESO_BATERIA", "PENALIZACION_VIOLACION", "ROTULO_PUNTAJE_HUD"):
+        assert _js(f"typeof m.{nombre}") == "undefined", nombre
+    assert "simple" not in _js("m.NOTA_PUNTAJE").lower() and "vetos" not in _js("m.NOTA_PUNTAJE").lower()
+
+
+_DESGLOSE = [
+    {"clave": "ciencia", "etiqueta": "Ciencia recogida (0 a 1)", "valor": 0.495, "peso": 1000, "puntos": 495.0},
+    {"clave": "bateria", "etiqueta": "Batería final (%)", "valor": 40, "peso": 5, "puntos": 200},
+    {"clave": "violaciones", "etiqueta": "Violaciones", "valor": 1, "peso": 500, "puntos": -500},
+]
 
 
 @sin_node
-@pytest.mark.parametrize("r,esperado", [
-    (dict(ciencia=1, bateria_pct=100, violaciones=0, barrancos_evitados=0), 1500),
-    (dict(ciencia=0, bateria_pct=0, violaciones=0, barrancos_evitados=0), 0),
-    (dict(ciencia=0.5, bateria_pct=40, violaciones=1, barrancos_evitados=4), 500 + 200 + 200 - 500),
-    (dict(ciencia=0, bateria_pct=10, violaciones=9, barrancos_evitados=0), 0),            # mínimo 0
-    (dict(ciencia=0.8333, bateria_pct=33.3, violaciones=0, barrancos_evitados=0), 1000),   # redondeo: 833,3+166,5 = 999,8
-    (dict(ciencia=0.75, bateria_pct=20, violaciones=0, barrancos_evitados=0), 850),
-])
-def test_puntaje_final(r, esperado):
-    assert _js(f"m.puntajeFinal({json.dumps(r)})") == esperado
+def test_el_puntaje_es_el_que_manda_el_servidor_sin_cuenta_propia():
+    e = dict(estado="EXITO", puntaje=1027, puntaje_desglose=_DESGLOSE, puntaje_formula="ciencia × 1000 + batería × 5 − violaciones × 500",
+             ciencia_fraccion=0.495, ciencia_recogida=3.96, ciencia_maxima=8, sitios_visitados=8, sitios_totales=8, vetos=9, barrancos_evitados=9)
+    r = _js(f"m.normalizarResultado({json.dumps(e)})")
+    assert r["puntaje"] == 1027 and r["ciencia"] == 0.495 and r["ciencia_recogida"] == 3.96 and r["ciencia_maxima"] == 8
+    assert r["objetivos_muestreados"] == 8 and r["objetivos_totales"] == 8     # sitios visitados: dato aparte de la ciencia
+    d = _js(f"m.desglosePuntaje(m.normalizarResultado({json.dumps(e)}))")
+    assert d["total"] == 1027 and d["formula"].startswith("ciencia × 1000") and [t["clave"] for t in d["terminos"]] == ["ciencia", "bateria", "violaciones"]
+    assert _js(f"m.puntajeFinal(m.normalizarResultado({json.dumps(e)}))") == 1027
+    # los vetos no cambian el puntaje: es el mismo con 0 o con 50 vetos
+    assert _js(f"m.puntajeFinal(m.normalizarResultado({json.dumps({**e, 'vetos': 50, 'barrancos_evitados': 50})}))") == 1027
+    lineas = _js(f"m.desglosePuntaje(m.normalizarResultado({json.dumps(e)})).terminos.map(m.lineaTermino)")
+    assert lineas == ["Ciencia recogida (0 a 1): 0,5 × 1.000 = +495", "Batería final (%): 40 × 5 = +200", "Violaciones: 1 × 500 = −500"]
+
+
+@sin_node
+def test_sin_puntaje_del_motor_se_muestra_sin_dato_y_no_se_inventa_una_cuenta():
+    r = _js("m.normalizarResultado({estado:'EXITO', sitios_visitados: 3, sitios_totales: 3, bateria_pct: 80, vetos: 4, barrancos_evitados: 4})")
+    assert r["puntaje"] is None and r["puntaje_desglose"] is None and r["puntaje_formula"] is None and r["ciencia"] is None
+    assert _js("m.puntajeFinal(m.normalizarResultado({estado:'EXITO', sitios_visitados: 3, sitios_totales: 3}))") is None
+    assert _js("m.desglosePuntaje(m.normalizarResultado({}))") == {"terminos": [], "formula": None, "total": None}
+    assert _js("m.lineaTermino({clave:'x', etiqueta:'Dato', valor: null, puntos: null})") == "Dato: sin dato"
 
 
 @sin_node
@@ -57,8 +78,6 @@ def test_dato_ausente_no_es_un_cero_inventado():
     r = _js("m.normalizarResultado({estado:'EXITO'})")
     for clave in ("ciencia", "bateria_pct", "violaciones", "barrancos_evitados", "vetos", "replanificaciones", "distancia", "paso"):
         assert r[clave] is None, clave
-    d = _js("m.desglosePuntaje(m.normalizarResultado({}))")
-    assert d["total"] == 0 and all(t["dato"] is False for t in d["terminos"])
     assert _js("[m.formatoDato(null), m.formatoDato(undefined), m.formatoDato('x'), m.formatoDato(0)]") == ["—", "—", "—", "0"]
     assert _js("m.formatoDato(12,{sufijo:' celdas'})") == "12 celdas"
 
@@ -69,7 +88,8 @@ def test_normalizar_estado_real():
              vetos=3, replanes=4, sitios_visitados=3, sitios_totales=4, distancia_recorrida=77, paso=120,
              barrancos_evitados=2, avisos=["Aviso corto"])
     r = _js(f"m.normalizarResultado({json.dumps(e)})")
-    assert r["ciencia"] == 0.75 and r["bateria_pct"] == 61.5 and r["violaciones"] == 3
+    assert r["ciencia"] is None and r["objetivos_muestreados"] == 3 and r["objetivos_totales"] == 4     # sitios ÷ totales ya no es «ciencia»
+    assert r["bateria_pct"] == 61.5 and r["violaciones"] == 3 and r["colisiones"] == 1 and r["pasos_sobre_tolerancia"] == 2
     assert r["vetos"] == 3 and r["replanificaciones"] == 4 and r["distancia"] == 77 and r["paso"] == 120
     assert r["barrancos_evitados"] == 2 and r["planeta"] == "Marte" and r["modo"] == "rover"
     assert r["motivo_final"] == "EXITO" and r["codigo"] == "EXITO"
@@ -77,14 +97,6 @@ def test_normalizar_estado_real():
     assert _js("m.normalizarResultado({colisiones:2}).violaciones") == 2
     assert _js("m.normalizarResultado({pasos_sobre_tolerancia:5}).violaciones") == 5
     assert _js("m.normalizarResultado(null).planeta") is None
-
-
-@sin_node
-def test_desglose_suma_el_total():
-    d = _js(f"m.desglosePuntaje({_p(ciencia=0.5, bateria_pct=40, violaciones=1, barrancos_evitados=4)})")
-    assert [t["clave"] for t in d["terminos"]] == ["ciencia", "barrancos", "bateria", "violaciones"]
-    assert d["terminos"][1]["etiqueta"] == "Vetos por barranco (pasos)"
-    assert sum(t["puntos"] for t in d["terminos"]) == d["bruto"] == 400 and d["total"] == 400
 
 
 @sin_node
@@ -102,6 +114,39 @@ def test_desglose_suma_el_total():
 ])
 def test_estrellas_en_los_umbrales(r, n):
     assert _js(f"m.estrellas({_p(**r)})") == n
+
+
+def _det(**k):
+    return _js(f"m.detalleEstrellas({_p(**k)})")
+
+
+@sin_node
+def test_las_estrellas_siempre_explican_cuantas_y_que_falta():
+    d = _det(ciencia=0.495, bateria_pct=60)
+    assert d["n"] == 1 and d["texto"].startswith("1 de 3: misión cumplida sin violaciones.")
+    assert "Para la segunda" in d["texto"] and "60 %" in d["texto"] and "(llevas 49,5 %)" in d["texto"]
+    d = _det(ciencia=0.7, bateria_pct=10)
+    assert d["n"] == 2 and "Para la tercera" in d["texto"] and "85 %" in d["texto"] and "(llevas 70,0 %)" in d["texto"]
+    assert "20 % de batería o más (quedó 10,0 %)" in d["texto"]
+    d = _det(ciencia=0.9, bateria_pct=10)          # la ciencia ya alcanza: solo falta la batería
+    assert d["n"] == 2 and "85 %" not in d["texto"].split("Para la tercera")[1] and "batería" in d["texto"]
+    d = _det(ciencia=1, bateria_pct=80)
+    assert d["n"] == 3 and d["texto"].startswith("3 de 3") and "máximo" in d["texto"]
+    assert all(_det(**k)["texto"] for k in (dict(codigo="FRACASO"), dict(ciencia=None), dict(violaciones=None)))
+
+
+@sin_node
+def test_cero_estrellas_en_un_exito_se_explica_por_choques_calor_o_dato_desconocido():
+    r = _js("m.detalleEstrellas(m.normalizarResultado({estado:'EXITO', colisiones: 2, pasos_sobre_tolerancia: 0, ciencia_fraccion: 1, bateria_pct: 80}))")
+    assert r["n"] == 0 and "se cumplió" in r["texto"] and "2 choques" in r["texto"] and "cero violaciones" in r["texto"]
+    r = _js("m.detalleEstrellas(m.normalizarResultado({estado:'EXITO', colisiones: 0, pasos_sobre_tolerancia: 3, ciencia_fraccion: 1}))")
+    assert r["n"] == 0 and "3 pasos sobre la tolerancia térmica" in r["texto"]
+    r = _js("m.detalleEstrellas(m.normalizarResultado({estado:'EXITO', ciencia_fraccion: 1}))")
+    assert r["n"] == 0 and "no se pudo comprobar" in r["texto"]
+    r = _js("m.detalleEstrellas(m.normalizarResultado({estado:'EXITO', colisiones: 0, pasos_sobre_tolerancia: 0}))")
+    assert r["n"] == 1 and "dato no disponible" in r["texto"]       # sin ciencia del motor: 1 estrella y se dice
+    r = _js("m.detalleEstrellas(m.normalizarResultado({estado:'FRACASO'}))")
+    assert r["n"] == 0 and "no se cumplió" in r["texto"]
 
 
 @sin_node
@@ -129,7 +174,7 @@ def test_hay_22_logros_unicos_con_estado_y_ficcion_rotulada():
     bloqueados = {x["id"] for x in logros if x["estado"] == "bloqueado"}
     assert bloqueados == {"geiser", "volcan", "frio_extremo", "ojos_robot"}
     assert all(x["nota"] for x in logros if x["estado"] == "bloqueado")
-    assert "Requiere un evento que el rover no tiene" in _js("m.NOTA_SIN_EVENTO")
+    assert "Requiere un evento que este motor no tiene" in _js("m.NOTA_SIN_EVENTO")
     assert "no afirma vida" in _js("m.NOTA_SENAL")
     assert "8 cuerpos" in next(x for x in logros if x["id"] == "gran_explorador")["descripcion"]
 
@@ -297,7 +342,9 @@ def test_los_iconos_de_los_logros_existen():
 def test_el_rotulo_de_ficcion_y_del_puntaje_estan_en_la_tarjeta():
     tarjeta = (ESTATICOS / "final_tarjeta.js").read_text(encoding="utf-8")
     assert "ROTULO_PUNTAJE" in tarjeta and "ROTULO_FICCION" in tarjeta and "NOTA_PUNTAJE" in tarjeta
-    assert "ROTULO_PUNTAJE_HUD" in (ESTATICOS / "app.js").read_text(encoding="utf-8") or "Puntaje simple" in (ESTATICOS / "index.html").read_text(encoding="utf-8")
+    for archivo in ESTATICOS.glob("*.js"):
+        assert "Puntaje simple" not in archivo.read_text(encoding="utf-8"), archivo.name
+    assert "Puntaje simple" not in (ESTATICOS / "index.html").read_text(encoding="utf-8")
 
 
 # ---------- /estado: claves de solo lectura nuevas ----------

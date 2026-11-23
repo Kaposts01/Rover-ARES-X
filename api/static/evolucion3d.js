@@ -4,7 +4,7 @@
 // Memoria: las geometrías de las rutas se liberan al cambiar de generación; los materiales (6 de rutas, 2 de marcas) se crean una vez
 // y se liberan en dispose(); las etiquetas de los sitios son lienzos que se redibujan, nunca nuevas texturas por generación.
 import * as THREE from "three";
-import { celdaValida, textoVentana } from "/static/ag_evolucion_datos.js?v=r14";
+import { celdaValida, textoVentana } from "/static/ag_evolucion_datos.js?v=r15";
 
 const ALTO_SOBRE_SUELO = 0.28;
 const COLOR_MEJOR = 0xffcf63, COLOR_RESTO = 0x42d9f2, COLOR_BASE = 0x6ee7a8, COLOR_SITIO = 0xffb454, COLOR_RESALTE = 0xffffff;

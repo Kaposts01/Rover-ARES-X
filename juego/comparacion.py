@@ -68,7 +68,7 @@ INFO_ESCENARIOS = {
         "titulo": "Exigente (nivel 5 con sensor ruidoso, 3 a 4 sitios)", "historico": False,
         "descripcion": "Mapa pequeño, nivel 5, sensor con ruido 0,6 y detección pobre de peligros. NO ejercita al AG restringido: son "
                        "3 a 4 sitios sin ventanas de tiempo ni recargas, y con tan pocos sitios el 2-opt encuentra el mismo orden que el "
-                       "AG (las dos políticas hacen exactamente lo mismo en las 20 semillas). Sirve para medir RNA y difuso con "
+                       "AG (las dos políticas hacen exactamente lo mismo en 92 de 100 semillas). Sirve para medir RNA y difuso con "
                        "sensores malos, no al AG."},
     "exigente10": {
         "titulo": "Exigente con 10 sitios (sin ventanas ni recargas)", "historico": False,

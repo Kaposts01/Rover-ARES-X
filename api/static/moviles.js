@@ -1,7 +1,7 @@
 // Visualización de los elementos móviles y de los eventos del paso (CONTRATOS_GRAFICOS.md §10).
 // Recibe el objeto de /moviles (o de prueba) y lo dibuja en la escena. No decide nada: solo muestra.
 import * as THREE from "three";
-import * as efectos from "/static/efectos.js?v=r14";
+import * as efectos from "/static/efectos.js?v=r15";
 
 const TEXTO_BIO = "anomalía, no confirma vida";
 const visuales = new Map();   // id -> { objeto, tipo, estela? }

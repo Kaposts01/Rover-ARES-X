@@ -1,7 +1,7 @@
 // Pantalla final: «mejores momentos». Captura hasta 3 imágenes del canvas del renderer (primer veto, mayor riesgo y final).
 // Cada captura vuelve a dibujar la escena y copia el canvas en el mismo instante (sin preserveDrawingBuffer en el renderer).
-import { MAX_MOMENTOS, ANCHO_MOMENTO } from "./final_datos.js?v=r14";
-import { nombresMotivos } from "./textos.js?v=r14";
+import { MAX_MOMENTOS, ANCHO_MOMENTO } from "./final_datos.js?v=r15";
+import { nombresMotivos } from "./textos.js?v=r15";
 
 export const ORDEN_MOMENTOS = ["veto", "riesgo", "final"];
 

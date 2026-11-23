@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ARES-X (3D)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%230b0f1a' stroke='%235fd3ff' stroke-width='2'/%3E%3Ccircle cx='8' cy='8' r='2' fill='%235fd3ff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/estilos.css?v=r14">
+  <link rel="stylesheet" href="/static/estilos.css?v=r15">
 <script type="importmap">
 { "imports": { "three": "/static/vendor/three.module.js" } }
 </script>
@@ -26,12 +26,12 @@
         <div class="fila"><span>Estado</span><span class="valor" id="h-estado">-</span></div>
         <div class="fila ancha"><span>Batería</span><span class="valor" id="h-bateria">-</span></div>
         <div class="barra-mini ancha"><div id="h-bateria-barra"></div></div>
-        <div class="fila" title="Puntaje simple = 100 × sitios visitados ÷ sitios totales + 0,5 × batería restante (unidades del motor) + 50 si no hubo ningún veto del supervisor. No es el puntaje de la pantalla final ni un criterio de evaluación."><span>Puntaje simple</span><span class="valor" id="h-puntaje">-</span></div>
+        <div class="fila" id="fila-puntaje" title="Puntaje de juego: el único de la partida, calculado por el motor. No es un criterio de evaluación."><span>Puntaje</span><span class="valor" id="h-puntaje">-</span></div>
         <div class="fila"><span>Munición</span><span class="valor" id="h-municion">-</span></div>
         <div class="fila"><span>Modo</span><span class="valor" id="h-modo">-</span></div>
         <div class="fila"><span>Paso</span><span class="valor" id="h-paso">-</span></div>
         <div class="fila"><span>Cooldown</span><span class="valor" id="h-cooldown">-</span></div>
-        <div class="fila"><span>Drones</span><span class="valor" id="h-drones">-</span></div>
+        <div class="fila ancha"><span>Drones</span><span class="valor" id="h-drones">-</span></div>
         <div class="fila ancha" id="fila-calor"><span>Temperatura interna</span><span class="valor" id="h-calor">-</span></div>
         <div class="barra-mini ancha" id="barra-calor-caja"><div id="h-calor-barra"></div></div>
       </div>
@@ -363,7 +363,7 @@
           </div>
         </div>
         <div class="lab-bloque">
-          <div class="titulo-seccion">Desglose del fitness (3 mejores rutas)</div>
+          <div class="titulo-seccion" id="ag-desglose-titulo">Desglose del fitness de las mejores rutas</div>
           <div id="ag-candidatos" class="lab-chips"></div>
           <div id="ag-desglose"></div>
         </div>
@@ -441,7 +441,7 @@
           </label>
           <label>Gradiente de altura (m) <input id="rna-gradiente" type="range" min="-10" max="10" step="0.1" value="0"> <output id="rna-gradiente-v"></output></label>
           <label>Vibración <input id="rna-vibracion" type="range" min="-5" max="5" step="0.1" value="0"> <output id="rna-vibracion-v"></output></label>
-          <button id="rna-restablecer" class="secundario" type="button">Celda frente al rover</button>
+          <button id="rna-restablecer" class="secundario" type="button">Celda frente al vehículo</button>
         </div>
         <div class="lab-grid-2">
           <div class="lab-bloque">
@@ -469,12 +469,18 @@
         <div class="lab-barra">
           <label>Escenario
             <select id="pol-escenario">
-              <option value="congelado">congelado</option>
-              <option value="exigente">exigente</option>
+              <option value="jugable_dificil">partida actual difícil · Marte</option>
+              <option value="jugable_dificil_neptuno">partida actual difícil · Neptuno</option>
+              <option value="exigente10">exigente con 10 sitios</option>
+              <option value="exigente">exigente (3 a 4 sitios)</option>
+              <option value="congelado">histórico (versión anterior del juego)</option>
             </select>
           </label>
           <label>Métrica
             <select id="pol-metrica">
+              <option value="tasa_exito">misiones cumplidas (%)</option>
+              <option value="ciencia">ciencia recogida (0 a 1)</option>
+              <option value="puntaje">puntaje</option>
               <option value="pasos">pasos hasta el final</option>
               <option value="bateria_final">batería final (%)</option>
               <option value="sitios_visitados">sitios visitados</option>
@@ -585,7 +591,7 @@
             <option value="150">rápida</option>
           </select>
         </label>
-        <label class="veto"><input type="checkbox" id="pausa-camara" checked> La cámara sigue al rover</label>
+        <label class="veto"><input type="checkbox" id="pausa-camara" checked> <span id="pausa-camara-texto">La cámara sigue al rover</span></label>
         <label class="veto"><input type="checkbox" class="casilla-viaje" id="pausa-viaje" checked> Animación del cohete al cargar la misión</label>
         <label class="veto"><input type="checkbox" class="casilla-final" id="pausa-final" checked> Mostrar la pantalla final</label>
         <button id="pausa-borrar-logros" class="secundario" type="button" title="Borra los logros guardados en este navegador">Borrar logros</button>
@@ -678,9 +684,10 @@
     </div>
   </div>
 
+  <button id="ver-resultado" class="oculto" type="button" title="Vuelve a abrir el resultado de la misión terminada (puntaje, estrellas y logros)">Ver resultado</button>
   <div id="mensaje" class="caja" role="status" aria-live="polite" style="padding:8px 16px;">Configura la misión y pulsa Iniciar misión.</div>
   <ul id="registro" class="registro" aria-live="polite"></ul>
 
-  <script type="module" src="/static/app.js?v=r14"></script>
+  <script type="module" src="/static/app.js?v=r15"></script>
 </body>
 </html>

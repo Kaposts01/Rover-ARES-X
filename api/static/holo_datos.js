@@ -43,6 +43,7 @@ export function adaptarHolo({ rna, difuso, ag, estado } = {}) {
     metodo: ag && ag.orden_en_juego && ag.orden_en_juego.metodo ? limpiar(ag.orden_en_juego.metodo, 90) : null,
     mejorRuta,
     estado: estado && estado.estado ? limpiar(estado.estado, 40) : null,
+    vehiculo: estado && estado.modo_planeta === "sonda" ? "sonda" : "rover",
     vetoActivo: estado && typeof estado.veto === "boolean" ? estado.veto : null,
     vetos,
   };

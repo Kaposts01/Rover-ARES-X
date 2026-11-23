@@ -2,8 +2,8 @@
 // docs/MATRIZ_REQUISITOS_PDF.md) y con cifras EN VIVO de la partida en curso. Solo lee del motor, salvo la acción
 // «Demostrar» de cada paso, que el usuario pulsa a propósito (dar pasos, abrir un laboratorio, lanzar un evento).
 // Todo con textContent (sin innerHTML).
-import { coma as comaFormato } from "./formato.js?v=r14";
-import { textoBateriaDifuso, nombreVariante, plural, Vehiculo } from "/static/textos.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import { textoBateriaDifuso, nombreVariante, plural, Vehiculo } from "/static/textos.js?v=r15";
 
 const coma = (v, d = 2) => comaFormato(v, d, "-");
 const pct = (v) => (v == null ? "-" : `${coma(v * 100, 1)} %`);

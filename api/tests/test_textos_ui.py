@@ -327,12 +327,16 @@ def test_la_meta_dice_que_inicia_y_resume_pasos_puntaje_y_bateria():
 
 
 @sin_node
-def test_resumen_de_la_meta_y_formula_del_puntaje_simple():
-    r = _js("m.resumenMeta({paso: 42, puntaje: 133, bateria_pct: 61.25, bateria: 90})")
-    assert r == [["Pasos", "42"], ["Puntaje simple", "133"], ["Batería", "61,3 %"]]
-    assert _js("m.resumenMeta(null)")[0][1] == "—"
-    assert "100 × sitios visitados ÷ sitios totales" in _js("m.AYUDA_PUNTAJE_SIMPLE")
-    assert "No es el puntaje de la pantalla final" in _js("m.AYUDA_PUNTAJE_SIMPLE")
+def test_resumen_de_la_meta_con_un_solo_puntaje_y_sitios_distintos_de_ciencia():
+    r = _js("m.resumenMeta({paso: 42, puntaje: 1027, bateria_pct: 61.25, bateria: 90, sitios_visitados: 8, sitios_totales: 8, ciencia_fraccion: 0.495})")
+    assert r == [["Pasos", "42"], ["Puntaje", "1027"], ["Sitios visitados", "8 de 8"], ["Ciencia recogida", "49,5 %"], ["Batería", "61,3 %"]]
+    sin = _js("m.resumenMeta(null)")
+    assert sin[0][1] == "—" and sin[1] == ["Puntaje", "—"] and sin[2][1] == "—" and sin[3][1] == "—"
+    assert "Puntaje simple" not in json.dumps(r, ensure_ascii=False)
+    assert "ventana de tiempo" in _js("m.AYUDA_SITIOS_Y_CIENCIA") and "Sitios visitados" in _js("m.AYUDA_SITIOS_Y_CIENCIA")
+    assert _js("m.ayudaPuntaje('a + b')").endswith("a + b") and _js("m.ayudaPuntaje(null)") == _js("m.AYUDA_PUNTAJE")
+    for viejo in ("puntajeSimple", "FORMULA_PUNTAJE_SIMPLE", "AYUDA_PUNTAJE_SIMPLE"):
+        assert _js(f"typeof m.{viejo}") == "undefined"
 
 
 def test_el_puntaje_del_estado_es_el_unico_y_coincide_con_su_desglose():
@@ -344,6 +348,12 @@ def test_el_puntaje_del_estado_es_el_unico_y_coincide_con_su_desglose():
     assert all(set(t) == {"clave", "etiqueta", "valor", "peso", "puntos"} for t in e["puntaje_desglose"])
     assert e["puntaje_formula"] and "simple" not in e["puntaje_formula"].lower()
     assert 0.0 <= e["ciencia_fraccion"] <= 1.0 and e["ciencia_maxima"] > 0
+
+
+@sin_node
+def test_articulos_del_vehiculo_segun_el_modo():
+    assert _js('[m.elVehiculo("sonda"), m.elVehiculo("rover"), m.delVehiculo("sonda"), m.delVehiculo(null), m.alVehiculo("sonda"), m.alVehiculo("rover")]') == [
+        "la sonda", "el rover", "de la sonda", "del rover", "a la sonda", "al rover"]
 
 
 # ---------- 13. eventos con señal visible y condiciones del planeta (ronda 23, interfaz) ----------
@@ -431,7 +441,9 @@ def test_las_filas_vivas_muestran_rafaga_resbalon_y_sobrecoste_del_paso():
     r = _js_modulo("planeta_datos.js", expr)
     assert r["d"]["resbalo"] is True and abs(r["d"]["extra"] - 0.4) < 1e-9
     textos = {f[0]: f[1] for f in r["filas"]}
-    assert textos["Viento"] == "ráfaga fuerte · hacia el este (2 pasos)" and "este paso +0,40 %" in textos["Batería extra"]
+    assert textos["Viento"] == "ráfaga fuerte · hacia el este (2 pasos)" and "Batería extra" not in textos
+    assert "de batería gastada de más por gravedad, viento y hielo en esta partida" in textos["Gasto adicional por el planeta"]
+    assert textos["Gasto adicional por el planeta"].startswith("+1,40 %") and "este paso +0,40 %" in textos["Gasto adicional por el planeta"]
     assert "¡Resbaló!" in textos and "1 resbalón" in textos["¡Resbaló!"]
     # sin lecturas vivas no hay delta ni filas vivas
     assert _js_modulo("planeta_datos.js", 'm.deltaPaso(null, null)') == {"extra": 0, "resbalo": False, "desvio": False}
@@ -481,3 +493,15 @@ def test_la_intro_tiene_lista_de_planetas_y_zonas_de_clic_generosas():
     js = (ESTATICOS / "intro3d.js").read_text(encoding="utf-8")
     assert "in-lista" in js and "ZONA_FACTOR" in js and "velOrbital" in js
     assert "zona" in js and "intersectObjects(cuerpos.map((k) => k.zona)" in js
+
+
+@sin_node
+def test_los_rotulos_de_los_graficos_se_parten_sin_encimarse():
+    medir = "(t) => t.length * 6"          # 6 px por letra
+    r = _js(f'm.lineasRotulo("Sin AG (vecino más cercano)", 90, {medir}, 3)')
+    assert len(r) >= 2 and all(len(x) * 6 <= 90 for x in r) and " ".join(r) == "Sin AG (vecino más cercano)"
+    assert _js(f'm.lineasRotulo("Híbrido", 90, {medir})') == ["Híbrido"]
+    largo = _js(f'm.lineasRotulo("Sin AG (ruta con 2-opt) muy largo de verdad esto", 60, {medir}, 2)')
+    assert len(largo) == 2 and largo[-1].endswith("…") and all(len(x) * 6 <= 60 for x in largo)
+    assert _js(f'm.lineasRotulo("Extraordinariamente", 50, {medir})')[0].endswith("…")
+    assert _js(f'm.lineasRotulo("", 50, {medir})') == [""]

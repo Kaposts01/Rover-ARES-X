@@ -1,8 +1,8 @@
 // Carga con cohete: escena propia (estrellas, planeta de origen y de destino holográficos, cohete, estela) dibujada en el mismo renderer.
 // El avance del vuelo sigue a la carga real de la partida: la app avisa con listo() cuando el motor responde.
 // No toca la partida ni el motor. Ilustrativa, no a escala.
-import { pasoCarga, etapaCarga, GUARDA_CARGA_S } from "/static/viaje_datos.js?v=r14";
-import { CIAN_HOLO, materialPlanetaHolo, materialHaloHolo, materialEstrellasHolo, geometriaEstrellas } from "/static/holo_material.js?v=r14";
+import { pasoCarga, etapaCarga, GUARDA_CARGA_S } from "/static/viaje_datos.js?v=r15";
+import { CIAN_HOLO, materialPlanetaHolo, materialHaloHolo, materialEstrellasHolo, geometriaEstrellas } from "/static/holo_material.js?v=r15";
 
 const N_ESTELA = 220, RADIO = 6, SEPARACION = 26, ALTURA_ARCO = 15;
 const CON_ANILLOS = new Set(["Saturno", "Urano"]);

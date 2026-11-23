@@ -1,8 +1,8 @@
 // Introducción: sistema solar en estilo «sala de control» (holograma) dibujado en el mismo renderer de la partida. Ilustración, no a escala.
 // No toca la partida ni el motor: al elegir un cuerpo solo avisa con alElegir(nombre).
-import { CUERPOS_INTRO, RADIO_SOL_ESCENA, DURACION_VUELO_S, fasesVuelo, pasoVuelo, posicionOrbital, modoIntro } from "./intro_datos.js?v=r14";
+import { CUERPOS_INTRO, RADIO_SOL_ESCENA, DURACION_VUELO_S, fasesVuelo, pasoVuelo, posicionOrbital, modoIntro } from "./intro_datos.js?v=r15";
 import { CIAN_HOLO, materialPlanetaHolo, materialHaloHolo, materialSolHolo, materialOrbitaHolo, geometriaOrbita,
-  materialBarridoHolo, materialEstrellasHolo, geometriaEstrellas, crearReticula } from "./holo_material.js?v=r14";
+  materialBarridoHolo, materialEstrellasHolo, geometriaEstrellas, crearReticula } from "./holo_material.js?v=r15";
 
 const N_ESTRELLAS_CERCA = 900, N_ESTRELLAS_LEJOS = 1800;
 const CON_ANILLOS = new Set(["Saturno", "Urano"]);
@@ -155,11 +155,22 @@ export function crearIntro({ THREE, renderer, OrbitControls, texturaPlaneta, pal
   controles.addEventListener("start", () => { sinMover = false; });
 
   function encuadrar(aspecto) {
-    // la distancia crece cuando la pantalla es estrecha para que quepa Neptuno
-    const radio = CUERPOS_INTRO[CUERPOS_INTRO.length - 1].distanciaEscena + 6;
-    const fov = (cam.fov * Math.PI) / 180;
-    const vertical = radio / Math.tan(fov / 2) * 0.62, horizontal = radio / (Math.tan(fov / 2) * aspecto);
-    const d = Math.max(vertical, horizontal);
+    // La distancia es la menor con la que toda la órbita de Neptuno (y con ella los planetas con anillos, que van por dentro)
+    // queda dentro de la pantalla con perspectiva real, dejando libre el título de arriba y la lista de planetas de abajo.
+    // (La fórmula anterior ignoraba la perspectiva y dejaba cortado por abajo al planeta que pasaba por delante.)
+    const radio = CUERPOS_INTRO[CUERPOS_INTRO.length - 1].distanciaEscena + 3.5;   // la órbita de Neptuno más su radio
+    const alto = renderer.domElement.clientHeight || 768, ancho = renderer.domElement.clientWidth || 1366;
+    const margenArriba = (2 * 96) / alto, margenAbajo = (2 * 84) / alto, margenLado = (2 * 24) / ancho;
+    const puntos = [[0, 0, radio], [0, 0, -radio], [radio, 0, 0], [-radio, 0, 0]].map((q) => new THREE.Vector3(...q));
+    const p = new THREE.Vector3();
+    const cabe = (d) => {
+      cam.position.set(0, d * 0.55, d * 0.83); cam.lookAt(0, 0, 0); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+      return puntos.every((q) => { p.copy(q).project(cam); return p.y <= 1 - margenArriba && p.y >= -1 + margenAbajo && Math.abs(p.x) <= 1 - margenLado; });
+    };
+    let bajo = 20, alta = controles.maxDistance;
+    if (cabe(bajo)) alta = bajo;
+    for (let i = 0; i < 24 && alta - bajo > 0.05; i++) { const medio = (bajo + alta) / 2; if (cabe(medio)) alta = medio; else bajo = medio; }
+    const d = alta;
     cam.position.set(0, d * 0.55, d * 0.83); controles.target.set(0, 0, 0); controles.update();
   }
 

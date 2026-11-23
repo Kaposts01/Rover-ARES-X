@@ -1,10 +1,10 @@
 // Controles de la capa «Evolución del AG»: se montan dentro de la pestaña «Genético» del panel derecho.
 // Interruptor de la capa, ▶/⏸, velocidad, deslizador de generación, curvas de fitness (mejor y media) y de diversidad, y la lectura del
 // candidato bajo el puntero. Todo con textContent; los textos viven en textos.js (EVO). Los datos llegan adaptados (ag_evolucion_datos.js).
-import { coma as comaFormato } from "./formato.js?v=r14";
-import { dibujarLineas } from "/static/laboratorio.js?v=r14";
-import { EVO, parametroDifusoLegible } from "/static/textos.js?v=r14";
-import { VELOCIDADES_EVO, seriesEvolucion, textoGeneracionEvo, lecturaCandidato } from "/static/ag_evolucion_datos.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import { dibujarLineas } from "/static/laboratorio.js?v=r15";
+import { EVO, parametroDifusoLegible } from "/static/textos.js?v=r15";
+import { VELOCIDADES_EVO, seriesEvolucion, textoGeneracionEvo, lecturaCandidato } from "/static/ag_evolucion_datos.js?v=r15";
 
 const el = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
 const coma = (v, d = 2) => comaFormato(v, d, "—");

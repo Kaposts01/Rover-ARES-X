@@ -1,9 +1,9 @@
-import { coma as comaFormato } from "./formato.js?v=r14";
-import * as adaptador from "/static/adaptador.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import * as adaptador from "/static/adaptador.js?v=r15";
 import {
   VARIANTES_POLITICA, nombreVariante, notaVariantes, NOTA_POLITICAS, textoCandidatoAG, lineasExtraCandidatoAG, LAB_AG, textoEvaluacionRNA, textoBateriaDifuso,
-  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso } from "/static/textos.js?v=r14";
-import { crearEditorDifuso } from "/static/difuso_editor.js?v=r14";
+  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso, lineasRotulo } from "/static/textos.js?v=r15";
+import { crearEditorDifuso } from "/static/difuso_editor.js?v=r15";
 // Laboratorios de los modelos: genético, difuso y RNA, más la comparación de políticas.
 // Datos de los endpoints de docs/CONTRATOS_GRAFICOS.md. Este módulo solo dibuja; el motor está en Python.
 
@@ -257,6 +257,11 @@ function pintarPoblacion(indice) {
 function pintarCandidatos() {
   const cont = $("ag-candidatos");
   cont.replaceChildren();
+  const tituloDesglose = $("ag-desglose-titulo");   // el título dice cuántas rutas se muestran de verdad
+  if (tituloDesglose) {
+    const n = agDatos.candidatos.length;
+    tituloDesglose.textContent = n ? `Desglose del fitness (${n} ${n === 1 ? "mejor ruta" : "mejores rutas"})` : "Desglose del fitness de las mejores rutas";
+  }
   agDatos.candidatos.forEach((c, i) => {
     const b = nodo("button", "chip" + (i === agCandidato ? " activa" : ""), `Candidato ${i + 1} · ${coma(c.fitness, 3)}`);
     b.type = "button";
@@ -784,16 +789,16 @@ export async function seguirPasoLaboratorio() {
 
 // ---------- comparación de políticas (CA del PDF; contrato §7 de CONTRATOS_GRAFICOS.md) ----------
 const VARIANTES_POL = Object.keys(VARIANTES_POLITICA).map((k) => [k, nombreVariante(k)]);   // todas las que publica el motor, con nombre claro
-const ETIQUETA_METRICA_POL = { pasos: "pasos", bateria_final: "batería final (%)", sitios_visitados: "sitios visitados", colisiones: "colisiones" };
+const ETIQUETA_METRICA_POL = { tasa_exito: "misiones cumplidas (%)", ciencia: "ciencia recogida (0 a 1)", puntaje: "puntaje", pasos: "pasos", bateria_final: "batería final (%)", sitios_visitados: "sitios visitados", colisiones: "colisiones" };
 let polDatos = null;
 let polBarras = [];   // geometría de las barras para el cursor
 
 // Escenarios (ARX-28e, ev3-d55 A). El parámetro ?escenario= lo recibe el servidor en ARX-28d;
-// el congelado no envía parámetro (respuesta idéntica a la de siempre).
+// siempre se envía el parámetro: desde la ronda 23b el servidor responde por defecto con el jugable, no con el congelado.
 async function cargarPoliticas() {
   const escenario = $("pol-escenario").value;
   $("pol-estado").textContent = `Consultando la comparación (escenario ${escenario})…`;
-  const datos = await deps.llamar("GET", "/comparacion" + (escenario === "congelado" ? "" : `?escenario=${encodeURIComponent(escenario)}`));
+  const datos = await deps.llamar("GET", `/comparacion?escenario=${encodeURIComponent(escenario)}`);
   if (!datos || !datos.variantes) {
     $("pol-estado").textContent = datos && (datos.motivo || datos.aviso)
       ? `Sin datos del escenario ${escenario}: ${datos.motivo || datos.aviso}`
@@ -802,7 +807,8 @@ async function cargarPoliticas() {
   }
   polDatos = datos;
   const servido = datos.escenario || "congelado";
-  let estado = `escenario ${servido} · ${datos.semillas.length} semillas por variante`;
+  const info = (datos.escenarios_info || {})[servido] || datos.info || null;
+  let estado = `${info && info.titulo ? info.titulo : `escenario ${servido}`} · ${datos.semillas.length} semillas por variante${info && info.descripcion ? ` · ${info.descripcion}` : ""}`;
   if (escenario !== "congelado" && !datos.escenario) {
     estado += " · AVISO: el servidor no distingue escenarios; estas cifras son las del congelado";
   }
@@ -817,7 +823,11 @@ function pintarPoliticas() {
   const metrica = $("pol-metrica").value;
   const filas = VARIANTES_POL.filter(([k]) => polDatos.variantes[k]).map(([k, nombre]) => {
     const v = polDatos.variantes[k];
-    const m = v[metrica] || { media: 0, desviacion: 0 };
+    // la tasa de éxito se calcula de éxitos ÷ n y su barra de error es medio intervalo de confianza del 95 %; el resto trae media y desviación
+    const ic = v.ic95_exito;
+    const m = metrica === "tasa_exito"
+      ? { media: v.n ? 100 * v.exitos / v.n : 0, desviacion: Array.isArray(ic) ? (ic[1] - ic[0]) / 2 : 0 }
+      : v[metrica] || { media: 0, desviacion: 0 };
     return { nombre, v, media: m.media, desv: m.desviacion || 0 };
   });
   dibujarBarrasPol(filas);
@@ -831,6 +841,13 @@ function dibujarBarrasPol(filas) {
   if (!p || !filas.length) return;
   const { ctx, w, h } = p;
   const m = { l: 52, r: 14, t: 14, b: 40 };
+  // Los nombres de las variantes se parten en líneas del ancho de su barra (no se enciman con las vecinas): el margen inferior crece con las líneas
+  const anchoSlot = (w - m.l - m.r) / filas.length;
+  const FUENTE_ROTULO = "11px 'Segoe UI', system-ui, sans-serif";
+  ctx.font = FUENTE_ROTULO;
+  const rotulos = filas.map((f) => lineasRotulo(f.nombre, Math.max(30, anchoSlot - 8), (t) => ctx.measureText(t).width, 4));
+  const nLineas = Math.max(1, ...rotulos.map((l) => l.length));
+  m.b = 14 + nLineas * 14;
   const top = Math.max(1, ...filas.map((f) => f.media + f.desv)) * 1.1;
   const Y = (y) => h - m.b - (y / top) * (h - m.t - m.b);
   ctx.font = "12px 'Segoe UI', system-ui, sans-serif";
@@ -865,7 +882,9 @@ function dibujarBarrasPol(filas) {
     ctx.fillStyle = "#c8d2e4";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(f.nombre, cx, h - m.b + 8);
+    ctx.font = FUENTE_ROTULO;
+    rotulos[i].forEach((linea, j) => ctx.fillText(linea, cx, h - m.b + 8 + j * 14));
+    ctx.font = "12px 'Segoe UI', system-ui, sans-serif";
     polBarras.push({ x0: cx - bw / 2, x1: cx + bw / 2, f });
   });
   ctx.textAlign = "left";

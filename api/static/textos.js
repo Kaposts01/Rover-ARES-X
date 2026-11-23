@@ -1,4 +1,4 @@
-import { coma as comaFormato } from "./formato.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
 // Textos y formatos de la interfaz: funciones puras, sin DOM, que se prueban con node (api/tests/test_textos_ui.py).
 // Aquí viven los nombres que ve el jugador; los valores que compara el código («automatico», «persecucion»...) no cambian.
 
@@ -8,6 +8,10 @@ export const reglasActivadas = (n) => (Number(n) === 1 ? "1 regla activada" : `$
 // Vehículo de la partida: «rover» o «sonda» (cualquier otro valor cae en rover, como el motor)
 export const vehiculoDe = (v) => (String(v || "").toLowerCase() === "sonda" ? "sonda" : "rover");
 export const Vehiculo = (v) => { const n = vehiculoDe(v); return n[0].toUpperCase() + n.slice(1); };
+// Con artículo, para frases: «el rover» / «la sonda», «del rover» / «de la sonda», «al rover» / «a la sonda»
+export const elVehiculo = (v) => (vehiculoDe(v) === "sonda" ? "la sonda" : "el rover");
+export const delVehiculo = (v) => (vehiculoDe(v) === "sonda" ? "de la sonda" : "del rover");
+export const alVehiculo = (v) => (vehiculoDe(v) === "sonda" ? "a la sonda" : "al rover");
 
 export const NOMBRE_MODO = { manual: "Manual", rna: "RNA", difuso: "Difuso", ag: "AG", automatico: "Híbrido" };
 export const NOMBRE_TECNICA = { humano: "Humano", rna: "RNA", difuso: "Difuso", ag: "AG", supervisor: "Supervisor", combate: "Combate", escenario: "Escenario" };
@@ -97,12 +101,40 @@ export function limpiarAviso(texto, vehiculo = "rover") {
   return t;
 }
 
-// Puntaje simple del HUD (juego/partida.py: puntaje): la fórmula real, en una línea
-export const FORMULA_PUNTAJE_SIMPLE = "100 × sitios visitados ÷ sitios totales + 0,5 × batería restante (unidades del motor) + 50 si no hubo ningún veto del supervisor";
-export const AYUDA_PUNTAJE_SIMPLE = `Puntaje simple = ${FORMULA_PUNTAJE_SIMPLE}. No es el puntaje de la pantalla final ni un criterio de evaluación.`;
-export function puntajeSimple({ visitados, totales, bateria, vetos }) {
-  const ciencia = totales > 0 ? (100 * visitados) / totales : 0;
-  return Math.round(ciencia + 0.5 * bateria + (vetos === 0 ? 50 : 0));
+// Puntaje: es uno solo y lo calcula el motor (/estado: puntaje, puntaje_desglose, puntaje_formula). Aquí no se calcula nada.
+export const AYUDA_PUNTAJE = "Puntaje de juego: el único de la partida, calculado por el motor. No es un criterio de evaluación.";
+export function ayudaPuntaje(formula) {
+  const f = typeof formula === "string" && formula.trim() ? formula.trim() : "";
+  return f ? `${AYUDA_PUNTAJE} ${f}` : AYUDA_PUNTAJE;
+}
+// «Sitios visitados» (cuántos sitios pisaste) y «Ciencia recogida» (valor según la ventana de tiempo de cada sitio) son dos datos distintos
+export const AYUDA_SITIOS_Y_CIENCIA = "Sitios visitados cuenta cuántos sitios pisaste (8 de 8 = todos). Ciencia recogida es otra cifra: cada sitio vale según la ventana de tiempo en que lo visitaste, por eso puede ser menor aunque hayas visitado todos.";
+export function textoSitios(visitados, totales) {
+  const ok = (v) => v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
+  return ok(visitados) && ok(totales) ? `${Number(visitados)} de ${Number(totales)}` : "—";
+}
+export function textoCiencia(fraccion) {
+  const ok = fraccion !== null && fraccion !== undefined && fraccion !== "" && Number.isFinite(Number(fraccion));
+  return ok ? `${comaFormato(Number(fraccion) * 100, 1)} %` : "—";
+}
+
+// Parte un rótulo en líneas que caben en `anchoMax` (medido con `medir(texto)`): por palabras y, si una palabra sola no cabe, la recorta
+// con «…». Sirve para las etiquetas de los gráficos, que no deben encimarse con la vecina. Máximo `maxLineas` (la última lleva «…» si sobra).
+export function lineasRotulo(texto, anchoMax, medir, maxLineas = 3) {
+  const palabras = String(texto ?? "").split(/\s+/).filter(Boolean);
+  const caben = (t) => medir(t) <= anchoMax;
+  const recortar = (t) => { let x = t; while (x.length > 1 && !caben(`${x}…`)) x = x.slice(0, -1); return `${x}…`; };
+  const lineas = [];
+  let actual = "";
+  for (const p of palabras) {
+    const prueba = actual ? `${actual} ${p}` : p;
+    if (caben(prueba)) { actual = prueba; continue; }
+    if (actual) lineas.push(actual);
+    actual = caben(p) ? p : recortar(p);
+  }
+  if (actual) lineas.push(actual);
+  if (lineas.length > maxLineas) { const resto = lineas.slice(0, maxLineas); resto[maxLineas - 1] = recortar(`${resto[maxLineas - 1]} ${lineas.slice(maxLineas).join(" ")}`); return resto; }
+  return lineas.length ? lineas : [""];
 }
 
 // Batería del difuso: lo que se rotula «%» es el porcentaje real (el del HUD); la entrada que usó el difuso está en
@@ -139,6 +171,8 @@ export const VARIANTES_POLITICA = {
   sin_ag_vecino: ["Sin AG (vecino más cercano)", "el orden de visita se arma yendo siempre al sitio más cercano"],
   sin_ag_mas_corta: ["AG solo por distancia", "el AG con pesos solo de distancia; con pocos sitios coincide con el híbrido"],
   sin_ag_2opt: ["Sin AG (ruta con 2-opt)", "vecino más cercano mejorado con 2-opt, una mejora local que desenreda cruces de la ruta, sin AG"],
+  sin_ag_ventanas: ["Sin AG (por ventanas de tiempo)", "visita los sitios en el orden en que cierran sus ventanas de tiempo, sin AG"],
+  difuso_base: ["Difuso sin evolucionar", "el híbrido con el control difuso original, sin los parámetros evolucionados para el planeta"],
   ruta_corta: ["Ruta corta voraz", "ruta corta que elige siempre el vecino más cercano; no es la ruta óptima"],
   ag_puro: ["AG puro", "el AG con el riesgo congelado y sin RNA ni difuso"],
 };
@@ -149,13 +183,15 @@ export function notaVariantes(variantes) {
   return Object.keys(variantes || {}).filter((k) => k !== "hibrido" && ayudaVariante(k)).map((k) => `${nombreVariante(k)}: ${ayudaVariante(k)}.`).join(" ");
 }
 
-// Resumen de la pantalla de meta: pasos, puntaje y batería
+// Resumen de la pantalla de meta: pasos, puntaje, sitios, ciencia y batería
 export function resumenMeta(e) {
   const x = e || {};
   const f1 = (v) => (typeof v === "number" ? comaFormato(v, 1) : "—");
   return [
     ["Pasos", x.paso == null ? "—" : String(x.paso)],
-    ["Puntaje simple", x.puntaje == null ? "—" : String(x.puntaje)],
+    ["Puntaje", x.puntaje == null ? "—" : String(x.puntaje)],
+    ["Sitios visitados", textoSitios(x.sitios_visitados, x.sitios_totales)],
+    ["Ciencia recogida", textoCiencia(x.ciencia_fraccion)],
     ["Batería", `${f1(x.bateria_pct ?? x.bateria)} %`],
   ];
 }

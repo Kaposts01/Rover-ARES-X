@@ -1,6 +1,6 @@
 // Pantalla final: logros (almacén en el navegador y aviso emergente). Todo con textContent.
-import { CLAVE_LOGROS, ROTULO_FICCION, evaluarLogros, normalizarResultado, leerLogros, memoriaVacia, serializarLogros, listaLogros } from "./final_datos.js?v=r14";
-import { insignia } from "./final_iconos.js?v=r14";
+import { CLAVE_LOGROS, ROTULO_FICCION, evaluarLogros, normalizarResultado, leerLogros, memoriaVacia, serializarLogros, listaLogros } from "./final_datos.js?v=r15";
+import { insignia } from "./final_iconos.js?v=r15";
 
 // Almacén en localStorage con try/catch; si no está disponible, funciona en memoria durante la sesión.
 export function crearAlmacenLocal(clave = CLAVE_LOGROS) {

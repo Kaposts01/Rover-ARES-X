@@ -1,15 +1,15 @@
 // Comparar dos políticas lado a lado con la misma semilla: dos minimapas 2D sincronizados paso a paso (canvas ligero),
 // controles comunes y, al final, una tabla con el ganador por métrica. Las dos partidas viven aparte en el servidor
 // (rutas /comparar): no tocan la partida que se está jugando.
-import { porcentaje } from "./formato.js?v=r14";
-import { el, boton, campo, selector, crearCapa } from "./vx_ui.js?v=r14";
+import { porcentaje } from "./formato.js?v=r15";
+import { el, boton, campo, selector, crearCapa } from "./vx_ui.js?v=r15";
 import {
   opcionesPoliticas, nombrePolitica, ayudaPolitica, estadoLado, fichaEn, rutaHasta, pasosDisponibles, ambosTerminados,
   textoDecision, textoDivergencia, TEXTO_SIN_DIVERGENCIA_AUN, TEXTO_SIN_DIVERGENCIA_FIN, filasTabla, veredicto, NOTA_TABLA, hayCiencia, cienciaEn,
   validarFormulario, VELOCIDADES, tamanoCelda,
-} from "./comparar_datos.js?v=r14";
-import { nombreAccion, nombresMotivos, plural, Vehiculo } from "./textos.js?v=r14";
-import { NIVELES } from "./records_datos.js?v=r14";
+} from "./comparar_datos.js?v=r15";
+import { nombreAccion, nombresMotivos, plural, Vehiculo, AYUDA_SITIOS_Y_CIENCIA } from "./textos.js?v=r15";
+import { NIVELES } from "./records_datos.js?v=r15";
 
 const COLOR = { a: "#5fd3ff", b: "#ffb454" };
 const TERRENO = { 0: "#1b2740", 1: "#58617a", 2: "#2a0f17" };
@@ -258,7 +258,7 @@ export function crearComparar({ valores = () => ({}), planetas = () => [] } = {}
       cuerpo.append(tr);
     }
     tabla.append(th, cuerpo);
-    cajaTabla.append(el("div", "vx-veredicto", veredicto(datos.tabla, nA, nB)), tabla, el("div", "ayuda", NOTA_TABLA));
+    cajaTabla.append(el("div", "vx-veredicto", veredicto(datos.tabla, nA, nB)), tabla, el("div", "ayuda", NOTA_TABLA), el("div", "ayuda", AYUDA_SITIOS_Y_CIENCIA));
   }
 
   function ir(n) {

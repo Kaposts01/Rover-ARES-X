@@ -1,7 +1,7 @@
 // Tutorial del modo manual: recorrido guiado sobre la interfaz real. Resalta el control y espera la acción del jugador
 // (app.js avisa con el evento «ares:accion»). Se ofrece la primera vez, se puede saltar y se reabre con el botón «Tutorial».
-import { el, boton } from "./vx_ui.js?v=r14";
-import { pasosTutorial, yaVisto, marcarVisto, TEXTO_OFERTA } from "./tutorial_datos.js?v=r14";
+import { el, boton } from "./vx_ui.js?v=r15";
+import { pasosTutorial, yaVisto, marcarVisto, TEXTO_OFERTA } from "./tutorial_datos.js?v=r15";
 
 const almacen = () => { try { return window.localStorage; } catch (e) { return { getItem() { throw new Error("sin almacenamiento"); }, setItem() { throw new Error("sin almacenamiento"); } }; } };
 
@@ -40,9 +40,24 @@ export function crearTutorial({ vehiculo = () => "rover", preparar = () => {}, a
     return null;
   }
 
+  // Si el control que explica el paso no está a la vista, se usa el texto que no lo menciona
+  function textoDe(paso) { return !objetivoDe(paso) && paso.textoSinObjetivo ? paso.textoSinObjetivo : paso.texto; }
+  // Rectángulos que la tarjeta no debe tapar: la barra inferior con el selector de cámara y los controles de reproducción
+  function zonasProtegidas() {
+    const zonas = [];
+    for (const sel of ["#barra-mision", "#modo-camara"]) {
+      const e = document.querySelector(sel);
+      if (e && e.getClientRects().length > 0) zonas.push(e.getBoundingClientRect());
+    }
+    return zonas;
+  }
+  const seCruzan = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+
   function colocar() {
     if (!activo) return;
     const paso = pasos[n], objetivo = objetivoDe(paso);
+    const nuevoTexto = textoDe(paso);
+    if (texto.textContent !== nuevoTexto) texto.textContent = nuevoTexto;
     const margen = 6, ancho = window.innerWidth, alto = window.innerHeight;
     if (objetivo) {
       const r = objetivo.getBoundingClientRect();
@@ -51,18 +66,29 @@ export function crearTutorial({ vehiculo = () => "rover", preparar = () => {}, a
       foco.style.width = `${Math.min(ancho, r.width + 2 * margen)}px`; foco.style.height = `${Math.min(alto, r.height + 2 * margen)}px`;
     } else foco.classList.add("oculto");
     const t = tarjeta.getBoundingClientRect();
-    let x = (ancho - t.width) / 2, y = alto - t.height - 24;
+    const protegidas = zonasProtegidas();
+    if (objetivo) protegidas.push(objetivo.getBoundingClientRect());
+    const libre = (px, py) => {   // cabe en pantalla y no tapa ni el control resaltado ni el selector de cámara
+      if (px < 8 || py < 8 || px + t.width > ancho - 8 || py + t.height > alto - 8) return false;
+      const c = { left: px, top: py, right: px + t.width, bottom: py + t.height };
+      return !protegidas.some((z) => seCruzan(c, z));
+    };
+    const centrada = (ancho - t.width) / 2;
+    let lugares = [];
     if (objetivo) {
       const r = objetivo.getBoundingClientRect();
-      const lugares = [   // a la derecha, a la izquierda, debajo, encima; el primero que cabe sin tapar el control resaltado
+      lugares = [   // a la derecha, a la izquierda, debajo, encima del control resaltado
         [r.right + 16, Math.max(12, Math.min(r.top, alto - t.height - 12))],
         [r.left - t.width - 16, Math.max(12, Math.min(r.top, alto - t.height - 12))],
         [Math.max(12, Math.min(r.left, ancho - t.width - 12)), r.bottom + 16],
         [Math.max(12, Math.min(r.left, ancho - t.width - 12)), r.top - t.height - 16],
       ];
-      const sitio = lugares.find(([px, py]) => px >= 8 && py >= 8 && px + t.width <= ancho - 8 && py + t.height <= alto - 8);
-      if (sitio) [x, y] = sitio;
     }
+    // sin control resaltado (o si no cabe junto a él): arriba al centro, bajo el mensaje, y luego las esquinas libres
+    lugares.push([centrada, 64], [centrada, alto - t.height - 24], [12, 64], [ancho - t.width - 12, 64], [12, alto - t.height - 12], [ancho - t.width - 12, alto - t.height - 12]);
+    const sitio = lugares.find(([px, py]) => libre(px, py));
+    let x = centrada, y = 64;
+    if (sitio) [x, y] = sitio;
     tarjeta.style.left = `${Math.max(8, Math.min(x, ancho - t.width - 8))}px`;
     tarjeta.style.top = `${Math.max(8, Math.min(y, alto - t.height - 8))}px`;
   }
@@ -71,7 +97,7 @@ export function crearTutorial({ vehiculo = () => "rover", preparar = () => {}, a
     const paso = pasos[n];
     hecho = !paso.accion;
     kicker.textContent = `Tutorial · paso ${n + 1} de ${pasos.length}`;
-    titulo.textContent = paso.titulo; texto.textContent = paso.texto;
+    titulo.textContent = paso.titulo; texto.textContent = textoDe(paso);
     puntos.replaceChildren(...pasos.map((_, i) => el("span", `tt-punto${i === n ? " actual" : i < n ? " pasado" : ""}`)));
     bAtras.disabled = n === 0;
     bSig.textContent = n >= pasos.length - 1 ? "Terminar" : "Siguiente";

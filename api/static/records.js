@@ -1,10 +1,10 @@
 // Vista «Récords»: mejores marcas por semilla (y planeta y nivel), con filtros, y borrado con confirmación en la página.
-import { el, boton, campo, selector, crearCapa } from "./vx_ui.js?v=r14";
+import { el, boton, campo, selector, crearCapa } from "./vx_ui.js?v=r15";
 import {
   NIVELES, nombreNivel, nombreTamano, rotuloOrigen, AYUDA_ORIGEN, politicaDe, textoResultado, textoBateria, fechaLegible,
   consultaFiltros, hayFiltros, TEXTO_VACIO, TEXTO_VACIO_FILTRADO, TEXTO_ERROR, textoBorrado, configuracionDe,
-} from "./records_datos.js?v=r14";
-import { Vehiculo, plural } from "./textos.js?v=r14";
+} from "./records_datos.js?v=r15";
+import { Vehiculo, plural } from "./textos.js?v=r15";
 
 // alJugar(config): empieza una misión con esa semilla y condiciones (lo resuelve app.js)
 export function crearRecords({ alJugar = null } = {}) {

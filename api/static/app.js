@@ -1,33 +1,33 @@
 // ARES-X · escena 3D del rover (ARX-04, ARX-05 y ARX-20: diseño realista). El motor está en Python; aquí solo se dibuja y se envían acciones.
 import * as THREE from "three";
 import { OrbitControls } from "/static/vendor/OrbitControls.js";
-import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios, abrirEdicionDifuso } from "/static/laboratorio.js?v=r14";
-import { coma, porcentaje, fraccionAPorcentaje, grados } from "/static/formato.js?v=r14";
-import * as efectos from "/static/efectos.js?v=r14";
-import * as adaptador from "/static/adaptador.js?v=r14";
-import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r14";
-import { crearEvolucion } from "/static/evolucion3d.js?v=r14";
-import { crearEvolucionUI } from "/static/evolucion_ui.js?v=r14";
-import { adaptarEvolucion, desdeLaboratorio } from "/static/ag_evolucion_datos.js?v=r14";
-import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r14";
-import { crearHolograma } from "/static/holo3d.js?v=r14";
-import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r14";
-import { crearPanelIA } from "/static/panel_ia.js?v=r14";
-import { crearSonido } from "/static/sonido.js?v=r14";
-import { crearDefensa } from "/static/defensa.js?v=r14";
+import { iniciarLaboratorios, seguirPasoLaboratorio, reiniciarLaboratorios, abrirEdicionDifuso } from "/static/laboratorio.js?v=r15";
+import { coma, porcentaje, fraccionAPorcentaje, grados } from "/static/formato.js?v=r15";
+import * as efectos from "/static/efectos.js?v=r15";
+import * as adaptador from "/static/adaptador.js?v=r15";
+import { aplicarMoviles, reiniciarEventos } from "/static/moviles.js?v=r15";
+import { crearEvolucion } from "/static/evolucion3d.js?v=r15";
+import { crearEvolucionUI } from "/static/evolucion_ui.js?v=r15";
+import { adaptarEvolucion, desdeLaboratorio } from "/static/ag_evolucion_datos.js?v=r15";
+import { tieneObservada, colorCelda, MODOS, AVISO_SIN_OBSERVACION } from "/static/incertidumbre_datos.js?v=r15";
+import { crearHolograma } from "/static/holo3d.js?v=r15";
+import { adaptarHolo, ROTULO_HOLO } from "/static/holo_datos.js?v=r15";
+import { crearPanelIA } from "/static/panel_ia.js?v=r15";
+import { crearSonido } from "/static/sonido.js?v=r15";
+import { crearDefensa } from "/static/defensa.js?v=r15";
 import {
   EVO, reglasActivadas, vehiculoDe, Vehiculo, nombreModo, nombreTecnica, nombreEstado, nombreEstadoDron, nombresMotivos, nombreMotivo, limpiarAviso,
-  textoBateriaDifuso, resumenMeta, AYUDA_PUNTAJE_SIMPLE, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
-} from "/static/textos.js?v=r14";
-import { crearMarcasEvento } from "/static/marcas_evento.js?v=r14";
-import { crearRecords } from "/static/records.js?v=r14";
-import { textoNuevoRecord } from "/static/records_datos.js?v=r14";
-import { crearComparar } from "/static/comparar.js?v=r14";
-import { crearTutorial } from "/static/tutorial.js?v=r14";
-import { TEXTO_CAMBIO_MODO } from "/static/tutorial_datos.js?v=r14";
-import { condicionesPlaneta, filasCondiciones, deltaPaso, perfilPlaneta, textoQueCambia } from "/static/planeta_datos.js?v=r14";
-import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r14";
-import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r14";
+  textoBateriaDifuso, resumenMeta, ayudaPuntaje, AYUDA_SITIOS_Y_CIENCIA, elVehiculo, plural, MARCA_EVENTO, celdasDeEvento, avisoEvento, ubicacionEvento,
+} from "/static/textos.js?v=r15";
+import { crearMarcasEvento } from "/static/marcas_evento.js?v=r15";
+import { crearRecords } from "/static/records.js?v=r15";
+import { textoNuevoRecord } from "/static/records_datos.js?v=r15";
+import { crearComparar } from "/static/comparar.js?v=r15";
+import { crearTutorial } from "/static/tutorial.js?v=r15";
+import { TEXTO_CAMBIO_MODO } from "/static/tutorial_datos.js?v=r15";
+import { condicionesPlaneta, filasCondiciones, deltaPaso, perfilPlaneta, textoQueCambia } from "/static/planeta_datos.js?v=r15";
+import { crearAmbientePlaneta, crearObstaculoGigante } from "/static/planeta_escena.js?v=r15";
+import { generadorAleatorio, texturaParaPlaneta, normalParaPlaneta, obtenerTexturaSolar, texturaSombraRadial, obtenerTexturaCarbono } from "/static/texturas.js?v=r15";
 
 const TIPO_OBSTACULO = 1;
 const TIPO_BARRANCO = 2;
@@ -458,7 +458,7 @@ async function obtenerEvolucion() {
   if (r.ok) return adaptarEvolucion(r.cuerpo, { fuente: "motor" });
   if (r.cuerpo && r.cuerpo.hay_plan === false) return adaptarEvolucion({ hay_plan: false });
   if (new URLSearchParams(location.search).has("demo")) {   // ?demo: simulacro con ventanas y recargas, mientras el motor no publique el endpoint
-    const { simularEvolucion } = await import("/static/ag_evolucion_simulacro.js?v=r14");
+    const { simularEvolucion } = await import("/static/ag_evolucion_simulacro.js?v=r15");
     return adaptarEvolucion(simularEvolucion(contextoEvolucion(), { autonomia: 16 }), { fuente: "motor" });
   }
   const ag = await pedirSinAviso("/ag");   // respaldo: el laboratorio genético
@@ -1664,7 +1664,11 @@ function pintarHud(e) {
   if (padConduccion) padConduccion.style.display = enSonda ? "none" : "";
   document.getElementById("manual").classList.toggle("sin-pad", enSonda);   // sin pad, los botones de vista se reparten en dos filas
   const botonRover = document.getElementById("encuadrar");
-  if (botonRover) { botonRover.textContent = enSonda ? "Sonda" : "Rover"; botonRover.title = enSonda ? "Centrar en la sonda" : "Centrar en el rover"; }
+  if (botonRover) { botonRover.textContent = enSonda ? "Sonda" : "Rover"; botonRover.title = `Centrar en ${elVehiculo(enSonda ? "sonda" : "rover")}`; }
+  // textos fijos del HTML que nombran al vehículo: siguen al modo (rover o sonda)
+  const vh = enSonda ? "sonda" : "rover";
+  const rnaRest = document.getElementById("rna-restablecer"); if (rnaRest) rnaRest.textContent = `Celda frente a ${elVehiculo(vh)}`;
+  const pausaCam = document.getElementById("pausa-camara-texto"); if (pausaCam) pausaCam.textContent = `La cámara sigue a ${elVehiculo(vh)}`;
   if (enSonda) {
     document.getElementById("sonda-planeta").textContent = planetaActivo;
     document.getElementById("sonda-temp").textContent = `${grados(e.temperatura_interna)} (tolerancia ${grados(e.tolerancia)})`;
@@ -1684,7 +1688,8 @@ function pintarHud(e) {
   document.getElementById("h-bateria").textContent = porcentaje(bpct);
   document.getElementById("h-bateria-barra").style.width = `${Math.max(0, Math.min(100, bpct))}%`;
   try { pintarEnergia(e); } catch (err) { console.warn("bases y pilas: no se pudieron dibujar", err); }
-  document.getElementById("h-puntaje").textContent = e.puntaje;
+  document.getElementById("h-puntaje").textContent = e.puntaje ?? "—";   // el único puntaje: lo calcula el motor
+  document.getElementById("fila-puntaje").title = ayudaPuntaje(e.puntaje_formula);
   document.getElementById("h-municion").textContent = e.municion;
   document.getElementById("h-modo").textContent = nombreModo(e.modo);
   document.getElementById("h-paso").textContent = e.paso ?? "-";
@@ -2190,9 +2195,20 @@ function actualizarEtiquetaEvento() {
   etiquetaEvento.classList.toggle("fuera", base.fuera);
   etiquetaEvento.style.setProperty("--ang", `${ang}rad`);
   etiquetaEvento.style.setProperty("--color", `#${m.color.toString(16).padStart(6, "0")}`);
-  etiquetaEvento.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, ${base.fuera ? "-50%" : "-100%"})`;
   const texto = etiquetaEvento.querySelector(".ev-texto");
   if (texto.textContent !== textoEtiquetaEvento) texto.textContent = textoEtiquetaEvento;
+  // El rótulo no debe tapar la bitácora (lista fija arriba a la izquierda del centro): si cae encima, baja a su lado o por debajo
+  const w = etiquetaEvento.offsetWidth || 160, hh = etiquetaEvento.offsetHeight || 28;
+  const centrado = base.fuera;
+  let izq = x - w / 2, arr = centrado ? y - hh / 2 : y - hh;
+  const bit = document.getElementById("registro"), rb = bit && bit.getClientRects().length > 0 && bit.children.length ? bit.getBoundingClientRect() : null;
+  const cruza = (a, t) => rb && a < rb.right && a + w > rb.left && t < rb.bottom && t + hh > rb.top;
+  if (cruza(izq, arr)) {
+    if (!centrado && !cruza(izq, y + 10)) arr = y + 10;      // la marca está bajo la bitácora: el rótulo pasa debajo de la marca
+    else arr = rb.bottom + 8;                                 // si no, justo debajo de la bitácora
+  }
+  izq = Math.max(8, Math.min(izq, window.innerWidth - w - 8));
+  etiquetaEvento.style.transform = `translate(${Math.round(izq)}px, ${Math.round(arr)}px)`;
 }
 etiquetaEvento.addEventListener("click", () => {
   const m = marcasEvento.principal();
@@ -2338,6 +2354,7 @@ function aplicarCondiciones(e, forzar = false) {
     v.title = fuente === "motor" ? "Dato del motor" : "Valor aproximado: todavía no hay partida que lo confirme";
     f.append(a, v);
     if (etiqueta === "¡Resbaló!") f.classList.add("cond-alerta");
+    if (String(valor).length > 34) f.classList.add("cond-larga");   // texto largo (p. ej. el gasto adicional): etiqueta arriba y valor debajo, sin columnas angostas
     if (fuente !== "motor") { const r = document.createElement("small"); r.className = "cond-ref"; r.textContent = "aprox."; v.append(" ", r); }
     return f;
   }));
@@ -2370,7 +2387,7 @@ async function abrirVuelo(destino, { alOmitir = null } = {}) {
   try {
     // Carga perezosa: si un módulo del vuelo no carga, la partida sigue igual (con import estático rompería toda la app)
     const [datosV, { crearViaje }, { crearTarjetaViaje }] = await Promise.all([
-      import("/static/viaje_datos.js?v=r14"), import("/static/viaje3d.js?v=r14"), import("/static/viaje_tarjeta.js?v=r14")]);
+      import("/static/viaje_datos.js?v=r15"), import("/static/viaje3d.js?v=r15"), import("/static/viaje_tarjeta.js?v=r15")]);
     const { datosTarjeta, modoMovimiento, origenVuelo, pasoCarga, etapaCarga, textoEtapa, CIERRE_ESTATICO_S } = datosV;
     const reducido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const modo = modoMovimiento(reducido, true);
@@ -2462,6 +2479,7 @@ function volverAlInicio(motivo = "salir") {
   generacionInicio += 1;
   cerrarAvisos();            // meta, pausa, avisos; con pausaActiva = false
   detenerReproduccion();
+  mostrarVerResultado(false);
   cadenaAutomatica = null;
   document.getElementById("controles").classList.add("oculto");
   document.getElementById("manual").classList.add("oculto");
@@ -2479,10 +2497,10 @@ async function correrIntro({ motivo = "abrir" } = {}) {
   try {
     const reducido = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const webgl = !!(renderer && renderer.getContext && renderer.getContext());
-    const { debeMostrarIntro, elegirCuerpo, datosCuerpo, GUARDA_PRIMER_CUADRO_S, CIERRE_INACTIVIDAD_S } = await import("/static/intro_datos.js?v=r14");
+    const { debeMostrarIntro, elegirCuerpo, datosCuerpo, GUARDA_PRIMER_CUADRO_S, CIERRE_INACTIVIDAD_S } = await import("/static/intro_datos.js?v=r15");
     if (!debeMostrarIntro({ motivo, activada: introActivada(), reducido, webgl })) return;
     if (!webgl || !planetasDatos) return;
-    const [{ crearIntro }, { crearTarjetaIntro }] = await Promise.all([import("/static/intro3d.js?v=r14"), import("/static/intro_tarjeta.js?v=r14")]);
+    const [{ crearIntro }, { crearTarjetaIntro }] = await Promise.all([import("/static/intro3d.js?v=r15"), import("/static/intro_tarjeta.js?v=r15")]);
     if (!tarjetaIntro) tarjetaIntro = crearTarjetaIntro(document.body);
     controles.enabled = false;   // la cámara de la partida no se mueve mientras dura la intro
     document.body.classList.add("intro-activa");   // oculta los paneles de la app mientras dura (CSS)
@@ -2534,8 +2552,8 @@ if (botonVerIntro) botonVerIntro.addEventListener("click", () => { correrIntro({
 // Puntaje de juego, estrellas, logros y mejores momentos; si algo falla, se abre la meta como siempre.
 let tarjetaFinal = null;
 let finCorriendo = false;
-let cerrarFinal = null;                    // cierra la pantalla abierta con la acción pedida (null = continuar a la meta)
-let accionFinal = null;                    // «repetir» | «otro» | null, según el botón con que se cerró
+let cerrarFinal = null;                    // cierra la pantalla abierta con la acción pedida
+let accionFinal = null;                    // «repetir» | «otro» | «opciones» | «revisar» (Esc o «Cerrar y revisar la partida») | null (no se mostró: sigue la meta)
 let logrosPantalla = null;                 // módulo de logros ya creado (carga perezosa)
 let promesaLogros = null;
 let colaLogros = Promise.resolve();        // los eventos de logros se evalúan en orden
@@ -2556,7 +2574,7 @@ document.querySelectorAll(".casilla-final").forEach((c) => {
 });
 function cargarLogros() {
   if (!promesaLogros) {
-    promesaLogros = import("/static/final_logros.js?v=r14").then(({ crearLogros }) => {
+    promesaLogros = import("/static/final_logros.js?v=r15").then(({ crearLogros }) => {
       logrosPantalla = crearLogros({ contenedor: document.body, alDesbloquear: (l) => { logrosNuevos.push(l); } });
       return logrosPantalla;
     }).catch((e) => { console.warn("logros: no se pudo cargar el módulo", e); return null; });
@@ -2572,7 +2590,7 @@ function revisarEstadoLogros(datos) {
 }
 function cargarMomentos() {
   if (!promesaMomentos) {
-    promesaMomentos = import("/static/final_momentos.js?v=r14").then(({ crearMomentos }) => {
+    promesaMomentos = import("/static/final_momentos.js?v=r15").then(({ crearMomentos }) => {
       momentosPantalla = crearMomentos({ canvas: renderer.domElement, dibujar: () => renderer.render(scene, camara) });
       return momentosPantalla;
     }).catch((e) => { console.warn("momentos: no se pudo cargar el módulo", e); return null; });
@@ -2601,11 +2619,11 @@ async function correrFinal(codigo) {
   accionFinal = null;
   let inactividad = null, limpiarActividad = null;
   try {
-    const { debeMostrarFinal, normalizarResultado, CIERRE_INACTIVIDAD_S } = await import("/static/final_datos.js?v=r14");
+    const { debeMostrarFinal, normalizarResultado, CIERRE_INACTIVIDAD_S } = await import("/static/final_datos.js?v=r15");
     const reducido = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     if (!debeMostrarFinal({ activada: finActivada(), reducido, terminal: ESTADOS_TERMINALES.includes(codigo) })) return;
     finCorriendo = true;
-    const { crearFinal } = await import("/static/final_tarjeta.js?v=r14");
+    const { crearFinal } = await import("/static/final_tarjeta.js?v=r15");
     await colaLogros;                                 // los logros del último paso ya están evaluados
     const m = await cargarMomentos();
     if (m && estado) m.alFinal({ paso: pasoActual(), codigo });
@@ -2619,8 +2637,9 @@ async function correrFinal(codigo) {
       if (!tarjetaFinal) {
         tarjetaFinal = crearFinal({
           contenedor: document.body,
-          alContinuar: () => cerrarFinal && cerrarFinal(null),
-          alCerrar: () => cerrarFinal && cerrarFinal(null),
+          alContinuar: () => cerrarFinal && cerrarFinal("revisar"),
+          alCerrar: () => cerrarFinal && cerrarFinal("revisar"),
+          alOpciones: () => cerrarFinal && cerrarFinal("opciones"),
           alRepetir: () => cerrarFinal && cerrarFinal("repetir"),
           alOtroPlaneta: () => cerrarFinal && cerrarFinal("otro"),
           alVerRecords: () => abrirRecords({ semilla: estado ? estado.semilla : "" }),
@@ -2633,7 +2652,7 @@ async function correrFinal(codigo) {
       });
       const reiniciarInactividad = () => {
         clearTimeout(inactividad);
-        inactividad = setTimeout(() => { console.warn("final: cierre por inactividad"); fin(); }, CIERRE_INACTIVIDAD_S * 1000);
+        inactividad = setTimeout(() => { console.warn("final: cierre por inactividad"); fin("revisar"); }, CIERRE_INACTIVIDAD_S * 1000);
       };
       reiniciarInactividad();
       window.addEventListener("pointermove", reiniciarInactividad); window.addEventListener("keydown", reiniciarInactividad);
@@ -2682,6 +2701,7 @@ function reiniciarEstadoDerivado() {
 async function cargarPartida(semilla, nivel, tamano = document.getElementById("tamano").value || "grande", config = configuracionVigente(), bateria = null) {
   detenerReproduccion();
   finAtendido = false; ultimoRecord = null; misionTerminada = false;
+  mostrarVerResultado(false);
   cerrarAvisos();
   reiniciarEventos();
   cargando = true;
@@ -2895,17 +2915,38 @@ async function alFinDeMision(codigo) {
   }
   // La pantalla final usa la cadena; se anula después, para que el bloque conserve los datos de la última misión
   const cadenaTerminada = cadenaAutomatica;
-  await correrFinal(codigo);   // la pantalla final va antes de la meta; nunca lanza y, si falla o se omite, sigue la meta
+  await cierreDeMision(codigo, cadenaTerminada);
+}
+// Cierre único de la misión: la pantalla final es la única pantalla de resultado (un solo puntaje). La meta con las opciones de
+// mapa y dificultad solo se abre si el jugador la pide, si la pantalla final está desactivada o si terminó una cadena automática.
+async function cierreDeMision(codigo, cadenaTerminada) {
+  accionFinal = null;
+  if (!cadenaTerminada) await correrFinal(codigo);   // nunca lanza; si falla o está desactivada, sigue la meta
   const pedido = accionFinal; accionFinal = null;
   if (pedido === "jugar" && configPendiente) { const c = configPendiente; configPendiente = null; cadenaAutomatica = null; await jugarConfiguracion(c); return; }
   if (pedido === "repetir") { cadenaAutomatica = null; await nuevaDesdeMeta(estado.semilla, estado.nivel); return; }
   if (pedido === "otro") {
+    cadenaAutomatica = null;
     volverAlInicio("salir");   // «Explorar otro cuerpo»: de vuelta al sistema solar
     return;
   }
+  if (pedido === "revisar") {   // Esc o «Cerrar y revisar la partida»: el mapa y los paneles quedan a la vista; «Ver resultado» la reabre
+    cadenaAutomatica = null;
+    mostrarVerResultado(true);
+    return;
+  }
+  mostrarVerResultado(false);
   mostrarMeta(codigo, cadenaTerminada);
   cadenaAutomatica = null;
 }
+// Botón para reabrir la pantalla final después de cerrarla para revisar la partida terminada
+function mostrarVerResultado(on) { const b = document.getElementById("ver-resultado"); if (b) b.classList.toggle("oculto", !on); }
+const botonVerResultado = document.getElementById("ver-resultado");
+if (botonVerResultado) botonVerResultado.addEventListener("click", () => {
+  if (!estado || !ESTADOS_TERMINALES.includes(estado.estado) || finCorriendo) return;
+  mostrarVerResultado(false);
+  cierreDeMision(estado.estado, null);
+});
 
 // Confirmar en la meta: cierra la meta y todos los avisos, y crea la partida con lo elegido (planeta, vehículo, tamaño y modo vigentes)
 async function nuevaDesdeMeta(semilla, nivel) {
@@ -2939,7 +2980,7 @@ function mostrarMeta(codigo, cadena = null) {
   }));
   const rec = textoNuevoRecord(ultimoRecord);
   if (rec) { const li = document.createElement("li"); li.textContent = `${rec.nuevo ? "★ " : ""}${rec.titulo}`; if (rec.nuevo) li.className = "nuevo-record"; li.title = rec.detalle; resumenLista.appendChild(li); }
-  document.getElementById("meta-puntaje-ayuda").textContent = AYUDA_PUNTAJE_SIMPLE;
+  document.getElementById("meta-puntaje-ayuda").textContent = `${ayudaPuntaje(estado && estado.puntaje_formula)} ${AYUDA_SITIOS_Y_CIENCIA}`;
   const lista = document.getElementById("meta-objetivos");
   lista.replaceChildren();
   for (const c of (ultimosObjetivos && ultimosObjetivos.condiciones) || []) {
@@ -3701,7 +3742,7 @@ function cineCargar() {
   if (!cineCarga) {
     cineCarga = (async () => {
       const [datos, { crearDirector }, ui] = await Promise.all([
-        import("/static/cine_datos.js?v=r14"), import("/static/cine3d.js?v=r14"), import("/static/cine_ui.js?v=r14")]);
+        import("/static/cine_datos.js?v=r15"), import("/static/cine3d.js?v=r15"), import("/static/cine_ui.js?v=r15")]);
       const director = crearDirector({
         THREE, escena: scene, camara, controles, sueloEn: alturaTerreno, reducido: cineReducido(),
         celdas: () => limitesMapa || { columnas: 60, filas: 40 },
@@ -3758,7 +3799,7 @@ async function cinePostActivar(on) {
     if (!cinePostCarga) {
       const base = "/static/vendor/postprocessing/";
       cinePostCarga = Promise.all([
-        import("/static/cine_post.js?v=r14"), import(base + "EffectComposer.js"), import(base + "RenderPass.js"), import(base + "UnrealBloomPass.js"),
+        import("/static/cine_post.js?v=r15"), import(base + "EffectComposer.js"), import(base + "RenderPass.js"), import(base + "UnrealBloomPass.js"),
         import(base + "BokehPass.js"), import(base + "ShaderPass.js"), import(base + "OutputPass.js"), cineCargar()]).catch((e) => { cinePostCarga = null; throw e; });
     }
     const [{ crearPostproceso }, a, b, c, d, f, g] = await cinePostCarga;

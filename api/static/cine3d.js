@@ -3,7 +3,7 @@
 import {
   TOMAS, MOMENTOS, REPETICION, duracionToma, siguienteToma, destinoToma, mezcla,
   nuevoBuffer, empujarMuestra, recortarRepeticion, poseRepeticion, modoCine,
-} from "/static/cine_datos.js?v=r14";
+} from "/static/cine_datos.js?v=r15";
 
 const K_POSICION = 2.2, K_MIRADA = 3.5;   // amortiguación de los cortes suaves
 

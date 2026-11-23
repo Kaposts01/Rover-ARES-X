@@ -1,5 +1,5 @@
 // Cine: interfaz (DOM). Todo con textContent; sin innerHTML.
-import { ROTULO_REPETICION } from "/static/cine_datos.js?v=r14";
+import { ROTULO_REPETICION } from "/static/cine_datos.js?v=r15";
 
 const el = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
 

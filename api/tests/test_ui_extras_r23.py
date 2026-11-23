@@ -98,10 +98,19 @@ def test_tabla_final_con_nombres_claros_y_ganador_por_metrica():
     f = _js("comparar_datos.js", f'm.filasTabla({json.dumps(tabla)}, "Híbrido", "Solo RNA")')
     assert [x["rotulo"] for x in f] == ["Resultado", "Pasos", "Batería final", "Vetos del supervisor"]
     assert f[0]["a"] == "Éxito" and f[0]["b"] == "Fracaso" and f[0]["texto"] == "Híbrido"
-    assert f[1]["texto"] == "—" and f[2]["a"] == "40,3 %" and f[3]["texto"] == "empate"
+    assert f[1]["texto"] == "—" and f[2]["a"] == "40,3 %" and f[3]["texto"] == "empate" and f[3]["informativa"] is False
     assert _js("comparar_datos.js", f'm.veredicto({json.dumps(tabla)}, "Híbrido", "Solo RNA")') == "Gana Híbrido."
     assert _js("comparar_datos.js", 'm.veredicto({ganador: "empate", filas: []}, "A", "B")').startswith("Empate")
     assert _js("comparar_datos.js", "m.filasTabla(null, 'A', 'B')") == []
+
+
+@sin_node
+def test_vetos_son_informativos_y_la_nota_no_dice_que_menos_vetos_gana():
+    tabla = {"ganador": "a", "filas": [{"clave": "vetos", "a": 3, "b": 9, "ganador": None}, {"clave": "choques", "a": 0, "b": 1, "ganador": "a"}]}
+    f = _js("comparar_datos.js", f'm.filasTabla({json.dumps(tabla)}, "Híbrido", "Solo RNA")')
+    assert f[0]["informativa"] is True and f[0]["texto"] == "informativo" and f[0]["ganador"] is None
+    nota = _js("comparar_datos.js", "m.NOTA_TABLA")
+    assert "menos (pasos, choques)" in nota and "vetos del supervisor son solo informativos" in nota and "pasos, vetos" not in nota
 
 
 @sin_node
@@ -135,6 +144,11 @@ def test_el_tutorial_tiene_de_4_a_6_pasos_con_accion_y_recuerda_lo_visto():
     assert [p["accion"] for p in pasos if p["accion"]] == ["mover", "recomendacion", "evento"]
     assert all(p["titulo"] and p["texto"] and p["objetivo"] for p in pasos)
     assert "la sonda" in _js("tutorial_datos.js", 'm.pasosTutorial("sonda")')[0]["texto"]
+    # el paso que habla del pad tiene un texto alternativo que no lo menciona, para cuando el pad no está a la vista
+    for v in ("rover", "sonda"):
+        mover = _js("tutorial_datos.js", f'm.pasosTutorial("{v}")')[0]
+        assert "pad" in mover["texto"] and "pad" not in mover["textoSinObjetivo"].replace("pad de botones", "")
+        assert "flechas" in mover["textoSinObjetivo"]
     # almacenamiento bloqueado o con datos: nunca lanza
     assert _js("tutorial_datos.js", "m.yaVisto({getItem() { throw new Error('bloqueado'); }})") is False
     assert _js("tutorial_datos.js", "m.marcarVisto({setItem() { throw new Error('bloqueado'); }})") is False

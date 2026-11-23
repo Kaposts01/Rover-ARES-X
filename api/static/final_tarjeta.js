@@ -1,14 +1,18 @@
 // Pantalla final: capa DOM (estrellas, puntaje, estadísticas, logros, momentos y botones). Todo con textContent.
+import { porcentaje } from "./formato.js?v=r15";
 import {
   ROTULO_PUNTAJE, NOTA_PUNTAJE, ROTULO_FICCION, NOTA_DISTANCIA, NOTA_BARRANCOS, NOTA_VIOLACIONES, AVISO_TERRENO,
   DURACION_CUENTA_MS, DURACION_CONFETI_MS, TECLAS_QUE_PASAN, MAX_MOMENTOS,
-  tituloFinal, puntajeFinal, desglosePuntaje, estrellas, formatoDato, confetiPermitido,
-} from "./final_datos.js?v=r14";
-import { icono, insignia, estrella } from "./final_iconos.js?v=r14";
+  tituloFinal, puntajeFinal, desglosePuntaje, detalleEstrellas, lineaTermino, formatoDato, confetiPermitido,
+} from "./final_datos.js?v=r15";
+import { icono, insignia, estrella } from "./final_iconos.js?v=r15";
+import { Vehiculo, nombreEstado, AYUDA_SITIOS_Y_CIENCIA, textoSitios, textoCiencia } from "./textos.js?v=r15";
 
 const reducidoAhora = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
-export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, alRepetir = null, alOtroPlaneta = null } = {}) {
+// alContinuar / alCerrar: cierran la pantalla y dejan la partida terminada para revisarla (Esc hace lo mismo); alOpciones: abre la
+// pantalla de meta (otro mapa, dificultad) sin volver a mostrar cifras distintas.
+export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, alRepetir = null, alOtroPlaneta = null, alVerRecords = null, alOpciones = null } = {}) {
   if (!contenedor) throw new Error("crearFinal necesita un contenedor");
   const el = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
   const boton = (clase, texto, ico) => {
@@ -30,18 +34,24 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   const titulo = el("h2", "fn-titulo"); titulo.id = "fn-titulo";
   const subtitulo = el("p", "fn-subtitulo");
   titulos.append(el("div", "fn-kicker", "ARES-X · informe de misión"), titulo, subtitulo);
-  const omitir = boton("secundario fn-omitir", "Omitir");
-  omitir.setAttribute("aria-label", "Omitir la pantalla final (Escape)");
-  cabecera.append(titulos, omitir);
+  cabecera.append(titulos);
 
   const estrellasEl = el("div", "fn-estrellas"); estrellasEl.setAttribute("role", "img");
+  const estrellasTexto = el("p", "fn-estrellas-texto");   // por qué esas estrellas y qué falta para la siguiente (siempre visible)
   const puntajeCaja = el("div", "fn-puntaje-caja");
   const puntajeEtiqueta = el("div", "fn-puntaje-etiqueta", "Puntaje de juego");
   const puntajeValor = el("span", "fn-puntaje", "0"); puntajeValor.setAttribute("aria-live", "polite");
   const rotuloPuntaje = el("p", "fn-rotulo", ROTULO_PUNTAJE);
   const notaPuntaje = el("p", "fn-nota", NOTA_PUNTAJE);
   const desglose = el("ul", "fn-desglose");
-  puntajeCaja.append(puntajeEtiqueta, puntajeValor, rotuloPuntaje, notaPuntaje, desglose);
+  const formulaPuntaje = el("p", "fn-nota fn-formula");
+  puntajeCaja.append(puntajeEtiqueta, puntajeValor, rotuloPuntaje, notaPuntaje, desglose, formulaPuntaje);
+
+  // Récord de la misión (ronda 23): «nuevo récord» resaltado, o dónde quedó entre las marcas de la semilla
+  const recordEl = el("section", "fn-record oculto");
+  const recordTitulo = el("h3", "fn-record-titulo"), recordTexto = el("p", "fn-record-texto");
+  const verRecords = boton("secundario fn-btn", "Ver récords");
+  recordEl.append(recordTitulo, recordTexto, verRecords);
 
   const rejilla = el("div", "fn-rejilla");
   const notasEstadisticas = el("div", "fn-notas");
@@ -64,13 +74,15 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   const acciones = el("div", "fn-acciones");
   const jugar = boton("fn-btn fn-btn-primario", "Volver a jugar", "reiniciar");
   const explorar = boton("fn-btn", "Explorar otro cuerpo", "planeta");
-  const cerrar = boton("secundario fn-btn", "Cerrar");
-  acciones.append(jugar, explorar, cerrar);
+  const opciones = boton("secundario fn-btn", "Más opciones (otro mapa, dificultad)");
+  const cerrar = boton("secundario fn-btn fn-cerrar", "Cerrar y revisar la partida");
+  cerrar.title = "Cierra este resultado y deja el mapa y los paneles para revisar la partida terminada (Esc). Después puedes reabrirlo con «Ver resultado».";
+  acciones.append(jugar, explorar, opciones, cerrar);
   const etiquetaCasilla = el("label", "fn-casilla");
   const casilla = document.createElement("input"); casilla.type = "checkbox"; casilla.className = "casilla-final"; casilla.checked = true;
   etiquetaCasilla.append(casilla, document.createTextNode(" Mostrar la pantalla final"));
 
-  panel.append(confeti, cabecera, estrellasEl, puntajeCaja, rejilla, notasEstadisticas, seccionNuevos, seccionTodos, seccionMomentos, aviso, acciones, etiquetaCasilla);
+  panel.append(confeti, cabecera, estrellasEl, estrellasTexto, puntajeCaja, recordEl, rejilla, notasEstadisticas, seccionNuevos, seccionTodos, seccionMomentos, aviso, acciones, etiquetaCasilla);
   raiz.append(panel);
   contenedor.append(raiz);
 
@@ -87,6 +99,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   const llamar = (fn) => { if (typeof fn === "function") fn(); };
   const onTecla = (e) => {
     if (!visible) return;
+    if (document.querySelector(".vx-capa:not(.oculto)")) return;   // con la vista de récords encima, las teclas son de esa vista
     if (e.key === "Escape") {
       e.preventDefault(); e.stopPropagation();
       if (!visor.classList.contains("oculto")) cerrarVisor(); else llamar(alContinuar);
@@ -107,10 +120,11 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   const cerrarVisor = () => { visor.classList.add("oculto"); };
   visorCerrar.addEventListener("click", cerrarVisor);
   visor.addEventListener("click", (e) => { if (e.target === visor) cerrarVisor(); });
-  omitir.addEventListener("click", () => llamar(alContinuar));
+  opciones.addEventListener("click", () => llamar(alOpciones));
   cerrar.addEventListener("click", () => llamar(alCerrar || alContinuar));
   jugar.addEventListener("click", () => llamar(alRepetir));
   explorar.addEventListener("click", () => llamar(alOtroPlaneta));
+  verRecords.addEventListener("click", () => llamar(alVerRecords));
 
   function pararAnimaciones() {
     clearInterval(temporizadorCuenta); clearInterval(temporizadorConfeti);
@@ -164,19 +178,20 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
   }
 
   // resultado: de normalizarResultado. momentos: [{titulo, texto, paso, imagen}]. opciones: { logrosNuevos, logros, activada, alCambiarCasilla }
-  function mostrar(resultado, momentos = [], { logrosNuevos = [], logros = [], activada = true, alCambiarCasilla = null } = {}) {
+  function mostrar(resultado, momentos = [], { logrosNuevos = [], logros = [], activada = true, alCambiarCasilla = null, record = null } = {}) {
     if (!vivo) return;
     const r = resultado || {};
     try { if (!foco) foco = document.activeElement; } catch (e) { foco = null; }
     const reducido = reducidoAhora();
     pararAnimaciones();
     titulo.textContent = tituloFinal(r.codigo);
-    subtitulo.textContent = [r.planeta || "—", r.modo || "—", r.motivo_final || r.codigo || "—"].join(" · ");
-    const n = estrellas(r);
+    subtitulo.textContent = [r.planeta || "—", r.modo ? Vehiculo(r.modo) : "—", nombreEstado(r.motivo_final || r.codigo || "—")].join(" · ");
+    const { n, texto: textoEstrellas } = detalleEstrellas(r);
     pintarEstrellas(n);
-    const total = puntajeFinal(r);
-    puntajeValor.textContent = reducido ? total.toLocaleString("es-CL") : "0";
-    if (!reducido) {
+    estrellasTexto.textContent = textoEstrellas;
+    const total = puntajeFinal(r);   // el del motor; sin dato, «—» (no se calcula nada aquí)
+    puntajeValor.textContent = total == null ? "—" : reducido ? total.toLocaleString("es-CL") : "0";
+    if (!reducido && total != null) {
       const t0 = performance.now();
       temporizadorCuenta = setInterval(() => {
         const u = Math.min(1, (performance.now() - t0) / DURACION_CUENTA_MS);
@@ -185,26 +200,26 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
       }, 24);
     }
     panel.classList.toggle("sin-animacion", reducido);
+    recordEl.classList.toggle("oculto", !record);
+    recordEl.classList.toggle("nuevo", !!(record && record.nuevo));
+    if (record) { recordTitulo.textContent = record.titulo; recordTexto.textContent = record.detalle; }
     const d = desglosePuntaje(r);
-    desglose.replaceChildren(...d.terminos.map((t) => {
-      const signo = t.clave === "violaciones" ? "−" : "+";
-      const valor = t.dato ? t.valor.toLocaleString("es-CL", { maximumFractionDigits: 2 }) : "—";
-      const puntos = t.dato ? Math.abs(Math.round(t.puntos)).toLocaleString("es-CL") : "sin dato, cuenta 0";
-      return el("li", t.dato ? "" : "sin-dato", `${signo} ${t.etiqueta}: ${valor} × ${t.peso.toLocaleString("es-CL")} = ${puntos}`);
-    }));
+    desglose.replaceChildren(...d.terminos.map((t) => el("li", "", lineaTermino(t))));
+    formulaPuntaje.textContent = d.formula || (total == null ? "El motor no entregó el puntaje de esta partida." : "");
+    formulaPuntaje.hidden = !formulaPuntaje.textContent;
     rejilla.replaceChildren(
       pintarEstadistica("planeta", "Cuerpo", r.planeta || "—"),
-      pintarEstadistica("brujula", "Modo", r.modo || "—"),
-      pintarEstadistica("microscopio", "Ciencia", r.ciencia == null ? "—" : `${formatoDato(r.ciencia * 100)} %`),
-      pintarEstadistica("probeta", "Objetivos muestreados", r.objetivos_muestreados == null || r.objetivos_totales == null ? "—" : `${formatoDato(r.objetivos_muestreados)} / ${formatoDato(r.objetivos_totales)}`),
-      pintarEstadistica("bateria", "Batería final", r.bateria_pct == null ? "—" : `${formatoDato(r.bateria_pct, { decimales: 1 })} %`),
+      pintarEstadistica("brujula", "Vehículo", r.modo ? Vehiculo(r.modo) : "—"),
+      pintarEstadistica("probeta", "Sitios visitados", textoSitios(r.objetivos_muestreados, r.objetivos_totales)),
+      pintarEstadistica("microscopio", "Ciencia recogida", textoCiencia(r.ciencia)),
+      pintarEstadistica("bateria", "Batería final", r.bateria_pct == null ? "—" : porcentaje(r.bateria_pct)),
       pintarEstadistica("escudo", "Violaciones / vetos", r.violaciones == null && r.vetos == null ? "—" : `${formatoDato(r.violaciones)} / ${formatoDato(r.vetos)}`),
       pintarEstadistica("montana", "Vetos por barranco (pasos)", formatoDato(r.barrancos_evitados)),
       pintarEstadistica("replanificar", "Replanificaciones", formatoDato(r.replanificaciones)),
       pintarEstadistica("ubicacion", "Distancia recorrida", r.distancia == null ? "—" : `${formatoDato(r.distancia)} celdas`),
       pintarEstadistica("reloj", "Paso final", formatoDato(r.paso)),
     );
-    notasEstadisticas.replaceChildren(el("p", "fn-nota", `${NOTA_DISTANCIA} ${NOTA_BARRANCOS} ${NOTA_VIOLACIONES}`));
+    notasEstadisticas.replaceChildren(el("p", "fn-nota", AYUDA_SITIOS_Y_CIENCIA), el("p", "fn-nota", `${NOTA_DISTANCIA} ${NOTA_BARRANCOS} ${NOTA_VIOLACIONES}`));
 
     nuevosEl.replaceChildren(...logrosNuevos.map((l) => pintarLogro({ ...l, obtenido: true })));
     seccionNuevos.hidden = !logrosNuevos.length;
@@ -235,7 +250,7 @@ export function crearFinal({ contenedor, alContinuar = null, alCerrar = null, al
     raiz.classList.remove("oculto");
     visible = true;
     panel.scrollTop = 0; raiz.scrollTop = 0;
-    omitir.focus({ preventScroll: true });
+    cerrar.focus({ preventScroll: true });
     confeti.hidden = !confetiPermitido({ n, reducido });
     if (!confeti.hidden) iniciarConfeti();
   }

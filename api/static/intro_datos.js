@@ -1,6 +1,7 @@
 // Introducción con el sistema solar: datos y funciones puras (sin DOM ni THREE). Se prueban con node.
 // Reutiliza las constantes del viaje entre planetas (sin duplicarlas).
-import { PLANETAS_VIAJE, DISTANCIA_SOL_MKM, AVISO_TERRENO, datosTarjeta } from "./viaje_datos.js?v=r14";
+import { filasFicha } from "./planeta_datos.js?v=r15";
+import { PLANETAS_VIAJE, DISTANCIA_SOL_MKM, AVISO_TERRENO, datosTarjeta } from "./viaje_datos.js?v=r15";
 
 export { PLANETAS_VIAJE, DISTANCIA_SOL_MKM, AVISO_TERRENO };
 export const CLAVE_PREF = "ares.intro";          // localStorage: casilla «Mostrar intro» (activa por defecto)
@@ -68,5 +69,7 @@ export function elegirCuerpo(nombre, catalogo) {
 // Tarjeta del cuerpo: solo la distancia media al Sol (constante rotulada) y el vehículo permitido (de /planetas).
 export function datosCuerpo(nombre, catalogo) {
   const t = datosTarjeta(nombre, nombre, catalogo);
-  return { titulo: nombre, filas: t.origen };
+  const lista = (catalogo && Array.isArray(catalogo.planetas)) ? catalogo.planetas : [];
+  const en = lista.find((x) => x && x.nombre === nombre);
+  return { titulo: nombre, filas: t.origen.concat(filasFicha(en && en.mecanicas, nombre)) };
 }

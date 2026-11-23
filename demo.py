@@ -6,7 +6,7 @@ import numpy as np
 
 from difuso import FuzzyController
 from genetico import GeneticPlanner, mapa_estimado
-from rna import NeuralPerception, generar_dataset, particion_por_mapas
+from rna import REFUERZO_BARRANCO_POR_MAPA, NeuralPerception, generar_dataset, particion_por_mapas
 from simulador import (PERFILES, SensorSuite, generar_mundo, paso_fisico, Rover,
                        validar_compatibilidad)
 
@@ -59,7 +59,7 @@ def demo_rna():
     titulo("3. RED NEURONAL (Fase 2)")
     print("Entrenando con mapas separados por semilla (puede tardar unos segundos)...")
     tr, va, te = particion_por_mapas(total_mapas=60)
-    Xtr, ytr = generar_dataset(tr, muestras_por_mapa=400)
+    Xtr, ytr = generar_dataset(tr, muestras_por_mapa=400, refuerzo_barranco=REFUERZO_BARRANCO_POR_MAPA)
     Xte, yte = generar_dataset(te, muestras_por_mapa=400)
     rna = NeuralPerception(semilla=42).entrenar(Xtr, ytr)
     res = rna.evaluar(Xte, yte)

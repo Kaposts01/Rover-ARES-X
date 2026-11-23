@@ -34,7 +34,8 @@ def _forzar_libre(p, celda):
 @pytest.mark.parametrize("nivel", [1, 2, 3, 4, 5])
 def test_nivel_genera_el_mundo_del_contrato(nivel):
     p = Partida(semilla=11, nivel=nivel)
-    sitios_esperados = 3 if nivel <= 2 else 4
+    from juego import dificultad          # R23: la partida jugable tiene 8 a 12 sitios (plan con restricciones)
+    sitios_esperados = dificultad.n_sitios(nivel, 20, 30)
     # ARX-66: la garantía de ganabilidad puede usar una variante del mismo mapa (semilla_mundo != semilla);
     # el contrato se comprueba contra la semilla con que se generó el mundo realmente.
     esperado = generar_mundo(p.semilla_mundo, n_obstaculos=20 + 2 * nivel, n_barrancos=4 + nivel,
@@ -47,7 +48,12 @@ def test_nivel_genera_el_mundo_del_contrato(nivel):
 
 @pytest.mark.parametrize("nivel", [1, 2, 3, 4, 5])
 def test_bateria_inicial_baja_4_por_nivel(nivel):
-    assert Partida(semilla=11, nivel=nivel).rover.bateria == 100.0 - 4.0 * (nivel - 1)
+    # R23: la curva de 100 − 4·(nivel − 1) es la de la evaluación congelada (garantia=False); la partida jugable tiene la
+    # suya, más exigente (juego/dificultad.py), y en Marte coincide con la tabla del nivel
+    assert Partida(semilla=11, nivel=nivel, garantia=False).rover.bateria == 100.0 - 4.0 * (nivel - 1)
+    jugable = Partida(semilla=11, nivel=nivel).rover.bateria
+    from juego import dificultad
+    assert jugable == dificultad.BATERIA_POR_NIVEL[nivel] and jugable <= 100.0 - 4.0 * (nivel - 1)
 
 
 def test_bateria_explicita_gana_sobre_el_nivel():
@@ -196,21 +202,22 @@ def test_ambiente_usa_generador_propio_no_el_de_la_mision():
 
 # ---------- puntaje (ev3-d24) ----------
 
-def test_puntaje_es_entero_con_la_formula_del_contrato():
+def test_puntaje_es_entero_con_la_formula_unica():
+    from juego import puntaje as pj
     p = Partida(semilla=11)
-    total = len(p.mundo.sitios)
-    esperado = round(100 * len(p.mision.visitados) / total + 0.5 * p.rover.bateria
-                     + (50 if p.mision.vetos == 0 else 0))
+    ci = p.ciencia_publica()["fraccion"]
+    esperado = max(0, round(450 * ci))        # sin éxito no cuentan ni la misión cumplida, ni la batería, ni los pasos
     valor = p.puntaje()
     assert isinstance(valor, int)
     assert valor == esperado
+    d = p.puntaje_detalle()
+    assert d["puntaje"] == pj.total(d["desglose"]) and d["formula"] == pj.FORMULA
 
 
 def test_puntaje_sin_sitios_no_divide_entre_cero():
     p = Partida(semilla=11)
     p.mundo.sitios.clear()
-    valor = p.puntaje()
-    assert valor == round(0.5 * p.rover.bateria + (50 if p.mision.vetos == 0 else 0))
+    assert p.puntaje() == 0 and p.ciencia_publica()["fraccion"] == 0.0
 
 
 def test_resumen_incluye_nivel_y_puntaje():

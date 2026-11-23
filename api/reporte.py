@@ -7,7 +7,28 @@ import datetime
 import html
 from collections import Counter
 
+from juego import puntaje
+
 ANCHO_SVG, ALTO_SVG = 640, 150
+
+# Nombres para mostrar (el motor y la API siguen usando los valores en minúscula y sin tilde)
+NOMBRE_MODO = {"manual": "Manual", "rna": "RNA", "difuso": "Difuso", "ag": "AG", "automatico": "Híbrido"}
+NOMBRE_TECNICA = {"humano": "Humano", "rna": "RNA", "difuso": "Difuso", "ag": "AG", "supervisor": "Supervisor",
+                  "combate": "Combate", "escenario": "Escenario"}
+NOMBRE_RESULTADO = {"EXITO": "Éxito", "FRACASO": "Fracaso", "MODO_SEGURO": "Modo seguro", "SIN_RUTA": "Sin ruta",
+                    "EXPLORACION": "Exploración", "ALERTA": "Alerta", "REPLANIFICACION": "Replanificación",
+                    "REFUGIO": "Refugio", "CONFIGURACION": "Configuración"}
+
+
+def _motivo(codigo: str) -> str:
+    """Descripción en lenguaje claro de un código de motivo del motor; si no la hay, el texto tal cual."""
+    from api.narrador import TEXTO_MOTIVO
+    base = str(codigo).split(":")[0]
+    return TEXTO_MOTIVO.get(base) or next((v for k, v in TEXTO_MOTIVO.items() if base.startswith(k)), None) or str(codigo)
+
+
+def _motivos(texto) -> str:
+    return "; ".join(_motivo(m) for m in str(texto or "").split(";") if m)
 
 
 def _e(v) -> str:
@@ -67,11 +88,16 @@ def svg_serie(valores: list, color: str, ymin: float = None, ymax: float = None,
             f'<polyline fill="none" stroke="{color}" stroke-width="2" points="{trazo}"/></svg></figure>')
 
 
-def _tabla_conteos(titulo: str, conteos: dict, vacio: str, nota: str = "") -> str:
+def _tabla_conteos(titulo: str, conteos: dict, vacio: str, nota: str = "", reglas: bool = False) -> str:
     extra = f"<p class='nota'>{_e(nota)}</p>" if nota else ""
     if not conteos:
         return f"<section><h3>{_e(titulo)}</h3>{extra}<p class='nota'>{_e(vacio)}</p></section>"
-    filas = "".join(f"<tr><td>{_e(k)}</td><td class='n'>{v}</td></tr>" for k, v in sorted(conteos.items(), key=lambda x: -x[1]))
+    def nombre(k):
+        if reglas:
+            from api.narrador import TEXTO_REGLA
+            return f"{k}: {TEXTO_REGLA.get(k, '')}".rstrip(": ")
+        return _motivo(k)
+    filas = "".join(f"<tr><td>{_e(nombre(k))}</td><td class='n'>{v}</td></tr>" for k, v in sorted(conteos.items(), key=lambda x: -x[1]))
     return f"<section><h3>{_e(titulo)}</h3>{extra}<table><thead><tr><th>motivo o regla</th><th>pasos</th></tr></thead><tbody>{filas}</tbody></table></section>"
 
 
@@ -86,16 +112,19 @@ def construir_html(datos: dict) -> str:
     filas_resumen = [
         ("Planeta y vehículo", f"{est.get('planeta', '-')} · {est.get('modo_planeta', '-')}"),
         ("Semilla y nivel", f"{est.get('semilla', '-')} · nivel {est.get('nivel', '-')}"),
-        ("Modo de control", est.get("modo", "-")),
-        ("Resultado", est.get("estado", "-")),
+        ("Modo de control", NOMBRE_MODO.get(est.get("modo"), est.get("modo", "-"))),
+        ("Resultado", NOMBRE_RESULTADO.get(est.get("estado"), est.get("estado", "-"))),
         ("Pasos de la misión", est.get("paso", "-")),
         ("Batería final (de la capacidad)", f"{_num(est.get('bateria_pct', est.get('bateria')), 1)} %"),
         ("Pilas recogidas · recargas en base", f"{est.get('pilas_recogidas', 0)} · {est.get('recargas', 0)}"),
-        ("Sitios científicos", f"{est.get('sitios_visitados', '-')}/{est.get('sitios_totales', '-')}"),
+        ("Ciencia recogida (valor por la calidad de su ventana)", f"{_num(100 * float(est.get('ciencia_fraccion') or 0), 1)} %"),
+        ("Sitios visitados", f"{est.get('sitios_visitados', '-')}/{est.get('sitios_totales', '-')}"),
         ("Vetos · replanteos · choques", f"{est.get('vetos', '-')} · {est.get('replanes', '-')} · {est.get('colisiones', '-')}"),
         ("Velocidad media (difuso)", _num(t["velocidad_media"], 3)),
-        ("Puntaje simple", est.get("puntaje", "-")),
+        ("Puntaje", f"{est.get('puntaje', '-')} ({est.get('puntaje_formula') or puntaje.FORMULA})"),
     ]
+    for term in est.get("puntaje_desglose") or []:
+        filas_resumen.append((f"   Puntaje: {term.get('etiqueta')}", f"{_num(term.get('puntos'), 1)} puntos ({_num(term.get('valor'), 2)} × {_num(term.get('peso'), 0)})"))
     resumen = "".join(f"<tr><th>{_e(k)}</th><td>{_e(v)}</td></tr>" for k, v in filas_resumen)
     avisos = "".join(f"<li>{_e(a)}</li>" for a in (est.get("avisos") or [])) or "<li>Sin avisos.</li>"
     graficos = "".join([
@@ -106,12 +135,13 @@ def construir_html(datos: dict) -> str:
         svg_serie([f.get("fitness_ag") for f in log], "#ffc857", None, None, "Fitness del plan del AG en juego"),
     ])
     bitacora = "".join(
-        f"<tr><td class='n'>{_e(h.get('n'))}</td><td class='n'>{_e(h.get('paso_mision'))}</td><td>{_e(h.get('modo'))}</td>"
-        f"<td>{_e(h.get('accion'))}</td><td>{_e(h.get('tecnica'))}</td><td>{_e(h.get('motivo'))}</td>"
+        f"<tr><td class='n'>{_e(h.get('n'))}</td><td class='n'>{_e(h.get('paso_mision'))}</td><td>{_e(NOMBRE_MODO.get(h.get('modo'), h.get('modo')))}</td>"
+        f"<td>{_e(h.get('accion'))}</td><td>{_e(NOMBRE_TECNICA.get(h.get('tecnica'), h.get('tecnica')))}</td><td>{_e(_motivos(h.get('motivo')))}</td>"
         f"<td class='n'>{_num(h.get('velocidad'), 2)}</td><td class='n'>{_num(h.get('p_barranco'), 2)}</td>"
         f"<td class='n'>{_num(h.get('bateria'), 1)}</td><td>{_e(h.get('reglas'))}</td></tr>" for h in hist)
     from api.narrador import narrar_fila
-    narracion = "".join(f"<li>{_e(narrar_fila(f))}</li>" for f in log)
+    vehiculo = est.get("modo_planeta") or "rover"
+    narracion = "".join(f"<li>{_e(narrar_fila(f, vehiculo))}</li>" for f in log)
     semilla, nivel = est.get("semilla", "-"), est.get("nivel", "-")
     return f"""<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -141,7 +171,7 @@ svg {{ width: 100%; height: auto; background: #0f1626; border-radius: 6px; }}
 <h2>Qué hizo cada técnica</h2>
 <div class="rejilla">
 {_tabla_conteos("RNA (vetos y riesgo)", t["rna"], "La RNA no vetó ni marcó riesgo.")}
-{_tabla_conteos("Difuso (reglas más usadas)", t["difuso"], "Sin reglas registradas.")}
+{_tabla_conteos("Difuso (reglas más usadas)", t["difuso"], "Sin reglas registradas.", reglas=True)}
 {_tabla_conteos("AG (replanteos)", t["ag"], "Sin replanteos por evento.", f"Replanteos de la misión: {est.get('replanes', '-')} (incluye los de rutina, al visitar un sitio). Abajo, los que dejaron motivo en la bitácora.")}
 {_tabla_conteos("Supervisor (vetos)", t["supervisor"], "Sin vetos del supervisor.")}
 </div>

@@ -16,8 +16,8 @@ import numpy as np
 from difuso import FuzzyController, ResultadoDifuso, aplanar_membresias
 from genetico import GeneticPlanner, camino_bfs, mapa_estimado
 import simulador
-from rna import (COLUMNAS_TERRENO, NOMBRES_RASGOS_ALERTA2, NOMBRES_RASGOS_TERRENO, PERFILES_RASGOS, NeuralPerception,
-                 _rasgos_alerta2, _rasgos_celda, generar_dataset, inclinacion_de_rasgos, particion_por_mapas,
+from rna import (COLUMNAS_TERRENO, NOMBRES_RASGOS_ALERTA2, NOMBRES_RASGOS_TERRENO, PERFILES_RASGOS,
+                 REFUERZO_BARRANCO_POR_MAPA, NeuralPerception, _rasgos_alerta2, _rasgos_celda, generar_dataset, inclinacion_de_rasgos, particion_por_mapas,
                  perfil_activo)
 from simulador import (BARRANCO, MOVIMIENTOS, UMBRAL_DESNIVEL_BARRANCO_M, MissionLogger, Rover, SensorSuite,
                        World, paso_fisico)
@@ -119,7 +119,9 @@ def _rna_entrenada(semilla: int, perfil: str) -> NeuralPerception:
     if perfil not in ("v1", "v2"):
         raise ValueError(f"Perfil de la RNA desconocido: {perfil!r} (v1 o v2)")
     tr, _, _ = particion_por_mapas(total_mapas=30)
-    X, y = generar_dataset(tr, muestras_por_mapa=300, perfil=perfil)
+    # R23: refuerzo de barrancos (solo v2 con ruido nominal). Con ruido alto no se usa: descalibra y sube los falsos barrancos.
+    X, y = generar_dataset(tr, muestras_por_mapa=300, perfil=perfil,
+                           refuerzo_barranco=REFUERZO_BARRANCO_POR_MAPA if perfil == "v2" else 0)
     return NeuralPerception(semilla=semilla, nombres=PERFILES_RASGOS[perfil], perfil=perfil).entrenar(X, y)
 
 

@@ -2,7 +2,7 @@
 // Paquete A, pieza «holo»: solo muestra lo que el rover calcula; no hay cautela ni retorno porque el motor no los produce.
 
 export const CLASES_RNA = ["libre", "obstáculo", "barranco"];   // rna.CLASES
-export const ROTULO_HOLO = "Holograma · lo que decide el rover: RNA, difuso (velocidad) y orden del AG";
+export const ROTULO_HOLO = "Holograma · lo que decide el vehículo: RNA, difuso (velocidad) y orden del AG";
 
 // Quita marcas y caracteres de control; el texto va al canvas, pero igual se sanea
 export function limpiar(valor, max = 80) {
@@ -43,6 +43,7 @@ export function adaptarHolo({ rna, difuso, ag, estado } = {}) {
     metodo: ag && ag.orden_en_juego && ag.orden_en_juego.metodo ? limpiar(ag.orden_en_juego.metodo, 90) : null,
     mejorRuta,
     estado: estado && estado.estado ? limpiar(estado.estado, 40) : null,
+    vehiculo: estado && estado.modo_planeta === "sonda" ? "sonda" : "rover",
     vetoActivo: estado && typeof estado.veto === "boolean" ? estado.veto : null,
     vetos,
   };

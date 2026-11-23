@@ -1,7 +1,8 @@
 // Capa 3D «Holograma de IA»: panel en un canvas junto al rover y la ruta luminosa del AG.
 // El contenido llega ya adaptado (holo_datos.js). Sin recursos externos; sin fábricas globales.
 import * as THREE from "three";
-import { limpiar, porcentaje } from "/static/holo_datos.js?v=r14";
+import { limpiar, porcentaje } from "/static/holo_datos.js?v=r15";
+import { nombreEstado, plural } from "/static/textos.js?v=r15";
 
 const ANCHO = 1024;
 const ALTO = 560;
@@ -49,7 +50,7 @@ export function crearHolograma(escena, { alturaTerreno } = {}) {
     ctx.stroke();
     ctx.fillStyle = "#a5f7ff";
     ctx.font = "bold 34px system-ui, sans-serif";
-    ctx.fillText("ROVER · ESTADO COGNITIVO", 44, 70);
+    ctx.fillText(`${d.vehiculo === "sonda" ? "SONDA" : "ROVER"} · ESTADO COGNITIVO`, 44, 70);
     // RNA: las 3 clases reales
     ctx.fillStyle = "#73eaff";
     ctx.font = "bold 28px system-ui, sans-serif";
@@ -81,7 +82,7 @@ export function crearHolograma(escena, { alturaTerreno } = {}) {
     ctx.fillText(`Método: ${d.metodo || "sin dato"}`, 44, 448);
     ctx.fillStyle = "#b9dce3";
     ctx.font = "22px system-ui, sans-serif";
-    ctx.fillText(`Ruta del plan: ${d.mejorRuta.length ? d.mejorRuta.length + " celdas" : "sin ruta"}   ·   Estado: ${d.estado || "sin dato"}`, 44, 484);
+    ctx.fillText(`Ruta del plan: ${d.mejorRuta.length ? plural(d.mejorRuta.length, "celda", "celdas") : "sin ruta"}   ·   Estado: ${d.estado ? nombreEstado(d.estado) : "sin dato"}`, 44, 484);
     if (d.vetos.length) {
       ctx.fillStyle = "rgba(111,9,21,0.94)";
       ctx.fillRect(34, 496, ANCHO - 68, 38);

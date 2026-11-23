@@ -37,6 +37,7 @@ from difuso import BATERIA_MAX, COLUMNAS_MEMBRESIA, DISTANCIA_MAX, INCLINACION_M
 from juego.partida import FILAS_BASE, COLUMNAS_BASE  # noqa: E402
 from juego.combate import ALCANCE_DISPARO, Combate, distancia  # noqa: E402
 from juego.partida import Partida, METODO_ORDEN, bateria_por_defecto  # noqa: E402
+from juego import planetas as planetas_mec  # noqa: E402
 from juego import termico  # noqa: E402
 from simulador import MOVIMIENTOS  # noqa: E402
 
@@ -258,6 +259,8 @@ def _estado(sesion: Sesion) -> dict:
     p = sesion.partida
     sug = p.sugerencia()
     res = p.resumen()
+    det = p.puntaje_detalle()                    # R23b: el único puntaje (juego/puntaje.py), con su desglose
+    ci = p.ciencia_publica()
     return {
         "semilla": sesion.semilla,
         "nivel": sesion.nivel,
@@ -275,7 +278,12 @@ def _estado(sesion: Sesion) -> dict:
         "estaciones": [[int(f), int(c)] for f, c in getattr(p, "estaciones", [])],
         "pilas": [[int(f), int(c)] for f, c in getattr(p, "pilas", [])],
         "pilas_recogidas": int(getattr(p, "pilas_recogidas", 0)),
-        "puntaje": p.puntaje(),
+        "puntaje": det["puntaje"],
+        "puntaje_desglose": det["desglose"],
+        "puntaje_formula": det["formula"],
+        "ciencia_fraccion": float(ci["fraccion"]),     # R23b: ciencia recogida (0 a 1); no es sitios visitados ÷ totales
+        "ciencia_recogida": float(ci["recogida"]),
+        "ciencia_maxima": float(ci["maxima"]),
         "modo": sesion.modo,
         "ambiente": p.ambiente,
         "ambiente_restante": p.ambiente_restante,
@@ -298,6 +306,9 @@ def _estado(sesion: Sesion) -> dict:
         "tolerancia": p.termico.tolerancia,    # ev3-d88 B: la tolerancia del planeta de la partida
         "aborto_termico_activo": termico.ABORTO_TERMICO_ACTIVO,    # O2 de QA: la interfaz aclara si el aborto está apagado
         "pasos_sobre_tolerancia": p.pasos_sobre_tolerancia,
+        "tolerancia_fria": termico.TOLERANCIA_FRIA,    # R23: límite por frío (planetas fríos; solo informativo)
+        # R23: mecánicas del planeta (gravedad, viento, hielo): perfil fijo y estado de la partida
+        "planeta_mecanicas": {"perfil": p.parametros_planeta(), "estado": p.mecanicas.estado()},
         "sensores": _sensores(p),                    # ARX-86
         # Solo lectura, para la pantalla final (datos que el motor ya calcula)
         "paso": int(p.mision.paso),
@@ -578,6 +589,27 @@ def _valor_entrada(texto, nombre: str, minimo: float, maximo: float):
     return v
 
 
+def _curvas_difuso(ctrl):
+    """Curvas del controlador dado (el de defecto, el evolucionado del planeta o el editado por el usuario)."""
+    return _curvas_de_puntos(json.dumps([ctrl.entrada_pts, ctrl.salida_pts], sort_keys=True))
+
+
+@functools.lru_cache(maxsize=16)
+def _curvas_de_puntos(clave: str):
+    from difuso import _rango, funcion_de_puntos
+    entrada, salida = json.loads(clave)
+    universos, curvas = {}, {}
+    for var, etiquetas in entrada.items():
+        lo, hi = _rango(var)
+        xs = np.linspace(lo, hi, 101)
+        universos[var] = {"min": float(lo), "max": float(hi)}
+        curvas[var] = {"x": [round(float(x), 3) for x in xs],
+                       "conjuntos": {n: [round(float(funcion_de_puntos(p)(x)), 4) for x in xs] for n, p in etiquetas.items()}}
+    ys = np.linspace(0.0, 1.0, 101)
+    return (universos, curvas, [round(float(y), 3) for y in ys],
+            {n: [round(float(funcion_de_puntos(p)(y)), 4) for y in ys] for n, p in salida.items()})
+
+
 @functools.lru_cache(maxsize=1)
 def _curvas_difuso_fijas():
     """Universos y curvas de pertenencia (entradas y salida): no dependen del paso, se calculan una vez por proceso.
@@ -596,18 +628,56 @@ def _curvas_difuso_fijas():
     return universos, curvas, salida_universo, salida_conjuntos
 
 
-def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, temperatura: float = 0.0) -> dict:
-    """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2)."""
+def _capacidad_bateria(sesion) -> float:
+    """Capacidad de la batería del rover en unidades del motor (la misma base del porcentaje de /estado)."""
+    return float(getattr(sesion.partida, "capacidad_bateria", 100.0) or 100.0)
+
+
+def _bateria_difuso(sesion, bateria, bateria_pct):
+    """Batería para el difuso en unidades del motor. `bateria_pct` (0 a 100, % de la capacidad, el mismo del HUD) manda
+    sobre `bateria` (unidades del motor). Sin ninguno devuelve None (se usa la carga real)."""
+    pct = _valor_entrada(bateria_pct, "bateria_pct", 0.0, 100.0)
+    if pct is not None:
+        return pct / 100.0 * _capacidad_bateria(sesion)
+    return _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
+
+
+def _bateria_para_difuso(sesion, bateria: float, bateria_pct: float = None) -> float:
+    """Valor de batería que recibe el difuso. En la partida jugable (mecánicas activas) el motor le pasa el % de la
+    capacidad (universo 0 a 100); en la evaluación congelada, las unidades del motor, como siempre. `bateria_pct` (el % que
+    usó el motor en un paso) manda si se da; si no, se convierte desde las unidades. Así el laboratorio y /ia/paso ven lo
+    mismo que el motor y la conversión se hace una sola vez."""
+    activa = bool(getattr(getattr(sesion.partida, "mecanicas", None), "activa", False))
+    if not activa:
+        return float(bateria)
+    if bateria_pct is not None:
+        return float(min(100.0, max(0.0, bateria_pct)))
+    return float(min(100.0, max(0.0, 100.0 * float(bateria) / _capacidad_bateria(sesion))))
+
+
+def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, temperatura: float = 0.0,
+                  bateria_pct: float = None) -> dict:
+    """Universos, curvas, punto de entrada, reglas y salida del difuso (CA-05, §10.2). `bateria` va en unidades del motor;
+    `bateria_pct` (opcional) es el % exacto que usó el motor."""
     from difuso import REGLAS, TEMPERATURA_TOLERANCIA
     m = sesion.partida.mision
     # auditoría 22/11: la tolerancia es la del planeta de la partida (la misma que /estado), no la constante general
     termico_p = getattr(sesion.partida, "termico", None)
     tolerancia = float(getattr(termico_p, "tolerancia", TEMPERATURA_TOLERANCIA) or TEMPERATURA_TOLERANCIA)
-    res = m.difuso.inferir(distancia, bateria, inclinacion, temperatura)
-    universos, curvas, salida_universo, salida_conjuntos = _curvas_difuso_fijas()
+    res = m.difuso.inferir(distancia, _bateria_para_difuso(sesion, bateria, bateria_pct), inclinacion, temperatura)
+    universos, curvas, salida_universo, salida_conjuntos = _curvas_difuso(m.difuso)
+    capacidad = _capacidad_bateria(sesion)
+    if bateria_pct is not None:
+        bateria_pct = round(min(100.0, max(0.0, float(bateria_pct))), 1)
+    else:
+        bateria_pct = round(min(100.0, max(0.0, 100.0 * float(bateria) / capacidad)), 1)
     return {
+        # `bateria` está en las unidades del motor (la escala que usa el difuso, con universo 0 a 100); `bateria_pct` es
+        # la misma carga como porcentaje de la capacidad (lo que muestra el HUD) y `capacidad_bateria` la equivalencia
         "entradas": {"distancia": float(distancia), "bateria": float(bateria), "inclinacion": float(inclinacion),
-                     "temperatura": float(temperatura)},
+                     "temperatura": float(temperatura),
+                     "bateria_pct": bateria_pct,
+                     "capacidad_bateria": round(capacidad, 2)},
         "universos": universos,
         "curvas": curvas,
         "punto_entrada": {var: {c: round(float(g), 4) for c, g in res.membresias[var].items()}
@@ -618,7 +688,9 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
                                               f"({tolerancia:g} °C): abortar o aislar (§12)"}
                    if temperatura > tolerancia else {"activo": False, "motivo": None}),
         "reglas": [{"id": r["id"], "si": [list(c) for c in r["si"]], "entonces": r["entonces"],
-                    "motivo": r["motivo"]} for r in REGLAS],
+                    "motivo": r["motivo"], "peso": float(r.get("peso", 1.0)), "activa": bool(r.get("activa", True))}
+                   for r in m.difuso.reglas],
+        "personalizadas": bool(m.difuso.personalizado),
         "salida": {"velocidad": round(float(res.velocidad), 4), "fallback": bool(res.fallback),
                    "universo": salida_universo,
                    "conjuntos": salida_conjuntos,
@@ -629,7 +701,7 @@ def _difuso_datos(sesion, distancia: float, bateria: float, inclinacion: float, 
 _cache_evaluacion_rna = {}
 _cache_ag = {}
 _cache_comparacion = {}
-ESCENARIOS_COMPARACION = ("congelado", "exigente")   # ARX-28d; si el motor declara ESCENARIOS, manda el motor
+ESCENARIOS_COMPARACION = ("jugable_dificil", "congelado", "exigente")   # ARX-28d; si el motor declara ESCENARIOS, manda el motor
 
 
 PESO_MAX = 5.0
@@ -652,6 +724,84 @@ def _pesos_ag(sesion, pedidos: dict) -> dict:
     if any(c is not None for c in pedidos.values()):
         sesion.pesos_ag = dict(pesos)
     return pesos
+
+
+def _ag_laboratorio_restricciones(p, pesos: dict, parada_sin_mejora) -> dict:
+    """GET /ag en la partida jugable (R23): el AG con restricciones (`planificacion.AGRestringido`) sobre el estado de ahora:
+    posición, batería, paso, mapa estimado, sitios pendientes (con ventanas y opcionales) y bases. Mismo contrato que el laboratorio
+    anterior (parametros.pesos, generaciones con poblacion, candidatos con orden, pasos, cromosoma y desglose) más campos nuevos."""
+    import planificacion
+    from genetico import PESOS_POR_DEFECTO
+    from juego import partida as jp
+    pendientes = {c: v for c, v in p.mundo.sitios.items() if c not in p.mision.visitados}
+    origen = tuple(int(v) for v in p.rover.posicion)
+    prob = p._problema_plan(origen, pendientes)
+    tocados = {k: float(v) for k, v in pesos.items() if abs(float(v) - PESOS_POR_DEFECTO[k]) > 1e-12}
+    prob.pesos = dict(pesos) if tocados else None      # sin tocar los pesos: el fitness del juego, tal cual
+    pob, gens = jp.AG_PLAN_INICIAL
+    ag = planificacion.AGRestringido(prob, poblacion=pob, generaciones=gens, semilla=int(p.mision.semilla),
+                                     parada_sin_mejora=parada_sin_mejora)
+    res = ag.optimizar()
+    por_id = {s.id: s for s in prob.sitios}
+
+    def celdas(ids):
+        return [[int(por_id[i].celda[0]), int(por_id[i].celda[1])] for i in ids]
+
+    def candidato(plan, con_camino=False):
+        c = p.candidato_json(prob, plan, con_camino)
+        comp = prob.componentes(plan.ciencia, plan.pasos, plan.recargas, plan.reparaciones, plan.ventanas_falladas)
+        return {**c, "ids": c["orden"], "orden": celdas(c["orden"]), "cromosoma": celdas(c["orden"]),
+                "pasos": [None] * len(c["orden"]),                # el AG con restricciones no usa punto de paso por tramo
+                "pasos_recorridos": c["pasos"],
+                "desglose": {"fitness": float(plan.fitness), "ciencia": comp["ciencia"], "distancia": comp["distancia"],
+                             "energia": comp["energia"], "riesgo": comp["riesgo"], "tiempo": comp["tiempo"],
+                             "inviabilidad": 0.0 if plan.factible else 1.0},
+                "ventanas_perdidas": int(plan.ventanas_falladas), "recargas_hechas": int(plan.recargas)}
+
+    generaciones, cr_ant, mu_ant = [], 0, 0
+    for h in res.historial:
+        cands = [candidato(pl) for pl in h["candidatos"]]
+        pobl = [{"cromosoma": c["cromosoma"], "fitness": c["fitness"], "operacion": op, "factible": c["factible"]}
+                for c, op in zip(cands, h["operaciones"])]
+        generaciones.append({"generacion": int(h["n"]), "n": int(h["n"]), "mejor": float(h["mejor"]), "media": float(h["media"]),
+                             "peor": float(h["peor"]), "diversidad": round(float(h["diversidad"]), 4), "distintos": int(h["distintos"]),
+                             "cruces": int(h["cruces"]) - cr_ant, "mutaciones": int(h["mutaciones"]) - mu_ant,
+                             "poblacion": pobl,
+                             "top": [{"cromosoma": c["cromosoma"], "fitness": c["fitness"]} for c in cands[:3]]})
+        cr_ant, mu_ant = int(h["cruces"]), int(h["mutaciones"])
+    mejor = candidato(res.mejor, con_camino=True)
+    otros = [candidato(pl) for pl in res.historial[-1]["candidatos"]]
+    mejores = [mejor] + [c for c in otros if c["ids"] != mejor["ids"]][:5]
+    jugada = prob.ruta(res.mejor) or []
+    return {
+        "modo": "restricciones",
+        "parametros": {"poblacion": pob, "generaciones": gens, "k_puntos": None, "prob_cruce": ag.prob_cruce,
+                       "prob_mutacion": ag.prob_mutacion, "elite": ag.elite, "torneo": ag.torneo, "semilla": int(p.mision.semilla),
+                       "pesos": dict(pesos), "parada_sin_mejora": parada_sin_mejora, "umbral_diversidad": ag.umbral_diversidad,
+                       "punto_de_paso": False,
+                       "fitness": "ponderado con los pesos del laboratorio" if tocados else "el del juego",
+                       "nota_pesos": "ciencia = valor por calidad de ventana; distancia = pasos; energía = recargas; riesgo = recargas "
+                                     "reparadas (no planeadas); tiempo = ventanas perdidas. Con los pesos por defecto el fitness es el del juego"},
+        "generaciones": generaciones,
+        "candidatos": mejores,
+        "mejor_ruta": [_celda(c) for c in jugada],
+        "mejor_desglose": mejor["desglose"],
+        "cruces": int(ag.cruces), "mutaciones": int(ag.mutaciones),
+        "generaciones_ejecutadas": len(res.historial),
+        "viable": bool(res.mejor.factible), "ordenes_evaluados": int(res.evaluaciones),
+        "fallback": None,
+        "orden_en_juego": {"metodo": "AG con restricciones (orden, selección y recargas)", "respaldo": None,
+                           "pesos": dict(PESOS_POR_DEFECTO)},
+        # campos nuevos del AG con restricciones
+        "tiempo_s": round(float(res.tiempo_s), 3), "evaluaciones": int(res.evaluaciones), "ultima_mejora": int(res.ultima_mejora),
+        "inicio": [int(v) for v in prob.inicio], "refugio": [int(v) for v in prob.refugio],
+        "bases": [[int(b[0]), int(b[1])] for b in prob.bases],
+        "sitios": [{"id": int(s.id), "celda": [int(s.celda[0]), int(s.celda[1])], "valor": float(s.valor),
+                    "ventana": list(s.ventana) if s.ventana else None, "unidad_ventana": "pasos", "obligatorio": bool(s.obligatorio)}
+                   for s in prob.sitios],
+        "bateria": round(float(prob.bateria), 2), "capacidad": float(prob.capacidad), "factor_energia": round(float(prob.factor), 3),
+        "paso": int(prob.t0),
+    }
 
 
 def _escenarios_comparacion():
@@ -747,9 +897,11 @@ def _evaluacion_rna_notebook(perfil: str = None) -> dict:
     perfil, nombres = _modelo_evaluacion(perfil)
     if ("notebook", perfil) in _cache_evaluacion_rna:
         return _cache_evaluacion_rna[("notebook", perfil)]
-    from rna import generar_dataset, particion_por_mapas, NeuralPerception, CLASES
+    from rna import REFUERZO_BARRANCO_POR_MAPA, generar_dataset, particion_por_mapas, NeuralPerception, CLASES
     tr, _, te = particion_por_mapas(total_mapas=60)
-    X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400, perfil=perfil)
+    # R23: el entrenamiento lleva el refuerzo de barrancos (solo v2); la prueba (mapas 51-59) es natural
+    X_tr, y_tr = generar_dataset(tr, muestras_por_mapa=400, perfil=perfil,
+                                 refuerzo_barranco=REFUERZO_BARRANCO_POR_MAPA if perfil == "v2" else 0)
     X_te, y_te = generar_dataset(te, muestras_por_mapa=400, perfil=perfil)
     res = NeuralPerception(semilla=42, nombres=nombres, perfil=perfil).entrenar(X_tr, y_tr).evaluar(X_te, y_te)
     datos = {
@@ -826,7 +978,8 @@ def _razon_corta(modelo: str, motivos: list, accion) -> str:
         if m in _RAZONES:
             return _RAZONES[m]
     if motivos and motivos[0].startswith("V-"):
-        return f"la supervisión veta el paso ({motivos[0]})"
+        from api.narrador import TEXTO_MOTIVO
+        return f"el supervisor veta el paso: {TEXTO_MOTIVO.get(motivos[0].split(':')[0], 'riesgo detectado')}"
     if accion == "detener":
         return "conviene detenerse"
     if accion == "replanificar":
@@ -901,6 +1054,11 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         if request.url.path == "/" or request.url.path.startswith("/static/"):
             respuesta.headers["Cache-Control"] = "no-cache"
         return respuesta
+
+    # R23: las respuestas grandes (/ag/evolucion pesa 150 a 350 KB en JSON, /ag unos 90 KB) viajan comprimidas cuando el cliente lo
+    # acepta (Accept-Encoding: gzip, como todos los navegadores): 354 KB pasan a unos 12 KB sin cambiar el contrato.
+    from fastapi.middleware.gzip import GZipMiddleware
+    app.add_middleware(GZipMiddleware, minimum_size=4096, compresslevel=5)
 
     @app.get("/")
     def pagina():
@@ -1063,12 +1221,22 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         pendientes = {c: v for c, v in p.mundo.sitios.items() if c not in p.mision.visitados}
         if not pendientes:
             return {"sin_sitios": True, "motivo": "no quedan sitios científicos pendientes"}
+        # R23: en la partida jugable el laboratorio corre el AG con restricciones (ventanas, recargas, opcionales) sobre el estado de
+        # ahora; el AG de orden anterior queda solo para las partidas sin plan restringido (escenarios congelados)
+        con_restricciones = bool(p.plan_activo and getattr(p, "sitios_plan", None))
         clave = (p.mision.semilla, tuple(sorted(pendientes)), tuple(p.rover.posicion),
-                 p.mision.riesgo.tobytes(), parada_sin_mejora, tuple(sorted(pesos.items())))
+                 p.mision.riesgo.tobytes(), parada_sin_mejora, tuple(sorted(pesos.items())),
+                 (int(p.mision.paso), round(float(p.rover.bateria), 3)) if con_restricciones else None)
         if clave in _cache_ag:
             return _cache_ag[clave]
         if parada_sin_mejora is not None and (isinstance(parada_sin_mejora, bool) or parada_sin_mejora < 1):
             raise ErrorApi(400, "parada_sin_mejora debe ser un entero mayor que 0")
+        if con_restricciones:
+            salida = _ag_laboratorio_restricciones(p, pesos, parada_sin_mejora)
+            if len(_cache_ag) >= 16:
+                _cache_ag.pop(next(iter(_cache_ag)))
+            _cache_ag[clave] = salida
+            return salida
         # ARX-92c: el laboratorio corre el MISMO AG sobre el orden que decide la partida (mismo envoltorio, pesos del lab)
         from juego.partida import (AG_ORDEN_CON_PASO, AVISO_FALLBACK, METODO_AG_ORDEN, UMBRAL_EMPATE,
                                    _ag_con_todos_los_sitios)
@@ -1106,6 +1274,42 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             _cache_ag.pop(next(iter(_cache_ag)))
         _cache_ag[clave] = salida
         return salida
+
+    @app.get("/ag/evolucion")
+    def evolucion_ag():
+        """R23: evolución del AG del plan inicial de la partida (generaciones con mejor, media, peor, diversidad y los mejores
+        candidatos distintos, con recargas y camino). Se guarda al calcular el plan; no se recalcula en cada llamada.
+        404 con `{hay_plan: false}` si no hay partida o no hay plan con restricciones."""
+        sesion = app.state.sesion
+        ev = getattr(getattr(sesion, "partida", None), "evolucion_inicial", None) if sesion is not None else None
+        if not ev:
+            return JSONResponse(status_code=404, content={"hay_plan": False, "motivo": "no hay evolución del AG: sin partida o sin plan con restricciones"})
+        return ev
+
+    @app.get("/difuso/reglas")
+    def difuso_reglas():
+        """R23: puntos de las funciones de pertenencia y reglas (con peso y estado) del difuso de la partida en curso."""
+        return activa().partida.mision.difuso.como_dict()
+
+    @app.put("/difuso/reglas")
+    def difuso_reglas_editar(cuerpo: dict):
+        """R23: valida y aplica reglas editadas (`reglas` completas, `variables` y `salida` solo con lo que cambia) a la partida en
+        curso. 400 con `motivo` si no es válido. No se guarda en disco ni afecta a las evaluaciones."""
+        p = activa().partida
+        ctrl = p.mision.difuso.copia()
+        try:
+            ctrl.aplicar(cuerpo)
+        except ValueError as exc:
+            raise ErrorApi(400, str(exc))
+        p.poner_difuso(ctrl)
+        return ctrl.como_dict()
+
+    @app.delete("/difuso/reglas")
+    def difuso_reglas_restaurar():
+        """R23: restaura el difuso del planeta (el evolucionado si lo hay, si no el de defecto)."""
+        p = activa().partida
+        p.restaurar_difuso()
+        return p.mision.difuso.como_dict()
 
     @app.get("/rna")
     def diagnostico_rna(proximidad: str = None, desnivel: str = None, contraste: str = None,
@@ -1158,14 +1362,25 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
                     rna["intervenida"] = u["rna_intervenida"]
                 except Exception:   # modelo cambiado entre pasos: se informa sin activaciones
                     rna = {"probabilidades": u["probabilidades"], "probabilidades_usadas": u["probabilidades"], "intervenida": u["rna_intervenida"]}
+            if rna is not None and u.get("tramo"):
+                # R23: clasificación por celda del tramo (celda siguiente + 2 a 4 pasos), por distancia, máximo 4
+                rna["tramo"] = sorted(({"celda": list(t["celda"]), "probabilidades": t["probabilidades"],
+                                        "distancia": int(t["distancia"]), "fuente": t.get("fuente"),
+                                        "marcada": bool(t.get("marcada", False))} for t in u["tramo"]),
+                                      key=lambda t: t["distancia"])[:4]
             salida["rna"] = rna
             salida["celda"] = list(u["celda"]); salida["posicion"] = list(u["posicion"]); salida["rumbo"] = u["rumbo"]
             salida["paso_ia"] = u["paso"]
             if u["usar_difuso"]:
                 e = u["difuso"]
-                dif = _difuso_datos(sesion, min(e["distancia"], DISTANCIA_MAX), e["bateria"], min(e["inclinacion"], INCLINACION_MAX), e["temperatura"])
+                dif = _difuso_datos(sesion, min(e["distancia"], DISTANCIA_MAX), e["bateria"], min(e["inclinacion"], INCLINACION_MAX),
+                                    e["temperatura"], bateria_pct=e.get("bateria_pct"))
                 dif["intervenido"] = u["difuso_intervenido"]
                 dif["velocidad_usada"] = ultima.get("velocidad")
+                if ultima.get("accion") == "avanzar" and (ultima.get("velocidad") or 0.0) < dif["salida"]["velocidad"] - 1e-3:
+                    # R23: la conducción recortó la velocidad del difuso (tope por hielo, viento o pendiente del planeta, o frenado
+                    # por un posible barranco a 2 a 4 celdas): se informa la velocidad con que se avanzó
+                    dif["tope_conduccion"] = ultima.get("velocidad")
                 salida["difuso"] = dif
             else:
                 salida["difuso"] = None
@@ -1177,11 +1392,16 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
               "ultimo_replanteo": _ultimo_replanteo(p), "replanes": int(getattr(m, "replanes", 0) or 0),
               "fallbacks": list(getattr(getattr(m, "_optimizar_ag", None), "fallbacks", []) or [])[-3:]}
         if res is not None:
-            ag.update({"generaciones": res.historial, "viable": bool(res.viable), "evaluados": int(res.evaluados),
-                       "mejor_desglose": _desglose_fitness(res.mejor_desglose)})
+            if hasattr(res, "historial_json"):       # R23: AG con restricciones (planificacion.py)
+                ag.update({"generaciones": res.historial_json(), "viable": bool(res.viable), "evaluados": int(res.evaluados),
+                           "mejor_desglose": _desglose_fitness(res.desglose())})
+            else:
+                ag.update({"generaciones": res.historial, "viable": bool(res.viable), "evaluados": int(res.evaluados),
+                           "mejor_desglose": _desglose_fitness(res.mejor_desglose)})
         salida["ag"] = ag
         from api.narrador import narrar_fila
-        salida["narracion"] = narrar_fila(ultima) if ultima else narrar_fila({})
+        vehiculo = getattr(sesion, "modo_planeta", "rover")
+        salida["narracion"] = narrar_fila(ultima, vehiculo) if ultima else narrar_fila({}, vehiculo)
         return salida
 
     @app.get("/rna/red")
@@ -1214,14 +1434,15 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
 
     @app.get("/difuso")
     def diagnostico_difuso(distancia: str = None, bateria: str = None, inclinacion: str = None,
-                           temperatura: str = None):
+                           temperatura: str = None, bateria_pct: str = None):
         """Laboratorio difuso (CA-05, §10.2). Sin parámetros usa el estado actual de la partida.
-        Las entradas manuales son opcionales; NaN o fuera de rango → 400 con motivo."""
+        Las entradas manuales son opcionales; NaN o fuera de rango → 400 con motivo. La batería se pide en
+        `bateria_pct` (% de la capacidad, como el HUD) o en `bateria` (unidades del motor, 0 a 100)."""
         sesion = activa()
         p = sesion.partida
         dist_actual = float(p.mision._distancia_a_riesgo_en_ruta())
         d = _valor_entrada(distancia, "distancia", 0.0, DISTANCIA_MAX)
-        b = _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
+        b = _bateria_difuso(sesion, bateria, bateria_pct)
         i = _valor_entrada(inclinacion, "inclinacion", 0.0, INCLINACION_MAX)
         t = _valor_entrada(temperatura, "temperatura", -80.0, 80.0)
         return _difuso_datos(sesion,
@@ -1232,7 +1453,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
 
     @app.get("/difuso/barrido")
     def barrido_difuso(desde: float = 10.0, hasta: float = 1.0, paso: float = 1.0, bateria: str = None,
-                       inclinacion: str = None, temperatura: str = None):
+                       inclinacion: str = None, temperatura: str = None, bateria_pct: str = None):
         """Barrido de la distancia (CA-05: de 10 m a 1 m). Devuelve velocidad y reglas por cada valor."""
         sesion = activa()
         if not (math.isfinite(desde) and math.isfinite(hasta) and math.isfinite(paso)) or paso <= 0:
@@ -1241,7 +1462,7 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             raise ErrorApi(400, f"la distancia debe estar en [0, {DISTANCIA_MAX:g}]")
         if (abs(desde - hasta) / paso) > 200:
             raise ErrorApi(400, "barrido demasiado largo: como máximo 200 valores")
-        b = _valor_entrada(bateria, "bateria", 0.0, BATERIA_MAX)
+        b = _bateria_difuso(sesion, bateria, bateria_pct)
         i = _valor_entrada(inclinacion, "inclinacion", 0.0, INCLINACION_MAX)
         b = float(sesion.partida.rover.bateria) if b is None else b
         i = 0.0 if i is None else i
@@ -1251,11 +1472,12 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         valores = [desde + (hasta - desde) * k / (n - 1) for k in range(n)] if n > 1 else [desde]
         filas = []
         for d in valores:
-            res = sesion.partida.mision.difuso.inferir(d, b, i, t)
+            res = sesion.partida.mision.difuso.inferir(d, _bateria_para_difuso(sesion, b), i, t)
             filas.append({"distancia": round(float(d), 3), "velocidad": round(float(res.velocidad), 4),
                           "fallback": bool(res.fallback),
                           "reglas": [{"id": r, "fuerza": round(float(f), 4)} for r, f, _ in res.reglas_activadas]})
-        return {"bateria": b, "inclinacion": i, "temperatura": t, "filas": filas}
+        return {"bateria": b, "bateria_pct": round(min(100.0, 100.0 * b / _capacidad_bateria(sesion)), 1),
+                "inclinacion": i, "temperatura": t, "filas": filas}
 
     @app.get("/moviles")
     def moviles():
@@ -1367,19 +1589,28 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
         lista = []
         for nombre, perfil in PERFILES.items():
             lista.append({"nombre": nombre, "modo": perfil.modo, "viable": perfil.modo == "rover",
+                          "mecanicas": planetas_mec.parametros(nombre),      # R23: gravedad, viento, hielo
                           "motivo": None if perfil.modo == "rover" else
                           f"{nombre} es un gigante sin suelo accesible: no admite rodaje; usa modo sonda"})
         activo = ({"planeta": getattr(sesion, "planeta", "Marte"), "modo": getattr(sesion, "modo_planeta", "rover")}
                   if sesion is not None else None)
         return {"planetas": lista, "modos": ["rover", "sonda"], "activo": activo}
 
+    @app.get("/hielo")
+    def hielo():
+        """R23: celdas de hielo de la partida (parches resbaladizos) y el viento actual, para dibujarlos en el mapa."""
+        sesion = activa()
+        mec = sesion.partida.mecanicas
+        return {"planeta": sesion.partida.planeta, "celdas": mec.celdas_hielo(), "estado": mec.estado()}
+
     @app.get("/comparacion")
-    def comparacion(semillas: int = 20, escenario: str = "congelado"):
+    def comparacion(semillas: int = None, escenario: str = "jugable_dificil"):
         """Comparación de políticas (RF-14, RF-15): híbrido frente a sin RNA, sin difuso y sin AG.
-        `escenario=congelado` (por defecto) o `exigente` (ARX-28d). Con 20 semillas sirve el JSON del escenario
-        (docs/COMPARACION_POLITICAS.json o docs/COMPARACION_POLITICAS_<escenario>.json); otros valores calculan
-        en la petición y tardan (1 a 40 semillas). La caché distingue escenario y número de semillas."""
-        if isinstance(semillas, bool) or not 1 <= semillas <= 40:
+        R23b: el escenario por defecto es `jugable_dificil` (la partida actual); `congelado` es histórico (versión anterior del
+        juego) y hay que pedirlo (`?escenario=congelado`). Sin `semillas` se sirve el JSON del escenario con todas sus semillas
+        (100 en los jugables, 20 en los demás: docs/COMPARACION_POLITICAS[_<escenario>].json); con `semillas` (1 a 40) se sirve el
+        JSON solo si trae justo esas semillas y, si no, se calcula en la petición (tarda). La caché distingue escenario y semillas."""
+        if semillas is not None and (isinstance(semillas, bool) or not 1 <= semillas <= 40):
             raise ErrorApi(400, "semillas debe ser un entero entre 1 y 40")
         validos = _escenarios_comparacion()
         if escenario not in validos:
@@ -1390,20 +1621,31 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             return _cache_comparacion[clave]
         ruta = COMPARACION_JSON if escenario == "congelado" else COMPARACION_JSON.replace(
             ".json", f"_{escenario}.json")
-        if semillas == 20 and os.path.exists(ruta):
+        datos = None
+        if os.path.exists(ruta):
             with open(ruta, encoding="utf-8") as f:
-                datos = json.load(f)
-        else:
+                en_disco = json.load(f)
+            if semillas is None or semillas == len(en_disco.get("semillas") or ()):
+                datos = en_disco
+        if datos is None:
             from juego import comparacion as motor
+            n = 20 if semillas is None else semillas
             if escenario == "congelado":
-                datos = motor.comparar(range(1, semillas + 1))
+                datos = motor.comparar(range(1, n + 1))
             elif not hasattr(motor, "ESCENARIOS"):
                 raise ErrorApi(400, f"el escenario {escenario} aún no está disponible en el motor de comparación")
             else:
-                datos = motor.comparar(range(1, semillas + 1), escenario=escenario)
+                datos = motor.comparar(range(1, n + 1), escenario=escenario)
         # ev3-d71: ag_puro no se publica (no mide el AG); mismo criterio que scripts/comparacion_politicas.py
         no_publicar = ()   # ev3-d71 corregido: ag_puro se publica entre las ablaciones; ARX-92 regeneración
-        datos = {**datos, "escenario": escenario,
+        try:
+            from juego.comparacion import INFO_ESCENARIOS
+        except ImportError:
+            INFO_ESCENARIOS = {}
+        datos = {**datos, "escenario": escenario, "escenario_recomendado": "jugable_dificil",   # R23: el que mide la IA en la partida jugable
+                 "escenarios_disponibles": list(validos),          # R23b: la partida actual primero; el congelado es histórico
+                 "escenarios_info": {k: INFO_ESCENARIOS[k] for k in validos if k in INFO_ESCENARIOS},
+                 "info": INFO_ESCENARIOS.get(escenario),
                  "variantes": {v: r for v, r in datos["variantes"].items() if v not in no_publicar},
                  "filas": [f for f in datos["filas"] if f["variante"] not in no_publicar]}
         _cache_comparacion[clave] = datos
@@ -1481,6 +1723,8 @@ def crear_app(sesion: Sesion = None) -> FastAPI:
             return {"ok": True, "tecnica": "difuso", "valor": float(datos.valor)}
         raise ErrorApi(400, f"técnica inválida: {datos.tecnica!r}; usa rna, difuso o apagar")
 
+    from api import extras   # ronda 23: comparación lado a lado y récords (rutas /comparar y /records)
+    extras.instalar(app, sys.modules[__name__])
     return app
 
 

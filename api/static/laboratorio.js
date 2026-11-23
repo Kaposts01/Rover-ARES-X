@@ -1,9 +1,14 @@
-import * as adaptador from "/static/adaptador.js?v=r14";
-// Laboratorios de los modelos: genético (CA-04), difuso (CA-05) y RNA (CA-06).
+import { coma as comaFormato } from "./formato.js?v=r15";
+import * as adaptador from "/static/adaptador.js?v=r15";
+import {
+  VARIANTES_POLITICA, nombreVariante, notaVariantes, NOTA_POLITICAS, textoCandidatoAG, lineasExtraCandidatoAG, LAB_AG, textoEvaluacionRNA, textoBateriaDifuso,
+  ETIQUETA_BATERIA_UNIVERSO, nombresMotivos, plural, nombreDifuso, lineasRotulo } from "/static/textos.js?v=r15";
+import { crearEditorDifuso } from "/static/difuso_editor.js?v=r15";
+// Laboratorios de los modelos: genético, difuso y RNA, más la comparación de políticas.
 // Datos de los endpoints de docs/CONTRATOS_GRAFICOS.md. Este módulo solo dibuja; el motor está en Python.
 
 const $ = (id) => document.getElementById(id);
-const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "-" : Number(v).toFixed(d).replace(".", ","));
+const coma = (v, d = 2) => comaFormato(v, d, "-");
 const porcentaje = (v) => (v == null ? "-" : `${coma(v * 100, 1)} %`);
 
 // Creación de nodos sin innerHTML: el texto siempre entra con textContent
@@ -139,6 +144,8 @@ const COLORES_CONJUNTO = ["#ff5d6c", "#ffb454", "#5fd3ff", "#6ee7a8"];
 // ---------- Genético (CA-04) ----------
 const PESOS_AG = ["ciencia", "distancia", "energia", "riesgo", "tiempo"];
 const COMPONENTES_AG = ["ciencia", "distancia", "energia", "riesgo", "tiempo", "penalizacion", "inviabilidad"];
+const ROTULO_AG = { energia: "energía", penalizacion: "penalización", inviabilidad: "inviabilidad" };   // solo el texto; las claves siguen siendo las del motor
+const rotuloAG = (k) => ROTULO_AG[k] || k;
 let agDatos = null;
 let agCandidato = 0;
 
@@ -147,13 +154,12 @@ let agCandidato = 0;
 const PESOS_AG_DEFECTO = { ciencia: 1.0, distancia: 0.3, energia: 0.2, riesgo: 0.8, tiempo: 0.1 };
 const PESO_AG_MAX = 5;
 let pesosAgTocados = false;   // sin tocar los deslizadores no se envía ningún peso (consulta idéntica a la de siempre)
-const NOTA_PESOS_AG = "estos pesos afectan al laboratorio; en el juego el orden de visita lo fija la ruta más corta validada";
 
 function iniciarPesosAG() {
   const cont = $("ag-pesos");
   if (!cont) return;
   for (const k of PESOS_AG) {
-    const fila = nodo("label", "", `${k} `);
+    const fila = nodo("label", "", `${rotuloAG(k)} `);
     const r = nodo("input");
     r.type = "range"; r.id = `ag-peso-${k}`; r.min = "0"; r.max = String(PESO_AG_MAX); r.step = "0.05";
     r.value = String(PESOS_AG_DEFECTO[k]);
@@ -179,7 +185,7 @@ function iniciarPesosAG() {
   });
   cont.appendChild(aplicar);
   cont.appendChild(defecto);
-  $("ag-pesos-nota").textContent = NOTA_PESOS_AG;
+  $("ag-pesos-nota").textContent = LAB_AG.notaPesos;
 }
 
 function textoCromosoma(cromosoma) {
@@ -232,7 +238,7 @@ function pintarPoblacion(indice) {
   cont.replaceChildren();
   const tabla = nodo("table", "lab-tabla");
   const cab = nodo("tr");
-  for (const t of ["#", "cromosoma (f,c)", "fitness", "operación"]) cab.appendChild(nodo("th", "", t));
+  for (const t of ["#", "Cromosoma (fila, columna)", "Fitness", "Operación"]) cab.appendChild(nodo("th", "", t));
   tabla.appendChild(nodo("thead")).appendChild(cab);
   const cuerpo = nodo("tbody");
   const ordenada = [...g.poblacion].sort((a, b) => b.fitness - a.fitness);
@@ -251,8 +257,13 @@ function pintarPoblacion(indice) {
 function pintarCandidatos() {
   const cont = $("ag-candidatos");
   cont.replaceChildren();
+  const tituloDesglose = $("ag-desglose-titulo");   // el título dice cuántas rutas se muestran de verdad
+  if (tituloDesglose) {
+    const n = agDatos.candidatos.length;
+    tituloDesglose.textContent = n ? `Desglose del fitness (${n} ${n === 1 ? "mejor ruta" : "mejores rutas"})` : "Desglose del fitness de las mejores rutas";
+  }
   agDatos.candidatos.forEach((c, i) => {
-    const b = nodo("button", "chip" + (i === agCandidato ? " activa" : ""), `candidato ${i + 1} · ${coma(c.fitness, 3)}`);
+    const b = nodo("button", "chip" + (i === agCandidato ? " activa" : ""), `Candidato ${i + 1} · ${coma(c.fitness, 3)}`);
     b.type = "button";
     b.addEventListener("click", () => { agCandidato = i; pintarCandidatos(); });
     cont.appendChild(b);
@@ -260,28 +271,35 @@ function pintarCandidatos() {
   const c = agDatos.candidatos[agCandidato];
   const cont2 = $("ag-desglose");
   cont2.replaceChildren();
+  if (!c) {   // el motor no devolvió candidatos (ningún orden viable con la batería del nivel): sin esto, c.desglose rompía el panel
+    cont2.appendChild(nodo("div", "ayuda", "El AG del laboratorio no encontró ningún orden de visita viable con la batería disponible, así que no hay candidatos que desglosar. El plan que se juega (con paradas de recarga) se ve con «Ver la evolución en el mapa»."));
+    return;
+  }
   const pesos = agDatos.parametros.pesos || {};
   const tabla = nodo("table", "lab-tabla");
   const cab = nodo("tr");
-  for (const t of ["componente", "valor", "peso"]) cab.appendChild(nodo("th", "", t));
+  for (const t of ["Componente", "Valor", "Peso"]) cab.appendChild(nodo("th", "", t));
   tabla.appendChild(nodo("thead")).appendChild(cab);
   const cuerpo = nodo("tbody");
   for (const k of COMPONENTES_AG) {
     if (c.desglose[k] === undefined) continue;
     const fila = nodo("tr");
-    fila.appendChild(nodo("td", "", k));
+    fila.appendChild(nodo("td", "", rotuloAG(k)));
     fila.appendChild(nodo("td", "", coma(c.desglose[k], 3)));
     fila.appendChild(nodo("td", "", PESOS_AG.includes(k) && pesos[k] !== undefined ? coma(pesos[k], 2) : "-"));
     cuerpo.appendChild(fila);
   }
   const total = nodo("tr", "lab-total");
-  total.appendChild(nodo("td", "", "fitness"));
+  total.appendChild(nodo("td", "", "Fitness"));
   total.appendChild(nodo("td", "", coma(c.fitness, 3)));
   total.appendChild(nodo("td", "", ""));
   cuerpo.appendChild(total);
   tabla.appendChild(cuerpo);
   cont2.appendChild(tabla);
-  cont2.appendChild(nodo("div", "ayuda", `Ruta de ${c.ruta_pasos} pasos. Valores tal como los devuelve el motor; el peso se aplica dentro del fitness.`));
+  cont2.appendChild(nodo("div", "ayuda", textoCandidatoAG(c)));
+  // campos del AG con restricciones, si el motor los manda (violaciones, paradas, descartes, ciencia): no se depende de ellos
+  const extra = lineasExtraCandidatoAG(c);
+  if (extra.length) cont2.appendChild(nodo("div", "ayuda", extra.map(([n, v]) => (v ? `${n}: ${v}` : n)).join(" · ")));
 }
 
 async function ejecutarAG() {
@@ -293,7 +311,7 @@ async function ejecutarAG() {
   const progreso = $("ag-progreso");
   progreso.classList.remove("oculto");
   const contar = () => {
-    estado.textContent = `Ejecutando el AG… ${Math.round((Date.now() - inicio) / 1000)} s (unos 70 s con 30 generaciones)`;
+    estado.textContent = LAB_AG.calculando(Math.round((Date.now() - inicio) / 1000));
   };
   contar();
   const reloj = setInterval(contar, 1000);
@@ -310,19 +328,21 @@ async function ejecutarAG() {
   }
   agDatos = datos;
   agCandidato = 0;
-  estado.textContent = `${datos.generaciones_ejecutadas} generaciones · cruces ${datos.cruces} · mutaciones ${datos.mutaciones}`;
+  const resumenAG = `${plural(datos.generaciones_ejecutadas, "generación", "generaciones")} · ${plural(datos.cruces, "cruce", "cruces")} · ${plural(datos.mutaciones, "mutación", "mutaciones")}`;
+  const segundos = Number.isFinite(Number(datos.tiempo_s)) && datos.tiempo_s !== null ? Number(datos.tiempo_s) : (Date.now() - inicio) / 1000;   // el tiempo real que devuelve el motor; si no lo trae, el medido aquí
+  estado.textContent = LAB_AG.terminado(resumenAG, segundos);
   pintarAG();
 }
 
 // ---------- Difuso (CA-05) ----------
 const UNIVERSOS = ["distancia", "bateria", "inclinacion", "temperatura"];
-const ETIQUETA_UNIVERSO = { distancia: "distancia (m)", bateria: "batería (%)", inclinacion: "inclinación (°)", temperatura: "temperatura (°C)" };
+const ETIQUETA_UNIVERSO = { distancia: "distancia (m)", bateria: ETIQUETA_BATERIA_UNIVERSO, inclinacion: "inclinación (°)", temperatura: "temperatura (°C)" };
 const CONTROL_DIF = { distancia: "dif-distancia", bateria: "dif-bateria", inclinacion: "dif-inclinacion", temperatura: "dif-temperatura" };
 
 function parametrosDifuso() {
   return new URLSearchParams({
     distancia: $("dif-distancia").value,
-    bateria: $("dif-bateria").value,
+    bateria_pct: $("dif-bateria").value,   // el control está en % de la capacidad (como el HUD); el servidor lo pasa a las unidades del difuso
     inclinacion: $("dif-inclinacion").value,
     temperatura: $("dif-temperatura").value,
   });
@@ -337,7 +357,11 @@ async function consultarDifuso() {
   const prueba = !datos.curvas.temperatura && adaptador.TEMPERATURA_PRUEBA && demo;
   if (prueba) adaptador.inyectarTemperaturaPrueba(datos, Number($("dif-temperatura").value));
   $("dif-estado").textContent = prueba ? "temperatura: datos de prueba (solo con ?demo)" : "";
-  for (const k of UNIVERSOS) $(`${CONTROL_DIF[k]}-v`).textContent = coma(datos.entradas[k], k === "distancia" ? 1 : 0);
+  if (editorDifuso && datos.entradas) editorDifuso.entradas({ distancia: datos.entradas.distancia, bateria: datos.entradas.bateria, inclinacion: datos.entradas.inclinacion, temperatura: datos.entradas.temperatura });
+  for (const k of UNIVERSOS) {
+    const e = datos.entradas;
+    $(`${CONTROL_DIF[k]}-v`).textContent = k === "bateria" && e.bateria_pct != null ? `${coma(e.bateria_pct, 1)} %` : coma(e[k], k === "distancia" ? 1 : 0);
+  }
 
   for (const k of UNIVERSOS) {
     const bloque = $(`dif-u-${k}`).closest(".lab-bloque");
@@ -355,15 +379,16 @@ async function consultarDifuso() {
     curva(`dif-u-${k}`, `dif-u-${k}-tip`, {
       xmin: uni.min, xmax: uni.max, ymin: 0, ymax: 1, xs,
       series: nombres.map((n, i) => ({ valores: xs.map((x, j) => [x, u.conjuntos[n][j]]), color: COLORES_CONJUNTO[i % 4] })),
-      marcas: [{ x: entrada, color: "rgba(231, 237, 247, 0.6)" }],
+      marcas: [{ x: Math.min(uni.max, Math.max(uni.min, entrada)), color: "rgba(231, 237, 247, 0.6)" }],   // fuera del universo, en el borde
       fmtY: (v) => coma(v, 1),
-      fmtX: (v) => coma(v, k === "distancia" ? 0 : 0),
+      fmtX: (v) => coma(v, 0),
       etiqueta: etiquetaPunto,
       etiquetaVacia: "Pasa el ratón sobre una curva.",
     });
     const pe = datos.punto_entrada[k];
-    $(`dif-u-${k}-entrada`).textContent = `entrada ${coma(entrada, k === "distancia" ? 1 : 0)} → ` +
-      Object.keys(pe).map((n) => `${n} ${porcentaje(pe[n])}`).join(" · ");
+    const textoEntrada = k === "bateria" ? textoBateriaDifuso(datos.entradas) : coma(entrada, k === "distancia" ? 1 : 0);
+    $(`dif-u-${k}-entrada`).textContent = `entrada ${textoEntrada} → ` +
+      Object.keys(pe).map((n) => `${nombreDifuso(n)} ${porcentaje(pe[n])}`).join(" · ");
   }
 
   const s = datos.salida;
@@ -380,19 +405,19 @@ async function consultarDifuso() {
     etiqueta: (x) => `velocidad ${coma(s.velocidad, 3)} · agregado ${coma(s.agregado[indiceMasCercano(s.universo, x)], 2)}`,
     etiquetaVacia: "Pasa el ratón sobre la salida.",
   });
-  $("dif-velocidad").textContent = `velocidad ${coma(s.velocidad, 3)} · ${s.fallback ? "recurso de respaldo" : "salida normal"}`;
+  $("lab-dif-velocidad").textContent = `Velocidad ${coma(s.velocidad, 3)} · ${s.fallback ? "recurso de respaldo" : "salida normal"}`;
 
   pintarReglas(datos.reglas, datos.reglas_activadas);
 }
 
 function pintarReglas(reglas, activadas) {
-  const cont = $("dif-reglas");
+  const cont = $("lab-dif-reglas");
   cont.replaceChildren();
   const fuerzas = new Map(activadas.map((r) => [r.id, r.fuerza]));
   for (const r of reglas) {
     const f = fuerzas.get(r.id);
     const fila = nodo("div", "lab-regla" + (f !== undefined ? " activa" : ""));
-    const cab = nodo("div", "", `${r.id} · si ${r.si.map(([v, t]) => `${v} es ${t}`).join(" y ")} → ${r.entonces}`);
+    const cab = nodo("div", "", `${r.id} · si ${r.si.map(([v, t]) => `${nombreDifuso(v)} es ${nombreDifuso(t)}`).join(" y ")} → ${nombreDifuso(r.entonces)}`);
     fila.appendChild(cab);
     const barra = nodo("div", "barra");
     const relleno = nodo("div", "");
@@ -409,7 +434,7 @@ async function barridoDifuso() {
   boton.disabled = true;
   const q = new URLSearchParams({
     desde: 10, hasta: 1, paso: 1,
-    bateria: $("dif-bateria").value,
+    bateria_pct: $("dif-bateria").value,
     inclinacion: $("dif-inclinacion").value,
   });
   const datos = await deps.llamar("GET", `/difuso/barrido?${q}`);
@@ -432,7 +457,7 @@ async function barridoDifuso() {
   cont.replaceChildren();
   const tabla = nodo("table", "lab-tabla");
   const cab = nodo("tr");
-  for (const t of ["distancia (m)", "velocidad", "reglas activadas"]) cab.appendChild(nodo("th", "", t));
+  for (const t of ["Distancia (m)", "Velocidad", "Reglas activadas"]) cab.appendChild(nodo("th", "", t));
   tabla.appendChild(nodo("thead")).appendChild(cab);
   const cuerpo = nodo("tbody");
   for (const f of filas) {
@@ -503,10 +528,15 @@ function rellenarRasgos(entrada) {
   for (const r of RASGOS) $(`${r.id}-v`).textContent = coma($(r.id).value, 1);
 }
 
+// Una sola fuente de verdad: solo la última consulta de la RNA pinta controles y tabla; una respuesta que llega tarde
+// (de una consulta anterior, p. ej. la de la celda del rover al abrir con «en vivo») se descarta. Devuelve true si pintó.
+let rnaEpoca = 0;
 async function consultarRNA() {
+  const epoca = ++rnaEpoca;
   const q = rnaUsoRover ? "" : `?${parametrosRNA()}`;
   const datos = await deps.llamar("GET", `/rna${q}`);
-  if (!datos) { $("rna-accion").textContent = "Sin respuesta de la RNA (revisa que haya partida)."; return; }
+  if (epoca !== rnaEpoca) return false;
+  if (!datos) { $("rna-accion").textContent = "Sin respuesta de la RNA (revisa que haya partida)."; return false; }
   adaptarControlesRNA(datos.modelo);
   if (rnaUsoRover) rellenarRasgos(datos.entrada);
   for (const r of RASGOS) $(`${r.id}-v`).textContent = coma($(r.id).value, 1);
@@ -515,7 +545,7 @@ async function consultarRNA() {
   const nrm = datos.normalizada;
   const tabla = nodo("table", "lab-tabla");
   const cab = nodo("tr");
-  for (const t of ["rasgo", "entrada", "normalizada"]) cab.appendChild(nodo("th", "", t));
+  for (const t of ["Rasgo", "Entrada", "Normalizada"]) cab.appendChild(nodo("th", "", t));
   tabla.appendChild(nodo("thead")).appendChild(cab);
   const cuerpo = nodo("tbody");
   for (const k of (datos.modelo ? datos.modelo.rasgos : Object.keys(ETIQUETA_RASGO))) {
@@ -528,7 +558,7 @@ async function consultarRNA() {
   tabla.appendChild(cuerpo);
   $("rna-entrada").replaceChildren(tabla);
   if (e.borde_barranco !== undefined) $("rna-entrada").appendChild(nodo("div", "ayuda", `borde de barranco: ${e.borde_barranco >= 0.5 ? "sí" : "no"} (entrada ${coma(e.borde_barranco, 0)})`));
-  if (datos.modelo) $("rna-entrada").appendChild(nodo("div", "ayuda", `modelo activo: ${datos.modelo.perfil} · rasgos: ${datos.modelo.rasgos.join(", ")}`));
+  if (datos.modelo) $("rna-entrada").appendChild(nodo("div", "ayuda", `Modelo activo: ${datos.modelo.perfil} · rasgos: ${datos.modelo.rasgos.map((k) => ETIQUETA_RASGO[k] || k.replace(/_/g, " ")).join(", ")}`));
 
   const probs = $("rna-probs");
   probs.replaceChildren();
@@ -546,9 +576,10 @@ async function consultarRNA() {
     probs.appendChild(fila);
   }
   $("rna-accion").textContent = `acción: ${datos.accion} · confianza ${porcentaje(datos.confianza)}` +
-    (datos.motivos && datos.motivos.length ? ` · motivos: ${datos.motivos.join(", ")}` : "");
+    (datos.motivos && datos.motivos.length ? ` · motivos: ${nombresMotivos(datos.motivos)}` : "");
 
   pintarActivaciones(datos.activaciones);
+  return true;
 }
 
 // Mapa de calor de una capa: azul para positivo, rojo para negativo, intensidad por magnitud
@@ -580,8 +611,9 @@ function pintarActivaciones(act) {
 }
 
 async function cargarEvaluacion() {
-  const ev = await deps.llamar("GET", "/rna/evaluacion");
   const cont = $("rna-evaluacion");
+  cont.replaceChildren(nodo("div", "ayuda", "Calculando la evaluación del modelo… (la primera vez tarda unos segundos)"));   // sin esto el panel quedaba en blanco
+  const ev = await deps.llamar("GET", "/rna/evaluacion");
   cont.replaceChildren();
   if (!ev) { cont.textContent = "La evaluación no respondió (revisa que haya partida)."; return; }
   const metricas = nodo("div", "lab-metricas");
@@ -599,7 +631,7 @@ async function cargarEvaluacion() {
     metricas.appendChild(m);
   }
   cont.appendChild(metricas);
-  if (ev.perfil) cont.appendChild(nodo("div", "ayuda", `modelo ${ev.perfil} · rasgos: ${ev.rasgos.join(", ")}`));
+  if (ev.perfil) cont.appendChild(nodo("div", "ayuda", `Modelo ${ev.perfil} · rasgos: ${ev.rasgos.map((k) => ETIQUETA_RASGO[k] || k.replace(/_/g, " ")).join(", ")}`));
 
   const tabla = nodo("table", "lab-tabla lab-confusion");
   const cab = nodo("tr");
@@ -621,11 +653,26 @@ async function cargarEvaluacion() {
   });
   tabla.appendChild(cuerpo);
   cont.appendChild(tabla);
-  cont.appendChild(nodo("div", "ayuda", `Filas: clase real. Columnas: clase predicha. Mapas de prueba: ${ev.mapas_prueba.join(", ")}. ${ev.nota}`));
+  cont.appendChild(nodo("div", "ayuda", textoEvaluacionRNA(ev)));
 }
 
 // ---------- overlay y arranque ----------
 const deps = { llamar: null, avisar: null };
+let editorDifuso = null;
+// Explorar (consultas al motor) o Editar reglas (vista previa local y aplicación a la partida)
+export function modoDifuso(modo) {
+  const editar = modo === "editar";
+  $("dif-explorar").classList.toggle("oculto", editar);
+  $("dif-edicion").classList.toggle("oculto", !editar);
+  for (const [id, activo] of [["dif-modo-explorar", !editar], ["dif-modo-editar", editar]]) { const b = $(id); b.classList.toggle("activa", activo); b.setAttribute("aria-selected", String(activo)); }
+  requestAnimationFrame(() => { if (editar && editorDifuso) editorDifuso.abrir(); else if (!editar) consultarDifuso(); });
+}
+// Abre el laboratorio directamente en la edición de reglas (desde el panel de IA o el aviso del HUD)
+export function abrirEdicionDifuso() {
+  $("laboratorio").classList.remove("oculto");
+  mostrarSeccion("difuso");
+  modoDifuso("editar");
+}
 let cargaEvaluacion = false;
 
 function mostrarSeccion(nombre) {
@@ -635,7 +682,8 @@ function mostrarSeccion(nombre) {
   for (const b of document.querySelectorAll(".lab-tab")) b.classList.toggle("activa", b.dataset.lab === nombre);
   const vivo = $("lab-vivo") && $("lab-vivo").checked && estadoPartidaConPaso;   // en vivo: lo carga seguirPasoLaboratorio
   requestAnimationFrame(() => {
-    if (nombre === "difuso" && !vivo) consultarDifuso();
+    if (nombre === "difuso" && !$("dif-edicion").classList.contains("oculto")) { if (editorDifuso) editorDifuso.abrir(); if (!vivo) consultarDifuso(); }
+    else if (nombre === "difuso" && !vivo) consultarDifuso();
     if (nombre === "rna") { if (!vivo) consultarRNA(); if (!cargaEvaluacion) { cargaEvaluacion = true; cargarEvaluacion(); } }
     if (nombre === "ag" && agDatos) pintarAG();
     if (nombre === "politicas") { if (polDatos) pintarPoliticas(); else cargarPoliticas(); }
@@ -672,11 +720,28 @@ export function iniciarLaboratorios(dependencias) {
   const reconsultarDif = conRetardo(consultarDifuso, 200);
   for (const k of UNIVERSOS) $(CONTROL_DIF[k]).addEventListener("input", () => { dejarDeSeguir(); reconsultarDif(); });
   $("dif-barrido").addEventListener("click", barridoDifuso);
+  // Editar reglas: tabla, funciones de pertenencia y efecto en vivo (difuso_editor.js); Explorar es el laboratorio de siempre
+  editorDifuso = crearEditorDifuso({
+    contenedor: $("dif-edicion"), dibujarLineas, preparar,
+    alEstado: (e) => { $("dif-modo-marca").classList.toggle("oculto", !e.personalizadas); if (dependencias.alReglas) dependencias.alReglas(e); },
+  });
+  $("dif-modo-explorar").addEventListener("click", () => modoDifuso("explorar"));
+  $("dif-modo-editar").addEventListener("click", () => modoDifuso("editar"));
 
   const reconsultarRNA = conRetardo(() => { rnaUsoRover = false; consultarRNA(); }, 200);
   for (const r of RASGOS) $(r.id).addEventListener("input", () => { dejarDeSeguir(); reconsultarRNA(); });
   $("rna-borde").addEventListener("change", () => { dejarDeSeguir(); reconsultarRNA(); });
   $("rna-restablecer").addEventListener("click", () => { rnaUsoRover = true; consultarRNA(); });
+}
+
+// Partida nueva: los resultados de los laboratorios de la partida anterior (AG ejecutado, rasgos de la RNA) se descartan
+export function reiniciarLaboratorios() {
+  agDatos = null; agCandidato = 0;
+  for (const id of ["ag-poblacion", "ag-candidatos", "ag-desglose", "ag-generacion"]) { const e = $(id); if (e) e.replaceChildren(); }
+  for (const id of ["ag-resumen", "ag-estado"]) { const e = $(id); if (e) e.textContent = ""; }
+  rnaUsoRover = true; estadoPartidaConPaso = false; siguiendo = false;
+  if (editorDifuso) editorDifuso.reiniciar();
+  const c = $("lab-vivo"); if (c) c.checked = true;
 }
 
 // ---------- seguir la misión en vivo (auditoría 22/11) ----------
@@ -705,34 +770,35 @@ export async function seguirPasoLaboratorio() {
       if (d.rna.modelo) adaptarControlesRNA(d.rna.modelo);
       rellenarRasgos(d.rna.entrada);
       rnaUsoRover = false;
-      await consultarRNA();
-      $("rna-accion").textContent = `paso ${d.paso} (en vivo) · ` + $("rna-accion").textContent;
+      if (await consultarRNA()) $("rna-accion").textContent = `paso ${d.paso} (en vivo) · ` + $("rna-accion").textContent;
     }
     if (activa === "difuso" && d.difuso) {
       const e = d.difuso.entradas;
-      fijarControl("dif-distancia", e.distancia, 1); fijarControl("dif-bateria", e.bateria, 0);
+      // la batería del control es el % real de la capacidad (el del HUD), no las unidades que recibió el difuso
+      fijarControl("dif-distancia", e.distancia, 1); fijarControl("dif-bateria", e.bateria_pct ?? e.bateria, 1);   // con un decimal, como el HUD (antes se redondeaba al entero y el rótulo no coincidía)
       fijarControl("dif-inclinacion", e.inclinacion, 0); fijarControl("dif-temperatura", e.temperatura, 0);
       await consultarDifuso();
-      const topes = [["batería", e.bateria, "dif-bateria"], ["distancia", e.distancia, "dif-distancia"], ["inclinación", e.inclinacion, "dif-inclinacion"]]
+      const topes = [["distancia", e.distancia, "dif-distancia"], ["inclinación", e.inclinacion, "dif-inclinacion"]]
         .filter(([, v, id]) => v > Number($(id).max)).map(([n, v, id]) => `${n} real ${coma(v, 0)}, en el tope del universo (${$(id).max})`);
       $("dif-estado").textContent = `paso ${d.paso} (en vivo): entradas reales del paso` + (d.difuso.intervenido ? " · difuso intervenido" : "")
-        + (topes.length ? ` · ${topes.join("; ")}: la pertenencia ya está saturada, el resultado es el mismo` : "");
+        + (topes.length ? ` · ${topes.join("; ")}: la pertenencia ya está saturada, el resultado es el mismo` : "")
+        + (e.bateria > 100 ? ` · el difuso recibió ${coma(e.bateria, 0)} u. del motor de batería (${coma(e.bateria_pct, 1)} % de la capacidad); su universo llega a 100 u., así que ya está saturada` : "");
     }
   } finally { siguiendo = false; }
 }
 
 // ---------- comparación de políticas (CA del PDF; contrato §7 de CONTRATOS_GRAFICOS.md) ----------
-const VARIANTES_POL = [["hibrido", "híbrido"], ["sin_rna", "sin RNA"], ["sin_difuso", "sin difuso"], ["sin_ag_vecino", "sin AG: vecino más cercano"]];
-const ETIQUETA_METRICA_POL = { pasos: "pasos", bateria_final: "batería final", sitios_visitados: "sitios visitados", colisiones: "colisiones" };
+const VARIANTES_POL = Object.keys(VARIANTES_POLITICA).map((k) => [k, nombreVariante(k)]);   // todas las que publica el motor, con nombre claro
+const ETIQUETA_METRICA_POL = { tasa_exito: "misiones cumplidas (%)", ciencia: "ciencia recogida (0 a 1)", puntaje: "puntaje", pasos: "pasos", bateria_final: "batería final (%)", sitios_visitados: "sitios visitados", colisiones: "colisiones" };
 let polDatos = null;
 let polBarras = [];   // geometría de las barras para el cursor
 
 // Escenarios (ARX-28e, ev3-d55 A). El parámetro ?escenario= lo recibe el servidor en ARX-28d;
-// el congelado no envía parámetro (respuesta idéntica a la de siempre).
+// siempre se envía el parámetro: desde la ronda 23b el servidor responde por defecto con el jugable, no con el congelado.
 async function cargarPoliticas() {
   const escenario = $("pol-escenario").value;
-  $("pol-estado").textContent = `Consultando /comparacion (${escenario})…`;
-  const datos = await deps.llamar("GET", "/comparacion" + (escenario === "congelado" ? "" : `?escenario=${encodeURIComponent(escenario)}`));
+  $("pol-estado").textContent = `Consultando la comparación (escenario ${escenario})…`;
+  const datos = await deps.llamar("GET", `/comparacion?escenario=${encodeURIComponent(escenario)}`);
   if (!datos || !datos.variantes) {
     $("pol-estado").textContent = datos && (datos.motivo || datos.aviso)
       ? `Sin datos del escenario ${escenario}: ${datos.motivo || datos.aviso}`
@@ -741,12 +807,14 @@ async function cargarPoliticas() {
   }
   polDatos = datos;
   const servido = datos.escenario || "congelado";
-  let estado = `escenario ${servido} · ${datos.semillas.length} semillas por variante`;
+  const info = (datos.escenarios_info || {})[servido] || datos.info || null;
+  let estado = `${info && info.titulo ? info.titulo : `escenario ${servido}`} · ${datos.semillas.length} semillas por variante${info && info.descripcion ? ` · ${info.descripcion}` : ""}`;
   if (escenario !== "congelado" && !datos.escenario) {
-    estado += " · AVISO: el servidor aún no distingue escenarios (llega con ARX-28d); estas cifras son las del congelado";
+    estado += " · AVISO: el servidor no distingue escenarios; estas cifras son las del congelado";
   }
   $("pol-estado").textContent = estado;
-  $("pol-nota").textContent = datos.nota || "";
+  // el texto de la nota viene del archivo de resultados y trae nombres internos: se muestra una explicación propia
+  $("pol-nota").textContent = `${NOTA_POLITICAS} ${notaVariantes(datos.variantes)}`;
   pintarPoliticas();
 }
 
@@ -755,7 +823,11 @@ function pintarPoliticas() {
   const metrica = $("pol-metrica").value;
   const filas = VARIANTES_POL.filter(([k]) => polDatos.variantes[k]).map(([k, nombre]) => {
     const v = polDatos.variantes[k];
-    const m = v[metrica] || { media: 0, desviacion: 0 };
+    // la tasa de éxito se calcula de éxitos ÷ n y su barra de error es medio intervalo de confianza del 95 %; el resto trae media y desviación
+    const ic = v.ic95_exito;
+    const m = metrica === "tasa_exito"
+      ? { media: v.n ? 100 * v.exitos / v.n : 0, desviacion: Array.isArray(ic) ? (ic[1] - ic[0]) / 2 : 0 }
+      : v[metrica] || { media: 0, desviacion: 0 };
     return { nombre, v, media: m.media, desv: m.desviacion || 0 };
   });
   dibujarBarrasPol(filas);
@@ -769,6 +841,13 @@ function dibujarBarrasPol(filas) {
   if (!p || !filas.length) return;
   const { ctx, w, h } = p;
   const m = { l: 52, r: 14, t: 14, b: 40 };
+  // Los nombres de las variantes se parten en líneas del ancho de su barra (no se enciman con las vecinas): el margen inferior crece con las líneas
+  const anchoSlot = (w - m.l - m.r) / filas.length;
+  const FUENTE_ROTULO = "11px 'Segoe UI', system-ui, sans-serif";
+  ctx.font = FUENTE_ROTULO;
+  const rotulos = filas.map((f) => lineasRotulo(f.nombre, Math.max(30, anchoSlot - 8), (t) => ctx.measureText(t).width, 4));
+  const nLineas = Math.max(1, ...rotulos.map((l) => l.length));
+  m.b = 14 + nLineas * 14;
   const top = Math.max(1, ...filas.map((f) => f.media + f.desv)) * 1.1;
   const Y = (y) => h - m.b - (y / top) * (h - m.t - m.b);
   ctx.font = "12px 'Segoe UI', system-ui, sans-serif";
@@ -803,7 +882,9 @@ function dibujarBarrasPol(filas) {
     ctx.fillStyle = "#c8d2e4";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(f.nombre, cx, h - m.b + 8);
+    ctx.font = FUENTE_ROTULO;
+    rotulos[i].forEach((linea, j) => ctx.fillText(linea, cx, h - m.b + 8 + j * 14));
+    ctx.font = "12px 'Segoe UI', system-ui, sans-serif";
     polBarras.push({ x0: cx - bw / 2, x1: cx + bw / 2, f });
   });
   ctx.textAlign = "left";
@@ -816,7 +897,7 @@ function pintarTablaPol() {
   cont.replaceChildren();
   const tabla = nodo("table", "lab-tabla");
   const cab = nodo("tr");
-  for (const t of ["política", "éxito", "pasos (media · mediana · desv.)", "colisiones", "batería (mediana)"]) cab.appendChild(nodo("th", "", t));
+  for (const t of ["Política", "Éxito", "Pasos (media · mediana · desv.)", "Colisiones", "Batería (mediana)"]) cab.appendChild(nodo("th", "", t));
   tabla.appendChild(nodo("thead")).appendChild(cab);
   const cuerpo = nodo("tbody");
   for (const [k, nombre] of VARIANTES_POL) {

@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 from api.servidor import Sesion, crear_app
 from integracion import ESTADOS_TERMINALES
-from juego.partida import PASOS_SIN_ENLACE, RUMBOS_JUGADOR, Partida, _alcanzables, _es_ganable
+from juego.partida import PASOS_SIN_ENLACE, RUMBOS_JUGADOR, Partida, _alcanzables, _es_ganable, _es_ganable_plan
 from simulador import BARRANCO, LIBRE
 
 # Línea base medida en main antes de ARX-30a (Partida(semilla=11, nivel=5, 40x60), 3000 llamadas a _tick_ambiente)
@@ -47,7 +47,7 @@ def test_partida_congelada_no_tiene_sismos_espontaneos():
 
 def test_regresion_ticks_de_meteoritos_no_cambian_con_el_sismo():
     # ARX-79: batería 84 explícita = la del nivel 5 antes del factor por tamaño; fija el generador (la lista no cambia)
-    p = Partida(semilla=11, nivel=5, filas=40, columnas=60, bateria=84.0)
+    p = Partida(semilla=11, nivel=5, filas=40, columnas=60, bateria=84.0, planeta="Tierra")   # R23: sin tormentas extra de polvo (Marte las tiene)
     ticks = []
     for k in range(3000):
         antes = len(p.meteoritos)
@@ -240,8 +240,8 @@ def test_arx66_con_la_senal_la_celda_es_alcanzable_y_la_partida_sigue_ganable():
         assert all(tuple(s) in alcanzables for s in p.mundo.sitios)
         assert p._ganable_con_senal(celda)
         # la partida sigue siendo ganable en el origen (la misma comprobación de la garantía ARX-66)
-        assert _es_ganable(p.mundo, p.rover.bateria, bateria_max=p.bateria_max, estaciones=p.estaciones,
-                           factor=p.mision.factor_ambiente)
+        # R23: con 8 a 12 sitios la comprobación de la garantía es la del planificador (no permuta)
+        assert _es_ganable_plan(p.mundo, p.rover.bateria, p.estaciones, p.mision.factor_ambiente)
 
 
 def test_senal_en_estado_terminal_responde_ok_false():
@@ -332,18 +332,34 @@ def test_arx66_muy_facil_y_facil_con_la_senal_espontanea_siguen_ganables():
         q = Partida(semilla=SEMILLA_SENAL, nivel=nivel)
         assert q.disparar_evento("senal_biologica")["ok"] is True
         assert q._ganable_con_senal(q.senales[0]["celda"])
-        assert _es_ganable(q.mundo, q.rover.bateria, bateria_max=q.bateria_max, estaciones=q.estaciones,
-                           factor=q.mision.factor_ambiente)
+        assert _es_ganable_plan(q.mundo, q.rover.bateria, q.estaciones, q.mision.factor_ambiente)
 
 
 # ---------- ARX-30c (QA C1): la ganabilidad de la señal cuenta la caza de drones y el meteorito ----------
 def _sesion_automatica(semilla, nivel, eventos):
-    sesion = Sesion(semilla=semilla, nivel=nivel)
-    app = crear_app(sesion)
-    cliente = TestClient(app)
-    cliente.post("/partida", json={"semilla": semilla, "nivel": nivel, "tamano": "pequeno"})
+    # R23: estas pruebas comprueban la lógica de la señal biológica, no la dificultad. Se juegan con la dificultad y la
+    # garantía anteriores (batería 100 − 4·(nivel − 1), garantía sin bases ni planeta, sin mecánicas de planeta); la partida
+    # jugable actual puede perderse por batería.
+    from juego import dificultad
+    antes = 100.0 - 4.0 * (nivel - 1)
+    previa = dificultad.GARANTIA_CON_BASES_Y_PLANETA
+    from juego import partida as _pm
+    plan_previo = _pm.PLAN_RESTRINGIDO_JUGABLE
+    dificultad.GARANTIA_CON_BASES_Y_PLANETA = False
+    _pm.PLAN_RESTRINGIDO_JUGABLE = False       # R23: y con el planificador anterior (3 a 4 sitios), no el plan con restricciones
+    try:
+        sesion = Sesion(semilla=semilla, nivel=nivel, bateria=antes)
+        app = crear_app(sesion)
+        cliente = TestClient(app)
+        cliente.post("/partida", json={"semilla": semilla, "nivel": nivel, "tamano": "pequeno", "bateria": antes})
+    finally:
+        dificultad.GARANTIA_CON_BASES_Y_PLANETA = previa
+        _pm.PLAN_RESTRINGIDO_JUGABLE = plan_previo
     cliente.post("/modo", json={"modo": "automatico", "veto": True})
-    app.state.sesion.partida.eventos_activos = tuple(eventos)
+    p = app.state.sesion.partida
+    p.eventos_activos = tuple(eventos)
+    p.mecanicas.activa = False
+    p.fisica_velocidad = False
     return app, cliente
 
 

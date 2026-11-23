@@ -12,7 +12,11 @@ from juego.partida import Partida  # noqa: E402
 # Hash de comparar(range(1, 4)) del congelado. ARX-94f (regeneración única tras el mundo v2 y los sensores de 94b/94c):
 # antes "d6fb9079…" (base 3a6c5a9, mundo v1). Se comprobó que la fusión del mapa estimado y la RNA según ruido de 94f
 # no lo cambian (el congelado usa ruido nominal); el cambio viene de 94a-94c.
-HASH_CONGELADO_BASE = "fec4500dbea8810d6f80c1549daae1a80f27e116a5c02502f34c1b613ae28121"
+# R23 (RNA con refuerzo de barrancos): la RNA nominal ve más barrancos y también marca algunos falsos; cambia el híbrido
+# del congelado (20 semillas: 42,2 -> 43,95 pasos; sin_rna idéntico, 20/20 y 0 choques en ambos). Antes: "fec4500d…".
+# R23b: el refuerzo baja de 100 a 15 muestras por mapa (menos falsas alarmas, macro-F1 0,890 en vez de 0,819): cambia el híbrido del
+# congelado; sin_rna y la nota idénticos. Antes: "73329aed…".
+HASH_CONGELADO_BASE = "f0425d43ca4bc816d2c25e1a8c3106805f8fc0f7b6ff232373fa30cfb5b94c48"
 # Hash de la nota de texto de la salida (la misma de la base; el hash anterior ya la cubría dentro del total, B2 de QA).
 HASH_NOTA_BASE = "f0696978dedf462892e6348ae4fac3c215c8a19c1dc0d2ec4184b34d31f863d8"
 
@@ -33,7 +37,9 @@ def _correr(escenario, velocidad, pasos=50, semilla=5):
 
 
 def test_bandera_apagada_por_defecto_y_en_congelado():
-    assert Partida(semilla=1).fisica_velocidad is False
+    # R23: la partida jugable (garantia=True) enciende el resbalón por pendiente; la evaluación congelada no
+    assert Partida(semilla=1).fisica_velocidad is True
+    assert Partida(semilla=1, garantia=False).fisica_velocidad is False
     assert comparacion.partida_variante(1, "hibrido", "congelado").fisica_velocidad is False
     assert comparacion.partida_variante(1, "hibrido", "exigente").fisica_velocidad is True
 

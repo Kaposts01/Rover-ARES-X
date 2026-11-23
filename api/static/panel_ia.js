@@ -1,9 +1,12 @@
 // Panel derecho de IA: pestañas Red neuronal / Difuso / Genético / Misión, siempre a la vista durante la partida.
 // Solo lee del motor (GET /rna/red, /rna, /difuso, /ag) y solo pide los datos de la pestaña abierta.
 // Todo con textContent (sin innerHTML). Si algo falla, el panel lo dice y la partida sigue igual.
-import { dibujarLineas, preparar } from "/static/laboratorio.js?v=r14";
+import { coma as comaFormato } from "./formato.js?v=r15";
+import { dibujarLineas, preparar } from "/static/laboratorio.js?v=r15";
+import { adaptarTramoRNA, titularRNA, celdasAMarcar, NOTA_SIN_TRAMO } from "/static/rna_tramo_datos.js?v=r15";
+import { reglasActivadas, plural, nombresMotivos, textoBateriaDifuso, ETIQUETA_BATERIA_UNIVERSO } from "/static/textos.js?v=r15";
 
-const coma = (v, d = 2) => (v == null || Number.isNaN(Number(v)) ? "-" : Number(v).toFixed(d).replace(".", ","));
+const coma = (v, d = 2) => comaFormato(v, d, "-");
 const pct = (v) => (v == null ? "-" : `${coma(v * 100, 1)} %`);
 const CIAN = "#5fe6ff", MAGENTA = "#ff4fd8", COLOR_CLASE = { libre: "#5fe6ff", "obstáculo": "#ffb454", barranco: "#ff5d6c" };
 const COLORES_CONJUNTO = ["#ff5d6c", "#ffb454", "#5fd3ff", "#6ee7a8"];
@@ -11,7 +14,7 @@ const ETIQUETA_RASGO = {
   proximidad_frontal_m: "proximidad (m)", desnivel_frontal_m: "desnivel (m)", contraste_optico: "contraste",
   vibracion: "vibración", borde_barranco: "borde", gradiente_altura_m: "gradiente (m)",
 };
-const ETIQUETA_UNIVERSO = { distancia: "distancia (m)", bateria: "batería (%)", inclinacion: "inclinación (°)", temperatura: "temperatura (°C)" };
+const ETIQUETA_UNIVERSO = { distancia: "distancia (m)", bateria: ETIQUETA_BATERIA_UNIVERSO, inclinacion: "inclinación (°)", temperatura: "temperatura (°C)" };
 const PESTANAS = [["rna", "RNA", "Red neuronal"], ["difuso", "Difuso", "Lógica difusa"], ["ag", "Genético", "Algoritmo genético"], ["mision", "Misión", "Partida y simulación"]];
 const ARISTAS_POR_CAPA = 70;      // conexiones dibujadas entre dos capas (las de mayor contribución)
 const CLAVE_ANCHO = "ares.panel.ancho", CLAVE_PESTANA = "ares.panel.pestana", CLAVE_PLEGADO = "ares.panel.plegado";
@@ -24,7 +27,8 @@ async function obtener(ruta) {
 }
 
 // opciones: controles (nodo a llevar a la pestaña Misión), alCambiarAncho(px), alAmpliar(laboratorio), alMaximizar()
-export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmpliar = null, alMaximizar = null, alNarrar = null } = {}) {
+// alMarcarCeldas([{celda, riesgo}]) pinta en la escena las celdas que clasificó la RNA; vehiculo() = «rover» | «sonda»
+export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmpliar = null, alMaximizar = null, alNarrar = null, alMarcarCeldas = null, vehiculo = null, alEditarReglas = null } = {}) {
   const raiz = el("aside", "pia oculto"); raiz.id = "panel-ia"; raiz.setAttribute("aria-label", "Panel de IA");
   const asa = el("div", "pia-asa"); asa.title = "Arrastra para cambiar el ancho"; asa.setAttribute("aria-hidden", "true");
   const cabecera = el("div", "pia-cabecera");
@@ -66,7 +70,8 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   const rnaProbs = el("div", "pia-barras");
   const rnaRepetir = el("button", "pia-secundario", "↻ Ver pensar otra vez"); rnaRepetir.type = "button";
   const rnaHist = historial("últimos pasos · p(barranco) y confianza");
-  secciones.rna.append(rnaDecision, el("div", "pia-lienzo-caja pia-lienzo-red", null), rnaProbs, rnaHist.caja, rnaLeyenda, rnaRepetir);
+  const rnaTramo = el("div", "pia-tramo"); rnaTramo.setAttribute("aria-label", "Celdas de la ruta que clasificó la RNA");
+  secciones.rna.append(rnaDecision, rnaTramo, el("div", "pia-lienzo-caja pia-lienzo-red", null), rnaProbs, rnaHist.caja, rnaLeyenda, rnaRepetir);
   secciones.rna.querySelector(".pia-lienzo-red").append(rnaLienzo);
 
   // Difuso
@@ -83,7 +88,13 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   const difLienzoSalida = el("canvas", "pia-lienzo"); const difCajaSalida = el("div", "pia-lienzo-caja"); difCajaSalida.append(difLienzoSalida);
   const difReglas = el("ol", "pia-reglas");
   const difHist = historial("últimos pasos · velocidad del difuso");
-  secciones.difuso.append(difSalida, difHist.caja, difRejilla, difTituloSalida, difCajaSalida, el("div", "pia-subtitulo", "Reglas activadas"), difReglas);
+  // Enlace a la edición de reglas (Laboratorios → Difuso) y aviso de que hay reglas propias en juego
+  const difEdicion = el("div", "pia-edicion");
+  const difAviso = el("span", "pia-badge-reglas oculto", "Reglas personalizadas activas"); difAviso.id = "dif-aviso-panel";
+  const difEditar = el("button", "pia-secundario", "Editar las reglas y ver el efecto"); difEditar.type = "button"; difEditar.title = "Abre Laboratorios → Difuso: reglas, pesos y funciones de pertenencia editables";
+  difEditar.addEventListener("click", () => { if (alEditarReglas) alEditarReglas(); });
+  difEdicion.append(difEditar, difAviso);
+  secciones.difuso.append(difEdicion, difSalida, difHist.caja, difRejilla, difTituloSalida, difCajaSalida, el("div", "pia-subtitulo", "Reglas activadas"), difReglas);
 
   // Genético
   const agResumen = el("div", "pia-decision", "Esperando el primer paso…");
@@ -104,7 +115,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   let plegado = leer(CLAVE_PLEGADO, "0") === "1";
   let ancho = Number(leer(CLAVE_ANCHO, "")) || Math.round(Math.min(560, Math.max(360, window.innerWidth * 0.24)));
   let red = null, rnaDatos = null, difDatos = null, agDatosUlt = null, iaUlt = null;
-  let enVuelo = false, ultimoPaso = null;
+  let enVuelo = false, ultimoPaso = null, epoca = 0;   // epoca: sube con cada partida nueva; una respuesta de la anterior se descarta
   const HIST_N = 40;
   const hist = [];   // { paso, pb, conf, vel, faltan, replan }
   let anim = null;   // { t0 } mientras corre el pulso de la red
@@ -117,10 +128,10 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     document.documentElement.style.setProperty("--ancho-panel-ia", `${anchoReal()}px`);
     avisarAncho();
   }
-  function aplicarPlegado() {
+  function aplicarPlegado(persistir = true) {
     raiz.classList.toggle("plegado", plegado);
     bPlegar.textContent = plegado ? "«" : "»"; bPlegar.title = plegado ? "Abrir el panel" : "Plegar el panel";
-    guardar(CLAVE_PLEGADO, plegado ? "1" : "0");
+    if (persistir) guardar(CLAVE_PLEGADO, plegado ? "1" : "0");
     aplicarAncho();
     if (!plegado) redibujar();
   }
@@ -140,38 +151,53 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   // ---------- datos: la decisión real del último paso (GET /ia/paso) ----------
   async function cargar(forzar = false) {
     if (enVuelo) return; enVuelo = true;
+    const miEpoca = epoca;
     try {
       const d = await obtener("/ia/paso");
+      if (miEpoca !== epoca) return;   // llegó de la partida anterior
       if (!d) { pasoInfo.textContent = "Sin datos (no hay partida o el motor no respondió)."; return; }
-      iaUlt = d;
-      const nuevo = d.hay_paso && d.paso !== ultimoPaso;
-      narracion.textContent = d.hay_paso ? (d.narracion || "") : "";
-      if (nuevo && alNarrar) { try { alNarrar(d.narracion || ""); } catch (e) { /* sin subtítulos */ } }
-      if (!d.hay_paso) { pasoInfo.textContent = "Sin pasos todavía: pulsa «Un paso» o «Reproducir»."; }
+      // /ia/paso es la decisión del ÚLTIMO PASO DE LA IA: si el jugador movió el vehículo a mano (o aún no hubo paso de la IA),
+      // esa decisión es vieja. Entonces la RNA se lee en vivo sobre la celda de enfrente (GET /rna) en cada movimiento.
+      const vieja = !d.hay_paso || (d.paso_ia != null && d.paso_ia !== d.paso);
+      const vivo = vieja ? await obtener("/rna") : null;
+      if (miEpoca !== epoca) return;
+      const enVivo = !!vivo;
+      iaUlt = enVivo ? { ...d, rna: vivo, celda: null, posicion: null } : d;
+      const nuevo = (d.hay_paso || enVivo) && d.paso !== ultimoPaso;
+      narracion.textContent = d.hay_paso && !enVivo ? (d.narracion || "") : "";
+      if (nuevo && alNarrar && !enVivo) { try { alNarrar(d.narracion || ""); } catch (e) { /* sin subtítulos */ } }
+      if (enVivo) {
+        pasoInfo.replaceChildren(el("strong", null, `Paso ${d.paso}`),
+          document.createTextNode(d.hay_paso ? ` · lectura en vivo de la RNA sobre la celda de enfrente (la última decisión de la IA fue en el paso ${d.paso_ia ?? "—"}; desde entonces conduces tú)`
+            : " · lectura en vivo de la RNA sobre la celda de enfrente (todavía no hubo un paso de la IA)"));
+      } else if (!d.hay_paso) { pasoInfo.textContent = "Sin pasos todavía: pulsa «Un paso» o «Reproducir»."; }
       else {
         const sup = d.supervisor || {};
         pasoInfo.replaceChildren(el("strong", null, `Paso ${d.paso}`),
           document.createTextNode(` · celda ${d.posicion ? `(${d.posicion.join(", ")})` : "-"} → ${d.rumbo || "-"} · ${sup.accion || "-"}`),
-          el("span", "pia-motivos", (sup.motivos || []).join(", ")));
+          el("span", "pia-motivos", nombresMotivos(sup.motivos)));
       }
-      if (d.rna) {
-        if (!red || !red.modelo || !d.rna.modelo || red.modelo.perfil !== d.rna.modelo.perfil) red = await obtener("/rna/red");
-        rnaDatos = { ...d.rna, accion: (d.supervisor || {}).accion };
+      const rnaFuente = enVivo ? vivo : d.rna;
+      if (rnaFuente) {
+        if (!red || !red.modelo || !rnaFuente.modelo || red.modelo.perfil !== rnaFuente.modelo.perfil) red = await obtener("/rna/red");
+        if (miEpoca !== epoca) return;
+        rnaDatos = { ...rnaFuente, accion: enVivo ? rnaFuente.accion : (d.supervisor || {}).accion };
       } else rnaDatos = null;
-      difDatos = d.difuso || null;
+      difDatos = enVivo ? null : (d.difuso || null);
       agDatosUlt = d.ag || null;
       if (nuevo) {
         ultimoPaso = d.paso;
-        const pr = (d.rna && (d.rna.probabilidades_usadas || d.rna.probabilidades)) || {};
+        const pr = (rnaFuente && (rnaFuente.probabilidades_usadas || rnaFuente.probabilidades)) || {};
         hist.push({ paso: d.paso, pb: pr.barranco ?? null, conf: Object.keys(pr).length ? Math.max(...Object.values(pr)) : null,
-          vel: d.difuso ? d.difuso.velocidad_usada ?? d.difuso.salida.velocidad : null,
-          faltan: d.ag ? d.ag.celdas_restantes : null, replan: !!(d.ag && d.ag.ultimo_replanteo && d.ag.ultimo_replanteo.paso === d.paso) });
+          vel: !enVivo && d.difuso ? d.difuso.velocidad_usada ?? d.difuso.salida.velocidad : null,
+          faltan: d.ag ? d.ag.celdas_restantes : null, replan: !enVivo && !!(d.ag && d.ag.ultimo_replanteo && d.ag.ultimo_replanteo.paso === d.paso) });
         if (hist.length > HIST_N) hist.shift();
       }
       if (!rnaDatos) rnaDecision.textContent = "La RNA no actuó en este paso (modo sin RNA o sin paso de la IA).";
+      if (rnaDatos && enVivo) rnaDecision.setAttribute("data-en-vivo", "1"); else rnaDecision.removeAttribute("data-en-vivo");
       if (!difDatos) difSalida.textContent = "El difuso no actuó en este paso (modo sin difuso o sin paso de la IA).";
       pintarRNA(); pintarDifuso(); pintarAG(); pintarHistoriales();
-      if (nuevo || forzar) pulsar();
+      if (nuevo || forzar) { pulsar(); if (rnaFuente) marcar(celdasAMarcar(tramoActual())); }
     } finally { enVuelo = false; }
   }
 
@@ -213,13 +239,21 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     const p = preparar(rnaLienzo); if (!p) return;
     const { ctx, w, h } = p;
     const capas = capasRed(); if (!capas) return;
-    // márgenes según el texto más largo de cada lado (los rótulos no se cortan)
-    ctx.font = "11px 'Cascadia Mono', Consolas, monospace";
+    // márgenes según el texto más largo de cada lado (los rótulos no se cortan): si no caben, la letra baja de 11 a 9 px y,
+    // como última salvaguarda, el margen puede llegar a la mitad del lienzo
     const ent0 = rnaDatos.entrada || {};
-    const anchoTexto = (lista) => Math.max(0, ...lista.map((t) => ctx.measureText(t).width));
     const textosIzq = capas.nombres.map((n) => `${ETIQUETA_RASGO[n] || n} ${coma(ent0[n], 1)}`);
     const textosDer = capas.clases.map((c, j) => `${c} ${pct(capas.valores[3][j])}`);
-    const margenIzq = Math.min(w * 0.38, anchoTexto(textosIzq) + 20), margenDer = Math.min(w * 0.32, anchoTexto(textosDer) + 24), mt = 14, mb = 14;
+    let tam = 11, margenIzq, margenDer;
+    for (; tam >= 9; tam--) {
+      ctx.font = `${tam}px 'Cascadia Mono', Consolas, monospace`;
+      const anchoTexto = (lista) => Math.max(0, ...lista.map((t) => ctx.measureText(t).width));
+      margenIzq = anchoTexto(textosIzq) + 20; margenDer = anchoTexto(textosDer) + 24;
+      if (margenIzq <= w * 0.4 && margenDer <= w * 0.32) break;
+    }
+    tam = Math.max(9, tam);
+    margenIzq = Math.min(w * 0.5, margenIzq); margenDer = Math.min(w * 0.4, margenDer);
+    const mt = 14, mb = 14;
     const xs = capas.valores.map((_, i) => margenIzq + (i / (capas.valores.length - 1)) * (w - margenIzq - margenDer));
     const ys = capas.valores.map((v) => v.map((_, j) => mt + (v.length === 1 ? 0.5 : j / (v.length - 1)) * (h - mt - mb)));
     const maxAbs = capas.valores.map((v) => Math.max(1e-6, ...v.map((x) => Math.abs(x))));
@@ -267,7 +301,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
       });
     });
     // rótulos: entradas a la izquierda, clases a la derecha, capas abajo
-    ctx.font = "11px 'Cascadia Mono', Consolas, monospace"; ctx.textBaseline = "middle";
+    ctx.font = `${tam}px 'Cascadia Mono', Consolas, monospace`; ctx.textBaseline = "middle";
     ctx.fillStyle = "#a9c6d8"; ctx.textAlign = "right";
     textosIzq.forEach((t, j) => ctx.fillText(t, xs[0] - 10, ys[0][j]));
     ctx.textAlign = "left";
@@ -299,14 +333,47 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
       b.append(r); f.append(n, v, b); return f;
     }));
   }
+  function marcar(lista) { try { if (alMarcarCeldas) alMarcarCeldas(lista); } catch (e) { /* sin marcas en la escena */ } }
+  function tramoActual() { return adaptarTramoRNA(iaUlt, vehiculo ? vehiculo() : "rover"); }
   function pintarRNA() {
     if (!rnaDatos) return;
     const probs = rnaDatos.probabilidades || {};
     const clases = Object.keys(probs);
     const mejor = clases.reduce((a, b) => (probs[b] > probs[a] ? b : a), clases[0]);
-    rnaDecision.replaceChildren(el("strong", null, `${mejor} · ${pct(probs[mejor])}`), document.createTextNode(` → acción ${rnaDatos.accion || "-"}`));
+    const tramo = tramoActual();
+    const f0 = tramo && tramo.filas[0];
+    // la cabecera siempre dice de qué celda habla (la clasificación de la celda de enfrente), no solo «libre 100 %»
+    const envivo = rnaDecision.getAttribute("data-en-vivo") === "1";
+    rnaDecision.replaceChildren(el("strong", null, f0 ? titularRNA(f0) : `${mejor} · ${pct(probs[mejor])}`),
+      document.createTextNode(envivo ? ` (celda de enfrente ahora) → el supervisor ${rnaDatos.accion ? `haría: ${rnaDatos.accion}` : "no decidió"}` : ` → acción ${rnaDatos.accion || "-"}`));
     rnaDecision.style.setProperty("--c", COLOR_CLASE[mejor] || CIAN);
     barras(rnaProbs, clases.map((c) => [c, probs[c], COLOR_CLASE[c]]));
+    pintarTramo(tramo);
+    // el resumen de la columna izquierda también dice de qué celda habla
+    const rs = document.getElementById("res-rna"), rc = document.getElementById("rna-celda");
+    if (f0 && rs) rs.textContent = titularRNA(f0);
+    if (f0 && rc) rc.textContent = `(${f0.celda[0]}, ${f0.celda[1]})`;
+  }
+  function pintarTramo(tramo) {
+    if (!tramo) { rnaTramo.replaceChildren(); return; }
+    const filas = tramo.filas.map((f) => {
+      const fila = el("div", "pia-tramo-fila" + (f.clase !== "libre" ? " riesgo" : ""));
+      fila.tabIndex = 0;
+      const [, donde] = f.lugar.split(" · ");
+      const cab = el("div", "pia-tramo-cab"); cab.append(el("strong", null, `Celda (${f.celda[0]}, ${f.celda[1]})`), el("span", null, donde ? ` · ${donde}` : ""));
+      const barra = el("div", "pia-tramo-barra");
+      const rotulos = [];
+      for (const c of ["libre", "obstáculo", "barranco"]) {
+        const seg = el("i"); seg.style.width = `${(f.probabilidades[c] * 100).toFixed(1)}%`; seg.style.background = COLOR_CLASE[c]; barra.append(seg);
+        rotulos.push(`${c} ${pct(f.probabilidades[c])}`);
+      }
+      fila.append(cab, barra, el("div", "pia-tramo-texto", rotulos.join(" · ")));
+      const resaltar = () => marcar([{ celda: f.celda, riesgo: f.clase !== "libre", destacada: true }]);
+      fila.addEventListener("mouseenter", resaltar); fila.addEventListener("focus", resaltar);
+      return fila;
+    });
+    rnaTramo.replaceChildren(el("div", "pia-mini-titulo", tramo.real ? "ruta por delante · lo que clasificó la RNA, celda por celda" : "celda que clasificó la RNA en este paso"), ...filas,
+      ...(tramo.real ? [] : [el("p", "pia-nota", NOTA_SIN_TRAMO)]));
   }
 
   // ---------- dibujo: difuso ----------
@@ -314,17 +381,18 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     const d = difDatos; if (!d || secciones.difuso.hidden) return;
     const s = d.salida || {};
     difSalida.replaceChildren(el("strong", null, `velocidad ${coma(s.velocidad, 3)}`),
-      document.createTextNode(s.fallback ? " · sin reglas: valor de respaldo" : ` · ${(d.reglas_activadas || []).length} reglas activadas`));
+      document.createTextNode(s.fallback ? " · sin reglas: valor de respaldo" : ` · ${reglasActivadas((d.reglas_activadas || []).length)}`));
     if (d.aborto && d.aborto.activo) difSalida.append(el("div", "pia-alerta", d.aborto.motivo));
     for (const [k, { c, v }] of Object.entries(difLienzos)) {
       const cur = d.curvas && d.curvas[k]; if (!cur) continue;
       const x = d.entradas[k];
-      v.textContent = ` ${coma(x, k === "distancia" ? 1 : 0)}`;
+      // la batería se rotula con el % real de la capacidad (el del HUD) y, entre paréntesis, lo que recibió el difuso
+      v.textContent = k === "bateria" ? ` ${textoBateriaDifuso(d.entradas)}` : ` ${coma(x, k === "distancia" ? 1 : 0)}`;
       const nombres = Object.keys(cur.conjuntos);
       dibujarLineas(c, {
         xmin: d.universos[k].min, xmax: d.universos[k].max, ymin: 0, ymax: 1,
         series: nombres.map((n, i) => ({ valores: cur.x.map((xx, j) => [xx, cur.conjuntos[n][j]]), color: COLORES_CONJUNTO[i % 4], ancho: 1.6 })),
-        marcas: [{ x, color: "rgba(255,255,255,0.75)" }], fmtY: (y) => coma(y, 1), fmtX: (xx) => coma(xx, 0),
+        marcas: [{ x: Math.min(d.universos[k].max, Math.max(d.universos[k].min, x)), color: "rgba(255,255,255,0.75)" }], fmtY: (y) => coma(y, 1), fmtX: (xx) => coma(xx, 0),
       });
     }
     const nombres = Object.keys(s.conjuntos || {});
@@ -345,11 +413,11 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
     const ult = gens[gens.length - 1] || {};
     const rep = d.ultimo_replanteo;
     agResumen.replaceChildren(
-      el("strong", null, `faltan ${d.celdas_restantes} celdas · sitios ${d.visitados}/${d.sitios}`),
+      el("strong", null, `faltan ${plural(d.celdas_restantes, "celda", "celdas")} · sitios ${d.visitados}/${d.sitios}`),
       document.createTextNode(gens.length ? ` · mejor fitness ${coma(ult.mejor, 2)}${d.viable === false ? " · orden no viable (respaldo)" : ""}` : " · sin ejecución del AG todavía"));
     // ultimo_replanteo solo anota los replanteos por eventos (sismo, meteorito…); los de rutina (sitio visitado, veto) no
     agTituloCurva.textContent = rep ? `fitness por generación · última ejecución (replanteo por evento en el paso ${rep.paso}: ${rep.motivo})`
-      : (d.replanes ? `fitness por generación · última ejecución del AG (${d.replanes} replanteos en la misión)` : "fitness por generación · plan inicial");
+      : (d.replanes ? `fitness por generación · última ejecución del AG (${plural(d.replanes, "replanteo", "replanteos")} en la misión)` : "fitness por generación · plan inicial");
     if (gens.length) {
       const ys = gens.flatMap((g) => [g.mejor, g.media, g.peor]).filter((v) => v != null);
       const lo = Math.min(...ys), hi = Math.max(...ys), m = (hi - lo) * 0.08 || 0.1;
@@ -390,6 +458,20 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   asa.addEventListener("pointerup", soltar); asa.addEventListener("pointercancel", soltar);
   let reajuste = null;
   window.addEventListener("resize", () => { clearTimeout(reajuste); reajuste = setTimeout(() => { aplicarAncho(); redibujar(); }, 120); });
+  // Partida nueva: se vacía todo lo derivado de la misión anterior (historial de los gráficos, decisión mostrada, narración)
+  function reiniciar() {
+    epoca += 1; hist.length = 0; ultimoPaso = null; iaUlt = null; rnaDatos = null; difDatos = null; agDatosUlt = null; red = null; anim = null;
+    pasoInfo.textContent = "Sin pasos todavía: pulsa «Un paso» o «Reproducir».";
+    narracion.textContent = "";
+    rnaDecision.textContent = "Esperando el primer paso…"; difSalida.textContent = "Esperando el primer paso…"; agResumen.textContent = "Esperando el primer paso…";
+    rnaProbs.replaceChildren(); difReglas.replaceChildren(); agDatos.replaceChildren();
+    rnaTramo.replaceChildren(); marcar([]);   // el tramo (y sus marcas en la escena) era de la partida anterior
+    for (const c of [rnaLienzo, rnaHist.c, difHist.c, agHist.c, difLienzoSalida, agLienzo, ...Object.values(difLienzos).map((x) => x.c)]) {
+      const x = c.getContext && c.getContext("2d"); if (x) { x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height); }
+    }
+    for (const { v } of Object.values(difLienzos)) v.textContent = "";
+    if (!raiz.classList.contains("oculto") && !plegado) actualizar({ forzar: true });
+  }
   // Visibilidad: el panel solo existe en la partida (la app lo muestra u oculta)
   function mostrar(si) {
     const antes = !raiz.classList.contains("oculto");
@@ -401,5 +483,7 @@ export function crearPanelIA({ controles = null, alCambiarAncho = null, alAmplia
   document.body.append(raiz);
   aplicarPlegado();
   abrir(pestana);
-  return { actualizar, mostrar, abrir, get ancho() { return anchoReal(); }, elemento: raiz };
+  // Ancho angosto: el panel se pliega solo a su tira lateral sin tocar la preferencia guardada; al volver a un ancho normal se restaura
+  function plegarPorAncho(si) { plegado = si ? true : leer(CLAVE_PLEGADO, "0") === "1"; aplicarPlegado(false); if (!plegado) { redibujar(); actualizar({ forzar: true }); } }
+  return { actualizar, mostrar, abrir, reiniciar, plegarPorAncho, seccion: (id) => secciones[id] || null, reglasPersonalizadas: (si) => difAviso.classList.toggle("oculto", !si), redibujar, get ancho() { return anchoReal(); }, elemento: raiz };
 }

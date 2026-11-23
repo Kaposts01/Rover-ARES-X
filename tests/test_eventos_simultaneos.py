@@ -15,8 +15,22 @@ TRIPLE = ["sismo", "bateria_baja", "meteorito"]
 PAR = ["tormenta", "baja_conectividad"]
 
 
+def _partida_anterior(semilla, nivel):
+    """R23: estas pruebas fijan el orden de vetos y avisos de mapas y baterías concretos; se juegan con la dificultad y la
+    garantía anteriores (batería 100 − 4·(nivel − 1), sin mecánicas de planeta), no con la curva nueva de la partida jugable."""
+    from juego import dificultad
+    previa = dificultad.GARANTIA_CON_BASES_Y_PLANETA
+    dificultad.GARANTIA_CON_BASES_Y_PLANETA = False
+    try:
+        p = Partida(semilla=semilla, nivel=nivel, bateria=100.0 - 4.0 * (nivel - 1), plan_restringido=False)   # R23: planificador anterior (3-4 sitios)
+    finally:
+        dificultad.GARANTIA_CON_BASES_Y_PLANETA = previa
+    p.mecanicas.activa = False
+    return p
+
+
 def _corrida(eventos, semilla, pasos, nivel=5):
-    p = Partida(semilla=semilla, nivel=nivel)
+    p = _partida_anterior(semilla, nivel)
     resultados = [(e, p.disparar_evento(e)["ok"]) for e in eventos]
     bateria_tras_eventos = round(float(p.rover.bateria), 2)
     avisos_tras_eventos = list(p.avisos)
@@ -69,7 +83,9 @@ def test_triple_orden_de_vetos_y_avisos_fijado_semilla_18():
     assert r["avisos"] == r["avisos_tras_eventos"]
     # el sismo cae en la ruta (REPLAN-AG-SISMO, ARX-31a) y, en el primer paso, el veto por riesgo en la ruta
     assert r["motivos"][:3] == ["REPLAN-AG-SISMO", "V-RUTA-CON-RIESGO", "OK"]
-    assert r["vetos"] == 1
+    # R23: la RNA reentrenada con refuerzo de barrancos añade, dentro de los 40 pasos, un veto propio V-RNA-BARRANCO que no
+    # tiene que ver con los eventos; lo que esta prueba fija es el veto del sismo, así que se cuentan aparte
+    assert r["vetos"] == 1 + r["motivos"].count("V-RNA-BARRANCO")
 
 
 def test_triple_orden_semilla_9_termina_sin_ruta_tras_el_veto():

@@ -8,7 +8,7 @@ export const DISTANCIA_SOL_MKM = {
   Mercurio: 57.9, Venus: 108.2, Tierra: 149.6, Marte: 228.0, "Júpiter": 778.5, Saturno: 1432, Urano: 2867, Neptuno: 4515,
 };
 export const FUENTE_DISTANCIA = "NASA Planetary Fact Sheet";
-export const AVISO_TERRENO = "En todos los planetas el terreno, los obstáculos y los eventos de la partida son los de Marte. El planeta cambia el aspecto, la temperatura interna del rover (solo avisa) y el vehículo permitido.";
+export const AVISO_TERRENO = "En todos los planetas el mapa (terreno, obstáculos y eventos) se genera como el de Marte. El planeta cambia el aspecto, las condiciones de conducción (gravedad, viento, hielo y polvo, que afectan a la batería y al movimiento), la temperatura interna del vehículo y el vehículo permitido.";
 export const ROTULO_ILUSTRATIVO = "Escena ilustrativa: no está a escala ni representa un traslado real.";
 export const ROTULO_DISTANCIA = "Distancia media al Sol (constante real aproximada)";
 

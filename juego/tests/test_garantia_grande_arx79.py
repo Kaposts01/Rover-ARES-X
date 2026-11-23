@@ -34,7 +34,7 @@ def test_factor_de_seguridad_por_tamano_y_nivel(k_plan):
 
 
 def test_el_factor_y_el_margen_endurecen_el_estimador(k_plan):
-    p = Partida(semilla=3, nivel=3, filas=40, columnas=60)
+    p = Partida(semilla=3, nivel=3, filas=40, columnas=60, plan_restringido=False)
     p.factor_seguridad = factor_seguridad_garantia(40, 60, 3)
     m = p.mundo
     # batería mínima (por pasos de 1) con la que _es_ganable acepta el mapa elegido, con y sin las constantes nuevas
@@ -52,39 +52,41 @@ def test_el_factor_y_el_margen_endurecen_el_estimador(k_plan):
 
 
 def test_atributos_de_la_partida_segun_tamano():
-    g = Partida(semilla=1, nivel=1, filas=40, columnas=60)
-    c = Partida(semilla=1, nivel=1)
+    g = Partida(semilla=1, nivel=1, filas=40, columnas=60, plan_restringido=False)
+    c = Partida(semilla=1, nivel=1, plan_restringido=False)
     assert g.margen_caza == 20 and c.margen_caza == 10
     assert g.factor_seguridad == 1.0 and c.factor_seguridad == 1.0   # K neutros
 
 
 @pytest.mark.parametrize("nivel", [1, 2, 3, 4, 5])
 def test_el_mapa_elegido_es_ganable_con_el_estimador_nuevo_y_es_determinista(nivel):
-    a = Partida(semilla=2, nivel=nivel)
-    b = Partida(semilla=2, nivel=nivel)
+    a = Partida(semilla=2, nivel=nivel, plan_restringido=False)
+    b = Partida(semilla=2, nivel=nivel, plan_restringido=False)
     assert a.semilla_mundo == b.semilla_mundo
     assert (a.mundo.tipo == b.mundo.tipo).all()
-    assert a.avisos == []                                    # pequeño: sigue habiendo variante que pasa
+    assert AVISO_SIN_GARANTIA not in a.avisos                # pequeño: sigue habiendo variante que pasa (R23: puede avisar AG-FALLBACK)
     drones = pm._drones_obligatorios(a.mundo, a.semilla, nivel)
-    assert _es_ganable(a.mundo, a.rover.bateria, drones, factor=a.factor_seguridad, margen_caza_pasos=a.margen_caza)
+    # R23: la garantía de la partida jugable cuenta con las bases de recarga y el sobrecoste medio del planeta
+    assert _es_ganable(a.mundo, a.rover.bateria, drones, bateria_max=a.bateria_max, estaciones=a.estaciones,
+                       factor=a.factor_seguridad * a.mision.factor_ambiente, margen_caza_pasos=a.margen_caza)
 
 
 def test_pequeno_no_se_queda_sin_garantia_en_una_muestra():
     for nivel in (1, 3, 5):
         for semilla in range(1, 6):
-            assert AVISO_SIN_GARANTIA not in Partida(semilla=semilla, nivel=nivel).avisos
+            assert AVISO_SIN_GARANTIA not in Partida(semilla=semilla, nivel=nivel, plan_restringido=False).avisos
 
 
 def test_mapa_imposible_forzado_avisa():
-    p = Partida(semilla=4, nivel=2, bateria=5.0)
+    p = Partida(semilla=4, nivel=2, bateria=5.0, plan_restringido=False)
     assert AVISO_SIN_GARANTIA in p.avisos
-    q = Partida(semilla=4, nivel=2, bateria=5.0, garantia=False)
+    q = Partida(semilla=4, nivel=2, bateria=5.0, garantia=False, plan_restringido=False)
     assert AVISO_SIN_GARANTIA not in q.avisos
 
 
 def test_una_llamada_del_estimador_en_grande_no_pasa_de_2_s():
     # La generación completa (59 variantes de 40x60) tarda ~8 s ya en la base 5801c7d: no es del estimador (ver informe).
-    p = Partida(semilla=8, nivel=3, filas=40, columnas=60)
+    p = Partida(semilla=8, nivel=3, filas=40, columnas=60, plan_restringido=False)
     drones = pm._drones_obligatorios(p.mundo, 8, 3)
     t0 = time.time()
     _es_ganable(p.mundo, p.rover.bateria, drones, factor=p.factor_seguridad, margen_caza_pasos=p.margen_caza)

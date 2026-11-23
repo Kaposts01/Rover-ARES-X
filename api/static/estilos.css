@@ -94,6 +94,9 @@ html, body {
   max-width: calc(100vw - 560px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+#ver-resultado { position: fixed; top: 62px; left: var(--centro, 50%); transform: translateX(-50%); z-index: 40; width: auto; padding: 8px 18px; border-radius: 999px; font-weight: 700; background: var(--acento); color: #06121c; border: 1px solid var(--acento); box-shadow: var(--sombra); cursor: pointer; }
+#ver-resultado.oculto { display: none; }
+
 /* ---------- controles (derecha) ---------- */
 #controles {
   position: fixed; top: 12px; right: 12px; width: 252px;
@@ -229,8 +232,8 @@ html, body {
   #decision.plegado { min-height: 0; }
   #controles { top: auto; bottom: 112px; left: 12px; right: 12px; width: auto; max-height: 34vh !important; }
   .dock { left: 12px; right: 12px; }
+  .dock > .zona-vista { width: 100%; }
   .dock-tab { letter-spacing: 0.02em; padding: 8px 4px; font-size: 12px; }
-  #dock #manual { grid-column: 1 / span 2; grid-row: 4; padding: 4px 0 0; }
   #intervencion-aviso { top: 110px; }
 }
 /* ---------- laboratorios de los modelos ---------- */
@@ -291,6 +294,8 @@ body.intro-activa > :not(#escena):not(.in-capa):not(.in-etiquetas) { visibility:
 .fn-estrella { display: inline-flex; opacity: 0; animation: fn-revela 0.65s cubic-bezier(0.16, 0.8, 0.24, 1) var(--fn-retardo, 0s) both; }
 .fn-estrella svg { display: block; overflow: visible; }
 @keyframes fn-revela { 0% { opacity: 0; transform: scale(0.55) rotate(-13deg); } 65% { opacity: 1; transform: scale(1.06) rotate(2deg); } 100% { opacity: 1; transform: none; } }
+.fn-estrellas-texto { margin: 4px auto 14px; max-width: 640px; text-align: center; font-size: 13px; line-height: 1.4; color: #d7e6ee; }
+.fn-formula { max-width: 560px; margin-left: auto; margin-right: auto; }
 .fn-puntaje-caja { text-align: center; margin: 0 0 18px; }
 .fn-puntaje-etiqueta { color: #a9bfcc; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
 .fn-puntaje { display: block; color: #fff; font-size: clamp(34px, 6vw, 54px); font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -337,7 +342,9 @@ summary.fn-seccion-titulo { cursor: pointer; }
 .fn-visor.oculto { display: none; }
 .fn-visor img { max-width: min(1100px, 95vw); max-height: 88vh; border-radius: 12px; }
 .fn-visor-cerrar { position: absolute; top: 14px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #648092; background: #102235; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.fn-avisos { position: fixed; top: 12px; right: 12px; z-index: 95; display: flex; flex-direction: column; gap: 8px; width: min(320px, calc(100% - 24px)); pointer-events: none; }
+.fn-avisos { position: fixed; top: 58px; right: calc(var(--ancho-panel-ia) + 24px); z-index: 95; display: flex; flex-direction: column; gap: 8px; width: min(320px, calc(100% - 24px)); pointer-events: none; }
+/* con un laboratorio, una vista (récords, comparar) o la meta abiertos, el aviso de logro baja a la esquina inferior derecha para no tapar «Cerrar (Esc)» */
+body:has(#laboratorio:not(.oculto)) .fn-avisos, body:has(.vx-capa:not(.oculto)) .fn-avisos, body:has(#meta:not(.oculto)) .fn-avisos { top: auto; bottom: 16px; right: 16px; }
 body.final-activa .fn-avisos { display: none; }   /* con la pantalla abierta, los logros nuevos ya van en su lista */
 .fn-aviso { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid #68d9ca; border-radius: 12px; background: #0e1928; color: #eaf8f5; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); animation: fn-aviso-entra 0.4s ease both; }
 @keyframes fn-aviso-entra { from { transform: translateX(110%); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -452,34 +459,48 @@ body.final-activa .fn-avisos { display: none; }   /* con la pantalla abierta, lo
 #simulacion { border-bottom: 0; }
 #controles #abrir-laboratorio { margin-top: 10px; }
 
-/* ---------- controles manuales flotantes (abajo a la derecha) ---------- */
-#manual {
-  position: fixed; right: 12px; bottom: 12px; z-index: 30; width: 190px; padding: 8px 10px;
-  opacity: 0.82; transition: opacity 0.2s;
-}
-#manual:hover, #manual:focus-within { opacity: 1; }
+/* ---------- controles de vista y capas: panel del HUD dentro de la zona de vista (ronda 23) ---------- */
+/* Un panel con el mismo cristal y borde que el resto; las filas se apilan en la zona de vista sin posiciones absolutas. */
+.panel-hud { background: var(--cristal-solido); border: 1px solid var(--borde); border-radius: 12px; padding: 8px 10px; box-shadow: var(--sombra); }
+.panel-hud-titulo, .grupo-titulo { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--acento); margin: 0 0 6px; line-height: 1.3; }
+.zona-vista { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
 #manual.plegado #manual-cuerpo { display: none; }
-#manual-cuerpo { max-height: 62vh; overflow-y: auto; }   /* Paquete A: con las casillas nuevas el panel puede no caber */
+#manual-cuerpo { max-height: 56vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(95, 211, 255, 0.45) transparent; }
+.grupo-manual { padding: 8px 0 6px; border-top: 1px solid var(--separador); }
+.grupo-manual > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; margin: 0; }
+.grupo-manual > summary::-webkit-details-marker { display: none; }
+.grupo-manual > summary::after { content: "▸"; color: var(--texto-suave); }
+.grupo-manual[open] > summary::after { content: "▾"; }
+.grupo-manual > summary:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.grupo-manual[open] > summary { margin-bottom: 6px; }
+.grupo-fila { display: flex; gap: 8px; align-items: flex-start; }
 #evo-controles { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px; }
 #evo-controles select { grid-column: 1 / span 2; }
 #evo-controles button { height: 30px; padding: 0; font-size: 12px; margin: 0; }
 #evo-controles .capa-nota { grid-column: 1 / span 2; }
 #riesgo-leyenda:not([hidden]) { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--texto); }
 .capa-nota { font-size: 11px; line-height: 1.35; color: var(--texto-suave); margin-top: 4px; }   /* rótulo de cada capa; no usa .ayuda porque el dock la oculta */
-.manual-cabecera { width: 100%; display: flex; justify-content: space-between; background: transparent; border: 0;
-  color: var(--texto-suave); font: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; padding: 2px 0 6px; cursor: pointer; }
-#pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 0; }
-#pad button { height: 34px; padding: 0; font-size: 15px; margin-top: 0; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(160, 200, 255, 0.16); box-shadow: none; }
+.manual-cabecera { width: 100%; display: flex; justify-content: space-between; align-items: center; background: transparent; border: 0;
+  color: var(--acento); font: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 0 0 6px; cursor: pointer; }
+#pad { display: grid; grid-template-columns: repeat(3, 32px); gap: 3px; margin-top: 0; flex: none; }
+#pad button { height: 32px; padding: 0; font-size: 15px; margin-top: 0; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(160, 200, 255, 0.16); box-shadow: none; }
 #pad button:hover { background: rgba(95, 211, 255, 0.16); filter: none; }
 #pad button.disparo { color: var(--peligro); }
 #pad .vacio { visibility: hidden; }
-#manual .vista { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px; }
-#manual .vista button { height: 34px; padding: 0; font-size: 13px; margin: 0; }
-#manual .ayuda { font-size: 12px; margin-top: 6px; }
-@media (max-width: 760px) {
-  #manual { bottom: 58px; }
-  #manual:not(.abierto) #manual-cuerpo { display: none; }
-}
+#manual .vista { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; flex: 1; min-width: 0; align-content: start; }
+#manual .vista button { height: 32px; padding: 0; font-size: 13px; margin: 0; width: 100%; }
+#manual .vista button:nth-child(n+3) { grid-column: 1 / -1; }
+#manual.sin-pad .vista { grid-template-columns: repeat(6, 1fr); }
+#manual.sin-pad .vista button:nth-child(-n+2) { grid-column: span 3; }
+#manual.sin-pad .vista button:nth-child(n+3) { grid-column: span 2; }
+#manual.sin-pad .grupo-fila + .capa-nota { display: none; }   /* Rover, Mapa y Todo a lo ancho; + y − en pareja */
+#manual .grupo-manual label.veto { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 0; font-size: 12px; line-height: 1.3; color: var(--texto); }
+#manual .grupo-manual label.veto input { width: auto; margin: 2px 0 0; accent-color: var(--acento); }
+#manual select { width: 100%; margin-top: 6px; padding: 5px 8px; border-radius: 8px; font: inherit; font-size: 12px; background: rgba(255, 255, 255, 0.06); color: var(--texto); border: 1px solid rgba(160, 200, 255, 0.18); }
+#manual select option { background: #141b2d; color: var(--texto); }
+#manual button.secundario { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(160, 200, 255, 0.18); border-radius: 8px; color: var(--texto); cursor: pointer; font: inherit; }
+#manual button.secundario:hover { background: rgba(95, 211, 255, 0.16); }
+#manual button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 
 /* ---------- menú de pausa (ARX-61) ---------- */
 /* ---------- medidor de calor interno del rover (ARX-51) ---------- */
@@ -553,7 +574,19 @@ body.final-activa .fn-avisos { display: none; }   /* con la pantalla abierta, lo
 @keyframes entraRegistro { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 /* ---------- modo cine (tecla H): la escena sin paneles ---------- */
-body.cine #registro, body.cine #columna, body.cine #controles, body.cine #graficos, body.cine #historial, body.cine #manual, body.cine #mensaje, body.cine #intervencion-aviso { display: none !important; }
+/* Modo cine: se ocultan TODOS los paneles (columna, panel de IA, barra, pestañas, fichas, avisos). Solo quedan la escena, las bandas
+   (con el director), los subtítulos y el botón discreto «Salir». Al salir, nada se pierde: son reglas de visualización, no se toca el estado. */
+body.cine #registro, body.cine #columna, body.cine #controles, body.cine #dock, body.cine #mensaje, body.cine #intervencion-aviso,
+body.cine .fn-avisos, body.cine #motor-calculando, body.cine .def-capa, body.cine #fps { display: none !important; }
+.cine-controles { position: fixed; top: 12px; right: 12px; z-index: 40; display: none; gap: 8px; align-items: center; }
+body.cine .cine-controles { display: flex; }
+.cine-salir { display: none; position: static; z-index: 40; width: auto; margin: 0; padding: 6px 12px; min-height: 32px; border-radius: 999px;
+  font: inherit; font-size: 12px; color: var(--texto); background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.28); cursor: pointer; opacity: 0.4; transition: opacity 0.25s; }
+body.cine .cine-salir { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.cine-play { min-width: 36px; }
+.cine-salir:hover, .cine-salir:focus-visible { opacity: 1; }
+.cine-salir:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+body.cine .cn-cinta-boton { display: none; }   /* ya existe «Salir» */
 
 /* ---------- cine: director de cámara y postproceso (cn-*) ---------- */
 .cn-fps { font-size: 11px; color: #9fb0cc; min-height: 14px; }
@@ -569,21 +602,19 @@ body.cine #registro, body.cine #columna, body.cine #controles, body.cine #grafic
 @media (max-width: 700px) { .cn-cinta { top: auto; bottom: 100px; } }
 
 /* ---------- franja inferior con pestañas y sección plegable de controles (vuelta 14) ---------- */
-.dock { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 25; display: grid;
-  grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: end; }
-.dock > .dock-tabs { grid-column: 1; grid-row: 1; }
-.dock > .dock-panel { grid-column: 1; }
+/* La franja ocupa solo el hueco central (entre la columna izquierda y el panel de IA) y apila sus piezas hacia arriba:
+   zona de vista (ficha de la sonda y controles) · barra de control · pestañas · panel abierto. Nada se superpone. */
+.dock { position: fixed; left: calc(var(--ancho-izq) + 24px); right: calc(var(--ancho-panel-ia) + 24px); bottom: 12px; z-index: 25;
+  display: flex; flex-direction: column; align-items: stretch; max-height: calc(100vh - 24px); pointer-events: none; }
+.dock > * { pointer-events: auto; flex: none; }
+.dock > .zona-vista { order: 0; align-self: flex-end; width: min(224px, 100%); margin-bottom: 8px; }
+.dock > .barra-mision { order: 1; }
+.dock > .dock-tabs { order: 2; }
+.dock > .dock-panel { order: 3; flex: 0 1 auto; }
+/* con un panel del dock abierto, el de controles se pliega a su cabecera para no empujar la franja fuera de la pantalla */
+.dock:has(.dock-panel:not(.plegado)) #manual-cuerpo { display: none; }
 /* Botón de reproducción en verde (ARX-56) */
 #reproducir.verde { background: #1f9d55; color: #fff; box-shadow: none; font-weight: 700; }
-/* Controles manuales dentro de la misma barra: sin caja propia */
-#dock #manual { grid-column: 2; grid-row: 1 / span 3; position: static; width: auto; padding: 0 0 0 4px; background: none;
-  border: 0; box-shadow: none; opacity: 1; align-self: end; }
-#dock #manual:hover, #dock #manual:focus-within { opacity: 1; }
-#dock #manual #pad { width: 118px; gap: 3px; }
-#dock #manual #pad button { height: 34px; }
-#dock #manual .vista { grid-template-columns: repeat(5, 1fr); width: 150px; }
-#dock #manual .ayuda { display: none; }
-#dock #manual .manual-cabecera { justify-content: flex-end; gap: 6px; padding: 0 0 4px; }
 .dock-tabs { display: flex; background: var(--cristal); border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; box-shadow: var(--sombra); }
 .dock-tab { flex: 1; width: auto; margin: 0; background: transparent; border: 0; border-radius: 0; color: var(--texto-suave);
   font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 8px; cursor: pointer; box-shadow: none; }
@@ -600,8 +631,8 @@ body.cine #registro, body.cine #columna, body.cine #controles, body.cine #grafic
 #controles #controles-toggle { background: none; box-shadow: none; color: var(--acento); margin: 0 0 8px; padding: 2px 0; width: 100%; border: 0; filter: none; }
 
 /* ---------- columna única izquierda: HUD y decisión separados por filetes (vuelta 13) ---------- */
-#columna { background: rgba(10, 14, 24, 0.5); border: 0; border-radius: var(--radio); box-shadow: var(--sombra);
-  padding: 12px 14px; gap: 0; width: 264px; max-height: calc(100vh - 24px); overflow: hidden; }
+#columna { background: rgba(10, 14, 24, 0.84); backdrop-filter: blur(5px); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra);
+  padding: 12px 14px; gap: 0; width: 264px; max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgba(95, 211, 255, 0.45) transparent; }
 #columna > .caja { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
 #columna #hud { padding-bottom: 10px; }
 #columna #decision { border-top: 1px solid var(--separador); padding-top: 4px; max-height: none; overflow: visible; min-height: 0; }
@@ -677,6 +708,8 @@ body.cine #registro, body.cine #columna, body.cine #controles, body.cine #grafic
 .in-fila { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 12px; font-size: 12px; }
 .in-fila-etiqueta { color: #8fb0c4; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.08em; }
 .in-fila-valor { color: #e9fbff; text-align: right; white-space: nowrap; }
+.in-fila.in-mecanica-nota { display: block; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(143, 176, 196, 0.25); }
+.in-mecanica-nota .in-fila-valor { display: block; white-space: normal; text-align: left; margin-top: 3px; line-height: 1.4; color: #cfe9f3; }
 .in-tarjeta.vacia .in-fila { display: block; color: #8fb0c4; }
 .in-pie { padding-left: 26px; padding-bottom: 22px; background: linear-gradient(transparent, rgba(2, 6, 17, 0.9) 45%); }
 .in-avisos p { font-size: 11px; color: #9cb8c9; }
@@ -684,7 +717,14 @@ body.cine #registro, body.cine #columna, body.cine #controles, body.cine #grafic
 .in-etiqueta { font-family: "Cascadia Mono", "Consolas", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.14em; font-size: 10.5px; border-radius: 3px; color: #bff4ff; background: rgba(2, 10, 22, 0.6); border: 1px solid rgba(95, 230, 255, 0.4); }
 .in-etiqueta::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: 8px; background: rgba(95, 230, 255, 0.6); }
 .in-etiqueta:hover, .in-etiqueta:focus-visible { background: rgba(95, 230, 255, 0.2); color: #fff; outline: 1px solid #5fe6ff; box-shadow: 0 0 12px rgba(95, 230, 255, 0.5); }
+/* Lista fija de planetas: alternativa por teclado al clic en 3D */
+.in-lista { position: absolute; left: 26px; bottom: 26px; max-width: calc(100% - 52px); display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; background: rgba(2, 10, 22, 0.6); border: 1px solid var(--holo-suave); border-left: 3px solid var(--holo); border-radius: 4px; backdrop-filter: blur(3px); }
+.in-lista-boton { width: auto; margin: 0; min-height: 32px; padding: 4px 12px; font: inherit; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #bff4ff; background: rgba(2, 10, 22, 0.6); border: 1px solid rgba(95, 230, 255, 0.4); border-radius: 3px; cursor: pointer; }
+.in-lista-boton:hover, .in-lista-boton.activo { background: rgba(95, 230, 255, 0.2); color: #fff; box-shadow: 0 0 10px rgba(95, 230, 255, 0.4); }
+.in-lista-boton:focus-visible { outline: 2px solid var(--holo); outline-offset: 2px; }
+.in-etiqueta.activo { background: rgba(95, 230, 255, 0.2); color: #fff; }
 @media (prefers-reduced-motion: reduce) { .in-estado { animation: none; } }
+@media (max-width: 640px) { .in-lista { left: 8px; bottom: 8px; max-width: calc(100% - 16px); } }
 @media (max-width: 640px) { .in-marco, .in-estado { display: none; } .in-cabecera { left: 8px; top: 8px; } .in-tarjeta { right: 8px; top: 56px; width: 180px; } .in-omitir { right: 8px; top: 8px; } }
 
 /* ---------- Carga con cohete (estilo sala de control) ---------- */
@@ -716,7 +756,6 @@ body.vuelo-activo > :not(#escena):not(.vj-capa) { visibility: hidden !important;
 #intervencion-aviso { left: var(--centro); }
 .registro { left: calc(var(--ancho-izq) + 24px); transform: none; top: 56px; width: min(340px, 28vw); }
 .registro li:nth-child(n+6) { display: none; }   /* solo los últimos cinco: no tapa la escena */
-.dock { right: calc(var(--ancho-panel-ia) + 24px); }
 
 #panel-ia { --holo: #5fe6ff; --holo-suave: rgba(95, 230, 255, 0.3);
   position: fixed; top: 12px; right: 12px; bottom: 12px; z-index: 27; width: var(--ancho-panel, 400px);
@@ -796,9 +835,7 @@ body.cine #panel-ia { display: none !important; }
   #intervencion-aviso { left: 50%; }
 }
 /* Barra de control de la simulación (sobre las pestañas del dock) */
-.dock > .barra-mision { grid-column: 1; grid-row: 1; justify-self: center; margin-bottom: 8px; }
-.dock > .dock-tabs { grid-row: 2; }
-.barra-mision { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--cristal-solido); border: 1px solid rgba(95, 230, 255, 0.3); border-radius: 10px; }
+.barra-mision { display: flex; flex-wrap: wrap; justify-content: center; align-self: center; max-width: 100%; margin-bottom: 8px; align-items: center; gap: 8px; padding: 6px 8px; background: var(--cristal-solido); border: 1px solid rgba(95, 230, 255, 0.3); border-radius: 10px; }
 .barra-mision button { width: auto; margin: 0; min-height: 34px; padding: 6px 14px; border-radius: 7px; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .barra-mision #reproducir { background: #1f9d55; color: #fff; border: 0; min-width: 136px; }
 .barra-mision #paso { background: rgba(95, 230, 255, 0.1); color: #5fe6ff; border: 1px solid rgba(95, 230, 255, 0.35); }
@@ -815,10 +852,6 @@ body::before, body::after { content: ""; position: fixed; left: 0; right: 0; hei
 body::before { top: 0; }
 body::after { bottom: 0; }
 body.cine-director::before, body.cine-director::after { height: 9vh; }
-body.cine .dock-tabs { display: none !important; }
-body.cine-director .dock { left: 50%; right: auto; transform: translateX(-50%); bottom: calc(9vh - 22px); z-index: 30; }
-body.cine-director .barra-mision { background: rgba(0, 0, 0, 0.55); border-color: rgba(255, 180, 71, 0.35); opacity: 0.55; transition: opacity 0.3s; }
-body.cine-director .barra-mision:hover, body.cine-director .barra-mision:focus-within { opacity: 1; }
 body.cine-director #cine-cinta { top: calc(9vh - 14px); z-index: 30; }
 @media (prefers-reduced-motion: reduce) { body::before, body::after { transition: none; } }
 /* HUD: las columnas no se desbordan con valores largos (CONFIGURACIÓN, «patrulla, patrulla») */
@@ -861,7 +894,7 @@ body.cine #hud-navegacion { display: none; }
 /* Narrador de pasos (auditoría 22/11) */
 .pia-narracion { font-size: 12px; line-height: 1.45; margin: -4px 0 10px; color: #d9f6ff; }
 .pia-narracion:empty { display: none; }
-#subtitulo-ia { display: none; position: fixed; left: 50%; bottom: calc(9vh + 120px); transform: translateX(-50%); z-index: 31; max-width: min(860px, 80vw);
+#subtitulo-ia { display: none; position: fixed; left: 50%; bottom: calc(9vh + 18px); transform: translateX(-50%); z-index: 31; max-width: min(860px, 80vw);
   padding: 8px 14px; border-radius: 6px; background: rgba(0, 0, 0, 0.6); color: #f4f7fb; font-size: 15px; line-height: 1.45; text-align: center; opacity: 0; transition: opacity 0.4s; pointer-events: none; }
 body.cine #subtitulo-ia { display: block; }
 #subtitulo-ia.visible { opacity: 1; }
@@ -879,8 +912,8 @@ body.cine #subtitulo-ia { display: block; }
 .def-progreso { height: 3px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; margin: 8px 0 10px; overflow: hidden; }
 .def-relleno { height: 100%; background: #a78bfa; transition: width 0.3s; }
 .def-titulo { font-size: 17px; margin: 0 0 6px; }
-.def-criterios { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-.def-criterio { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(167, 139, 250, 0.16); color: #ddd6fe; border: 1px solid rgba(167, 139, 250, 0.35); }
+.def-criterios { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 8px; }
+.def-criterio { font-size: 11.5px; padding: 2px 9px; border-radius: 10px; line-height: 1.35; background: rgba(167, 139, 250, 0.16); color: #ddd6fe; border: 1px solid rgba(167, 139, 250, 0.35); }
 .def-texto { font-size: 13.5px; line-height: 1.55; margin: 0 0 10px; }
 .def-vivo-titulo { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6ee7a8; }
 .def-vivo { margin: 4px 0 12px; padding-left: 18px; font-size: 12.5px; color: #d9f6ff; }
@@ -913,8 +946,298 @@ body.cine #subtitulo-ia { display: block; }
   background: rgba(10, 20, 36, 0.9); border: 1px solid rgba(95, 230, 255, 0.4); color: #bff4ff; font-size: 12.5px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 #motor-calculando.visible { opacity: 1; }
 .barra-mision .boton-seguir { background: rgba(95, 230, 255, 0.08); color: #bff4ff; border: 1px solid rgba(95, 230, 255, 0.35); }
-/* Pantalla de sonda (ARX-85): tarjeta compacta sobre los controles de vista (22/11: antes heredaba la cuadrícula del dock) */
-#sonda-panel { position: fixed; right: calc(var(--ancho-panel-ia) + 24px); bottom: 230px; width: 250px; z-index: 26; padding: 10px 12px; box-sizing: border-box; }
-#sonda-panel.oculto { display: none; }
+/* Pantalla de sonda (ARX-85): ficha dentro de la zona de vista, apilada sobre los controles */
 #sonda-panel .fila { font-size: 12px; }
-body.cine #sonda-panel { bottom: calc(9vh + 20px); right: 24px; }
+#sonda-panel .fila span:first-child { min-width: 0; }
+
+/* Correcciones de texto (ronda 23): el selector de cámara no corta «Persecución»; los valores del HUD parten por palabras */
+.barra-mision label { flex: 0 0 auto; white-space: nowrap; }
+.barra-mision select { flex: 0 0 auto; min-width: 9.5em; text-overflow: clip; }
+#hud .fila .valor, .hud-grid .fila .valor { overflow-wrap: break-word; word-break: normal; min-width: 0; }
+.def-criterios-nota { font-size: 11px; color: var(--texto-suave, #98a4bb); }
+
+/* ---------- señal visible de los eventos (ronda 23) ---------- */
+/* Rótulo sobre la marca; si el evento queda fuera de cuadro pasa al borde del hueco libre con una flecha hacia él */
+.evento-etiqueta { position: fixed; left: 0; top: 0; z-index: 29; display: inline-flex; align-items: center; gap: 6px; width: auto; margin: 0; max-width: 300px; padding: 5px 11px; min-height: 28px;
+  font: inherit; font-size: 12px; font-weight: 600; color: #fff; background: rgba(10, 14, 24, 0.9); border: 1px solid var(--color, var(--acento-calido)); border-radius: 999px;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color, #ffb454) 45%, transparent); cursor: pointer; text-align: left; line-height: 1.3; }
+.evento-etiqueta:hover, .evento-etiqueta:focus-visible { background: rgba(30, 38, 58, 0.95); outline: 2px solid var(--acento); outline-offset: 2px; }
+.evento-etiqueta .ev-flecha { display: none; color: var(--color, #ffb454); transform: rotate(var(--ang, 0rad)); font-size: 14px; }
+.evento-etiqueta.fuera .ev-flecha { display: inline-block; }
+body.cine .evento-etiqueta { display: none !important; }
+.destello { animation: destelloBateria 0.5s ease-in-out 4; }
+@keyframes destelloBateria { 50% { background: var(--peligro); box-shadow: 0 0 8px var(--peligro); } }
+/* Velo de ambiente sobre la escena (debajo de todos los paneles): noche y tormenta, según /estado.ambiente */
+#ambiente-velo { position: fixed; inset: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity 1.2s ease; }
+#ambiente-velo.noche, #ambiente-velo.tormenta { opacity: 1; }
+#ambiente-velo.noche { background: radial-gradient(ellipse at 50% 55%, rgba(8, 14, 48, 0.35), rgba(2, 4, 24, 0.78) 100%); }
+#ambiente-velo.tormenta { background: linear-gradient(180deg, rgba(60, 66, 84, 0.5), rgba(40, 44, 58, 0.35)); }
+#ambiente-velo.tormenta::before { content: ""; position: absolute; inset: -40% -10%; opacity: 0.5;
+  background: repeating-linear-gradient(105deg, transparent 0 22px, rgba(220, 230, 255, 0.16) 22px 23px, transparent 23px 46px); animation: tormentaViento 0.7s linear infinite; }
+@keyframes tormentaViento { from { transform: translate(0, 0); } to { transform: translate(-46px, 40px); } }
+@media (prefers-reduced-motion: reduce) { #ambiente-velo.tormenta::before, .destello { animation: none; } }
+
+/* ---------- condiciones del planeta en el HUD (gravedad, viento, hielo) ---------- */
+.condiciones { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--separador); }
+.cond-titulo { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--acento); margin: 0 0 4px; }
+.cond-filas .fila { font-size: 12px; padding: 2px 0; }
+.cond-ref { font-size: 10px; font-weight: 400; color: var(--texto-suave); letter-spacing: 0.04em; }
+.condiciones .cond-alerta .valor { color: var(--acento-calido); font-weight: 600; }
+.cond-firma { font-size: 11px; line-height: 1.4; color: var(--texto-suave); margin-top: 4px; font-style: italic; }
+body.cine .condiciones { display: none; }
+
+/* ---------- aviso «La IA está conduciendo» (modo manual con Reproducir) ---------- */
+.ia-conduce { position: fixed; top: 12px; left: var(--centro); transform: translateX(-50%); z-index: 33; display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px 7px 14px; border-radius: 999px; font-size: 13px; color: var(--texto); background: var(--cristal-solido);
+  border: 1px solid var(--acento-calido); box-shadow: 0 0 18px rgba(255, 180, 84, 0.22); }
+.ia-conduce.oculto { display: none; }
+.ia-conduce-punto { width: 9px; height: 9px; border-radius: 50%; background: var(--acento-calido); animation: latidoIA 1.2s ease-in-out infinite; }
+@keyframes latidoIA { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.ia-retomar { margin: 0; width: auto; padding: 4px 12px; min-height: 28px; border-radius: 999px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  color: #1b1405; background: var(--acento-calido); border: 0; }
+.ia-retomar:hover, .ia-retomar:focus-visible { filter: brightness(1.12); outline: 2px solid var(--texto); outline-offset: 2px; }
+body.cine .ia-conduce { display: none; }
+.dock > .ia-conduce { position: static; transform: none; left: auto; top: auto; order: 1; align-self: center; margin-bottom: 8px; }
+@media (prefers-reduced-motion: reduce) { .ia-conduce-punto { animation: none; } }
+
+/* ---------- ronda 23: Récords, Comparar políticas y Tutorial (vx-*, tt-*) ---------- */
+.menu-extras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 4px; }
+#menu .menu-extras button { width: auto; margin: 0; padding: 7px 6px; font-size: 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(160, 200, 255, 0.18); }
+#menu .menu-extras button:hover { background: rgba(255, 255, 255, 0.14); }
+#meta .meta-acciones #meta-records { grid-column: 1 / -1; height: 38px; background: transparent; color: var(--acento); border: 1px solid rgba(95, 211, 255, 0.4); cursor: pointer; }
+#meta .meta-acciones #meta-records:hover { background: rgba(95, 211, 255, 0.1); }
+#pol-comparar-vivo { width: auto; }
+
+.vx-capa { position: fixed; inset: 0; z-index: 90; padding: 16px; background: rgba(6, 9, 16, 0.92); display: flex; align-items: center; justify-content: center; }
+.vx-caja { width: min(1240px, 100%); max-height: 100%; overflow-y: auto; scrollbar-width: thin; background: var(--cristal-solido); border: 1px solid var(--borde);
+  border-radius: var(--radio); padding: 16px 18px 20px; color: var(--texto); }
+.vx-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.vx-cabecera .titulo-seccion { margin: 0 0 2px; }
+.vx-cabecera .titulo-seccion::after { display: none; }
+.vx-titulo { margin: 0; font-size: 18px; letter-spacing: 0.02em; }
+.vx-boton { width: auto; margin: 0; padding: 8px 14px; min-height: 34px; font: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; cursor: pointer;
+  color: var(--texto); background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(160, 200, 255, 0.18); }
+.vx-boton:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+.vx-boton:disabled { opacity: 0.45; cursor: not-allowed; }
+.vx-boton.primario { background: #2563eb; border: 0; color: #fff; }
+.vx-boton.peligro { background: transparent; color: #ff8a95; border: 1px solid rgba(255, 93, 108, 0.6); }
+.vx-boton.peligro:hover:not(:disabled) { background: rgba(255, 93, 108, 0.14); }
+.vx-boton.enlace { background: none; border: 0; color: var(--texto-suave); font-weight: 400; text-decoration: underline; padding: 4px 0; min-height: 0; }
+.vx-boton:focus-visible, .vx-control:focus-visible, .vx-check input:focus-visible, .vx-barra-pasos:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.vx-barra { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 8px; }
+.vx-campo { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--texto-suave); min-width: 120px; }
+.vx-campo-corto { min-width: 100px; }
+.vx-control { font: inherit; font-size: 13px; padding: 7px 8px; color: var(--texto); background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(160, 200, 255, 0.2); border-radius: 8px; min-height: 34px; }
+.vx-control option { background: #141b2d; color: var(--texto); }
+.vx-subbarra { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0; }
+.vx-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--texto-suave); cursor: pointer; }
+.vx-check input { accent-color: var(--acento); margin: 0; }
+.vx-resumen { margin: 4px 0 8px; min-height: 16px; }
+.vx-confirmar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; margin: 6px 0 10px; border-radius: 10px; font-size: 13px;
+  background: rgba(255, 93, 108, 0.1); border: 1px solid rgba(255, 93, 108, 0.5); color: #ffd2d6; }
+.vx-confirmar.oculto { display: none; }
+.vx-vacio { padding: 26px 12px; text-align: center; color: var(--texto-suave); font-size: 14px; border: 1px dashed var(--borde); border-radius: 10px; }
+.vx-scroll { max-height: min(52vh, 520px); }
+.vx-tabla td { font-family: var(--sans); vertical-align: middle; }
+.vx-tabla tr.vx-fallo td { color: #8f9bb0; }
+.vx-jugar { padding: 4px 10px; min-height: 28px; font-size: 12px; white-space: nowrap; }
+.vx-insignia { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
+.vx-manual { background: rgba(110, 231, 168, 0.16); color: #8ff0bf; border: 1px solid rgba(110, 231, 168, 0.5); }
+.vx-asistida { background: rgba(255, 180, 84, 0.16); color: #ffcb85; border: 1px solid rgba(255, 180, 84, 0.5); }
+.vx-ia { background: rgba(95, 211, 255, 0.16); color: #8fe0ff; border: 1px solid rgba(95, 211, 255, 0.5); }
+
+.vx-politica { display: flex; flex-direction: column; gap: 2px; min-width: 190px; padding-left: 8px; border-left: 3px solid var(--acento); }
+.vx-politica.vx-b { border-left-color: var(--acento-calido); }
+.vx-ayuda-politica { font-size: 11px; color: var(--texto-suave); max-width: 230px; line-height: 1.3; min-height: 14px; }
+.vx-estado-form { margin: 2px 0 10px; min-height: 16px; }
+.vx-lados { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 10px; }
+.vx-lado { min-width: 0; padding: 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--separador); border-top: 3px solid var(--acento); }
+.vx-lado.vx-b { border-top-color: var(--acento-calido); }
+.vx-lado-titulo { margin: 0 0 8px; font-size: 14px; }
+.vx-mini { display: block; max-width: 100%; margin: 0 auto 8px; border-radius: 6px; background: #0b0f1a; image-rendering: pixelated; }
+.vx-stats { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 3px 10px; margin: 0; font-size: 12px; }
+.vx-stats dt { color: var(--texto-suave); }
+.vx-stats dd { margin: 0; color: var(--texto); font-variant-numeric: tabular-nums; }
+.vx-decision { margin-top: 8px; font-size: 12px; line-height: 1.4; color: var(--texto-suave); min-height: 34px; }
+.vx-controles { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: flex-end; padding: 8px 0; border-top: 1px solid var(--separador); border-bottom: 1px solid var(--separador); margin-bottom: 8px; }
+.vx-controles.oculto { display: none; }
+.vx-texto-paso { font-variant-numeric: tabular-nums; font-size: 13px; min-width: 80px; align-self: center; }
+.vx-barra-pasos { flex: 1; min-width: 160px; accent-color: var(--acento); align-self: center; }
+.vx-divergencia { padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--separador); margin-bottom: 8px; }
+.vx-divergencia.vx-hay { background: rgba(255, 93, 108, 0.09); border-color: rgba(255, 93, 108, 0.55); }
+.vx-divergencia .vx-boton { margin-top: 6px; }
+.vx-dec { margin-top: 4px; padding-left: 8px; border-left: 3px solid var(--acento); }
+.vx-dec.vx-b { border-left-color: var(--acento-calido); }
+.vx-resultado { margin: 8px 0; padding: 12px; border-radius: 10px; background: rgba(110, 231, 168, 0.06); border: 1px solid rgba(110, 231, 168, 0.4); }
+.vx-veredicto { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--exito); }
+.vx-tabla-res th.vx-a { color: var(--acento); }
+.vx-tabla-res th.vx-b { color: var(--acento-calido); }
+.vx-tabla-res td { font-family: var(--sans); }
+.vx-tabla-res td.vx-gana { color: var(--exito); font-weight: 700; }
+.vx-leyenda { margin-top: 8px; }
+@media (max-width: 860px) { .vx-lados { grid-template-columns: 1fr; } .vx-capa { padding: 8px; } }
+
+/* récord en la pantalla final */
+.fn-record { margin: 10px 0 4px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--borde); background: rgba(255, 255, 255, 0.04); }
+.fn-record.nuevo { border-color: rgba(255, 209, 102, 0.75); background: rgba(255, 209, 102, 0.1); }
+.fn-record-titulo { font-size: 15px; font-weight: 700; margin: 0 0 3px; }
+.fn-record.nuevo .fn-record-titulo { color: #ffd166; }
+.fn-record.nuevo .fn-record-titulo::before { content: "\2605\00a0"; }
+.fn-record-texto { margin: 0 0 8px; font-size: 13px; color: var(--texto-suave); line-height: 1.4; }
+.fn-record .fn-btn { width: auto; }
+
+/* tutorial guiado */
+.tt-foco { position: fixed; z-index: 68; pointer-events: none; border: 2px solid var(--acento-calido); border-radius: 12px; box-shadow: 0 0 0 9999px rgba(5, 8, 16, 0.5), 0 0 18px rgba(255, 180, 84, 0.5); transition: left 0.25s, top 0.25s, width 0.25s, height 0.25s; }
+.tt-tarjeta, .tt-oferta { position: fixed; z-index: 69; width: min(340px, calc(100vw - 24px)); padding: 14px 16px; border-radius: 12px; color: var(--texto);
+  background: var(--cristal-solido); border: 1px solid var(--acento-calido); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); }
+.tt-oferta { left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 66; }
+.tt-tarjeta.oculto, .tt-oferta.oculto, .tt-foco.oculto { display: none; }
+.tt-kicker { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--acento-calido); font-weight: 700; }
+.tt-titulo { margin: 4px 0 6px; font-size: 16px; }
+.tt-texto { margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: #d4dcea; }
+.tt-estado { margin: 0 0 8px; font-size: 12px; color: var(--acento-calido); min-height: 16px; }
+.tt-estado.hecho { color: var(--exito); }
+.tt-nota { margin: 8px 0 0; font-size: 11px; color: var(--texto-suave); }
+.tt-puntos { display: flex; gap: 5px; margin: 4px 0 10px; }
+.tt-punto { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); }
+.tt-punto.pasado { background: var(--exito); }
+.tt-punto.actual { background: var(--acento-calido); }
+.tt-acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.tt-tarjeta .vx-boton, .tt-oferta .vx-boton { padding: 6px 12px; min-height: 32px; font-size: 12px; }
+.tt-tarjeta .vx-boton.oculto { display: none; }
+@media (prefers-reduced-motion: reduce) { .tt-foco { transition: none; } }
+
+/* ---- R23: menú en dos columnas (sin desplazar «Iniciar misión» ni las herramientas en 1366×768) y ficha del planeta ---- */
+#menu p.ficha-planeta { margin: 8px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--texto-suave); }
+#menu p.ficha-planeta:empty { display: none; }
+@media (min-width: 760px) {
+  #menu .caja.asistente { width: min(800px, calc(100vw - 32px)); display: grid; grid-template-columns: 1fr 1fr; column-gap: 30px; align-content: start; padding: 22px 28px 16px; }
+  #menu .asistente > .kicker, #menu .asistente > h1, #menu .asistente > p { grid-column: 1 / -1; }
+  #menu .asistente > p { margin-bottom: 6px; }
+  #menu .asistente > .paso:nth-of-type(1) { grid-column: 1; grid-row: 4 / span 2; border-bottom: 0; }
+  #menu .asistente > .paso:nth-of-type(2) { grid-column: 2; grid-row: 4; }
+  #menu .asistente > .paso-final { grid-column: 2; grid-row: 5; }
+}
+
+/* ---- R23: tramo de la ruta que clasificó la RNA (una fila por celda) ---- */
+.pia-tramo { margin: 0 0 10px; }
+.pia-tramo-fila { padding: 6px 8px; margin-bottom: 5px; border-left: 3px solid var(--holo-suave, rgba(95, 230, 255, 0.4)); background: rgba(95, 230, 255, 0.05); border-radius: 4px; font-size: 12px; cursor: default; }
+.pia-tramo-fila.riesgo { border-left-color: var(--peligro); background: rgba(255, 93, 108, 0.08); }
+.pia-tramo-fila:hover, .pia-tramo-fila:focus-visible { background: rgba(95, 230, 255, 0.12); outline: none; }
+.pia-tramo-cab strong { color: var(--texto); }
+.pia-tramo-cab span { color: var(--texto-suave); }
+.pia-tramo-barra { display: flex; height: 6px; margin: 4px 0 3px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, 0.08); }
+.pia-tramo-barra i { display: block; height: 100%; }
+.pia-tramo-texto { font-size: 11px; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+
+/* ---- R23: evolución del AG en el mapa (controles en la pestaña Genético) ---- */
+.evo-ui { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--holo-suave, rgba(95, 230, 255, 0.35)); border-radius: 8px; background: rgba(95, 230, 255, 0.04); }
+.evo-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.evo-cab .pia-mini-titulo { margin: 0; }
+.evo-ui .evo-interruptor { width: auto; margin: 0; padding: 5px 10px; white-space: nowrap; }
+.evo-ui .evo-interruptor[aria-pressed="true"] { background: rgba(255, 207, 99, 0.14); border-color: rgba(255, 207, 99, 0.6); color: #ffcf63; }
+.evo-estado { font-size: 11.5px; color: var(--texto-suave); margin: 6px 0; line-height: 1.4; }
+.evo-fila { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 8px; }
+.evo-ui .evo-play { width: 36px; margin: 0; padding: 5px 0; font-size: 14px; }
+.evo-velocidad { background: rgba(255, 255, 255, 0.06); color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 4px; font-size: 12px; }
+.evo-deslizador { width: 100%; accent-color: #ffcf63; }
+.evo-gen { font-size: 12px; margin: 6px 0 2px; color: var(--texto); font-variant-numeric: tabular-nums; }
+.evo-leyenda { display: grid; gap: 2px; margin: 6px 0; font-size: 11px; color: var(--texto-suave); }
+.evo-ley::before { content: ""; display: inline-block; width: 18px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; background: var(--c); }
+.evo-ley-mejor { --c: #ffcf63; } .evo-ley-resto { --c: #42d9f2; } .evo-ley-sitio { --c: #ffb454; } .evo-ley-base { --c: #6ee7a8; }
+.evo-ley-sitio::before, .evo-ley-base::before { height: 8px; width: 8px; border-radius: 50%; margin-right: 10px; margin-left: 5px; }
+.evo-ley-base::before { border-radius: 1px; transform: rotate(45deg); }
+.evo-lectura { padding: 6px 8px; border-left: 3px solid #ffcf63; background: rgba(255, 207, 99, 0.06); border-radius: 4px; font-size: 12px; min-height: 40px; }
+.evo-lectura-titulo, .evo-tip strong { display: block; font-weight: 700; color: #ffe9b8; margin-bottom: 3px; }
+.evo-lectura-fila { display: grid; grid-template-columns: 92px 1fr; gap: 6px; margin: 2px 0; }
+.evo-lectura-clave { color: var(--texto-suave); }
+.evo-lectura-valor { color: var(--texto); overflow-wrap: anywhere; }
+.evo-lectura-fila.mal .evo-lectura-valor, .evo-tip .mal { color: var(--peligro); }
+.evo-lectura-fila.bien .evo-lectura-valor, .evo-tip .bien { color: var(--exito); }
+.evo-difuso { margin: 8px 0; font-size: 12px; }
+.evo-difuso summary { cursor: pointer; color: var(--texto-suave); }
+.evo-tip { position: fixed; z-index: 60; max-width: 340px; padding: 8px 10px; font-size: 12px; line-height: 1.4; border-radius: 8px; background: rgba(8, 14, 26, 0.94); border: 1px solid rgba(255, 207, 99, 0.55); color: var(--texto); pointer-events: none; }
+.evo-tip.oculto, .evo-ui .oculto { display: none; }
+.evo-abrir { width: auto; margin: 4px 0 0; padding: 4px 8px; font-size: 12px; }
+.pia-edicion { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+.pia-edicion .pia-secundario { width: auto; margin: 0; padding: 6px 10px; }
+.pia-badge-reglas, .badge-reglas { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: #1a1205; background: var(--acento-calido); }
+.pia-badge-reglas.oculto, .badge-reglas.oculto { display: none; }
+
+/* ---- R23: edición de reglas difusas ---- */
+button.badge-reglas { border: 0; cursor: pointer; margin: 6px 0 0; width: auto; }
+.badge-reglas.inactiva { background: rgba(255, 255, 255, 0.14); color: var(--texto-suave); }
+.lab-subtabs { margin: 0 0 10px; }
+.dedit-barra { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 8px 0; }
+.dedit-barra button { width: auto; margin: 0; }
+.dedit-mensaje { margin: 0; }
+.dedit-avisos { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.dedit-aviso { padding: 5px 9px; border-radius: 6px; font-size: 12px; line-height: 1.4; }
+.dedit-aviso.error { background: rgba(255, 93, 108, 0.14); border-left: 3px solid var(--peligro); color: #ffd2d6; }
+.dedit-aviso.aviso { background: rgba(255, 180, 84, 0.12); border-left: 3px solid var(--acento-calido); color: #ffe2b8; }
+.dedit-resumen { font-size: 15px; margin: 4px 0 8px; }
+.dedit-clave { color: var(--texto-suave); margin-right: 8px; }
+.dedit-antes { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.dedit-despues { font-variant-numeric: tabular-nums; }
+.dedit-despues.cambio { color: var(--acento-calido); }
+.dedit-tabla-reglas td { vertical-align: top; }
+.dedit-regla.apagada .dedit-celda-regla { opacity: 0.45; }
+.dedit-regla.activa td:first-child { box-shadow: inset 3px 0 0 var(--acento); }
+.dedit-regla.cambio .dedit-despues { color: var(--acento-calido); }
+.dedit-sel { width: auto; max-width: 130px; margin: 0 2px; padding: 3px 4px; font-size: 12px; }
+.dedit-num { width: 64px; margin: 0 3px; padding: 3px 4px; font-size: 12px; }
+.dedit-celda-peso { white-space: nowrap; }
+.dedit-celda-peso input[type="range"] { width: 90px; vertical-align: middle; }
+.dedit-mini { width: auto; margin: 0 2px; padding: 1px 7px; font-size: 11px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--borde); border-radius: 6px; color: var(--texto); cursor: pointer; }
+.dedit-texto { margin-top: 3px; }
+.dedit-viable.mal { color: var(--peligro); font-weight: 700; }
+.dedit-fuerza { min-width: 130px; }
+.dedit-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.dedit-lienzo { height: 150px; }
+.dedit-campos { display: grid; gap: 4px; margin-top: 4px; }
+.dedit-campo { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; font-size: 12px; }
+.dedit-etq { min-width: 74px; color: var(--c); font-weight: 600; }
+
+/* ---- R23: anchos angostos (hasta 900 px): paneles plegables en cajón para que el vehículo no quede tapado.
+   Por encima de 900 px nada de esto se aplica: 1366×768 y superiores quedan igual. ---- */
+.cajon-asa { display: none; }
+@media (max-width: 900px) {
+  :root { --ancho-izq: 0px; }
+  /* columna izquierda: cajón que se abre sobre la escena y se cierra con el mismo botón */
+  #columna { top: 0; left: 0; bottom: 0; width: min(300px, 86vw); max-width: none; max-height: none; height: 100%; border-radius: 0 var(--radio) var(--radio) 0;
+    z-index: 42; transform: translateX(-104%); transition: transform 0.2s ease; visibility: hidden; }
+  body.cajon-izq #columna { transform: none; visibility: visible; }
+  #columna #decision { max-height: none; }
+  .cajon-asa { display: inline-flex; align-items: center; gap: 6px; position: fixed; left: 0; top: 42%; z-index: 43; margin: 0; padding: 8px 12px 8px 8px; width: auto;
+    background: var(--cristal-solido); color: var(--acento); border: 1px solid var(--borde); border-left: 0; border-radius: 0 10px 10px 0; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: left 0.2s ease; }
+  body.cajon-izq .cajon-asa { left: min(300px, 86vw); }
+  body.cajon-izq .cajon-asa .cajon-flecha { transform: rotate(180deg); }
+  body:has(#menu:not(.oculto)) .cajon-asa, body.cine .cajon-asa, body.intro-activa .cajon-asa { display: none; }
+  /* panel de IA: tira lateral plegada (46 px); abierto, cubre casi todo el ancho sin empujar la escena */
+  #panel-ia { top: 12px; bottom: 12px; left: auto; right: 12px; height: auto; width: min(var(--ancho-panel, 400px), calc(100vw - 24px)); z-index: 41; }
+  #panel-ia.plegado { width: 46px; height: auto; }
+  #panel-ia.plegado .pia-cabecera { flex-direction: column-reverse; }
+  #panel-ia.plegado .pia-tabs { flex-direction: column; }
+  #panel-ia.plegado .pia-tab { writing-mode: vertical-rl; }
+  /* la franja inferior ocupa el ancho libre, sin pasar por debajo de la tira del panel */
+  .dock { left: 12px; right: 70px; bottom: 12px; }
+  .dock > .zona-vista { width: min(224px, 100%); }
+  .registro { left: 24px; width: min(340px, calc(100vw - 130px)); }
+  #mensaje { left: 50%; transform: translateX(-50%); max-width: calc(100vw - 150px); top: 12px; right: auto; font-size: 12px; }
+  #intervencion-aviso { left: 50%; }
+  /* controles de vista: una chip plegada; el cuerpo solo se despliega al pulsar */
+  #manual { padding: 6px 8px; }
+}
+@media (max-width: 760px) {
+  #mensaje { max-width: calc(100vw - 100px); }
+  #controles { top: auto; }
+  .dock { right: 66px; }
+  .barra-mision button { padding: 6px 9px; font-size: 12px; }
+  .barra-mision #reproducir { min-width: 0; }
+}
+/* «persecución» (estado de un dron) no se parte a mitad de palabra en el HUD; los demás valores siguen partiéndose por palabras */
+#h-drones { overflow-wrap: normal; word-break: normal; }
+.cond-filas .fila.cond-larga { display: block; }
+.cond-filas .fila.cond-larga .valor { display: block; margin-top: 2px; text-align: left; font-weight: 400; color: var(--texto-suave, #b5c8d1); }
+/* con el tutorial abierto, los avisos de logro no tapan su tarjeta: los logros nuevos se ven luego en la pantalla final */
+body.tutorial-activo .fn-avisos { display: none; }

@@ -259,6 +259,8 @@ def _estado(sesion: Sesion) -> dict:
     p = sesion.partida
     sug = p.sugerencia()
     res = p.resumen()
+    det = p.puntaje_detalle()                    # R23b: el único puntaje (juego/puntaje.py), con su desglose
+    ci = p.ciencia_publica()
     return {
         "semilla": sesion.semilla,
         "nivel": sesion.nivel,
@@ -276,7 +278,12 @@ def _estado(sesion: Sesion) -> dict:
         "estaciones": [[int(f), int(c)] for f, c in getattr(p, "estaciones", [])],
         "pilas": [[int(f), int(c)] for f, c in getattr(p, "pilas", [])],
         "pilas_recogidas": int(getattr(p, "pilas_recogidas", 0)),
-        "puntaje": p.puntaje(),
+        "puntaje": det["puntaje"],
+        "puntaje_desglose": det["desglose"],
+        "puntaje_formula": det["formula"],
+        "ciencia_fraccion": float(ci["fraccion"]),     # R23b: ciencia recogida (0 a 1); no es sitios visitados ÷ totales
+        "ciencia_recogida": float(ci["recogida"]),
+        "ciencia_maxima": float(ci["maxima"]),
         "modo": sesion.modo,
         "ambiente": p.ambiente,
         "ambiente_restante": p.ambiente_restante,

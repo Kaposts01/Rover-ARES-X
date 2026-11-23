@@ -62,22 +62,17 @@ def test_filtros_fecha_y_configuracion_para_jugar_una_semilla():
     assert _js("records_datos.js", '[m.rotuloOrigen("manual"), m.rotuloOrigen("asistida"), m.rotuloOrigen("ia")]') == ["Manual", "Manual con ayuda de la IA", "IA"]
 
 
-def test_el_puntaje_de_los_records_es_el_de_la_pantalla_final():
-    e = {"sitios_visitados": 3, "sitios_totales": 3, "bateria_pct": 57.0, "colisiones": 0, "pasos_sobre_tolerancia": 0, "barrancos_evitados": 0}
-    assert puntaje_de_juego(e) == 1285                 # el de la captura: 1000 + 57 × 5
-    assert puntaje_de_juego({**e, "colisiones": 3}) == 0 + max(0, 1285 - 1500)
+def test_el_puntaje_de_los_records_es_el_unico_del_motor():
+    """R23b: un solo puntaje (juego/puntaje.py); sin bono por veto, y fracasar vale claramente menos que cumplir."""
+    e = {"estado": "EXITO", "ciencia_fraccion": 0.5, "bateria_pct": 57.0, "paso": 100, "colisiones": 0, "pasos_sobre_tolerancia": 0}
+    # 450 × 0,5 + 300 + 125 × 0,57 + 125 × (1 − 100 ÷ 400)
+    assert puntaje_de_juego(e) == round(225 + 300 + 71.25 + 93.75)
+    assert puntaje_de_juego({**e, "barrancos_evitados": 8, "vetos": 8}) == puntaje_de_juego(e)       # los vetos no suman
+    assert puntaje_de_juego({**e, "colisiones": 2}) == puntaje_de_juego(e) - 200
+    assert puntaje_de_juego({**e, "barrancos_pisados": 1}) == puntaje_de_juego(e) - 150
+    assert puntaje_de_juego({**e, "estado": "FRACASO", "ciencia_fraccion": 0.9}) < puntaje_de_juego(e)
+    assert puntaje_de_juego({**e, "colisiones": 99}) == 0
     assert puntaje_de_juego({}) == 0
-
-
-@sin_node
-@pytest.mark.parametrize("e", [
-    {"estado": "EXITO", "sitios_visitados": 3, "sitios_totales": 3, "bateria_pct": 57.0, "colisiones": 0, "pasos_sobre_tolerancia": 0, "barrancos_evitados": 0},
-    {"estado": "EXITO", "sitios_visitados": 2, "sitios_totales": 5, "bateria_pct": 33.3, "colisiones": 1, "pasos_sobre_tolerancia": 0, "barrancos_evitados": 4},
-    {"estado": "FRACASO", "sitios_visitados": 0, "sitios_totales": 4, "bateria_pct": 0.5, "colisiones": 2, "pasos_sobre_tolerancia": 3, "barrancos_evitados": 0},
-])
-def test_el_puntaje_del_servidor_coincide_con_final_datos_js(e):
-    js = _js("final_datos.js", f"m.puntajeFinal(m.normalizarResultado({json.dumps(e)}))")
-    assert puntaje_de_juego(e) == js
 
 
 # ---------- comparar ----------

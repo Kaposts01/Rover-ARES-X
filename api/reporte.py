@@ -7,6 +7,8 @@ import datetime
 import html
 from collections import Counter
 
+from juego import puntaje
+
 ANCHO_SVG, ALTO_SVG = 640, 150
 
 # Nombres para mostrar (el motor y la API siguen usando los valores en minúscula y sin tilde)
@@ -16,8 +18,6 @@ NOMBRE_TECNICA = {"humano": "Humano", "rna": "RNA", "difuso": "Difuso", "ag": "A
 NOMBRE_RESULTADO = {"EXITO": "Éxito", "FRACASO": "Fracaso", "MODO_SEGURO": "Modo seguro", "SIN_RUTA": "Sin ruta",
                     "EXPLORACION": "Exploración", "ALERTA": "Alerta", "REPLANIFICACION": "Replanificación",
                     "REFUGIO": "Refugio", "CONFIGURACION": "Configuración"}
-FORMULA_PUNTAJE_SIMPLE = ("100 × sitios visitados ÷ sitios totales + 0,5 × batería restante (en unidades del motor) "
-                          "+ 50 si no hubo ningún veto del supervisor")
 
 
 def _motivo(codigo: str) -> str:
@@ -117,11 +117,14 @@ def construir_html(datos: dict) -> str:
         ("Pasos de la misión", est.get("paso", "-")),
         ("Batería final (de la capacidad)", f"{_num(est.get('bateria_pct', est.get('bateria')), 1)} %"),
         ("Pilas recogidas · recargas en base", f"{est.get('pilas_recogidas', 0)} · {est.get('recargas', 0)}"),
-        ("Sitios científicos", f"{est.get('sitios_visitados', '-')}/{est.get('sitios_totales', '-')}"),
+        ("Ciencia recogida (valor por la calidad de su ventana)", f"{_num(100 * float(est.get('ciencia_fraccion') or 0), 1)} %"),
+        ("Sitios visitados", f"{est.get('sitios_visitados', '-')}/{est.get('sitios_totales', '-')}"),
         ("Vetos · replanteos · choques", f"{est.get('vetos', '-')} · {est.get('replanes', '-')} · {est.get('colisiones', '-')}"),
         ("Velocidad media (difuso)", _num(t["velocidad_media"], 3)),
-        ("Puntaje simple", f"{est.get('puntaje', '-')} ({FORMULA_PUNTAJE_SIMPLE})"),
+        ("Puntaje", f"{est.get('puntaje', '-')} ({est.get('puntaje_formula') or puntaje.FORMULA})"),
     ]
+    for term in est.get("puntaje_desglose") or []:
+        filas_resumen.append((f"   Puntaje: {term.get('etiqueta')}", f"{_num(term.get('puntos'), 1)} puntos ({_num(term.get('valor'), 2)} × {_num(term.get('peso'), 0)})"))
     resumen = "".join(f"<tr><th>{_e(k)}</th><td>{_e(v)}</td></tr>" for k, v in filas_resumen)
     avisos = "".join(f"<li>{_e(a)}</li>" for a in (est.get("avisos") or [])) or "<li>Sin avisos.</li>"
     graficos = "".join([

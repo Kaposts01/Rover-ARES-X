@@ -314,7 +314,8 @@ def test_el_reporte_no_muestra_codigos_de_motivo_ni_nombres_de_modo_internos():
     h = construir_html({"estado": est, "filas_log": log, "historial": hist})
     assert "V-RNA-BARRANCO" not in h and "V-BORDE-BARRANCO" not in h
     assert "Híbrido" in h and "Éxito" in h and "Supervisor" in h
-    assert "100 × sitios visitados" in h                      # el puntaje simple explica su cuenta
+    assert "Puntaje simple" not in h and "100 × sitios visitados" not in h     # R23b: un solo puntaje, sin bono por veto
+    assert "Los vetos no suman ni restan" in h                                  # el reporte explica su cuenta
 
 
 # ---------- 13. pantalla final ----------
@@ -334,12 +335,15 @@ def test_resumen_de_la_meta_y_formula_del_puntaje_simple():
     assert "No es el puntaje de la pantalla final" in _js("m.AYUDA_PUNTAJE_SIMPLE")
 
 
-@sin_node
-def test_la_formula_del_puntaje_simple_coincide_con_la_del_motor():
+def test_el_puntaje_del_estado_es_el_unico_y_coincide_con_su_desglose():
+    """R23b: /estado publica `puntaje` (el único), su desglose (la suma redondeada y acotada a 0 da el puntaje) y la fórmula.
+    Sustituye a la prueba que comparaba el puntaje simple del HUD (JS) con el del motor: el HUD ya no tiene cuenta propia."""
     c = _cliente()
     e = c.get("/estado").json()
-    esperado = _js(f"m.puntajeSimple({json.dumps(dict(visitados=e['sitios_visitados'], totales=e['sitios_totales'], bateria=e['bateria'], vetos=e['vetos']))})")
-    assert esperado == e["puntaje"]
+    assert max(0, round(sum(t["puntos"] for t in e["puntaje_desglose"]))) == e["puntaje"]
+    assert all(set(t) == {"clave", "etiqueta", "valor", "peso", "puntos"} for t in e["puntaje_desglose"])
+    assert e["puntaje_formula"] and "simple" not in e["puntaje_formula"].lower()
+    assert 0.0 <= e["ciencia_fraccion"] <= 1.0 and e["ciencia_maxima"] > 0
 
 
 # ---------- 13. eventos con señal visible y condiciones del planeta (ronda 23, interfaz) ----------

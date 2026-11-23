@@ -47,13 +47,12 @@ POLITICAS = {
 
 
 def puntaje_de_juego(e: dict) -> int:
-    """El puntaje de la pantalla final (la misma fórmula que final_datos.js): ciencia(0 a 1)×1000 + vetos por barranco×50 +
-    batería(%)×5 − violaciones×500, mínimo 0. Es el que ve el jugador, por eso es el de los récords."""
-    total = float(e.get("sitios_totales") or 0)
-    ciencia = min(1.0, max(0.0, float(e.get("sitios_visitados") or 0) / total)) if total > 0 else 0.0
-    violaciones = float(e.get("colisiones") or 0) + float(e.get("pasos_sobre_tolerancia") or 0)
-    bruto = 1000 * ciencia + 50 * float(e.get("barrancos_evitados") or 0) + 5 * float(e.get("bateria_pct") or 0) - 500 * violaciones
-    return max(0, int(math.floor(bruto + 0.5)))
+    """El puntaje de un `/estado` (dict): la fórmula única de `juego.puntaje` (R23b). Sin bono por veto. Es el de los récords."""
+    from juego import puntaje
+    return puntaje.calcular(
+        ciencia=e.get("ciencia_fraccion") or 0.0, exito=e.get("estado") == "EXITO", bateria_pct=e.get("bateria_pct") or 0.0,
+        pasos=int(e.get("paso") or 0), choques=int(e.get("colisiones") or 0), caidas=int(e.get("barrancos_pisados") or 0),
+        pasos_sobre_tolerancia=int(e.get("pasos_sobre_tolerancia") or 0))["puntaje"]
 
 
 class ComparacionIn(BaseModel):
@@ -176,11 +175,12 @@ def instalar(app: FastAPI, servidor) -> None:
 
     def ficha(l: Lado, n: int, r: dict) -> dict:
         e = servidor._estado(l.sesion)
-        ci = l.sesion.partida.ciencia()      # R23: valor de cada sitio por la calidad de su ventana
-        return {"n": n, "posicion": e["posicion"], "accion": r.get("accion"), "motivos": list(r.get("motivos") or []),
-                "estado": estado_de(l), "bateria_pct": e["bateria_pct"], "puntaje": puntaje_de_juego(e),
-                "ciencia_recogida": float(ci["recogida"]), "ciencia_maxima": float(ci["maxima"]),
-                "ciencia_fraccion": float(ci["fraccion"]),
+        # R23b: «n» cuenta turnos de la API (un disparo ocupa un turno sin avanzar la misión); «paso» es el paso de la misión, el de la
+        # pantalla final y el informe. La tabla compara «paso»: antes comparaba «n» y la comparación decía 181 donde la partida 175.
+        return {"n": n, "paso": e["paso"], "posicion": e["posicion"], "accion": r.get("accion"), "motivos": list(r.get("motivos") or []),
+                "estado": estado_de(l), "bateria_pct": e["bateria_pct"], "puntaje": e["puntaje"],
+                "ciencia_recogida": e["ciencia_recogida"], "ciencia_maxima": e["ciencia_maxima"],
+                "ciencia_fraccion": e["ciencia_fraccion"],
                 "sitios_visitados": e["sitios_visitados"], "sitios_totales": e["sitios_totales"],
                 "visitados": [list(map(int, c)) for c in sorted(l.sesion.partida.mision.visitados)],
                 "vetos": e["vetos"], "colisiones": e["colisiones"], "replanes": e["replanes"]}
@@ -229,13 +229,13 @@ def instalar(app: FastAPI, servidor) -> None:
             return "a" if (x > y) == mayor else "b"
         filas = [
             {"clave": "resultado", "a": ra, "b": rb, "ganador": ("a" if ra == "EXITO" else "b") if not mismo else "empate"},
-            {"clave": "pasos", "a": fa["n"], "b": fb["n"], "ganador": mejor(fa["n"], fb["n"], False, mismo)},
+            {"clave": "pasos", "a": fa["paso"], "b": fb["paso"], "ganador": mejor(fa["paso"], fb["paso"], False, mismo)},
             {"clave": "puntaje", "a": fa["puntaje"], "b": fb["puntaje"], "ganador": mejor(fa["puntaje"], fb["puntaje"])},
             {"clave": "ciencia_fraccion", "a": fa["ciencia_fraccion"], "b": fb["ciencia_fraccion"],
              "ganador": mejor(fa["ciencia_fraccion"], fb["ciencia_fraccion"])},
             {"clave": "bateria_pct", "a": fa["bateria_pct"], "b": fb["bateria_pct"], "ganador": mejor(fa["bateria_pct"], fb["bateria_pct"])},
-            {"clave": "sitios_visitados", "a": fa["sitios_visitados"], "b": fb["sitios_visitados"], "ganador": mejor(fa["sitios_visitados"], fb["sitios_visitados"])},
-            {"clave": "vetos", "a": fa["vetos"], "b": fb["vetos"], "ganador": mejor(fa["vetos"], fb["vetos"], False)},
+            {"clave": "sitios_visitados", "a": fa["sitios_visitados"], "b": fb["sitios_visitados"], "ganador": None, "informativa": True},   # informativa: la fila con ganador es la ciencia recogida
+            {"clave": "vetos", "a": fa["vetos"], "b": fb["vetos"], "ganador": None, "informativa": True},   # R23b: un veto no es mérito ni demérito
             {"clave": "colisiones", "a": fa["colisiones"], "b": fb["colisiones"], "ganador": mejor(fa["colisiones"], fb["colisiones"], False)},
         ]
         general = filas[0]["ganador"]
@@ -327,8 +327,8 @@ def instalar(app: FastAPI, servidor) -> None:
         origen = records.origen_de(s.historial)
         nuevo = {"planeta": e["planeta"], "nivel": int(s.nivel), "tamano": tamano, "semilla": int(s.semilla),
                  "vehiculo": e["modo_planeta"], "origen": origen, "modo": s.modo,
-                 "resultado": e["estado"], "pasos": int(e["paso"]), "puntaje": puntaje_de_juego(e),
-                 "puntaje_simple": int(e["puntaje"]),
+                 "resultado": e["estado"], "pasos": int(e["paso"]), "puntaje": int(e["puntaje"]),
+                 "ciencia_fraccion": float(e["ciencia_fraccion"]),
                  "bateria_pct": float(e["bateria_pct"]), "sitios_visitados": e["sitios_visitados"],
                  "sitios_totales": e["sitios_totales"]}
         try:

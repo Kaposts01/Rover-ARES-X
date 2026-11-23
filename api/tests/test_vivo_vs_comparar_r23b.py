@@ -52,6 +52,7 @@ def test_la_misma_semilla_da_la_misma_trayectoria_en_vivo_y_en_la_comparacion():
 def test_sitios_visitados_y_ciencia_recogida_son_datos_distintos():
     c = TestClient(app)
     e, _ = _vivo(c)
-    assert e["sitios_visitados"] == e["sitios_totales"]       # visitó todos los sitios (obligatorios y opcionales)...
-    assert e["ciencia_fraccion"] < 1.0                        # ...pero parte con la ventana perdida: la ciencia vale menos
+    # no se fija cuántos sitios visita esta semilla (cambia al reentrenar la RNA): lo que importa es que son dos magnitudes
+    assert 0 < e["sitios_visitados"] <= e["sitios_totales"]
+    assert e["ciencia_fraccion"] < e["sitios_visitados"] / e["sitios_totales"]   # ventanas perdidas: la ciencia vale menos que el conteo
     assert abs(e["ciencia_recogida"] / e["ciencia_maxima"] - e["ciencia_fraccion"]) < 1e-3
